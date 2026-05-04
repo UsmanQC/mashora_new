@@ -1,0 +1,37 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+class CreateWordsDayTable extends Migration
+{
+    /**
+     * Run the migrations.
+     *
+     * @return void
+     */
+    public function up()
+    {
+        Schema::create('words_day', function (Blueprint $table) {
+            $table->id();
+            $table->text("description_ar")->nullable();
+            $table->text("description_en")->nullable();
+            $table->text("auth_en")->nullable();
+            $table->text("auth_ar")->nullable();
+            $table->boolean('satuts')->default(1);
+            
+            $table->timestamps();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     *
+     * @return void
+     */
+    public function down()
+    {
+        Schema::dropIfExists('words_day');
+    }
+}
