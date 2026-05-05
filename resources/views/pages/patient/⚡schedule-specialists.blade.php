@@ -1,8 +1,8 @@
 <?php
 
+use App\Support\SpecialistCatalog;
 use Flux\Flux;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Lang;
 use Illuminate\Support\Facades\Session;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
@@ -14,12 +14,23 @@ new #[Layout('layouts::patient')] #[Title('Specialists')] class extends Componen
     /** @var array<string, int> */
     public array $likeCounts = [];
 
+    /** @var list<array<string, mixed>>|null */
+    protected ?array $filteredSpecialistsCache = null;
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    protected function filteredSpecialists(): array
+    {
+        return $this->filteredSpecialistsCache ??= SpecialistCatalog::filtered(
+            Session::get('session_filter_preferences')
+        );
+    }
+
     public function mount(): void
     {
-        $cards = Lang::get('specialist_results.demo_cards');
-
-        foreach (is_array($cards) ? $cards : [] as $specialist) {
-            $this->likeCounts[$specialist['id']] = (int) $specialist['likes'];
+        foreach ($this->filteredSpecialists() as $specialist) {
+            $this->likeCounts[$specialist['id']] = (int) ($specialist['likes'] ?? 0);
         }
     }
 
@@ -29,9 +40,7 @@ new #[Layout('layouts::patient')] #[Title('Specialists')] class extends Componen
     #[Computed]
     public function specialists(): array
     {
-        $cards = Lang::get('specialist_results.demo_cards');
-
-        return is_array($cards) ? $cards : [];
+        return $this->filteredSpecialists();
     }
 
     public function incrementLike(string $id): void
@@ -45,6 +54,27 @@ new #[Layout('layouts::patient')] #[Title('Specialists')] class extends Componen
 
     public function pickSlot(string $specialistId, string $slot): void
     {
+        $specialist = collect($this->specialists)->firstWhere('id', $specialistId);
+        if ($specialist === null) {
+            return;
+        }
+
+        $doctorId = $specialist['doctor_database_id'] ?? null;
+        if (is_int($doctorId) && $doctorId > 0) {
+            $date = now()->timezone(config('app.timezone'))->format('Y-m-d');
+
+            $this->redirect(
+                route('patient.book-appointments', ['doctor' => $doctorId], false)
+                    . '?'.http_build_query([
+                        'date' => $date,
+                        'duration' => (int) ($specialist['session_minutes'] ?? 15),
+                        'time' => $slot,
+                    ])
+            );
+
+            return;
+        }
+
         Session::flash('patient_demo_slot_pick', [
             'specialist_id' => $specialistId,
             'slot' => $slot,
@@ -75,12 +105,27 @@ new #[Layout('layouts::patient')] #[Title('Specialists')] class extends Componen
         </flux:text>
     </header>
 
-    <div class="grid gap-6 md:grid-cols-2">
-        @foreach ($this->specialists as $specialist)
-            @include('partials.patient-specialist-result-card', [
-                'specialist' => $specialist,
-                'likes' => $this->likeCounts[$specialist['id']] ?? (int) $specialist['likes'],
-            ])
-        @endforeach
-    </div>
+    @if (count($this->specialists) === 0)
+        <div class="rounded-2xl border border-zinc-200/90 bg-white p-8 text-center shadow-md shadow-black/10">
+            <flux:heading size="lg" class="text-zinc-900">{{ __('specialist_results.no_results_title') }}</flux:heading>
+            <flux:text class="mx-auto mt-2 max-w-md text-zinc-600">{{ __('specialist_results.no_results_hint') }}</flux:text>
+            <flux:button
+                :href="route('patient.schedule.filter')"
+                variant="primary"
+                class="mt-6 border-[#0B163E] !bg-[#0B163E] !text-white hover:!brightness-[0.97]"
+                wire:navigate
+            >
+                {{ __('specialist_results.adjust_filters') }}
+            </flux:button>
+        </div>
+    @else
+        <div class="grid gap-6 md:grid-cols-2">
+            @foreach ($this->specialists as $specialist)
+                @include('partials.patient-specialist-result-card', [
+                    'specialist' => $specialist,
+                    'likes' => $this->likeCounts[$specialist['id']] ?? (int) $specialist['likes'],
+                ])
+            @endforeach
+        </div>
+    @endif
 </div>

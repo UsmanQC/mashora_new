@@ -95,16 +95,35 @@
                 @php
                     $slotFormatted = \Illuminate\Support\Carbon::createFromFormat('H:i', $slot)->timezone(config('app.timezone'));
                     $slotLabel = $slotFormatted->locale(app()->getLocale())->translatedFormat('g:i a');
+                    $doctorDbId = $specialist['doctor_database_id'] ?? null;
+                    $bookHref = $doctorDbId
+                        ? route('patient.book-appointments', ['doctor' => $doctorDbId], false)
+                            .'?'.http_build_query([
+                                'date' => now()->timezone(config('app.timezone'))->format('Y-m-d'),
+                                'duration' => $specialist['session_minutes'],
+                                'time' => $slot,
+                            ])
+                        : null;
                 @endphp
-                <flux:button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    wire:click="pickSlot('{{ $id }}', '{{ $slot }}')"
-                    class="shrink-0 rounded-full border border-[#1565c0]/50 bg-white px-3 py-2 text-[0.8rem] font-semibold tabular-nums text-[#0B163E] shadow-sm hover:border-[#0B163E] hover:bg-blue-600/10"
-                >
-                    {{ $slotLabel }}
-                </flux:button>
+                @if ($bookHref)
+                    <a
+                        href="{{ $bookHref }}"
+                        wire:navigate
+                        class="inline-flex shrink-0 items-center justify-center rounded-full border border-[#1565c0]/50 bg-white px-3 py-2 text-[0.8rem] font-semibold tabular-nums text-[#0B163E] shadow-sm transition hover:border-[#0B163E] hover:bg-blue-600/10"
+                    >
+                        {{ $slotLabel }}
+                    </a>
+                @else
+                    <flux:button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        wire:click="pickSlot('{{ $id }}', '{{ $slot }}')"
+                        class="shrink-0 rounded-full border border-[#1565c0]/50 bg-white px-3 py-2 text-[0.8rem] font-semibold tabular-nums text-[#0B163E] shadow-sm hover:border-[#0B163E] hover:bg-blue-600/10"
+                    >
+                        {{ $slotLabel }}
+                    </flux:button>
+                @endif
             @endforeach
         </div>
     </div>

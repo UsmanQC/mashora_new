@@ -10,10 +10,10 @@ return [
     'promo_body' => 'Your appointments, mood check-ins, and resources in one responsive place: desktop or install as an app on your phone.',
 
     'phone_heading' => 'Enter your mobile number',
-    'phone_lead' => 'Enter your phone number to receive a confirmation message.',
+    'phone_lead' => 'If this number is already registered, you\'ll sign in with your password next. If it\'s new, you\'ll create an account.',
 
     'start_title' => 'Enter your mobile number',
-    'start_hint' => 'We use your number to create a secure patient account. Existing members are sent to sign-in.',
+    'start_hint' => 'If your number is already on file, you\'ll sign in next. If not, you\'ll be taken through creating an account.',
     'phone_label' => 'Mobile number',
     'country_code' => 'Country code',
     'phone_national_placeholder' => '5XXXXXXXX',
@@ -39,6 +39,8 @@ return [
 
     'login_title' => 'Sign in',
     'login_sub' => 'Enter the mobile number or email on your account.',
+    'login_password_lead' => 'Enter your password for this mobile number.',
+    'change_phone' => 'Use a different number',
     'login_field' => 'Mobile number or email',
     'forgot_password' => 'Forgot password?',
 

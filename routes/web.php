@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\Patient\PatientPaymentController;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'welcome')->name('home');
@@ -12,9 +14,9 @@ Route::middleware(['patient.redirect'])->group(function () {
         ->name('patient.phone');
 });
 
-Route::view('patient/sign-in', 'patient.auth.sign-in')
-    ->middleware(['patient.redirect'])
-    ->name('patient.auth.sign-in');
+Route::get('patient/sign-in', function (Request $request) {
+    return redirect()->route('patient.phone', $request->query());
+})->middleware(['patient.redirect'])->name('patient.auth.sign-in');
 
 Route::livewire('patient/sign-up', 'pages::patient-auth.sign-up')
     ->middleware(['patient.redirect', 'signed'])
@@ -83,6 +85,29 @@ Route::livewire('patient/filter', 'pages::patient.schedule-session')
 Route::livewire('patient/specialists', 'pages::patient.schedule-specialists')
     ->middleware(['auth', 'patient.profile'])
     ->name('patient.schedule.specialists');
+
+Route::livewire('patient/book-appointments/{doctor}', 'pages::patient.book-appointments')
+    ->middleware(['auth', 'patient.profile'])
+    ->name('patient.book-appointments');
+
+Route::livewire('patient/checkout-demo', 'pages::patient.checkout-demo')
+    ->name('patient.checkout.demo');
+
+Route::livewire('patient/checkout/{temporaryAppointment}', 'pages::patient.checkout')
+    ->middleware(['auth', 'patient.profile'])
+    ->name('patient.checkout');
+
+Route::get('patient/payment/success/{temporaryAppointment}', [PatientPaymentController::class, 'success'])
+    ->middleware(['auth', 'patient.profile'])
+    ->name('patient.payment.success');
+
+Route::get('patient/payment/failed/{temporaryAppointment}', [PatientPaymentController::class, 'failed'])
+    ->middleware(['auth', 'patient.profile'])
+    ->name('patient.payment.failed');
+
+Route::post('patient/payment/execute/{temporaryAppointment}', [PatientPaymentController::class, 'executePayment'])
+    ->middleware(['auth', 'patient.profile'])
+    ->name('patient.payment.execute');
 
 Route::view('patient/important-numbers', 'patient.important-numbers')
     ->middleware(['patient.profile'])

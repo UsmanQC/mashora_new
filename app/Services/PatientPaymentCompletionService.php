@@ -1,0 +1,190 @@
+<?php
+
+namespace App\Services;
+
+use App\Models\Appointment;
+use App\Models\TemporaryAppointment;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
+use MyFatoorah\Library\API\Payment\MyFatoorahPaymentStatus;
+use Throwable;
+
+/**
+ * Confirms MyFatoorah payment and creates a booked {@link Appointment} from a paid {@link TemporaryAppointment}.
+ */
+final class PatientPaymentCompletionService
+{
+    /**
+     * Verifies payment with MyFatoorah and completes booking. Idempotent if already paid.
+     *
+     * @return array{appointment: ?Appointment, state: 'paid'|'needs_config'|'pending'|'failed'}
+     */
+    public function confirmIfPaid(TemporaryAppointment $temporaryAppointment, Request $request): array
+    {
+        $temporaryAppointment->loadMissing('doctor');
+
+        if ($temporaryAppointment->appointment_id !== null) {
+            $existing = Appointment::query()->find($temporaryAppointment->appointment_id);
+            if ($existing !== null) {
+                return [
+                    'appointment' => $existing,
+                    'state' => 'paid',
+                ];
+            }
+        }
+
+        if ($temporaryAppointment->doctor_id === null) {
+            return ['appointment' => null, 'state' => 'failed'];
+        }
+
+        if (empty(config('myfatoorah.api_key'))) {
+            return ['appointment' => null, 'state' => 'needs_config'];
+        }
+
+        try {
+            $mf = new MyFatoorahPaymentStatus(self::mfConfig());
+            $keyData = self::resolveStatusKey($temporaryAppointment, $request);
+
+            $data = $mf->getPaymentStatus(
+                $keyData['key'],
+                $keyData['type'],
+                (string) $temporaryAppointment->id,
+                (float) $temporaryAppointment->total,
+                'SAR'
+            );
+        } catch (Throwable $e) {
+            report($e);
+
+            return ['appointment' => null, 'state' => 'failed'];
+        }
+
+        $status = $data->InvoiceStatus ?? '';
+
+        if (! in_array($status, ['Paid', 'DuplicatePayment'], true)) {
+            return ['appointment' => null, 'state' => $status === 'Pending' ? 'pending' : 'failed'];
+        }
+
+        try {
+            $appointment = DB::transaction(function () use ($temporaryAppointment, $data): Appointment {
+                $temporaryAppointment->refresh();
+
+                if ($temporaryAppointment->appointment_id !== null) {
+                    $found = Appointment::query()->find($temporaryAppointment->appointment_id);
+                    if ($found !== null) {
+                        return $found;
+                    }
+                }
+
+                $appointment = self::createAppointmentRecord($temporaryAppointment);
+                self::syncCommunications($appointment, $temporaryAppointment);
+
+                $temporaryAppointment->appointment_id = $appointment->id;
+                $temporaryAppointment->payment_status = 'paid';
+                $temporaryAppointment->payment_response = json_encode($data);
+                $temporaryAppointment->save();
+
+                return $appointment;
+            });
+        } catch (Throwable $e) {
+            report($e);
+
+            return ['appointment' => null, 'state' => 'failed'];
+        }
+
+        return ['appointment' => $appointment, 'state' => 'paid'];
+    }
+
+    /**
+     * @return array{key: string|int, type: string}
+     */
+    private static function resolveStatusKey(TemporaryAppointment $temporaryAppointment, Request $request): array
+    {
+        if ($request->filled('paymentId')) {
+            return ['key' => $request->string('paymentId')->toString(), 'type' => 'PaymentId'];
+        }
+
+        if ($temporaryAppointment->payment_invoice_id) {
+            return ['key' => $temporaryAppointment->payment_invoice_id, 'type' => 'InvoiceId'];
+        }
+
+        return ['key' => $temporaryAppointment->id, 'type' => 'CustomerReference'];
+    }
+
+    private static function createAppointmentRecord(TemporaryAppointment $temporaryAppointment): Appointment
+    {
+        return Appointment::create([
+            'appointment_number' => self::generateAppointmentNumber(),
+            'doctor_id' => $temporaryAppointment->doctor_id,
+            'user_id' => $temporaryAppointment->user_id,
+            'scheduled_at' => $temporaryAppointment->scheduled_at,
+            'appointment_date' => $temporaryAppointment->appointment_date,
+            'start_time' => $temporaryAppointment->start_time,
+            'end_time' => $temporaryAppointment->end_time,
+            'duration' => $temporaryAppointment->duration,
+            'appointment_for' => $temporaryAppointment->appointment_for,
+            'patient_name' => $temporaryAppointment->patient_name,
+            'patient_email' => $temporaryAppointment->patient_email,
+            'patient_phone' => $temporaryAppointment->patient_phone,
+            'patient_notes' => $temporaryAppointment->patient_notes,
+            'amount' => $temporaryAppointment->amount,
+            'discount' => $temporaryAppointment->discount,
+            'tax' => $temporaryAppointment->tax,
+            'total' => $temporaryAppointment->total,
+            'appointment_type' => $temporaryAppointment->appointment_type ?? 'regular',
+            'instant_counseling' => $temporaryAppointment->instant_counseling,
+            'status' => 'new',
+            'payment_invoice_id' => $temporaryAppointment->payment_invoice_id,
+            'payment_invoice_url' => $temporaryAppointment->payment_invoice_url,
+        ]);
+    }
+
+    private static function syncCommunications(Appointment $appointment, TemporaryAppointment $temporaryAppointment): void
+    {
+        $channels = is_array($temporaryAppointment->communications)
+            ? $temporaryAppointment->communications
+            : [];
+
+        $allowed = ['chat', 'voice_call', 'video_call'];
+
+        foreach ($channels as $channel) {
+            if (! is_string($channel) || ! in_array($channel, $allowed, true)) {
+                continue;
+            }
+
+            $exists = DB::table('communications')
+                ->where('communication', $channel)
+                ->exists();
+
+            if (! $exists) {
+                continue;
+            }
+
+            DB::table('appointment_communication')->insertOrIgnore([
+                'appointment_id' => $appointment->id,
+                'communication' => $channel,
+            ]);
+        }
+    }
+
+    public static function generateAppointmentNumber(): string
+    {
+        do {
+            $number = 'APP'.now()->format('Ymd').strtoupper(Str::random(6));
+        } while (Appointment::withTrashed()->where('appointment_number', $number)->exists());
+
+        return $number;
+    }
+
+    /**
+     * @return array{apiKey: string, isTest: bool, vcCode: string}
+     */
+    private static function mfConfig(): array
+    {
+        return [
+            'apiKey' => (string) config('myfatoorah.api_key'),
+            'isTest' => (bool) config('myfatoorah.is_test'),
+            'vcCode' => (string) config('myfatoorah.vc_code'),
+        ];
+    }
+}

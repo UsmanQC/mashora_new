@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Speciality;
 use Flux\Flux;
 use Illuminate\Support\Facades\Session;
 use Livewire\Attributes\Computed;
@@ -17,55 +18,72 @@ new #[Layout('layouts::patient')] #[Title('Session filter')] class extends Compo
 
     public string $languagePreference = 'both';
 
-    /** @var list<string> */
+    /** @var list<string> Speciality primary keys as strings (matches `specialities.id`) */
     public array $subspecialties = [];
 
     public bool $subspecialtiesExpanded = false;
 
     /**
-     * @return list<string>
+     * @return list<array{id: string, label: string}>
      */
     #[Computed]
-    public function subspecialtyKeys(): array
+    public function specialityOptions(): array
     {
-        return config('session_filter.subspecialty_keys', []);
+        return Speciality::query()
+            ->where('status', true)
+            ->orderBy('id')
+            ->get(['id', 'title', 'title_ar'])
+            ->map(function (Speciality $s): array {
+                $isAr = app()->getLocale() === 'ar';
+                $label = $isAr
+                    ? (filled($s->title_ar) ? (string) $s->title_ar : (string) $s->title)
+                    : (filled($s->title) ? (string) $s->title : (string) $s->title_ar);
+
+                return [
+                    'id' => (string) $s->id,
+                    'label' => $label,
+                ];
+            })
+            ->all();
     }
 
-    public function toggleSubspecialty(string $key): void
+    /**
+     * @return list<array{id: string, label: string}>
+     */
+    #[Computed]
+    public function visibleSpecialityOptions(): array
     {
-        if ($key === '') {
+        $all = $this->specialityOptions;
+        $limit = (int) config('session_filter.subspecialties_collapsed_count', 7);
+
+        if ($this->subspecialtiesExpanded || count($all) <= $limit) {
+            return $all;
+        }
+
+        return array_slice($all, 0, $limit);
+    }
+
+    public function toggleSubspecialty(string $id): void
+    {
+        if ($id === '') {
             return;
         }
 
-        if (in_array($key, $this->subspecialties, true)) {
+        if (in_array($id, $this->subspecialties, true)) {
             $this->subspecialties = array_values(array_filter(
                 $this->subspecialties,
-                static fn (string $k): bool => $k !== $key
+                static fn (string $k): bool => $k !== $id
             ));
 
             return;
         }
 
-        $this->subspecialties = array_values(array_unique([...$this->subspecialties, $key]));
+        $this->subspecialties = array_values(array_unique([...$this->subspecialties, $id]));
     }
 
-    public function subspecialtyIsSelected(string $key): bool
+    public function subspecialtyIsSelected(string $id): bool
     {
-        return in_array($key, $this->subspecialties, true);
-    }
-
-    /** @return list<string> */
-    #[Computed]
-    public function visibleSubspecialtyKeys(): array
-    {
-        $keys = $this->subspecialtyKeys;
-        $limit = (int) config('session_filter.subspecialties_collapsed_count', 7);
-
-        if ($this->subspecialtiesExpanded || count($keys) <= $limit) {
-            return $keys;
-        }
-
-        return array_slice($keys, 0, $limit);
+        return in_array($id, $this->subspecialties, true);
     }
 
     public function toggleSubspecialtiesExpanded(): void
@@ -175,19 +193,19 @@ new #[Layout('layouts::patient')] #[Title('Session filter')] class extends Compo
                 {{ __('session_filter.sections.subspecialties') }}
             </flux:heading>
             <div class="flex flex-wrap gap-2">
-                @foreach ($this->visibleSubspecialtyKeys as $key)
+                @foreach ($this->visibleSpecialityOptions as $opt)
                     <button
                         type="button"
-                        wire:key="sub-{{ $key }}"
-                        wire:click="toggleSubspecialty('{{ $key }}')"
-                        aria-pressed="{{ $this->subspecialtyIsSelected($key) ? 'true' : 'false' }}"
-                        class="@if ($this->subspecialtyIsSelected($key)) border-mashora-brand bg-mashora-brand/12 text-mashora-brand @else border-zinc-200 bg-white text-zinc-800 hover:border-zinc-300 @endif rounded-full border px-3 py-1.5 text-start text-xs font-medium leading-snug shadow-sm transition sm:text-sm"
+                        wire:key="sub-{{ $opt['id'] }}"
+                        wire:click="toggleSubspecialty('{{ $opt['id'] }}')"
+                        aria-pressed="{{ $this->subspecialtyIsSelected($opt['id']) ? 'true' : 'false' }}"
+                        class="@if ($this->subspecialtyIsSelected($opt['id'])) border-mashora-brand bg-mashora-brand/12 text-mashora-brand @else border-zinc-200 bg-white text-zinc-800 hover:border-zinc-300 @endif rounded-full border px-3 py-1.5 text-start text-xs font-medium leading-snug shadow-sm transition sm:text-sm"
                     >
-                        {{ __('session_filter.sections.subspecialty_labels.'.$key) }}
+                        {{ $opt['label'] }}
                     </button>
                 @endforeach
             </div>
-            @if (count($this->subspecialtyKeys) > (int) config('session_filter.subspecialties_collapsed_count', 7))
+            @if (count($this->specialityOptions) > (int) config('session_filter.subspecialties_collapsed_count', 7))
                 <div>
                     <flux:button variant="ghost" size="sm" wire:click="toggleSubspecialtiesExpanded" type="button" class="!px-0 text-[#1565c0] hover:!text-[#0B163E]">
                         {{ $this->subspecialtiesExpanded ? __('session_filter.show_less') : __('session_filter.show_more') }}

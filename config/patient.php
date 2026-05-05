@@ -4,6 +4,21 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Demo checkout page
+    |--------------------------------------------------------------------------
+    |
+    | When true, `/patient/checkout-demo` renders a mock checkout for UI/QA.
+    | Defaults to enabled in the local environment; set PATIENT_DEMO_CHECKOUT
+    | to override (e.g. false on local, or true on a staging host).
+    |
+    */
+    'demo_checkout_enabled' => filter_var(
+        env('PATIENT_DEMO_CHECKOUT', env('APP_ENV') === 'local'),
+        FILTER_VALIDATE_BOOLEAN
+    ),
+
+    /*
+    |--------------------------------------------------------------------------
     | Placeholder email domain
     |--------------------------------------------------------------------------
     |

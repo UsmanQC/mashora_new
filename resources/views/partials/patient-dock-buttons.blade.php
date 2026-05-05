@@ -15,11 +15,14 @@
             ? 'w-full shrink-0 justify-start gap-3 px-3 py-2.5 text-sm [--flux-button-icon-size:1.35rem]'
             : 'flex-1 shrink flex-col gap-0.5 py-2 text-[0.6875rem] [--flux-button-icon-size:1.35rem]';
 
-        /** Selected/current route — solid #0B163E overrides Flux ghost (bg-transparent + zinc hover/text). */
-        $dockActiveClass = 'rounded-lg !border-0 !bg-[#0B163E] !text-white shadow-sm ring-0 hover:!bg-[#0B163E] hover:!text-white active:!bg-[#080f34] dark:!border-0 dark:!bg-[#0B163E] dark:!text-white dark:hover:!bg-[#0B163E] [&_svg]:!text-white';
+        /**
+         * Selected: navy pill on #1565c0 chrome — hover lightens slightly (not same as inactive hover).
+         * Inactive: transparent on chrome — hover is a soft white veil (not the navy pill).
+         */
+        $dockActiveClass = 'rounded-lg !border-0 !bg-[#0B163E] !text-white shadow-md shadow-black/20 ring-1 ring-white/15 hover:!bg-[#132a6e] hover:!text-white hover:ring-white/25 active:!bg-[#060b28] dark:!border-0 dark:!bg-[#0B163E] dark:!text-white dark:hover:!bg-[#132a6e] [&_svg]:!text-white';
         $dockInactiveClass = $isVertical
-            ? 'rounded-lg !border-0 !bg-transparent !font-medium !text-white ring-0 hover:!bg-white/12 hover:!text-white active:!bg-[#0B163E] active:!text-white dark:!bg-transparent dark:!text-white dark:hover:!bg-white/12'
-            : '!border-0 !bg-transparent !text-white ring-0 hover:!bg-white/18 hover:!text-white active:!bg-[#0B163E] active:!text-white dark:!text-white dark:hover:!bg-white/18';
+            ? 'rounded-lg !border-0 !bg-transparent !font-medium !text-white ring-0 hover:!bg-white/20 hover:!text-white active:!bg-[#0B163E]/90 active:!text-white dark:!bg-transparent dark:!text-white dark:hover:!bg-white/22'
+            : '!border-0 !bg-transparent !text-white ring-0 hover:!bg-white/24 hover:!text-white active:!bg-[#0B163E] active:!text-white dark:!text-white dark:hover:!bg-white/26';
     } else {
         $dockButtonClass = $isVertical
             ? 'w-full shrink-0 justify-start gap-3 px-3 py-2.5 text-sm [--flux-button-icon-size:1.35rem]'
@@ -35,7 +38,16 @@
     $hrefNumbers = $guest ? $phoneEntry : route('patient.important-numbers');
 
     $activeHome = request()->routeIs('patient.home');
-    $activeAppointments = ! $guest && request()->routeIs(['patient.appointments', 'patient.schedule.filter', 'patient.schedule.specialists']);
+    $activeAppointments = ! $guest && request()->routeIs([
+        'patient.appointments',
+        'patient.schedule.filter',
+        'patient.schedule.specialists',
+        'patient.book-appointments',
+        'patient.checkout',
+        'patient.checkout.demo',
+        'patient.payment.success',
+        'patient.payment.failed',
+    ]);
     $activeNumbers = ! $guest && request()->routeIs('patient.important-numbers');
     $activeMenu = ! $guest && request()->routeIs([
         'patient.menu',

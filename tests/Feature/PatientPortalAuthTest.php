@@ -3,6 +3,7 @@
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\URL;
+use Livewire\Livewire;
 
 uses(RefreshDatabase::class);
 test('guest is redirected from legacy patient start url to phone entry', function () {
@@ -16,10 +17,28 @@ test('guest can open patient phone entry screen', function () {
         ->assertSee(__('patient_auth.phone_heading'), false);
 });
 
-test('guest can open patient sign in screen', function () {
+test('existing mobile number opens password step on phone page', function () {
+    User::factory()->create([
+        'phone' => '966512345678',
+        'profile_completed' => true,
+    ]);
+
+    Livewire::test('pages::patient-auth.phone')
+        ->set('countryIso', 'SA')
+        ->set('phone', '512345678')
+        ->call('continueGuest')
+        ->assertSet('loginPhoneE164', '966512345678')
+        ->assertSee(__('patient_auth.cta_login'), false);
+});
+
+test('legacy patient sign-in url redirects to phone entry', function () {
     $this->get(route('patient.auth.sign-in'))
-        ->assertSuccessful()
-        ->assertSee(__('patient_auth.login_title'));
+        ->assertRedirect(route('patient.phone'));
+});
+
+test('legacy patient sign-in url preserves phone query string', function () {
+    $this->get(route('patient.auth.sign-in', ['phone' => '966512345670']))
+        ->assertRedirect(route('patient.phone', ['phone' => '966512345670']));
 });
 
 test('signed patient sign up url responds', function () {

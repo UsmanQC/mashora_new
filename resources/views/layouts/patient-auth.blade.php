@@ -31,7 +31,7 @@
                         ])
                     </a>
 
-                    @if (request()->routeIs(['patient.auth.sign-in', 'patient.phone']))
+                    @if (request()->routeIs('patient.phone'))
                         <div class="mt-8 flex min-h-0 flex-1 flex-col items-center justify-center overflow-hidden py-4">
                             <img
                                 src="{{ asset('images/login-illustration.png') }}"

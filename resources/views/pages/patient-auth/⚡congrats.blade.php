@@ -11,7 +11,7 @@ new #[Layout('layouts::patient-auth')] #[Title('You are all set')] class extends
     public function mount(): void
     {
         if (! Auth::check()) {
-            $this->redirect(route('patient.auth.sign-in'));
+            $this->redirect(route('patient.phone'));
 
             return;
         }

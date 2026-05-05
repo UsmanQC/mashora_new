@@ -42,7 +42,7 @@ new #[Layout('layouts::patient-auth')] #[Title('Enter your mobile number')] clas
         }
 
         if (User::query()->where('phone', $normalized)->exists()) {
-            $this->redirect(route('patient.auth.sign-in', ['phone' => $normalized]));
+            $this->redirect(route('patient.phone', ['phone' => $normalized]));
 
             return;
         }

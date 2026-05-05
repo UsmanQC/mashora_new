@@ -27,7 +27,7 @@
         <flux:button variant="primary" type="submit" class="patient-auth-primary-btn w-full">{{ __('Email password reset link') }}</flux:button>
 
         <flux:text class="text-center text-sm text-zinc-500">
-            <flux:link :href="route('patient.auth.sign-in')" class="cursor-pointer font-medium text-mashora-brand hover:underline" wire:navigate>
+            <flux:link :href="route('patient.phone')" class="cursor-pointer font-medium text-mashora-brand hover:underline" wire:navigate>
                 {{ __('patient_auth.cta_login') }}
             </flux:link>
         </flux:text>

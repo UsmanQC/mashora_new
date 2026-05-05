@@ -19,7 +19,7 @@ new #[Layout('layouts::patient-auth')] #[Title('A few more details')] class exte
         $user = Auth::user();
 
         if (! $user instanceof User) {
-            $this->redirect(route('patient.auth.sign-in'));
+            $this->redirect(route('patient.phone'));
 
             return;
         }
@@ -39,7 +39,7 @@ new #[Layout('layouts::patient-auth')] #[Title('A few more details')] class exte
         $patient = Auth::user();
 
         if (! $patient instanceof User) {
-            $this->redirect(route('patient.auth.sign-in'));
+            $this->redirect(route('patient.phone'));
 
             return;
         }
