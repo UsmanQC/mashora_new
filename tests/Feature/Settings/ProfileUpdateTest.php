@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\User;
+use Illuminate\Support\Facades\Hash;
 use Livewire\Livewire;
 
 test('profile page is displayed', function () {
@@ -43,33 +44,36 @@ test('email verification status is unchanged when email address is unchanged', f
     expect($user->refresh()->email_verified_at)->not->toBeNull();
 });
 
-test('user can delete their account', function () {
-    $user = User::factory()->create();
+test('password can be updated from profile page', function () {
+    $user = User::factory()->create([
+        'password' => Hash::make('password'),
+    ]);
 
     $this->actingAs($user);
 
-    $response = Livewire::test('pages::settings.delete-user-modal')
-        ->set('password', 'password')
-        ->call('deleteUser');
+    $response = Livewire::test('pages::settings.profile')
+        ->set('current_password', 'password')
+        ->set('password', 'new-password')
+        ->set('password_confirmation', 'new-password')
+        ->call('updatePassword');
 
-    $response
-        ->assertHasNoErrors()
-        ->assertRedirect('/');
+    $response->assertHasNoErrors();
 
-    expect($user->fresh())->toBeNull();
-    expect(auth()->check())->toBeFalse();
+    expect(Hash::check('new-password', $user->refresh()->password))->toBeTrue();
 });
 
-test('correct password must be provided to delete account', function () {
-    $user = User::factory()->create();
+test('correct current password must be provided to update password', function () {
+    $user = User::factory()->create([
+        'password' => Hash::make('password'),
+    ]);
 
     $this->actingAs($user);
 
-    $response = Livewire::test('pages::settings.delete-user-modal')
-        ->set('password', 'wrong-password')
-        ->call('deleteUser');
+    $response = Livewire::test('pages::settings.profile')
+        ->set('current_password', 'wrong-password')
+        ->set('password', 'new-password')
+        ->set('password_confirmation', 'new-password')
+        ->call('updatePassword');
 
-    $response->assertHasErrors(['password']);
-
-    expect($user->fresh())->not->toBeNull();
+    $response->assertHasErrors(['current_password']);
 });

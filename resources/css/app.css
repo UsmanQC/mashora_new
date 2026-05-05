@@ -26,6 +26,9 @@
     --color-accent: var(--color-neutral-800);
     --color-accent-content: var(--color-neutral-800);
     --color-accent-foreground: var(--color-white);
+
+    /** Patient auth / marketing accent (headings, CTAs) */
+    --color-mashora-brand: #3c5cf7;
 }
 
 @layer theme {
@@ -37,6 +40,9 @@
 }
 
 @layer base {
+    [x-cloak] {
+        display: none !important;
+    }
 
     *,
     ::after,
@@ -59,6 +65,52 @@ input:focus[data-flux-control],
 textarea:focus[data-flux-control],
 select:focus[data-flux-control] {
     @apply outline-hidden ring-2 ring-accent ring-offset-2 ring-offset-accent-foreground;
+}
+
+@layer components {
+    .patient-auth-heading {
+        @apply text-mashora-brand;
+    }
+
+    .patient-auth-primary-btn {
+        @apply !border-mashora-brand !bg-mashora-brand !text-white shadow-sm hover:!brightness-[0.97] focus-visible:!outline-none focus-visible:!ring-2 focus-visible:!ring-mashora-brand/35 focus-visible:!ring-offset-2;
+    }
+
+    /** Patient profile gender radios: fix label vs control vertical alignment (especially when selected). */
+    .patient-gender-fields {
+        --color-accent: #0b163e;
+        --color-accent-content: #0b163e;
+        --color-accent-foreground: #ffffff;
+    }
+
+    .patient-gender-fields [data-flux-field] {
+        @apply items-center;
+    }
+
+    .patient-gender-fields [data-flux-field] [data-flux-label] {
+        @apply leading-none;
+    }
+
+    .patient-gender-fields ui-radio[data-flux-radio] {
+        @apply !mt-0;
+    }
+
+    /** Mood tracker: detail panel expands after a mood is chosen. */
+    @keyframes patient-mood-detail-open {
+        from {
+            opacity: 0;
+            transform: translateY(-0.5rem);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .patient-mood-detail-panel {
+        animation: patient-mood-detail-open 0.28s ease-out forwards;
+    }
 }
 
 /* \[:where(&)\]:size-4 {
