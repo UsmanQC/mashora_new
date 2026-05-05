@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Appointment;
+use App\Models\ChMessage;
 use App\Models\Diagnosis;
 use App\Models\Doctor;
 use App\Models\Medication;
@@ -411,4 +412,82 @@ test('medical history shows previous completed sessions for the same patient', f
         ->assertOk()
         ->assertSee('Migraine')
         ->assertSee('9001');
+});
+
+test('doctor can start session from conversation tab', function () {
+    $user = User::factory()->create();
+    $doctor = Doctor::factory()->create([
+        'profile_completed' => true,
+        'phone' => '966511122315',
+    ]);
+    $appointment = Appointment::factory()->create([
+        'doctor_id' => $doctor->id,
+        'user_id' => $user->id,
+        'status' => 'new',
+        'duration' => 30,
+        'appointment_date' => now()->toDateString(),
+        'scheduled_at' => now(),
+    ]);
+
+    Livewire::actingAs($doctor, 'doctor')
+        ->test('pages::doctor.appointment.conversation', ['appointment' => $appointment])
+        ->call('startSession');
+
+    $fresh = $appointment->fresh();
+    expect($fresh->status)->toBe('in_process')
+        ->and($fresh->actual_start_at)->not->toBeNull()
+        ->and($fresh->extend_at)->not->toBeNull();
+});
+
+test('doctor can send a session chat message after starting session', function () {
+    $user = User::factory()->create();
+    $doctor = Doctor::factory()->create([
+        'profile_completed' => true,
+        'phone' => '966511122316',
+    ]);
+    $appointment = Appointment::factory()->create([
+        'doctor_id' => $doctor->id,
+        'user_id' => $user->id,
+        'status' => 'new',
+        'duration' => 20,
+        'appointment_date' => now()->toDateString(),
+        'scheduled_at' => now(),
+    ]);
+
+    Livewire::actingAs($doctor, 'doctor')
+        ->test('pages::doctor.appointment.conversation', ['appointment' => $appointment])
+        ->call('startSession')
+        ->set('draft', 'Hello from the doctor')
+        ->call('sendMessage');
+
+    $message = ChMessage::query()->where('appointment_id', $appointment->id)->first();
+    expect($message)->not->toBeNull()
+        ->and($message->body)->toBe('Hello from the doctor')
+        ->and($message->send_by)->toBe('doctor');
+});
+
+test('doctor can refresh agora token for an appointment', function () {
+    config([
+        'agora.AGORA_APP_ID' => 'test-app-id',
+        'agora.AGORA_APP_CERTIFICATE' => str_repeat('a', 32),
+    ]);
+
+    $user = User::factory()->create();
+    $doctor = Doctor::factory()->create([
+        'profile_completed' => true,
+        'phone' => '966511122317',
+    ]);
+    $appointment = Appointment::factory()->create([
+        'doctor_id' => $doctor->id,
+        'user_id' => $user->id,
+        'status' => 'in_process',
+        'appointment_date' => now()->toDateString(),
+        'scheduled_at' => now(),
+    ]);
+
+    $this->actingAs($doctor, 'doctor')
+        ->postJson(route('doctor.appointments.realtime.agora-token', $appointment))
+        ->assertOk()
+        ->assertJsonPath('agora_app_id', 'test-app-id')
+        ->assertJsonStructure(['agora_token', 'agora_channel']);
 });

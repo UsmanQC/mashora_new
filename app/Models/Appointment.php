@@ -27,6 +27,7 @@ class Appointment extends Model
             'prescription_not_needed' => 'boolean',
             'actual_start_at' => 'datetime',
             'actual_end_at' => 'datetime',
+            'extend_at' => 'datetime',
         ];
     }
 
@@ -59,6 +60,8 @@ class Appointment extends Model
         'prescription_not_needed',
         'actual_start_at',
         'actual_end_at',
+        'extend_at',
+        'extend_duration',
     ];
 
     /**
@@ -134,5 +137,15 @@ class Appointment extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Session chat messages (legacy `ch_messages` / Chatify-style table).
+     *
+     * @return HasMany<ChMessage, $this>
+     */
+    public function chMessages(): HasMany
+    {
+        return $this->hasMany(ChMessage::class, 'appointment_id');
     }
 }

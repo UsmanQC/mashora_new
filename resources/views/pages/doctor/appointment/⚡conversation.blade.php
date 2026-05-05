@@ -1,7 +1,9 @@
 <?php
 
+use App\Events\AppointmentChatMessageSent;
 use App\Models\Appointment;
-use Carbon\Carbon;
+use App\Models\ChMessage;
+use App\Support\DoctorAgoraChannel;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
@@ -10,84 +12,774 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
 {
     public Appointment $appointment;
 
-    public function getSessionTimerProperty(): string
+    /**
+     * @var list<array{id: string, body: string|null, send_by: string, created_at: string|null}>
+     */
+    public array $messages = [];
+
+    public string $draft = '';
+
+    public string $agoraAppId = '';
+
+    public string $agoraToken = '';
+
+    public string $agoraChannel = '';
+
+    public function mount(): void
     {
-        $start = $this->appointment->actual_start_at;
-        if ($start === null) {
-            return '00:00';
+        $this->refreshAgoraCredentials();
+        $this->loadMessages();
+    }
+
+    public function startSession(): void
+    {
+        if ($this->appointment->status !== 'new') {
+            return;
         }
 
-        $seconds = Carbon::parse($start)->diffInSeconds(now());
-        $minutes = intdiv($seconds, 60);
-        $remainingSeconds = $seconds % 60;
+        $this->appointment->update([
+            'actual_start_at' => now(),
+            'status' => 'in_process',
+            'extend_at' => now()->addMinutes(max(1, (int) $this->appointment->duration)),
+        ]);
 
-        return str_pad((string) $minutes, 2, '0', STR_PAD_LEFT).':'.str_pad((string) $remainingSeconds, 2, '0', STR_PAD_LEFT);
+        $this->appointment->refresh();
+        $this->refreshAgoraCredentials();
+    }
+
+    public function sendMessage(): void
+    {
+        if ($this->appointment->status !== 'in_process') {
+            return;
+        }
+
+        $this->validate([
+            'draft' => ['required', 'string', 'max:5000'],
+        ], [], ['draft' => __('doctor.conversation.message_field')]);
+
+        $doctor = auth('doctor')->user();
+        if ($doctor === null) {
+            return;
+        }
+
+        $message = ChMessage::query()->create([
+            'from_id' => $doctor->id,
+            'to_id' => $this->appointment->user_id,
+            'appointment_id' => $this->appointment->id,
+            'body' => $this->draft,
+            'send_by' => 'doctor',
+            'seen' => false,
+        ]);
+
+        broadcast(new AppointmentChatMessageSent($message));
+
+        $this->reset('draft');
+        $this->loadMessages();
+    }
+
+    public function loadMessages(): void
+    {
+        $this->messages = $this->appointment->chMessages()
+            ->orderBy('created_at')
+            ->get()
+            ->map(fn (ChMessage $m) => [
+                'id' => $m->id,
+                'body' => $m->body,
+                'send_by' => $m->send_by,
+                'created_at' => $m->created_at?->toIso8601String(),
+            ])
+            ->all();
+    }
+
+    protected function refreshAgoraCredentials(): void
+    {
+        $appId = (string) config('agora.AGORA_APP_ID');
+        $certificate = (string) config('agora.AGORA_APP_CERTIFICATE');
+
+        if ($appId === '' || $certificate === '') {
+            $this->agoraAppId = '';
+            $this->agoraToken = '';
+            $this->agoraChannel = '';
+
+            return;
+        }
+
+        $this->agoraAppId = $appId;
+        $this->agoraChannel = DoctorAgoraChannel::channelName($this->appointment);
+        $this->agoraToken = DoctorAgoraChannel::buildRtcToken($this->agoraChannel);
     }
 }; ?>
 
 <div class="space-y-6">
     @include('partials.doctor-appointment-workspace-header', ['appointment' => $appointment, 'active' => 'conversation'])
 
-    <div class="rounded-2xl border border-zinc-200/90 bg-white shadow-sm">
-        <div class="grid min-h-[34rem] grid-cols-1 lg:grid-cols-12">
-            <div class="border-zinc-200 lg:col-span-8 lg:border-e">
-                <div class="flex items-center justify-between border-b border-zinc-200 px-4 py-3">
-                    <div class="flex items-center gap-3">
-                        <div class="relative">
-                            <flux:avatar :name="$appointment->patient_name" circle size="md" />
-                            <span class="absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full border border-white bg-emerald-500"></span>
+    <div
+        id="conversation-page-metrics"
+        class="hidden"
+        data-status="{{ $appointment->status }}"
+        data-session-start="{{ $appointment->actual_start_at?->toIso8601String() }}"
+        data-session-end="{{ $appointment->extend_at?->toIso8601String() }}"
+        data-session-not-started="{{ __('doctor.conversation.session_not_started') }}"
+        data-label-video="{{ __('doctor.conversation.video_call') }}"
+        data-label-voice="{{ __('doctor.conversation.voice_call') }}"
+        data-label-live="{{ __('doctor.conversation.live') }}"
+        data-label-connecting="{{ __('doctor.conversation.connecting') }}"
+    ></div>
+
+    <div class="overflow-hidden rounded-2xl border border-zinc-200/90 bg-white shadow-sm shadow-zinc-200/40 ring-1 ring-zinc-100">
+        <div class="grid min-h-[36rem] grid-cols-1 lg:grid-cols-12">
+            <div class="flex min-h-[28rem] flex-col border-zinc-200 lg:col-span-8 lg:min-h-0 lg:border-e">
+                {{-- Session workspace header --}}
+                <div class="shrink-0 border-b border-zinc-200/90 bg-gradient-to-br from-[#f8faff] via-white to-zinc-50/80 px-4 py-4 sm:px-5">
+                    <div class="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+                        <div class="flex min-w-0 items-center gap-3 sm:gap-4">
+                            <div class="relative shrink-0">
+                                <div class="rounded-2xl bg-white p-0.5 shadow-md shadow-zinc-200/60 ring-1 ring-zinc-100">
+                                    <flux:avatar :name="$appointment->patient_name" circle size="lg" />
+                                </div>
+                                @if ($appointment->status === 'in_process')
+                                    <span class="absolute -bottom-0.5 -end-0.5 flex size-3.5 items-center justify-center rounded-full border-2 border-white bg-emerald-500 shadow-sm" title="{{ __('doctor.conversation.status_in_process') }}">
+                                        <span class="sr-only">{{ __('doctor.conversation.status_in_process') }}</span>
+                                    </span>
+                                @endif
+                            </div>
+                            <div class="min-w-0">
+                                <p class="truncate text-lg font-semibold tracking-tight text-zinc-900">{{ $appointment->patient_name }}</p>
+                                <p class="mt-0.5 text-sm text-zinc-500">{{ __('doctor.conversation.status_'.$appointment->status) }}</p>
+                            </div>
                         </div>
-                        <p class="text-base font-semibold text-zinc-900">{{ $appointment->patient_name }}</p>
+
+                        {{-- Timers: session elapsed + time until extend_at (client-updated) --}}
+                        @if ($appointment->status === 'in_process')
+                            <div class="flex flex-wrap items-stretch gap-2 sm:gap-3">
+                                <div class="flex min-w-[7.5rem] flex-1 flex-col justify-center rounded-xl border border-zinc-200/80 bg-white/90 px-3 py-2 shadow-sm backdrop-blur-sm sm:flex-initial sm:min-w-[8.5rem]">
+                                    <p class="text-[0.65rem] font-semibold uppercase tracking-wider text-zinc-400">{{ __('doctor.conversation.session_elapsed_label') }}</p>
+                                    <p id="timer-session-elapsed" class="mt-0.5 font-mono text-lg font-semibold tabular-nums text-zinc-900">00:00</p>
+                                </div>
+                                @if ($appointment->extend_at)
+                                    <div id="wrap-session-remaining" class="flex min-w-[7.5rem] flex-1 flex-col justify-center rounded-xl border border-zinc-200/80 bg-white/90 px-3 py-2 shadow-sm backdrop-blur-sm sm:flex-initial sm:min-w-[8.5rem]">
+                                        <p class="text-[0.65rem] font-semibold uppercase tracking-wider text-zinc-400">{{ __('doctor.conversation.session_remaining_label') }}</p>
+                                        <p id="timer-session-remaining" class="mt-0.5 font-mono text-lg font-semibold tabular-nums text-[#132A6E]">--:--</p>
+                                    </div>
+                                @endif
+                                <div id="call-status-chip" class="hidden min-w-0 flex-1 items-center gap-2.5 rounded-xl border border-emerald-200/80 bg-emerald-50/90 px-3 py-2 shadow-sm sm:flex-initial sm:min-w-[11rem]">
+                                    <span class="relative flex h-2.5 w-2.5 shrink-0">
+                                        <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60"></span>
+                                        <span class="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500"></span>
+                                    </span>
+                                    <div class="min-w-0 flex-1">
+                                        <p class="text-[0.65rem] font-semibold uppercase tracking-wider text-emerald-700/90">
+                                            <span id="call-status-label">{{ __('doctor.conversation.live') }}</span>
+                                            · <span id="call-type-label"></span>
+                                        </p>
+                                        <p class="font-mono text-base font-semibold tabular-nums text-emerald-900">
+                                            <span id="call-duration-display">00:00</span>
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        @endif
+
+                        <div class="flex flex-wrap items-center gap-2 xl:justify-end">
+                            @if ($appointment->status === 'new')
+                                <flux:button type="button" variant="primary" icon="play" class="min-h-10 shadow-md shadow-[#132A6E]/20" wire:click="startSession" wire:loading.attr="disabled">
+                                    {{ __('doctor.conversation.start_session') }}
+                                </flux:button>
+                            @endif
+                            @if ($appointment->status === 'in_process')
+                                <button
+                                    type="button"
+                                    id="btn-agora-video"
+                                    @class([
+                                        'inline-flex min-h-10 items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[#3C5CF7] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-45',
+                                        'border-zinc-200 bg-white text-zinc-800 shadow-sm hover:border-[#132A6E]/30 hover:bg-zinc-50' => true,
+                                    ])
+                                    @disabled($agoraAppId === '')
+                                    title="{{ $agoraAppId === '' ? __('doctor.conversation.agora_required') : '' }}"
+                                >
+                                    <flux:icon name="video-camera" variant="mini" class="size-5 text-zinc-600" />
+                                    <span class="btn-label">{{ __('doctor.conversation.video') }}</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    id="btn-agora-audio"
+                                    @class([
+                                        'inline-flex min-h-10 items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[#3C5CF7] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-45',
+                                        'border-zinc-200 bg-white text-zinc-800 shadow-sm hover:border-[#132A6E]/30 hover:bg-zinc-50' => true,
+                                    ])
+                                    @disabled($agoraAppId === '')
+                                    title="{{ $agoraAppId === '' ? __('doctor.conversation.agora_required') : '' }}"
+                                >
+                                    <flux:icon name="phone" variant="mini" class="size-5 text-zinc-600" />
+                                    <span class="btn-label">{{ __('doctor.conversation.voice') }}</span>
+                                </button>
+                            @endif
+                        </div>
                     </div>
-                    <div class="flex items-center gap-3">
-                        <span class="font-semibold tabular-nums text-rose-600">{{ $this->sessionTimer }}</span>
-                        <flux:button type="button" size="sm" variant="primary" icon="clock">
-                            Extend
+                </div>
+
+                @if ($appointment->status === 'in_process' && $agoraAppId === '')
+                    <div class="shrink-0 border-b border-amber-200/80 bg-gradient-to-r from-amber-50 to-amber-50/50 px-4 py-2.5 sm:px-5">
+                        <p class="flex items-start gap-2 text-xs leading-relaxed text-amber-950">
+                            <flux:icon name="exclamation-triangle" variant="mini" class="mt-0.5 size-4 shrink-0 text-amber-600" />
+                            <span>{{ __('doctor.conversation.agora_configure_hint') }}</span>
+                        </p>
+                    </div>
+                @endif
+
+                <div
+                    class="relative flex min-h-0 flex-1 flex-col bg-gradient-to-b from-zinc-50/90 to-zinc-100/80"
+                    id="doctor-chat-panel"
+                    data-appointment-id="{{ $appointment->id }}"
+                    data-notify-url="{{ route('doctor.appointments.realtime.notify-call', $appointment) }}"
+                    data-token-url="{{ route('doctor.appointments.realtime.agora-token', $appointment) }}"
+                    data-csrf="{{ csrf_token() }}"
+                >
+                    <div class="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-4 sm:px-5" id="doctor-chat-messages" wire:ignore.self>
+                        @forelse ($messages as $msg)
+                            <div
+                                wire:key="doc-chat-{{ $msg['id'] }}"
+                                @class([
+                                    'flex',
+                                    'justify-end' => $msg['send_by'] === 'doctor',
+                                    'justify-start' => $msg['send_by'] !== 'doctor',
+                                ])
+                            >
+                                <div
+                                    @class([
+                                        'max-w-[min(85%,28rem)] rounded-2xl px-3.5 py-2.5 text-sm shadow-sm',
+                                        'bg-[#132A6E] text-white shadow-[#132A6E]/25' => $msg['send_by'] === 'doctor',
+                                        'border border-zinc-200/90 bg-white text-zinc-800 shadow-zinc-200/30' => $msg['send_by'] !== 'doctor',
+                                    ])
+                                >
+                                    <p class="whitespace-pre-wrap break-words">{{ $msg['body'] }}</p>
+                                    @if ($msg['created_at'])
+                                        <p
+                                            @class([
+                                                'mt-1 text-[0.65rem]',
+                                                'text-white/70' => $msg['send_by'] === 'doctor',
+                                                'text-zinc-400' => $msg['send_by'] !== 'doctor',
+                                            ])
+                                        >
+                                            {{ \Illuminate\Support\Carbon::parse($msg['created_at'])->timezone(config('app.timezone'))->format('H:i') }}
+                                        </p>
+                                    @endif
+                                </div>
+                            </div>
+                        @empty
+                            <div class="flex flex-col items-center justify-center py-16 text-center">
+                                <div class="mb-3 flex size-14 items-center justify-center rounded-2xl bg-white shadow-md shadow-zinc-200/50 ring-1 ring-zinc-100">
+                                    <flux:icon name="chat-bubble-left-right" class="size-7 text-zinc-400" />
+                                </div>
+                                <p class="max-w-xs text-sm leading-relaxed text-zinc-500">{{ __('doctor.conversation.empty_chat') }}</p>
+                            </div>
+                        @endforelse
+                    </div>
+                </div>
+
+                <div class="shrink-0 border-t border-zinc-200/90 bg-white px-4 py-3 pb-[max(0.85rem,env(safe-area-inset-bottom))] sm:px-5 lg:pb-3">
+                    <form
+                        wire:submit="sendMessage"
+                        class="mx-auto flex max-w-4xl items-end gap-2 rounded-2xl border border-zinc-200/90 bg-zinc-50/50 p-1.5 shadow-inner shadow-zinc-200/20 ring-1 ring-zinc-100/80 @if ($appointment->status !== 'in_process') pointer-events-none opacity-55 @endif"
+                    >
+                        <div class="min-w-0 flex-1">
+                            <flux:input
+                                wire:model="draft"
+                                type="text"
+                                :placeholder="__('doctor.conversation.type_message')"
+                                :disabled="$appointment->status !== 'in_process'"
+                                class="!rounded-xl !border-0 !bg-transparent !shadow-none"
+                            />
+                        </div>
+                        <flux:button
+                            type="submit"
+                            variant="primary"
+                            icon="paper-airplane"
+                            class="shrink-0 !rounded-xl shadow-md shadow-[#132A6E]/25"
+                            wire:loading.attr="disabled"
+                            :disabled="$appointment->status !== 'in_process'"
+                        >
+                            <span class="hidden sm:inline">{{ __('doctor.conversation.send') }}</span>
                         </flux:button>
-                        <flux:button type="button" size="sm" variant="ghost" icon="information-circle" />
-                    </div>
-                </div>
-
-                <div class="relative flex h-[26rem] items-center justify-center bg-zinc-50 px-4">
-                    <p class="rounded-full bg-zinc-200 px-4 py-2 text-sm text-zinc-600">Say 'hi' and start messaging</p>
-                </div>
-
-                <div class="border-t border-zinc-200 px-4 py-3">
-                    <div class="flex items-center gap-3 rounded-xl border border-zinc-200 bg-white px-3 py-2 shadow-sm">
-                        <button type="button" class="inline-flex size-8 items-center justify-center rounded-full text-zinc-500 hover:bg-zinc-100">
-                            <flux:icon name="plus" class="size-5" />
-                        </button>
-                        <input
-                            type="text"
-                            placeholder="Type a message.."
-                            class="w-full border-0 bg-transparent text-sm text-zinc-700 placeholder:text-zinc-400 focus:outline-none focus:ring-0"
-                        />
-                        <button type="button" class="inline-flex size-8 items-center justify-center rounded-full text-[#3C5CF7] hover:bg-[#3C5CF7]/10">
-                            <flux:icon name="paper-airplane" class="size-5" />
-                        </button>
-                    </div>
+                    </form>
+                    @if ($appointment->status === 'new')
+                        <p class="mt-2.5 text-center text-xs text-zinc-500">{{ __('doctor.conversation.chat_locked_until_started') }}</p>
+                    @endif
                 </div>
             </div>
 
-            <aside class="hidden bg-white lg:col-span-4 lg:block">
-                <div class="flex items-center justify-between border-b border-zinc-200 px-5 py-4">
-                    <h3 class="text-lg font-medium text-zinc-900">Patient Details</h3>
-                    <button type="button" class="text-[#3C5CF7] hover:text-[#324cc9]">
-                        <flux:icon name="x-mark" class="size-6" />
-                    </button>
+            <aside class="hidden bg-gradient-to-b from-white to-zinc-50/50 lg:col-span-4 lg:block">
+                <div class="border-b border-zinc-200/90 px-5 py-4">
+                    <h3 class="text-base font-semibold text-zinc-900">{{ __('doctor.conversation.patient_details') }}</h3>
+                    <p class="mt-0.5 text-xs text-zinc-500">{{ __('doctor.workspace.title') }}</p>
                 </div>
-                <div class="px-6 py-7 text-center">
-                    <flux:avatar :name="$appointment->patient_name" circle size="2xl" class="mx-auto" />
-                    <p class="mt-4 text-3xl font-semibold text-zinc-900">{{ $appointment->patient_name }}</p>
-                    <button type="button" class="mt-5 text-base text-rose-500 hover:text-rose-600">
-                        Delete Conversation
-                    </button>
-                </div>
-                <div class="border-t border-zinc-200 px-6 py-4 text-center">
-                    <p class="text-sm text-zinc-500">Shared Photos</p>
-                    <p class="mt-4 inline-flex rounded-full bg-zinc-100 px-4 py-2 text-xl text-zinc-600">Nothing shared yet</p>
+                <div class="px-5 py-8 text-center">
+                    <div class="mx-auto w-fit rounded-2xl bg-white p-1 shadow-lg shadow-zinc-200/40 ring-1 ring-zinc-100">
+                        <flux:avatar :name="$appointment->patient_name" circle size="2xl" />
+                    </div>
+                    <p class="mt-5 text-lg font-semibold tracking-tight text-zinc-900">{{ $appointment->patient_name }}</p>
+                    @if ($appointment->patient_phone)
+                        <a href="tel:{{ preg_replace('/\s+/', '', (string) $appointment->patient_phone) }}" class="mt-3 inline-flex items-center justify-center gap-2 rounded-full bg-zinc-100 px-4 py-2 text-sm font-medium text-zinc-700 transition hover:bg-zinc-200/80">
+                            <flux:icon name="phone" variant="mini" class="size-4" />
+                            {{ $appointment->patient_phone }}
+                        </a>
+                    @endif
                 </div>
             </aside>
         </div>
     </div>
+
+    {{-- Agora full-screen overlay --}}
+    <div
+        id="agora-call-overlay"
+        class="fixed inset-0 z-[200] hidden flex-col bg-zinc-950 text-white"
+        aria-hidden="true"
+    >
+        <div class="flex items-center justify-between gap-3 border-b border-white/10 bg-zinc-900/80 px-4 py-3 backdrop-blur-md sm:px-5">
+            <div class="min-w-0">
+                <p id="agora-call-title" class="truncate text-sm font-semibold">{{ __('doctor.conversation.call_in_progress') }}</p>
+                <p class="mt-0.5 font-mono text-xs tabular-nums text-zinc-400">
+                    {{ __('doctor.conversation.call_duration_label') }}:
+                    <span id="overlay-call-duration">00:00</span>
+                </p>
+            </div>
+            <button
+                type="button"
+                id="agora-leave-btn"
+                class="inline-flex shrink-0 items-center gap-2 rounded-xl bg-rose-600 px-4 py-2.5 text-sm font-semibold shadow-lg shadow-rose-900/30 transition hover:bg-rose-500"
+            >
+                <flux:icon name="x-mark" variant="mini" class="size-4" />
+                {{ __('doctor.conversation.end_call') }}
+            </button>
+        </div>
+        <div class="relative flex min-h-0 flex-1 flex-col gap-3 p-3 sm:p-4 md:flex-row md:gap-4">
+            <div class="relative min-h-[40vh] flex-1 overflow-hidden rounded-2xl bg-black ring-1 ring-white/10 md:min-h-0">
+                <div id="agora-remote-player" class="h-full min-h-[12rem] w-full"></div>
+            </div>
+            <div class="flex w-full shrink-0 flex-col gap-2 md:w-52">
+                <div id="agora-local-player" class="aspect-video w-full overflow-hidden rounded-xl bg-zinc-800 ring-1 ring-white/10"></div>
+                <p class="text-center text-xs font-medium text-zinc-400">{{ __('doctor.conversation.you') }}</p>
+            </div>
+        </div>
+        <div class="flex flex-wrap justify-center gap-2 border-t border-white/10 bg-zinc-900/50 px-4 py-3 backdrop-blur-sm">
+            <button type="button" id="agora-toggle-mic" class="inline-flex items-center gap-2 rounded-xl bg-white/10 px-4 py-2.5 text-sm font-medium hover:bg-white/15">
+                <flux:icon name="microphone" variant="mini" class="size-4" />
+                {{ __('doctor.conversation.mic') }}
+            </button>
+            <button type="button" id="agora-toggle-video" class="inline-flex items-center gap-2 rounded-xl bg-white/10 px-4 py-2.5 text-sm font-medium hover:bg-white/15">
+                <flux:icon name="video-camera" variant="mini" class="size-4" />
+                {{ __('doctor.conversation.camera') }}
+            </button>
+        </div>
+    </div>
+
+    <div
+        id="doctor-conversation-bootstrap"
+        class="hidden"
+        data-pusher-key="{{ config('broadcasting.connections.pusher.key') }}"
+        data-pusher-cluster="{{ config('broadcasting.connections.pusher.options.cluster') }}"
+        data-appointment-id="{{ $appointment->id }}"
+        data-doctor-id="{{ auth('doctor')->id() }}"
+        data-agora-app-id="{{ $agoraAppId }}"
+        data-agora-token="{{ $agoraToken }}"
+        data-agora-channel="{{ $agoraChannel }}"
+        data-agora-ready="{{ $agoraAppId !== '' ? '1' : '0' }}"
+    ></div>
 </div>
+
+@push('scripts')
+    <script src="https://js.pusher.com/8.2.0/pusher.min.js"></script>
+    <script src="https://download.agora.io/sdk/release/AgoraRTC_N-4.23.0.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const boot = document.getElementById('doctor-conversation-bootstrap');
+            if (!boot) return;
+
+            const appointmentId = Number(boot.dataset.appointmentId);
+            const pusherKey = boot.dataset.pusherKey || '';
+            const pusherCluster = boot.dataset.pusherCluster || 'mt1';
+            const csrfToken = document.querySelector('#doctor-chat-panel')?.dataset.csrf || '';
+            const seenMessageIds = new Set();
+            const doctorId = Number(boot.dataset.doctorId || 0);
+
+            const metricsEl = document.getElementById('conversation-page-metrics');
+            const bootAgoraReady = document.getElementById('doctor-conversation-bootstrap')?.dataset.agoraReady === '1';
+
+            const btnVideo = document.getElementById('btn-agora-video');
+            const btnAudio = document.getElementById('btn-agora-audio');
+            const callChip = document.getElementById('call-status-chip');
+            const callTypeLabel = document.getElementById('call-type-label');
+            const callDurationDisplay = document.getElementById('call-duration-display');
+            const overlayCallDuration = document.getElementById('overlay-call-duration');
+            const agoraTitle = document.getElementById('agora-call-title');
+
+            const btnIdleClass =
+                'inline-flex min-h-10 items-center gap-2 rounded-xl border border-zinc-200 bg-white px-4 py-2 text-sm font-semibold text-zinc-800 shadow-sm transition hover:border-[#132A6E]/30 hover:bg-zinc-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#3C5CF7] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-45';
+            const btnActiveClass =
+                'inline-flex min-h-10 items-center gap-2 rounded-xl border-2 border-emerald-500 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-900 shadow-md shadow-emerald-900/10 ring-2 ring-emerald-500/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-45';
+
+            document.querySelectorAll('#doctor-chat-messages [wire\\:key^="doc-chat-"]').forEach((el) => {
+                const key = el.getAttribute('wire:key') || '';
+                const id = key.replace('doc-chat-', '');
+                if (id) seenMessageIds.add(id);
+            });
+
+            function formatDuration(totalSeconds) {
+                const s = Math.max(0, Math.floor(totalSeconds));
+                const h = Math.floor(s / 3600);
+                const m = Math.floor((s % 3600) / 60);
+                const r = s % 60;
+                if (h > 0) {
+                    return h + ':' + String(m).padStart(2, '0') + ':' + String(r).padStart(2, '0');
+                }
+                return String(m).padStart(2, '0') + ':' + String(r).padStart(2, '0');
+            }
+
+            let sessionTimerId = null;
+            let callTimerId = null;
+            let callStartedAt = null;
+
+            function tickSessionTimers() {
+                const metrics = document.getElementById('conversation-page-metrics');
+                const elapsedEl = document.getElementById('timer-session-elapsed');
+                const remainingEl = document.getElementById('timer-session-remaining');
+                if (!metrics || !elapsedEl) return;
+
+                const status = metrics.dataset.status || '';
+                const startIso = metrics.dataset.sessionStart || '';
+                const endIso = metrics.dataset.sessionEnd || '';
+
+                if (status !== 'in_process' || !startIso) {
+                    elapsedEl.textContent = metrics.dataset.sessionNotStarted || '—';
+                    if (remainingEl) remainingEl.textContent = '—';
+                    return;
+                }
+
+                const start = new Date(startIso).getTime();
+                const now = Date.now();
+                elapsedEl.textContent = formatDuration((now - start) / 1000);
+
+                if (remainingEl && endIso) {
+                    const end = new Date(endIso).getTime();
+                    const left = (end - now) / 1000;
+                    remainingEl.textContent = formatDuration(left);
+                    remainingEl.classList.toggle('text-amber-700', left > 0 && left <= 300);
+                    remainingEl.classList.toggle('text-rose-600', left <= 0);
+                    remainingEl.classList.toggle('text-[#132A6E]', left > 300);
+                }
+            }
+
+            function startSessionTimers() {
+                if (sessionTimerId) clearInterval(sessionTimerId);
+                tickSessionTimers();
+                sessionTimerId = setInterval(tickSessionTimers, 1000);
+            }
+
+            function tickCallTimer() {
+                if (!callStartedAt) return;
+                const sec = (Date.now() - callStartedAt) / 1000;
+                const t = formatDuration(sec);
+                if (callDurationDisplay) callDurationDisplay.textContent = t;
+                if (overlayCallDuration) overlayCallDuration.textContent = t;
+            }
+
+            function startCallTimer(mode, labelVideo, labelVoice) {
+                if (callTimerId) clearInterval(callTimerId);
+                callStartedAt = Date.now();
+                tickCallTimer();
+                callTimerId = setInterval(tickCallTimer, 1000);
+                if (callChip) callChip.classList.remove('hidden');
+                if (callChip) callChip.classList.add('flex');
+                if (callTypeLabel) callTypeLabel.textContent = mode === 'video' ? labelVideo : labelVoice;
+                if (agoraTitle) agoraTitle.textContent = mode === 'video' ? labelVideo : labelVoice;
+            }
+
+            function stopCallTimer() {
+                if (callTimerId) clearInterval(callTimerId);
+                callTimerId = null;
+                callStartedAt = null;
+                if (callChip) {
+                    callChip.classList.add('hidden');
+                    callChip.classList.remove('flex');
+                }
+                if (callDurationDisplay) callDurationDisplay.textContent = '00:00';
+                if (overlayCallDuration) overlayCallDuration.textContent = '00:00';
+            }
+
+            function setCallButtonsIdle() {
+                if (btnVideo) {
+                    btnVideo.className = btnIdleClass;
+                    const l = btnVideo.querySelector('.btn-label');
+                    if (l) l.textContent = btnVideo.dataset.labelVideo || 'Video';
+                }
+                if (btnAudio) {
+                    btnAudio.className = btnIdleClass;
+                    const l = btnAudio.querySelector('.btn-label');
+                    if (l) l.textContent = btnAudio.dataset.labelVoice || 'Voice';
+                }
+            }
+
+            function setCallButtonConnecting(btn) {
+                if (!btn) return;
+                const label = btn.querySelector('.btn-label');
+                const connecting = document.getElementById('conversation-page-metrics')?.dataset.labelConnecting || '…';
+                if (label) label.textContent = connecting;
+                btn.disabled = true;
+            }
+
+            function restoreCallButtonsAfterError() {
+                if (btnVideo) btnVideo.disabled = !bootAgoraReady;
+                if (btnAudio) btnAudio.disabled = !bootAgoraReady;
+                setCallButtonsIdle();
+            }
+
+            if (btnVideo) btnVideo.dataset.labelVideo = btnVideo.querySelector('.btn-label')?.textContent || 'Video';
+            if (btnAudio) btnAudio.dataset.labelVoice = btnAudio.querySelector('.btn-label')?.textContent || 'Voice';
+
+            startSessionTimers();
+
+            function appendMessageRow(payload) {
+                const wrap = document.getElementById('doctor-chat-messages');
+                if (!wrap || !payload.id) return;
+                if (seenMessageIds.has(payload.id)) return;
+                if (payload.send_by === 'doctor' && doctorId && Number(payload.from_id) === doctorId) {
+                    return;
+                }
+                seenMessageIds.add(payload.id);
+
+                const emptyCard = wrap.querySelector('.flex.flex-col.items-center.justify-center');
+                if (emptyCard) emptyCard.remove();
+
+                const row = document.createElement('div');
+                const isDoctor = payload.send_by === 'doctor';
+                row.className = isDoctor ? 'flex justify-end' : 'flex justify-start';
+
+                const bubble = document.createElement('div');
+                bubble.className = isDoctor
+                    ? 'max-w-[min(85%,28rem)] rounded-2xl bg-[#132A6E] px-3.5 py-2.5 text-sm text-white shadow-sm shadow-[#132A6E]/25'
+                    : 'max-w-[min(85%,28rem)] rounded-2xl border border-zinc-200/90 bg-white px-3.5 py-2.5 text-sm text-zinc-800 shadow-sm shadow-zinc-200/30';
+
+                const text = document.createElement('p');
+                text.className = 'whitespace-pre-wrap break-words';
+                text.textContent = payload.body || '';
+                bubble.appendChild(text);
+
+                if (payload.created_at) {
+                    const time = document.createElement('p');
+                    time.className = isDoctor ? 'mt-1 text-[0.65rem] text-white/70' : 'mt-1 text-[0.65rem] text-zinc-400';
+                    const d = new Date(payload.created_at);
+                    time.textContent = d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+                    bubble.appendChild(time);
+                }
+
+                row.appendChild(bubble);
+                wrap.appendChild(row);
+                wrap.scrollTop = wrap.scrollHeight;
+            }
+
+            if (pusherKey) {
+                const pusher = new Pusher(pusherKey, {
+                    cluster: pusherCluster,
+                    authEndpoint: '/broadcasting/auth',
+                    auth: {
+                        headers: {
+                            'X-CSRF-TOKEN': csrfToken,
+                            'X-Requested-With': 'XMLHttpRequest',
+                        },
+                    },
+                });
+
+                const channel = pusher.subscribe('private-appointment.' + appointmentId);
+                channel.bind('message.created', (data) => appendMessageRow(data));
+            }
+
+            const panel = document.getElementById('doctor-chat-panel');
+            const notifyUrl = panel?.dataset.notifyUrl || '';
+            const tokenUrl = panel?.dataset.tokenUrl || '';
+
+            let agoraClient = null;
+            let localAudio = null;
+            let localVideo = null;
+            let currentMode = null;
+
+            async function refreshAgoraConfig() {
+                if (!tokenUrl) return null;
+                const res = await fetch(tokenUrl, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': csrfToken,
+                        'Accept': 'application/json',
+                    },
+                });
+                if (!res.ok) return null;
+                return res.json();
+            }
+
+            function showOverlay(show) {
+                const el = document.getElementById('agora-call-overlay');
+                if (!el) return;
+                el.classList.toggle('hidden', !show);
+                el.setAttribute('aria-hidden', show ? 'false' : 'true');
+            }
+
+            async function leaveCall() {
+                stopCallTimer();
+                setCallButtonsIdle();
+                if (btnVideo) btnVideo.disabled = !bootAgoraReady;
+                if (btnAudio) btnAudio.disabled = !bootAgoraReady;
+                if (localVideo) {
+                    localVideo.stop();
+                    localVideo.close();
+                    localVideo = null;
+                }
+                if (localAudio) {
+                    localAudio.stop();
+                    localAudio.close();
+                    localAudio = null;
+                }
+                if (agoraClient) {
+                    await agoraClient.leave();
+                    agoraClient = null;
+                }
+                currentMode = null;
+                const rp = document.getElementById('agora-remote-player');
+                const lp = document.getElementById('agora-local-player');
+                if (rp) rp.innerHTML = '';
+                if (lp) lp.innerHTML = '';
+                showOverlay(false);
+                const tv = document.getElementById('agora-toggle-video');
+                if (tv) tv.classList.remove('hidden');
+            }
+
+            async function postNotify(callType, cfg) {
+                if (!notifyUrl) return;
+                await fetch(notifyUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken,
+                        'Accept': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        agora_app_id: cfg.agora_app_id,
+                        agora_token: cfg.agora_token,
+                        agora_channel: cfg.agora_channel,
+                        call_type: callType,
+                    }),
+                });
+            }
+
+            const labelVideo = metricsEl?.dataset.labelVideo || 'Video call';
+            const labelVoice = metricsEl?.dataset.labelVoice || 'Voice call';
+
+            async function joinVideoCall() {
+                if (currentMode) return;
+                setCallButtonConnecting(btnVideo);
+                try {
+                    const cfg = await refreshAgoraConfig();
+                    if (!cfg || !window.AgoraRTC) {
+                        restoreCallButtonsAfterError();
+                        return;
+                    }
+                    await postNotify('video', cfg);
+
+                    agoraClient = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
+                    agoraClient.on('user-published', async (user, mediaType) => {
+                        await agoraClient.subscribe(user, mediaType);
+                        if (mediaType === 'video') {
+                            user.videoTrack.play('agora-remote-player');
+                        }
+                        if (mediaType === 'audio') {
+                            user.audioTrack.play();
+                        }
+                    });
+
+                    const [, audioTrack, videoTrack] = await Promise.all([
+                        agoraClient.join(cfg.agora_app_id, cfg.agora_channel, cfg.agora_token || null, null),
+                        AgoraRTC.createMicrophoneAudioTrack(),
+                        AgoraRTC.createCameraVideoTrack(),
+                    ]);
+                    localAudio = audioTrack;
+                    localVideo = videoTrack;
+                    videoTrack.play('agora-local-player');
+                    await agoraClient.publish([audioTrack, videoTrack]);
+                    currentMode = 'video';
+                    if (btnVideo) {
+                        btnVideo.className = btnActiveClass;
+                        btnVideo.disabled = true;
+                    }
+                    if (btnAudio) btnAudio.disabled = true;
+                    document.getElementById('agora-toggle-video')?.classList.remove('hidden');
+                    startCallTimer('video', labelVideo, labelVoice);
+                    showOverlay(true);
+                } catch (e) {
+                    console.error(e);
+                    restoreCallButtonsAfterError();
+                }
+            }
+
+            async function joinAudioCall() {
+                if (currentMode) return;
+                setCallButtonConnecting(btnAudio);
+                try {
+                    const cfg = await refreshAgoraConfig();
+                    if (!cfg || !window.AgoraRTC) {
+                        restoreCallButtonsAfterError();
+                        return;
+                    }
+                    await postNotify('audio', cfg);
+
+                    agoraClient = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
+                    agoraClient.on('user-published', async (user, mediaType) => {
+                        await agoraClient.subscribe(user, mediaType);
+                        if (mediaType === 'audio') {
+                            user.audioTrack.play();
+                        }
+                    });
+
+                    const [, audioTrack] = await Promise.all([
+                        agoraClient.join(cfg.agora_app_id, cfg.agora_channel, cfg.agora_token || null, null),
+                        AgoraRTC.createMicrophoneAudioTrack(),
+                    ]);
+                    localAudio = audioTrack;
+                    await agoraClient.publish([audioTrack]);
+                    currentMode = 'audio';
+                    if (btnAudio) {
+                        btnAudio.className = btnActiveClass;
+                        btnAudio.disabled = true;
+                    }
+                    if (btnVideo) btnVideo.disabled = true;
+                    document.getElementById('agora-toggle-video')?.classList.add('hidden');
+                    startCallTimer('audio', labelVideo, labelVoice);
+                    showOverlay(true);
+                } catch (e) {
+                    console.error(e);
+                    restoreCallButtonsAfterError();
+                }
+            }
+
+            btnVideo?.addEventListener('click', () => joinVideoCall());
+            btnAudio?.addEventListener('click', () => joinAudioCall());
+            document.getElementById('agora-leave-btn')?.addEventListener('click', () => {
+                leaveCall().catch((e) => console.error(e));
+            });
+            document.getElementById('agora-toggle-mic')?.addEventListener('click', () => {
+                if (localAudio) {
+                    localAudio.setEnabled(!localAudio.enabled);
+                }
+            });
+            document.getElementById('agora-toggle-video')?.addEventListener('click', () => {
+                if (localVideo) {
+                    localVideo.setEnabled(!localVideo.enabled);
+                }
+            });
+
+            document.addEventListener('livewire:navigated', () => {
+                leaveCall().catch(() => {});
+                if (sessionTimerId) clearInterval(sessionTimerId);
+                sessionTimerId = null;
+                startSessionTimers();
+            });
+        });
+    </script>
+@endpush

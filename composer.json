@@ -15,7 +15,9 @@
         "laravel/tinker": "^3.0",
         "livewire/flux": "^2.13.1",
         "livewire/livewire": "^4.1",
-        "myfatoorah/laravel-package": "^2.2"
+        "myfatoorah/laravel-package": "^2.2",
+        "pusher/pusher-php-server": "^7.2",
+        "yasserbelhimer/agora-access-token-generator": "^1.0"
     },
     "require-dev": {
         "fakerphp/faker": "^1.24",

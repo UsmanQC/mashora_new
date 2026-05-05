@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\AuthenticateBroadcastParticipant;
 use App\Http\Middleware\EnsureDoctorOwnsAppointment;
 use App\Http\Middleware\EnsureDoctorPortalActive;
 use App\Http\Middleware\EnsureDoctorProfileCompleted;
@@ -49,4 +50,9 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
-    })->create();
+    })
+    ->withBroadcasting(
+        channels: __DIR__.'/../routes/channels.php',
+        attributes: ['middleware' => ['web', AuthenticateBroadcastParticipant::class]],
+    )
+    ->create();

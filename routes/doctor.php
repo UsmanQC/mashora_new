@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Doctor\DoctorAppointmentRealtimeController;
 use App\Http\Controllers\Doctor\DoctorSessionController;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Route;
@@ -51,22 +52,14 @@ Route::middleware('auth:doctor')->group(function (): void {
                 'appointments/{appointment}/conversation',
                 'pages::doctor.appointment.conversation',
             )->name('appointments.conversation');
-            Route::livewire(
-                'appointments/{appointment}/chat-v2',
-                'pages::doctor.appointment.chat-v2',
-            )->name('appointments.conversation.chat-v2');
-            Route::livewire(
-                'appointments/{appointment}/chat',
-                'pages::doctor.appointment.chat',
-            )->name('appointments.conversation.chat');
-            Route::livewire(
-                'appointments/{appointment}/video',
-                'pages::doctor.appointment.video',
-            )->name('appointments.conversation.video');
-            Route::livewire(
-                'appointments/{appointment}/voice',
-                'pages::doctor.appointment.voice',
-            )->name('appointments.conversation.voice');
+            Route::post(
+                'appointments/{appointment}/realtime/notify-call',
+                [DoctorAppointmentRealtimeController::class, 'notifyCall'],
+            )->name('appointments.realtime.notify-call');
+            Route::post(
+                'appointments/{appointment}/realtime/agora-token',
+                [DoctorAppointmentRealtimeController::class, 'refreshAgoraToken'],
+            )->name('appointments.realtime.agora-token');
         });
 
         Route::livewire('ratings', 'pages::doctor.ratings')->name('ratings');
