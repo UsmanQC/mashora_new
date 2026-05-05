@@ -9,7 +9,7 @@
         icon="user"
         type="button"
         @class([
-            'w-full justify-start text-white hover:bg-white/10 hover:!text-white active:bg-[#0B163E] active:!text-white' => $density === 'sidebar',
+            'w-full justify-start text-white hover:!bg-[#132A6E] hover:!text-white active:!bg-[#132A6E] active:!text-white' => $density === 'sidebar',
             'max-w-[11rem] text-white hover:bg-white/15 hover:!text-white [&]:text-white' => $density === 'header',
         ])
     >

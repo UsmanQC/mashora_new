@@ -16,13 +16,13 @@
             : 'flex-1 shrink flex-col gap-0.5 py-2 text-[0.6875rem] [--flux-button-icon-size:1.35rem]';
 
         /**
-         * Selected: navy pill on #1565c0 chrome — hover lightens slightly (not same as inactive hover).
-         * Inactive: transparent on chrome — hover is a soft white veil (not the navy pill).
+         * Selected + hover: #132A6E on #1565c0 chrome.
+         * Inactive: transparent; hover is a soft white veil (not the navy pill).
          */
-        $dockActiveClass = 'rounded-lg !border-0 !bg-[#0B163E] !text-white shadow-md shadow-black/20 ring-1 ring-white/15 hover:!bg-[#132a6e] hover:!text-white hover:ring-white/25 active:!bg-[#060b28] dark:!border-0 dark:!bg-[#0B163E] dark:!text-white dark:hover:!bg-[#132a6e] [&_svg]:!text-white';
+        $dockActiveClass = 'rounded-lg !border-0 !bg-[#132A6E] !text-white shadow-md shadow-black/20 ring-1 ring-white/15 hover:!bg-[#132A6E] hover:!text-white hover:ring-white/25 active:!bg-[#132A6E] dark:!border-0 dark:!bg-[#132A6E] dark:!text-white dark:hover:!bg-[#132A6E] [&_svg]:!text-white';
         $dockInactiveClass = $isVertical
-            ? 'rounded-lg !border-0 !bg-transparent !font-medium !text-white ring-0 hover:!bg-white/20 hover:!text-white active:!bg-[#0B163E]/90 active:!text-white dark:!bg-transparent dark:!text-white dark:hover:!bg-white/22'
-            : '!border-0 !bg-transparent !text-white ring-0 hover:!bg-white/24 hover:!text-white active:!bg-[#0B163E] active:!text-white dark:!text-white dark:hover:!bg-white/26';
+            ? 'rounded-lg !border-0 !bg-transparent !font-medium !text-white ring-0 hover:!bg-white/20 hover:!text-white active:!bg-[#132A6E] active:!text-white dark:!bg-transparent dark:!text-white dark:hover:!bg-white/22'
+            : '!border-0 !bg-transparent !text-white ring-0 hover:!bg-white/24 hover:!text-white active:!bg-[#132A6E] active:!text-white dark:!text-white dark:hover:!bg-white/26';
     } else {
         $dockButtonClass = $isVertical
             ? 'w-full shrink-0 justify-start gap-3 px-3 py-2.5 text-sm [--flux-button-icon-size:1.35rem]'

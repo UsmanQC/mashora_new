@@ -27,7 +27,7 @@ return [
     'session_price' => 'Session price',
     'discount' => 'Discount',
     'total' => 'Total',
-    'sar' => 'SAR',
+    'sar' => config('currency.sa_riyal_symbol'),
     'discount_code' => 'Discount code',
 
     'next' => 'Next',

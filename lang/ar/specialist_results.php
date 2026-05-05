@@ -19,7 +19,7 @@ return [
     'more' => 'المزيد',
     'less' => 'إخفاء',
 
-    'sar' => 'ر.س',
+    'sar' => config('currency.sa_riyal_symbol'),
 
     'available_times' => 'الأوقات المتاحة',
 

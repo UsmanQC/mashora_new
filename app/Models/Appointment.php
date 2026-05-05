@@ -2,14 +2,33 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
+use Database\Factories\AppointmentFactory;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Appointment extends Model
 {
+    /** @use HasFactory<AppointmentFactory> */
+    use HasFactory;
+
     use SoftDeletes;
+
+    protected function casts(): array
+    {
+        return [
+            'appointment_date' => 'date',
+            'scheduled_at' => 'datetime',
+            'prescription_not_needed' => 'boolean',
+            'actual_start_at' => 'datetime',
+            'actual_end_at' => 'datetime',
+        ];
+    }
 
     protected $fillable = [
         'appointment_number',
@@ -37,6 +56,9 @@ class Appointment extends Model
         'payment_invoice_url',
         'refund_payment_invoice_id',
         'refund_payment_response',
+        'prescription_not_needed',
+        'actual_start_at',
+        'actual_end_at',
     ];
 
     /**
@@ -65,11 +87,52 @@ class Appointment extends Model
             ->where('appointment_date', $date);
     }
 
+    public function formattedSessionStart(): string
+    {
+        if ($this->appointment_date === null || $this->start_time === null) {
+            return '';
+        }
+
+        try {
+            $datePart = $this->appointment_date instanceof Carbon
+                ? $this->appointment_date->format('Y-m-d')
+                : Carbon::parse($this->appointment_date)->format('Y-m-d');
+
+            return Carbon::parse($datePart.' '.(string) $this->start_time)->timezone(config('app.timezone'))->format('h:i A');
+        } catch (\Throwable) {
+            return (string) $this->start_time;
+        }
+    }
+
+    /**
+     * @return HasOne<Diagnosis, $this>
+     */
+    public function diagnosis(): HasOne
+    {
+        return $this->hasOne(Diagnosis::class);
+    }
+
+    /**
+     * @return HasMany<Medication, $this>
+     */
+    public function medications(): HasMany
+    {
+        return $this->hasMany(Medication::class);
+    }
+
     /**
      * @return BelongsTo<Doctor, $this>
      */
     public function doctor(): BelongsTo
     {
         return $this->belongsTo(Doctor::class);
+    }
+
+    /**
+     * @return BelongsTo<User, $this>
+     */
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
     }
 }

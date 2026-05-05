@@ -27,7 +27,7 @@ return [
     'session_price' => 'سعر الجلسة',
     'discount' => 'خصم',
     'total' => 'الإجمالي',
-    'sar' => 'ر.س',
+    'sar' => config('currency.sa_riyal_symbol'),
     'discount_code' => 'رمز الخصم',
 
     'next' => 'التالي',

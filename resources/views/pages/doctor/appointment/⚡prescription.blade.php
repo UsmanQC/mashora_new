@@ -1,0 +1,309 @@
+<?php
+
+use App\Models\Appointment;
+use App\Models\Medication;
+use Flux\Flux;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
+use Illuminate\Validation\Rule;
+use Livewire\Attributes\Computed;
+use Livewire\Attributes\Layout;
+use Livewire\Attributes\Title;
+use Livewire\Component;
+
+new #[Layout('layouts::doctor')] #[Title('Prescription')] class extends Component
+{
+    public Appointment $appointment;
+
+    public bool $prescriptionNotNeeded = false;
+
+    public bool $showMedicationModal = false;
+
+    public ?int $editingMedicationId = null;
+
+    public ?string $name = null;
+
+    public ?string $dosage = null;
+
+    public ?string $usage = null;
+
+    public ?string $frequency = null;
+
+    public ?string $duration = null;
+
+    public ?string $duration_measurement = null;
+
+    public ?string $instructions = null;
+
+    public function mount(): void
+    {
+        $this->prescriptionNotNeeded = (bool) $this->appointment->prescription_not_needed;
+    }
+
+    /**
+     * @return EloquentCollection<int, Medication>
+     */
+    #[Computed]
+    public function medications(): EloquentCollection
+    {
+        return $this->appointment->medications()->orderBy('id')->get();
+    }
+
+    public function updatedPrescriptionNotNeeded(bool $value): void
+    {
+        $this->appointment->forceFill(['prescription_not_needed' => $value])->save();
+
+        Flux::toast(
+            variant: 'success',
+            text: $value
+                ? __('doctor.prescription_form.prescription_toggle_on')
+                : __('doctor.prescription_form.prescription_toggle_off'),
+        );
+    }
+
+    public function openCreateMedication(): void
+    {
+        $this->resetMedicationForm();
+        $this->showMedicationModal = true;
+    }
+
+    public function openEditMedication(int $medicationId): void
+    {
+        $medication = $this->appointment->medications()->whereKey($medicationId)->first();
+
+        if ($medication === null) {
+            return;
+        }
+
+        $this->editingMedicationId = $medication->id;
+        $this->name = $medication->name;
+        $this->dosage = $medication->dosage;
+        $this->usage = $medication->usage;
+        $this->frequency = $medication->frequency;
+        $this->duration = $medication->duration;
+        $this->duration_measurement = $medication->duration_measurement;
+        $this->instructions = $medication->instructions;
+
+        $this->showMedicationModal = true;
+    }
+
+    public function dismissMedicationModal(): void
+    {
+        $this->showMedicationModal = false;
+        $this->resetMedicationForm();
+    }
+
+    public function updatedShowMedicationModal(bool $value): void
+    {
+        if (! $value) {
+            $this->resetMedicationForm();
+        }
+    }
+
+    public function saveMedication(): void
+    {
+        $validated = $this->validate([
+            'name' => ['required', 'string', 'max:250'],
+            'dosage' => ['required', 'string', 'max:100'],
+            'usage' => ['required', 'string', 'max:255'],
+            'frequency' => ['required', 'string', 'max:250'],
+            'duration' => ['required', 'string', 'max:250'],
+            'duration_measurement' => ['required', Rule::in(['days', 'week', 'month'])],
+            'instructions' => ['nullable', 'string', 'max:2500'],
+        ]);
+
+        if ($this->editingMedicationId !== null) {
+            $medication = $this->appointment->medications()->whereKey($this->editingMedicationId)->first();
+
+            if ($medication !== null) {
+                $medication->update($validated);
+                Flux::toast(variant: 'success', text: __('doctor.prescription_form.medication_updated'));
+            }
+        } else {
+            $this->appointment->medications()->create($validated);
+            Flux::toast(variant: 'success', text: __('doctor.prescription_form.medication_added'));
+        }
+
+        if ($this->prescriptionNotNeeded) {
+            $this->prescriptionNotNeeded = false;
+            $this->appointment->forceFill(['prescription_not_needed' => false])->save();
+        }
+
+        $this->showMedicationModal = false;
+        $this->resetMedicationForm();
+        unset($this->medications);
+    }
+
+    public function deleteMedication(int $medicationId): void
+    {
+        $medication = $this->appointment->medications()->whereKey($medicationId)->first();
+
+        if ($medication === null) {
+            return;
+        }
+
+        $medication->delete();
+
+        Flux::toast(variant: 'success', text: __('doctor.prescription_form.medication_removed'));
+
+        unset($this->medications);
+    }
+
+    private function resetMedicationForm(): void
+    {
+        $this->editingMedicationId = null;
+        $this->name = null;
+        $this->dosage = null;
+        $this->usage = null;
+        $this->frequency = null;
+        $this->duration = null;
+        $this->duration_measurement = null;
+        $this->instructions = null;
+        $this->resetErrorBag();
+    }
+}; ?>
+
+<div class="space-y-8">
+    @include('partials.doctor-appointment-workspace-header', ['appointment' => $appointment, 'active' => 'prescription'])
+
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+            <flux:heading size="xl" class="font-semibold text-zinc-900">{{ __('doctor.prescription_form.title') }}</flux:heading>
+            <flux:text class="mt-1 text-zinc-600">{{ __('doctor.prescription_form.subtitle') }}</flux:text>
+        </div>
+        <flux:button
+            type="button"
+            variant="primary"
+            icon="plus"
+            class="!bg-[#3C5CF7] hover:!brightness-95"
+            wire:click="openCreateMedication"
+        >
+            {{ __('doctor.prescription_form.add_medication') }}
+        </flux:button>
+    </div>
+
+    <div class="rounded-2xl border border-zinc-200/90 bg-white p-5 shadow-sm sm:p-6">
+        <div class="flex items-center justify-between gap-4">
+            <div>
+                <flux:heading size="md" class="font-semibold text-zinc-900">
+                    {{ __('doctor.prescription_form.no_prescription_needed') }}
+                </flux:heading>
+                @if ($prescriptionNotNeeded)
+                    <flux:text class="mt-1 text-sm text-zinc-600">
+                        {{ __('doctor.prescription_form.no_prescription_locked') }}
+                    </flux:text>
+                @endif
+            </div>
+            <flux:switch wire:model.live="prescriptionNotNeeded" />
+        </div>
+    </div>
+
+    <div class="rounded-2xl border border-zinc-200/90 bg-white shadow-sm">
+        @if ($this->medications->isEmpty())
+            <div class="px-4 py-10 text-center">
+                <flux:text class="text-zinc-600">{{ __('doctor.prescription_form.no_medications') }}</flux:text>
+            </div>
+        @else
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-zinc-200 text-sm">
+                    <thead class="bg-zinc-50 text-xs uppercase tracking-wide text-zinc-500">
+                        <tr>
+                            <th class="px-4 py-3 text-start font-semibold">{{ __('doctor.prescription_form.col_medicine') }}</th>
+                            <th class="px-4 py-3 text-start font-semibold">{{ __('doctor.prescription_form.col_dosage') }}</th>
+                            <th class="px-4 py-3 text-start font-semibold">{{ __('doctor.prescription_form.col_usage') }}</th>
+                            <th class="px-4 py-3 text-start font-semibold">{{ __('doctor.prescription_form.col_frequency') }}</th>
+                            <th class="px-4 py-3 text-start font-semibold">{{ __('doctor.prescription_form.col_duration') }}</th>
+                            <th class="px-4 py-3 text-end font-semibold">{{ __('doctor.prescription_form.col_actions') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-zinc-100 bg-white">
+                        @foreach ($this->medications as $med)
+                            <tr wire:key="med-{{ $med->id }}">
+                                <td class="px-4 py-3 font-semibold text-zinc-900">{{ $med->name }}</td>
+                                <td class="px-4 py-3 text-zinc-700">{{ $med->dosage ?: '—' }}</td>
+                                <td class="px-4 py-3 text-zinc-700">{{ $med->usage ?: '—' }}</td>
+                                <td class="px-4 py-3 text-zinc-700">{{ $med->frequency ?: '—' }}</td>
+                                <td class="px-4 py-3 tabular-nums text-zinc-700">
+                                    {{ trim(($med->duration ?? '').' '.($med->duration_measurement ?? '')) ?: '—' }}
+                                </td>
+                                <td class="px-4 py-3">
+                                    <div class="flex items-center justify-end gap-2">
+                                        <flux:button
+                                            type="button"
+                                            size="xs"
+                                            variant="outline"
+                                            icon="pencil-square"
+                                            wire:click="openEditMedication({{ $med->id }})"
+                                        >
+                                            {{ __('doctor.prescription_form.edit_medication') }}
+                                        </flux:button>
+                                        <flux:button
+                                            type="button"
+                                            size="xs"
+                                            variant="outline"
+                                            icon="trash"
+                                            class="!border-rose-200 !text-rose-600 hover:!bg-rose-50"
+                                            wire:click="deleteMedication({{ $med->id }})"
+                                            wire:confirm="{{ __('doctor.complete_modal.body') }}"
+                                        >
+                                            {{ __('doctor.prescription_form.remove') }}
+                                        </flux:button>
+                                    </div>
+                                </td>
+                            </tr>
+                            @if (filled($med->instructions))
+                                <tr class="bg-zinc-50/60">
+                                    <td colspan="6" class="px-4 py-2 text-xs italic text-zinc-600">
+                                        {{ $med->instructions }}
+                                    </td>
+                                </tr>
+                            @endif
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        @endif
+    </div>
+
+    <flux:modal wire:model.self="showMedicationModal" class="max-w-2xl rounded-2xl shadow-xl" :closable="true">
+        <form wire:submit="saveMedication" class="space-y-6 p-1">
+            <div>
+                <flux:heading size="lg" class="font-semibold text-zinc-900">
+                    {{ $editingMedicationId
+                        ? __('doctor.prescription_form.edit_medication')
+                        : __('doctor.prescription_form.add_medication') }}
+                </flux:heading>
+            </div>
+
+            <div class="grid gap-4 sm:grid-cols-2">
+                <flux:input wire:model="name" :label="__('doctor.prescription_form.medicine_name')" required />
+                <flux:input wire:model="dosage" :label="__('doctor.prescription_form.dosage')" required />
+                <flux:input wire:model="usage" :label="__('doctor.prescription_form.usage')" required />
+                <flux:input wire:model="frequency" :label="__('doctor.prescription_form.frequency')" required />
+                <flux:select wire:model="duration_measurement" :label="__('doctor.prescription_form.duration_measurement')" :placeholder="__('doctor.prescription_form.choose')" required>
+                    <flux:select.option value="days">{{ __('doctor.prescription_form.unit_days') }}</flux:select.option>
+                    <flux:select.option value="week">{{ __('doctor.prescription_form.unit_week') }}</flux:select.option>
+                    <flux:select.option value="month">{{ __('doctor.prescription_form.unit_month') }}</flux:select.option>
+                </flux:select>
+                <flux:input wire:model="duration" :label="__('doctor.prescription_form.duration')" type="number" min="1" required />
+            </div>
+
+            <flux:textarea
+                wire:model="instructions"
+                :label="__('doctor.prescription_form.instructions')"
+                :placeholder="__('doctor.prescription_form.instructions_placeholder')"
+                rows="3"
+            />
+
+            <div class="flex flex-col gap-3 sm:flex-row sm:justify-end">
+                <flux:button type="button" variant="ghost" wire:click="dismissMedicationModal">
+                    {{ __('doctor.prescription_form.cancel') }}
+                </flux:button>
+                <flux:button type="submit" variant="primary" class="!bg-[#3C5CF7] hover:!brightness-95">
+                    {{ $editingMedicationId
+                        ? __('doctor.prescription_form.update')
+                        : __('doctor.prescription_form.save') }}
+                </flux:button>
+            </div>
+        </form>
+    </flux:modal>
+</div>

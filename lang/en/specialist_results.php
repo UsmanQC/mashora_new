@@ -18,7 +18,7 @@ return [
     'more' => 'More',
     'less' => 'Less',
 
-    'sar' => 'SAR',
+    'sar' => config('currency.sa_riyal_symbol'),
 
     'available_times' => 'Available times',
 
