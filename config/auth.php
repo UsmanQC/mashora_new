@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Admin;
 use App\Models\Doctor;
 use App\Models\User;
 
@@ -48,6 +49,11 @@ return [
             'driver' => 'session',
             'provider' => 'doctors',
         ],
+
+        'admin' => [
+            'driver' => 'session',
+            'provider' => 'admins',
+        ],
     ],
 
     /*
@@ -76,6 +82,11 @@ return [
         'doctors' => [
             'driver' => 'eloquent',
             'model' => Doctor::class,
+        ],
+
+        'admins' => [
+            'driver' => 'eloquent',
+            'model' => Admin::class,
         ],
 
         // 'users' => [
@@ -114,6 +125,13 @@ return [
         'doctors' => [
             'provider' => 'doctors',
             'table' => 'doctor_password_reset_tokens',
+            'expire' => 60,
+            'throttle' => 60,
+        ],
+
+        'admins' => [
+            'provider' => 'admins',
+            'table' => 'admin_password_resets',
             'expire' => 60,
             'throttle' => 60,
         ],

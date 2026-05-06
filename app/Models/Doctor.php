@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Database\Factories\DoctorFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -82,6 +83,22 @@ class Doctor extends Authenticatable
     public function appointments(): HasMany
     {
         return $this->hasMany(Appointment::class);
+    }
+
+    /**
+     * @return BelongsTo<Degree, $this>
+     */
+    public function degree(): BelongsTo
+    {
+        return $this->belongsTo(Degree::class);
+    }
+
+    /**
+     * @return BelongsToMany<Speciality, $this>
+     */
+    public function specialities(): BelongsToMany
+    {
+        return $this->belongsToMany(Speciality::class, 'doctor_speciality', 'doctor_id', 'speciality_id');
     }
 
     public function displayName(): string
