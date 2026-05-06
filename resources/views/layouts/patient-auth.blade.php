@@ -17,25 +17,13 @@
     <body class="h-svh max-h-svh overflow-hidden bg-[#F3F5F7] antialiased lg:bg-white">
         <div class="grid h-svh max-h-svh min-h-0 w-full grid-cols-1 overflow-hidden lg:grid-cols-2">
             <aside
-                class="relative hidden min-h-0 flex-col overflow-hidden border-zinc-200 bg-white px-10 py-10 text-zinc-900 lg:flex lg:border-e"
+                class="relative hidden min-h-0 flex-col overflow-hidden border-zinc-200 bg-[#3A59F0] px-10 py-10 text-white lg:flex lg:border-e"
             >
                 <div class="flex min-h-0 flex-1 flex-col overflow-hidden">
-                    <a
-                        href="{{ route('patient.home') }}"
-                        wire:navigate
-                        class="inline-flex shrink-0 items-center"
-                        title="{{ __('patient.brand') }}"
-                    >
-                        @include('partials.patient-brand-logo', [
-                            'imgClass' => 'h-11 w-auto max-w-[min(100%,15rem)] object-contain object-start',
-                            'whiteOnBlue' => false,
-                        ])
-                    </a>
-
                     @if (request()->routeIs('patient.phone'))
                         <div class="mt-8 flex min-h-0 flex-1 flex-col items-center justify-center overflow-hidden py-4">
                             <img
-                                src="{{ asset('images/login-illustration.png') }}"
+                                src="{{ asset('images/illulstration-patient.png') }}"
                                 alt=""
                                 width="560"
                                 height="560"
@@ -43,6 +31,9 @@
                                 loading="eager"
                                 decoding="async"
                             />
+                            <p class="mt-4 max-w-md text-center text-2xl font-semibold text-white">
+                                {{ __('patient_auth.illustration_caption') }}
+                            </p>
                         </div>
                     @else
                         <flux:heading size="xl" class="mt-8 max-w-sm text-balance text-zinc-900">
@@ -55,11 +46,9 @@
                 </div>
             </aside>
 
-            <main
-                class="flex min-h-0 flex-col justify-center overflow-hidden bg-[#F3F5F7] px-4 py-5 sm:px-8 sm:py-6 lg:py-8"
-            >
+            <main class="flex min-h-0 flex-col overflow-hidden bg-[#F3F5F7] px-4 py-5 sm:px-8 sm:py-6 lg:py-8">
                 <div class="mx-auto w-full max-w-md shrink-0">
-                    <div class="mb-5 flex items-center justify-between lg:mb-6 lg:hidden">
+                    <div class="flex items-center justify-between gap-3">
                         <a
                             href="{{ route('patient.home') }}"
                             wire:navigate
@@ -71,12 +60,21 @@
                                 'whiteOnBlue' => false,
                             ])
                         </a>
-                        <flux:button :href="route('patient.home')" variant="ghost" size="sm" wire:navigate>
-                            {{ __('patient_auth.back_home') }}
-                        </flux:button>
+                        @php($switchLocale = app()->getLocale() === 'ar' ? 'en' : 'ar')
+                        <a
+                            href="{{ route('patient.locale', ['locale' => $switchLocale]) }}"
+                            class="inline-flex items-center gap-1 text-sm font-medium text-zinc-600 hover:text-zinc-900"
+                        >
+                            <img src="{{ $switchLocale === 'ar' ? 'https://flagcdn.com/w20/sa.png' : 'https://flagcdn.com/w20/us.png' }}" alt="{{ $switchLocale === 'ar' ? 'Arabic' : 'English' }}" class="h-3.5 w-5 rounded-sm object-cover" />
+                            <span>{{ strtoupper($switchLocale) }}</span>
+                        </a>
                     </div>
+                </div>
 
-                    {{ $slot }}
+                <div class="flex min-h-0 flex-1 items-center justify-center py-6">
+                    <div class="mx-auto w-full max-w-md">
+                        {{ $slot }}
+                    </div>
                 </div>
             </main>
         </div>

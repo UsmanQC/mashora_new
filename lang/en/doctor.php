@@ -28,6 +28,7 @@ return [
         'kicker' => 'For healthcare professionals',
         'headline' => 'Your practice on Mashora',
         'subhead' => 'Manage appointments and your profile in one place.',
+        'illustration_caption' => 'We help you provide the best service to your patients',
     ],
 
     'ratings' => [

@@ -21,32 +21,20 @@
                     <div class="absolute -bottom-[15%] -end-[5%] h-96 w-96 rounded-full bg-white/10 blur-3xl"></div>
                     <div class="absolute start-[40%] top-1/3 h-48 w-48 rounded-full bg-[#132A6E]/20 blur-2xl"></div>
                 </div>
-                <div class="relative z-10 max-w-md text-white lg:mx-auto">
-                    @include('partials.doctor-brand-strip', [
-                        'density' => 'sidebar',
-                        'href' => route('doctor.welcome'),
-                    ])
-                    <p class="mt-6 text-sm font-medium text-white/80">{{ __('doctor.guest.kicker') }}</p>
-                    <h1 class="mt-2 text-3xl font-bold tracking-tight lg:text-4xl">{{ __('doctor.guest.headline') }}</h1>
-                    <p class="mt-3 text-base text-white/85">{{ __('doctor.guest.subhead') }}</p>
-                    <div class="mt-8 hidden lg:block" aria-hidden="true">
-                        <svg
-                            class="h-auto w-full max-w-sm opacity-90"
-                            viewBox="0 0 400 260"
-                            fill="none"
-                            xmlns="http://www.w3.org/2000/svg"
-                        >
-                            <rect x="40" y="48" width="200" height="140" rx="12" fill="white" fill-opacity="0.12" />
-                            <rect x="68" y="76" width="144" height="12" rx="4" fill="white" fill-opacity="0.35" />
-                            <rect x="68" y="100" width="96" height="12" rx="4" fill="white" fill-opacity="0.2" />
-                            <rect x="68" y="124" width="120" height="12" rx="4" fill="white" fill-opacity="0.2" />
-                            <circle cx="320" cy="72" r="48" fill="white" fill-opacity="0.18" />
-                            <path
-                                d="M300 120c20-24 52-24 72 0s20 64 0 88-52 24-72 0-20-64 0-88Z"
-                                fill="white"
-                                fill-opacity="0.1"
-                            />
-                        </svg>
+                <div class="relative z-10 flex h-full w-full max-w-md flex-col text-white lg:mx-auto">
+                    <div class="hidden flex-1 flex-col items-center justify-center gap-4 lg:flex">
+                        <img
+                            src="{{ asset('images/login-illustration.png') }}"
+                            alt=""
+                            class="h-auto w-full max-w-lg object-contain"
+                            loading="eager"
+                            decoding="async"
+                        />
+                        <div class="text-center">
+                            <p class="text-xl font-semibold text-white">
+                                {{ __('doctor.guest.illustration_caption') }}
+                            </p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -66,21 +54,14 @@
                             'whiteOnBlue' => false,
                         ])
                     </a>
-                    <div class="flex items-center gap-2 text-sm">
-                        <a
-                            href="{{ route('doctor.locale', ['locale' => 'en']) }}"
-                            class="{{ app()->getLocale() === 'en' ? 'font-semibold text-zinc-900' : 'text-zinc-500 hover:text-zinc-800' }}"
-                        >
-                            EN
-                        </a>
-                        <span class="text-zinc-300" aria-hidden="true">|</span>
-                        <a
-                            href="{{ route('doctor.locale', ['locale' => 'ar']) }}"
-                            class="{{ app()->getLocale() === 'ar' ? 'font-semibold text-zinc-900' : 'text-zinc-500 hover:text-zinc-800' }}"
-                        >
-                            AR
-                        </a>
-                    </div>
+                    @php($switchLocale = app()->getLocale() === 'ar' ? 'en' : 'ar')
+                    <a
+                        href="{{ route('doctor.locale', ['locale' => $switchLocale]) }}"
+                        class="inline-flex items-center gap-1 text-sm font-medium text-zinc-600 hover:text-zinc-900"
+                    >
+                        <img src="{{ $switchLocale === 'ar' ? 'https://flagcdn.com/w20/sa.png' : 'https://flagcdn.com/w20/us.png' }}" alt="{{ $switchLocale === 'ar' ? 'Arabic' : 'English' }}" class="h-3.5 w-5 rounded-sm object-cover" />
+                        <span>{{ strtoupper($switchLocale) }}</span>
+                    </a>
                 </div>
                 <div class="flex flex-1 flex-col px-4 py-8 sm:px-6 lg:justify-center lg:px-10 lg:py-12">
                     <div class="mx-auto w-full max-w-md flex-1">

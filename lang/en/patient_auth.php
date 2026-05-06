@@ -8,6 +8,7 @@ return [
 
     'promo_title' => 'Care for your mind — one step at a time.',
     'promo_body' => 'Your appointments, mood check-ins, and resources in one responsive place: desktop or install as an app on your phone.',
+    'illustration_caption' => 'Enhance your mental wellness',
 
     'phone_heading' => 'Enter your mobile number',
     'phone_lead' => 'If this number is already registered, you\'ll sign in with your password next. If it\'s new, you\'ll create an account.',
