@@ -134,7 +134,6 @@ new #[Layout('layouts::patient-auth')] #[Title('Phone')] class extends Component
         </form>
     @else
         <flux:heading size="xl" class="patient-auth-heading text-[#193ADB]">{{ __('patient_auth.phone_heading') }}</flux:heading>
-        <flux:text class="mt-2">{{ __('patient_auth.phone_lead') }}</flux:text>
 
         <form wire:submit="continueGuest" class="mt-8 space-y-6">
             @include('partials.patient-unified-phone-field')

@@ -90,7 +90,5 @@ new #[Layout('layouts::doctor-guest')] #[Title('Doctor registration')] class ext
         </flux:button>
     </form>
 
-    <div class="text-center text-sm text-zinc-600">
-        <flux:link :href="route('doctor.login')" wire:navigate>{{ __('doctor.auth.has_account') }}</flux:link>
-    </div>
+    
 </div>

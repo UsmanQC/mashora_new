@@ -106,19 +106,7 @@
             </div>
 
             @auth
-                <div class="mt-12 flex justify-end sm:mt-14">
-                    <form method="POST" action="{{ route('logout') }}">
-                        @csrf
-                        <flux:button
-                            type="submit"
-                            variant="outline"
-                            class="gap-3 rounded-full! border-red-300/70! bg-white px-10! py-3! font-semibold !text-red-600 hover:!bg-red-50 hover:!border-red-400 hover:!text-red-700"
-                        >
-                            <flux:icon name="arrow-right-start-on-rectangle" variant="outline" class="size-7 rtl:rotate-180 text-current" />
-                            {{ __('patient.menu.sign_out') }}
-                        </flux:button>
-                    </form>
-                </div>
+                
             @endauth
         </div>
     </div>

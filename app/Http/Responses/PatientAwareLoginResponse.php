@@ -21,7 +21,7 @@ class PatientAwareLoginResponse implements LoginResponse
                 return redirect()->route('patient.profile.basic');
             }
 
-            return redirect()->intended(route('patient.home'));
+            return redirect()->route('patient.home');
         }
 
         return redirect()->intended(config('fortify.home'));

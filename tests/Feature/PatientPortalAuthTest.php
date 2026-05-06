@@ -80,3 +80,17 @@ test('patient logout redirects back to patient home', function () {
         ->post(route('logout'))
         ->assertRedirect(route('patient.home'));
 });
+
+test('patient flow login always redirects to patient home for completed profiles', function () {
+    $user = User::factory()->create([
+        'phone' => '966500111222',
+        'password' => 'password',
+        'profile_completed' => true,
+    ]);
+
+    $this->post(route('login.store'), [
+        'patient_flow' => 1,
+        'email' => $user->phone,
+        'password' => 'password',
+    ])->assertRedirect(route('patient.home'));
+});

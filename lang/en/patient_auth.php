@@ -11,7 +11,6 @@ return [
     'illustration_caption' => 'Enhance your mental wellness',
 
     'phone_heading' => 'Enter your mobile number',
-    'phone_lead' => 'If this number is already registered, you\'ll sign in with your password next. If it\'s new, you\'ll create an account.',
 
     'start_title' => 'Enter your mobile number',
     'start_hint' => 'If your number is already on file, you\'ll sign in next. If not, you\'ll be taken through creating an account.',

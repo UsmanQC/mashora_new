@@ -47,7 +47,7 @@
             </aside>
 
             <main class="flex min-h-0 flex-col overflow-hidden bg-[#F3F5F7] px-4 py-5 sm:px-8 sm:py-6 lg:py-8">
-                <div class="mx-auto w-full max-w-md shrink-0">
+                <div class="w-full shrink-0">
                     <div class="flex items-center justify-between gap-3">
                         <a
                             href="{{ route('patient.home') }}"

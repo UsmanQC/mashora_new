@@ -54,7 +54,6 @@ return [
         'email' => 'Email',
         'password_confirm' => 'Confirm password',
         'register_submit' => 'Continue',
-        'has_account' => 'Already have an account?',
 
         'basic_info_title' => 'Complete your profile',
         'basic_info_subtitle' => 'These details are shown to patients after approval.',
