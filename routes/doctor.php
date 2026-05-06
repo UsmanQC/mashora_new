@@ -64,5 +64,13 @@ Route::middleware('auth:doctor')->group(function (): void {
 
         Route::livewire('ratings', 'pages::doctor.ratings')->name('ratings');
         Route::livewire('settings', 'pages::doctor.settings')->name('settings');
+        Route::livewire('settings/profile', 'pages::doctor.settings.profile')->name('settings.profile');
+        Route::livewire('settings/notifications', 'pages::doctor.settings.notifications')->name('settings.notifications');
+        Route::livewire('settings/bank-account', 'pages::doctor.settings.bank-account')->name('settings.bank-account');
+        Route::livewire('settings/support', 'pages::doctor.settings.support')->name('settings.support');
+        Route::livewire('settings/privacy-policy', 'pages::doctor.settings.privacy-policy')->name('settings.privacy-policy');
+        Route::livewire('settings/invoices', 'pages::doctor.settings.invoices')->name('settings.invoices');
+        Route::livewire('settings/working-hours', 'pages::doctor.settings.working-hours')->name('settings.working-hours');
+        Route::livewire('settings/duration', 'pages::doctor.settings.duration')->name('settings.duration');
     });
 });

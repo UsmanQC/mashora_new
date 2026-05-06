@@ -253,35 +253,48 @@ new #[Layout('layouts::doctor')] #[Title('Dashboard')] class extends Component
 
 <div class="space-y-8" @if ($doc?->status === 'approved') wire:poll.45s @endif>
     @if ($doc)
-        <div class="flex flex-col gap-4 rounded-2xl border border-zinc-200/90 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-5">
-            <div class="flex min-w-0 items-center gap-4">
-                <flux:avatar
-                    :name="$doc->displayName()"
-                    :src="$doc->profilePhotoUrl()"
-                    circle
-                    size="xl"
-                    class="shrink-0"
-                />
-                <div class="min-w-0">
-                    <p class="truncate text-lg font-semibold text-zinc-900">{{ $doc->displayName() }}</p>
-                    @if (filled($doc->aboutDisplay()))
-                        <p class="mt-1 line-clamp-2 text-sm text-zinc-600">{{ $doc->aboutDisplay() }}</p>
+        <div class="relative overflow-hidden rounded-2xl border border-zinc-200/80 bg-white p-4 shadow-sm sm:p-5">
+            <div class="pointer-events-none absolute end-0 top-0 h-20 w-56 bg-gradient-to-l from-[#3C5CF7]/10 to-transparent"></div>
+            <div class="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div class="flex min-w-0 items-center gap-4">
+                    <div class="rounded-full border border-zinc-200 bg-zinc-50 p-1.5 shadow-sm">
+                        <flux:avatar
+                            :name="$doc->displayName()"
+                            :src="$doc->profilePhotoUrl()"
+                            circle
+                            size="xl"
+                            class="shrink-0"
+                        />
+                    </div>
+                    <div class="min-w-0 space-y-1">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <p class="truncate text-xl font-semibold tracking-tight text-zinc-900">{{ $doc->displayName() }}</p>
+                            <span class="inline-flex items-center rounded-full bg-[#3C5CF7]/10 px-2.5 py-0.5 text-xs font-semibold text-[#2f49ca]">
+                                {{ __('Welcome back') }}
+                            </span>
+                        </div>
+                        <p class="text-sm text-zinc-500">{{ __('Hope you have a productive day.') }}</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="inline-flex items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-1.5 text-xs font-medium text-zinc-600">
+                        {{ now()->locale(app()->getLocale())->isoFormat('ddd, D MMM') }}
+                    </span>
+                    @if ($doc->status === 'approved' && app()->environment('production'))
+                        <flux:button
+                            variant="primary"
+                            size="sm"
+                            class="shrink-0 !bg-[#3C5CF7] hover:!brightness-95"
+                            :href="route('patient.book-appointments', $doc)"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            icon="share"
+                        >
+                            {{ __('doctor.dashboard.share_profile') }}
+                        </flux:button>
                     @endif
                 </div>
             </div>
-            @if ($doc->status === 'approved' && app()->environment('production'))
-                <flux:button
-                    variant="primary"
-                    size="sm"
-                    class="shrink-0 !bg-[#3C5CF7] hover:!brightness-95"
-                    :href="route('patient.book-appointments', $doc)"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    icon="share"
-                >
-                    {{ __('doctor.dashboard.share_profile') }}
-                </flux:button>
-            @endif
         </div>
     @endif
 
@@ -297,15 +310,15 @@ new #[Layout('layouts::doctor')] #[Title('Dashboard')] class extends Component
         </div>
     @elseif ($doc && $doc->status === 'approved')
         <div class="space-y-6">
-            <div class="-mx-1 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                <nav class="flex min-w-max gap-1 px-1" aria-label="{{ __('doctor.dashboard.period_label') }}">
+            <div class="rounded-2xl bg-white p-3 shadow-sm">
+                <nav class="grid grid-cols-5 gap-2" aria-label="{{ __('doctor.dashboard.period_label') }}">
                     @foreach (['today' => __('doctor.dashboard.tab_today'), 'week' => __('doctor.dashboard.tab_week'), 'month' => __('doctor.dashboard.tab_month'), 'year' => __('doctor.dashboard.tab_year'), 'all' => __('doctor.dashboard.tab_all')] as $key => $label)
                         <flux:button
                             :href="route('doctor.dashboard', ['period' => $key])"
                             wire:navigate
                             size="sm"
                             :variant="$this->period === $key ? 'primary' : 'outline'"
-                            class="{{ $this->period === $key ? '!bg-[#132A6E] !text-white' : '!border-zinc-200 text-zinc-700' }}"
+                            class="w-full rounded-xl py-2.5 text-sm font-semibold {{ $this->period === $key ? '!bg-[#132A6E] !text-white shadow-sm' : '!border-0 bg-zinc-50 text-zinc-700 hover:!bg-white' }}"
                         >
                             {{ $label }}
                         </flux:button>
@@ -313,65 +326,47 @@ new #[Layout('layouts::doctor')] #[Title('Dashboard')] class extends Component
                 </nav>
             </div>
 
-            <div
-                class="flex gap-4 overflow-x-auto pb-2 [-ms-overflow-style:none] snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-            >
-                <div class="w-[min(100%,22rem)] shrink-0 snap-start sm:w-auto sm:min-w-[14rem] sm:flex-1">
-                    <div class="rounded-2xl border border-[#3C5CF7]/25 bg-white p-4 shadow-sm sm:p-5">
-                        <div class="flex items-start justify-between gap-3">
-                            <div class="min-w-0">
-                                <p class="text-sm font-medium text-zinc-500">{{ __('doctor.dashboard.stat_revenue') }}</p>
-                                <p class="mt-1 text-3xl font-semibold tabular-nums text-zinc-900">
-                                    {{ $this->revenueTotalFormatted }}
-                                    <span class="text-base font-semibold text-[#3C5CF7]">{{ __('doctor.dashboard.sar_suffix') }}</span>
-                                </p>
-                            </div>
-                            <span class="shrink-0 text-[#3C5CF7]" aria-hidden="true">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="39" height="30" viewBox="0 0 39 30" fill="none">
-                                    <path
-                                        d="M23.992,20.045a1.5,1.5,0,0,0,0,3Zm5.607,3a1.5,1.5,0,0,0,0-3ZM2,22.25H2ZM2,8.75H2ZM2,12.5H38v-3H2ZM23.992,23.045H29.6v-3H23.992ZM.5,22.25A8.25,8.25,0,0,0,8.75,30.5v-3A5.25,5.25,0,0,1,3.5,22.25Zm36,0a5.25,5.25,0,0,1-5.25,5.25v3a8.25,8.25,0,0,0,8.25-8.25Zm3-13.5A8.25,8.25,0,0,0,31.25.5v3A5.25,5.25,0,0,1,36.5,8.75Zm-36,0A5.25,5.25,0,0,1,8.75,3.5V.5A8.25,8.25,0,0,0,.5,8.75Zm33,0v13.5h3V8.75Zm-33,13.5V8.75H.5v13.5ZM8.75,3.5h22.5V.5H8.75Zm22.5,24H8.75v3h22.5Z"
-                                        transform="translate(-0.5 -0.5)"
-                                        fill="currentColor"
-                                    />
-                                </svg>
-                            </span>
+            <div class="grid gap-4 lg:grid-cols-3">
+                <div class="rounded-2xl border border-[#3C5CF7]/20 bg-gradient-to-br from-[#eef2ff] via-white to-white p-5 shadow-sm transition hover:shadow-md">
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="min-w-0">
+                            <p class="text-sm font-semibold text-zinc-500">{{ __('doctor.dashboard.stat_revenue') }}</p>
+                            <p class="mt-2 text-3xl font-bold tabular-nums tracking-tight text-zinc-900">
+                                {{ $this->revenueTotalFormatted }}
+                                <span class="text-base font-semibold text-[#3C5CF7]">{{ __('doctor.dashboard.sar_suffix') }}</span>
+                            </p>
                         </div>
+                        <span class="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-[#3C5CF7]/10 text-[#3C5CF7]" aria-hidden="true">
+                            <flux:icon name="banknotes" variant="outline" class="size-6" />
+                        </span>
                     </div>
                 </div>
-                <div class="w-[min(100%,22rem)] shrink-0 snap-start sm:w-auto sm:min-w-[14rem] sm:flex-1">
-                    <div class="rounded-2xl border border-[#3C5CF7]/25 bg-white p-4 shadow-sm sm:p-5">
-                        <div class="flex items-start justify-between gap-3">
-                            <div class="min-w-0">
-                                <p class="text-sm font-medium text-zinc-500">{{ __('doctor.dashboard.stat_appointments') }}</p>
-                                <p class="mt-1 text-3xl font-semibold tabular-nums text-zinc-900">
-                                    {{ $this->periodBookingsCount }}
-                                    <span class="text-base font-semibold normal-case text-[#3C5CF7]">{{ __('doctor.dashboard.reservations_suffix') }}</span>
-                                </p>
-                            </div>
-                            <span class="shrink-0 text-[#3C5CF7]" aria-hidden="true">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="35" height="35" viewBox="0 0 35 35" fill="none">
-                                    <path d="M18,10v8l5,2m11-2A16,16,0,1,1,18,2,16,16,0,0,1,34,18Z" transform="translate(-0.5 -0.5)" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="3" />
-                                </svg>
-                            </span>
+                <div class="rounded-2xl border border-sky-200/70 bg-gradient-to-br from-sky-50 via-white to-white p-5 shadow-sm transition hover:shadow-md">
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="min-w-0">
+                            <p class="text-sm font-semibold text-zinc-500">{{ __('doctor.dashboard.stat_appointments') }}</p>
+                            <p class="mt-2 text-3xl font-bold tabular-nums tracking-tight text-zinc-900">
+                                {{ $this->periodBookingsCount }}
+                                <span class="text-base font-semibold normal-case text-sky-600">{{ __('doctor.dashboard.reservations_suffix') }}</span>
+                            </p>
                         </div>
+                        <span class="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-sky-100 text-sky-600" aria-hidden="true">
+                            <flux:icon name="calendar-days" variant="outline" class="size-6" />
+                        </span>
                     </div>
                 </div>
-                <div class="w-[min(100%,22rem)] shrink-0 snap-start sm:w-auto sm:min-w-[14rem] sm:flex-1">
-                    <div class="rounded-2xl border border-[#3C5CF7]/25 bg-white p-4 shadow-sm sm:p-5">
-                        <div class="flex items-start justify-between gap-3">
-                            <div class="min-w-0">
-                                <p class="text-sm font-medium text-zinc-500">{{ __('doctor.dashboard.stat_cases') }}</p>
-                                <p class="mt-1 text-3xl font-semibold tabular-nums text-zinc-900">
-                                    {{ $this->periodBookingsCount }}
-                                    <span class="ms-1 text-xs font-semibold uppercase leading-tight text-[#3C5CF7] sm:text-sm">{{ __('doctor.dashboard.cases_suffix') }}</span>
-                                </p>
-                            </div>
-                            <span class="shrink-0 text-[#3C5CF7]" aria-hidden="true">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 39.667 39.667" fill="none">
-                                    <path d="M13,24a9.9,9.9,0,0,0,7.333,3.667A9.9,9.9,0,0,0,27.667,24M14.852,15.75v-.917m10.982,0v.917m12.833,4.583A18.333,18.333,0,1,1,20.333,2,18.333,18.333,0,0,1,38.667,20.333Z" transform="translate(-0.5 -0.5)" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="3" />
-                                </svg>
-                            </span>
+                <div class="rounded-2xl border border-emerald-200/70 bg-gradient-to-br from-emerald-50 via-white to-white p-5 shadow-sm transition hover:shadow-md">
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="min-w-0">
+                            <p class="text-sm font-semibold text-zinc-500">{{ __('doctor.dashboard.stat_cases') }}</p>
+                            <p class="mt-2 text-3xl font-bold tabular-nums tracking-tight text-zinc-900">
+                                {{ $this->periodBookingsCount }}
+                                <span class="ms-1 text-xs font-semibold uppercase leading-tight text-emerald-600 sm:text-sm">{{ __('doctor.dashboard.cases_suffix') }}</span>
+                            </p>
                         </div>
+                        <span class="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600" aria-hidden="true">
+                            <flux:icon name="face-smile" variant="outline" class="size-6" />
+                        </span>
                     </div>
                 </div>
             </div>

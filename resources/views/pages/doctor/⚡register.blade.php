@@ -9,15 +9,22 @@ use Livewire\Component;
 
 new #[Layout('layouts::doctor-guest')] #[Title('Doctor registration')] class extends Component
 {
-    public string $name = '';
+    public string $phone = '';
 
     public string $email = '';
-
-    public string $phone = '';
 
     public string $password = '';
 
     public string $password_confirmation = '';
+
+    public function mount(): void
+    {
+        $this->phone = (string) request()->string('phone');
+
+        if ($this->phone === '') {
+            $this->redirect(route('doctor.welcome'), navigate: true);
+        }
+    }
 
     public function register(): void
     {
@@ -25,16 +32,15 @@ new #[Layout('layouts::doctor-guest')] #[Title('Doctor registration')] class ext
         $this->phone = $normalized;
 
         $this->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['nullable', 'email', 'max:255'],
+            'email' => ['required', 'string', 'lowercase', 'email', 'max:255', Rule::unique('doctors', 'email')->whereNull('deleted_at')],
             'phone' => ['required', 'string', 'min:8', 'max:24', Rule::unique('doctors', 'phone')],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
         ]);
 
         /** @var Doctor $doctor */
         $doctor = Doctor::query()->create([
-            'name' => $this->name,
-            'email' => $this->email !== '' ? $this->email : null,
+            'name' => null,
+            'email' => $this->email,
             'phone' => $normalized,
             'password' => $this->password,
             'status' => 'pending',
@@ -55,22 +61,16 @@ new #[Layout('layouts::doctor-guest')] #[Title('Doctor registration')] class ext
     </div>
 
     <form wire:submit="register" class="space-y-4">
-        <flux:field>
-            <flux:label>{{ __('doctor.auth.name') }}</flux:label>
-            <flux:input wire:model="name" autocomplete="name" />
-            <flux:error name="name" />
-        </flux:field>
+        <flux:input wire:model="phone" type="hidden" autocomplete="tel" />
+        <flux:error name="phone" />
+        <flux:text class="text-sm text-zinc-600">
+            {{ __('Creating account for') }} <span class="font-semibold text-zinc-900">{{ $phone }}</span>
+        </flux:text>
 
         <flux:field>
             <flux:label>{{ __('doctor.auth.email') }}</flux:label>
             <flux:input wire:model="email" type="email" autocomplete="email" />
             <flux:error name="email" />
-        </flux:field>
-
-        <flux:field>
-            <flux:label>{{ __('doctor.auth.phone') }}</flux:label>
-            <flux:input wire:model="phone" type="tel" autocomplete="tel" />
-            <flux:error name="phone" />
         </flux:field>
 
         <flux:field>
@@ -85,7 +85,7 @@ new #[Layout('layouts::doctor-guest')] #[Title('Doctor registration')] class ext
             <flux:error name="password_confirmation" />
         </flux:field>
 
-        <flux:button class="w-full !bg-[#132A6E] !text-white hover:!brightness-95" type="submit" variant="primary">
+        <flux:button class="w-full bg-[#132A6E]! text-white! hover:brightness-95!" type="submit" variant="primary">
             {{ __('doctor.auth.register_submit') }}
         </flux:button>
     </form>

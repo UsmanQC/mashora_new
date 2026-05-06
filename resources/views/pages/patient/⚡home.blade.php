@@ -152,7 +152,7 @@ new #[Layout('layouts::patient')] #[Title('Home')] class extends Component
             </div>
 
             <a
-                href="{{ auth()->check() ? route('dashboard') : route('login') }}"
+                href="{{ auth()->check() ? route('patient.menu') : route('patient.phone') }}"
                 wire:navigate
                 class="flex min-h-[155px] w-[85vw] max-w-[22rem] shrink-0 snap-center flex-col justify-between rounded-2xl bg-gradient-to-br from-emerald-400 via-teal-500 to-emerald-600 p-5 text-white shadow-lg shadow-teal-500/25 outline-none ring-transparent transition hover:ring-2 hover:ring-teal-200/70 focus-visible:ring-2 focus-visible:ring-teal-200/70"
                 title="{{ __('patient.metrics_description') }}"

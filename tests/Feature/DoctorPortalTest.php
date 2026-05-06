@@ -1,11 +1,18 @@
 <?php
 
+use App\Livewire\Doctor\Components\Notifications;
 use App\Models\Appointment;
+use App\Models\BankAccount;
 use App\Models\ChMessage;
+use App\Models\Communication;
 use App\Models\Diagnosis;
 use App\Models\Doctor;
+use App\Models\Duration;
 use App\Models\Medication;
+use App\Models\Notification;
 use App\Models\User;
+use App\Models\WorkingDay;
+use App\Models\WorkingHour;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 
@@ -64,11 +71,110 @@ test('approved doctor dashboard includes formatted revenue total for revenue-eli
         ->assertSee('2,500');
 });
 
-test('authenticated doctor can view ratings and settings', function () {
+test('authenticated doctor can view appointments ratings and settings', function () {
     $doctor = Doctor::factory()->create(['profile_completed' => true]);
 
+    $this->actingAs($doctor, 'doctor')->get(route('doctor.appointments'))->assertOk();
+    $this->actingAs($doctor, 'doctor')->get(route('doctor.appointments', ['status' => 'completed']))->assertOk();
     $this->actingAs($doctor, 'doctor')->get(route('doctor.ratings'))->assertOk();
     $this->actingAs($doctor, 'doctor')->get(route('doctor.settings'))->assertOk();
+    $this->actingAs($doctor, 'doctor')->get(route('doctor.settings.profile'))->assertOk();
+    $this->actingAs($doctor, 'doctor')->get(route('doctor.settings.notifications'))->assertOk();
+    $this->actingAs($doctor, 'doctor')->get(route('doctor.settings.bank-account'))->assertOk();
+    $this->actingAs($doctor, 'doctor')->get(route('doctor.settings.support'))->assertOk();
+    $this->actingAs($doctor, 'doctor')->get(route('doctor.settings.privacy-policy'))->assertOk();
+    $this->actingAs($doctor, 'doctor')->get(route('doctor.settings.invoices'))->assertOk();
+    $this->actingAs($doctor, 'doctor')->get(route('doctor.settings.working-hours'))->assertOk();
+    $this->actingAs($doctor, 'doctor')->get(route('doctor.settings.duration'))->assertOk();
+});
+
+test('doctor can save dynamic working hours', function () {
+    $doctor = Doctor::factory()->create(['profile_completed' => true]);
+
+    $this->actingAs($doctor, 'doctor');
+
+    Livewire::test('pages::doctor.settings.working-hours')
+        ->set('availabilities', ['sunday', 'monday'])
+        ->set('workingHours.sunday', [
+            ['start_time' => '09:00:00', 'end_time' => '12:00:00'],
+            ['start_time' => '13:00:00', 'end_time' => '15:00:00'],
+        ])
+        ->set('workingHours.monday', [
+            ['start_time' => '10:00:00', 'end_time' => '14:00:00'],
+        ])
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $sunday = WorkingDay::query()
+        ->where('doctor_id', $doctor->id)
+        ->where('day_of_week', 'sunday')
+        ->first();
+
+    expect($sunday)->not->toBeNull();
+    expect(WorkingHour::query()->where('working_day_id', $sunday->id)->count())->toBe(2);
+});
+
+test('doctor can save duration prices from settings page', function () {
+    $doctor = Doctor::factory()->create(['profile_completed' => true]);
+
+    Duration::query()->create(['duration' => 15, 'title' => '15 min']);
+    Duration::query()->create(['duration' => 30, 'title' => '30 min']);
+
+    Communication::query()->create(['communication' => 'chat', 'title' => 'Chat']);
+    Communication::query()->create(['communication' => 'voice_call', 'title' => 'Voice call']);
+    Communication::query()->create(['communication' => 'video_call', 'title' => 'Video call']);
+
+    $this->actingAs($doctor, 'doctor');
+
+    Livewire::test('pages::doctor.settings.duration')
+        ->set('doctorDurations', ['15', '30'])
+        ->set('selectedCommunications', ['chat', 'video_call'])
+        ->set('durationPrices.15', 120)
+        ->set('durationPrices.30', 220)
+        ->set('acceptInstantAppointment', true)
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect($doctor->fresh()->accept_instant_appointment)->toBeTrue();
+    expect($doctor->durations()->count())->toBe(2);
+    expect($doctor->communications()->pluck('communications.communication')->sort()->values()->all())->toBe(['chat', 'video_call']);
+    expect((float) $doctor->durations()->where('durations.duration', 30)->first()->pivot->price)->toBe(220.0);
+});
+
+test('doctor can save bank account from settings page', function () {
+    $doctor = Doctor::factory()->create(['profile_completed' => true]);
+
+    $this->actingAs($doctor, 'doctor');
+
+    Livewire::test('pages::doctor.settings.bank-account')
+        ->set('account_holder_name', 'John Doe')
+        ->set('account_number', '123456789')
+        ->set('iban_number', 'SA4410000000123456789001')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $account = BankAccount::query()->where('doctor_id', $doctor->id)->first();
+    expect($account)->not->toBeNull()
+        ->and($account->account_holder_name)->toBe('John Doe')
+        ->and($account->iban_number)->toBe('SA4410000000123456789001');
+});
+
+test('doctor header notifications are dynamic and can be marked as read', function () {
+    $doctor = Doctor::factory()->create(['profile_completed' => true]);
+    Notification::query()->create([
+        'type' => 'appointment',
+        'title' => 'New appointment',
+        'message' => 'You have a new appointment request.',
+        'userable_type' => Doctor::class,
+        'userable_id' => $doctor->id,
+    ]);
+
+    Livewire::actingAs($doctor, 'doctor')
+        ->test(Notifications::class)
+        ->assertSee('New appointment')
+        ->assertSet('unreadCount', 1)
+        ->call('readNotification')
+        ->assertSet('unreadCount', 0);
 });
 
 test('doctor locale route updates session and redirects back', function () {
@@ -90,7 +196,45 @@ test('doctor with incomplete profile is redirected to basic info from dashboard'
 });
 
 test('doctor login page renders', function () {
-    $this->get(route('doctor.login'))->assertOk();
+    $this->get(route('doctor.login'))->assertRedirect(route('doctor.welcome'));
+
+    $this->get(route('doctor.login', ['phone' => '966511000999']))->assertOk();
+});
+
+test('doctor register page accepts phone email password in onboarding flow', function () {
+    Livewire::withQueryParams(['phone' => '966511123456'])
+        ->test('pages::doctor.register')
+        ->set('email', 'new-doctor@example.com')
+        ->set('password', 'password123')
+        ->set('password_confirmation', 'password123')
+        ->call('register')
+        ->assertHasNoErrors()
+        ->assertRedirect(route('doctor.register.basic.info'));
+
+    $doctor = Doctor::query()->where('phone', '966511123456')->first();
+
+    expect($doctor)->not->toBeNull()
+        ->and($doctor->email)->toBe('new-doctor@example.com')
+        ->and($doctor->profile_completed)->toBeFalse();
+});
+
+test('doctor welcome phone step routes existing doctors to login', function () {
+    Doctor::factory()->create([
+        'phone' => '966511555111',
+        'profile_completed' => true,
+    ]);
+
+    Livewire::test('pages::doctor.welcome')
+        ->set('phone', '966511555111')
+        ->call('proceed')
+        ->assertRedirect(route('doctor.login', ['phone' => '966511555111']));
+});
+
+test('doctor welcome phone step routes new numbers to register', function () {
+    Livewire::test('pages::doctor.welcome')
+        ->set('phone', '966511777222')
+        ->call('proceed')
+        ->assertRedirect(route('doctor.register', ['phone' => '966511777222']));
 });
 
 test('doctor can logout', function () {

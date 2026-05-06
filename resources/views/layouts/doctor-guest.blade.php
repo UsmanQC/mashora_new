@@ -9,6 +9,7 @@
         <meta name="theme-color" content="#3C5CF7" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         @include('partials.head')
+        @stack('styles')
     </head>
     <body class="min-h-svh antialiased">
         <div class="flex min-h-svh flex-col lg:flex-row">
@@ -94,6 +95,7 @@
                 <flux:toast />
             </flux:toast.group>
         @endpersist
+        @stack('scripts')
         @fluxScripts
     </body>
 </html>

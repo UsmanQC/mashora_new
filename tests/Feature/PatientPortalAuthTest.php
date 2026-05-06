@@ -69,3 +69,14 @@ test('guest can browse patient appointments placeholder', function () {
     $this->get(route('patient.appointments'))
         ->assertSuccessful();
 });
+
+test('patient logout redirects back to patient home', function () {
+    $user = User::factory()->create([
+        'profile_completed' => true,
+    ]);
+
+    $this->from(route('patient.home'))
+        ->actingAs($user)
+        ->post(route('logout'))
+        ->assertRedirect(route('patient.home'));
+});

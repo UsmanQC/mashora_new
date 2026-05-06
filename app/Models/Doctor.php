@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -83,6 +85,46 @@ class Doctor extends Authenticatable
     public function appointments(): HasMany
     {
         return $this->hasMany(Appointment::class);
+    }
+
+    /**
+     * @return HasMany<WorkingDay, $this>
+     */
+    public function workingDays(): HasMany
+    {
+        return $this->hasMany(WorkingDay::class);
+    }
+
+    /**
+     * @return BelongsToMany<Communication, $this>
+     */
+    public function communications(): BelongsToMany
+    {
+        return $this->belongsToMany(Communication::class, 'doctor_communication', 'doctor_id', 'communication');
+    }
+
+    /**
+     * @return HasOne<BankAccount, $this>
+     */
+    public function bankAccount(): HasOne
+    {
+        return $this->hasOne(BankAccount::class);
+    }
+
+    /**
+     * @return HasMany<Invoice, $this>
+     */
+    public function invoices(): HasMany
+    {
+        return $this->hasMany(Invoice::class);
+    }
+
+    /**
+     * @return MorphMany<Notification, $this>
+     */
+    public function notifications(): MorphMany
+    {
+        return $this->morphMany(Notification::class, 'userable');
     }
 
     /**

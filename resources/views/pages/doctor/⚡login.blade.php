@@ -17,6 +17,15 @@ new #[Layout('layouts::doctor-guest')] #[Title('Doctor sign in')] class extends 
 
     public bool $remember = false;
 
+    public function mount(): void
+    {
+        $this->phone = (string) request()->string('phone');
+
+        if ($this->phone === '') {
+            $this->redirect(route('doctor.welcome'), navigate: true);
+        }
+    }
+
     public function login(): void
     {
         $this->phone = (string) (preg_replace('/\D/', '', $this->phone) ?? '');
@@ -70,33 +79,38 @@ new #[Layout('layouts::doctor-guest')] #[Title('Doctor sign in')] class extends 
     }
 }; ?>
 
-<div class="space-y-8">
-    <div class="space-y-2 text-center sm:text-start">
-        <flux:heading size="xl" class="font-semibold text-zinc-900">{{ __('doctor.auth.sign_in') }}</flux:heading>
-        <flux:text class="text-zinc-600">{{ __('doctor.welcome_subtitle') }}</flux:text>
-    </div>
+<div class="flex min-h-full items-center">
+    <div class="w-full py-2">
+        <div class="mb-6 text-center">
+            <div class="mx-auto mb-3 inline-flex h-11 w-11 items-center justify-center rounded-full bg-[#132A6E]/10 text-[#132A6E]">
+                <flux:icon name="shield-check" class="size-5" />
+            </div>
+            <flux:heading size="xl" class="font-semibold text-zinc-900">{{ __('doctor.auth.sign_in') }}</flux:heading>
+            <flux:text class="mt-1 text-zinc-600">{{ __('doctor.welcome_subtitle') }}</flux:text>
+        </div>
 
-    <form wire:submit="login" class="space-y-5">
-        <flux:field>
-            <flux:label>{{ __('doctor.auth.phone') }}</flux:label>
-            <flux:input wire:model="phone" type="tel" autocomplete="username" />
-            <flux:error name="phone" />
-        </flux:field>
+        <form wire:submit="login" class="space-y-5">
+            <flux:text class="text-center text-sm text-zinc-600">
+                {{ __('Enter your password for') }} <span class="font-semibold text-zinc-900">{{ $phone }}</span>
+            </flux:text>
+            <div class="text-center">
+                <flux:link :href="route('doctor.welcome')" wire:navigate>{{ __('Not my number') }}</flux:link>
+            </div>
 
-        <flux:field>
-            <flux:label>{{ __('doctor.auth.password') }}</flux:label>
-            <flux:input wire:model="password" type="password" autocomplete="current-password" />
-            <flux:error name="password" />
-        </flux:field>
+            <flux:field>
+                <flux:input wire:model="phone" type="hidden" autocomplete="username" />
+                <flux:error name="phone" />
+                <flux:label>{{ __('doctor.auth.password') }}</flux:label>
+                <flux:input wire:model="password" type="password" autocomplete="current-password" viewable />
+                <flux:error name="password" />
+            </flux:field>
 
-        <flux:checkbox wire:model.live="remember" :label="__('doctor.auth.remember')" />
+            <flux:checkbox wire:model.live="remember" :label="__('doctor.auth.remember')" />
 
-        <flux:button class="w-full !bg-[#132A6E] !text-white hover:!brightness-95" type="submit" variant="primary">
-            {{ __('doctor.auth.sign_in') }}
-        </flux:button>
-    </form>
+            <flux:button class="w-full bg-[#132A6E]! text-white! hover:brightness-95!" type="submit" variant="primary">
+                {{ __('doctor.auth.sign_in') }}
+            </flux:button>
+        </form>
 
-    <div class="text-center text-sm text-zinc-600">
-        <flux:link :href="route('doctor.register')" wire:navigate>{{ __('doctor.welcome_register') }}</flux:link>
     </div>
 </div>

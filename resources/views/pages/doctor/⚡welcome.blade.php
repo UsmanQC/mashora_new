@@ -1,34 +1,86 @@
 <?php
 
+use App\Models\Doctor;
+use App\Support\CountryPhoneTerritories;
+use App\Support\PatientPhone;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\URL;
+use Illuminate\Validation\Rule;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
 new #[Layout('layouts::doctor-guest')] #[Title('Doctor portal')] class extends Component
 {
+    public string $countryIso = 'SA';
+
+    public string $phone = '';
+
+    public function proceed(): void
+    {
+        $this->countryIso = strtoupper(trim($this->countryIso));
+
+        $isos = array_column(config('country_phone_territories'), 'iso');
+        $this->validate([
+            'countryIso' => ['required', 'string', 'size:2', Rule::in($isos)],
+            'phone' => ['required', 'string', 'min:8', 'max:24'],
+        ]);
+
+        $dial = CountryPhoneTerritories::dialForIso($this->countryIso);
+        if ($dial === null) {
+            $this->addError('countryIso', __('validation.in', ['attribute' => 'countryIso']));
+
+            return;
+        }
+
+        $nationalDigits = preg_replace('/\D/', '', $this->phone) ?? '';
+        $normalized = str_starts_with($nationalDigits, $dial)
+            ? $nationalDigits
+            : PatientPhone::combineInternational($dial, $this->phone);
+        if (strlen($normalized) < 10) {
+            $this->addError('phone', __('patient_auth.phone_invalid_length'));
+
+            return;
+        }
+
+        $doctorExists = Doctor::query()
+            ->where('phone', $normalized)
+            ->where(static fn (Builder $query): Builder => $query->whereNull('deleted_at'))
+            ->exists();
+
+        if ($doctorExists) {
+            $this->redirect(route('doctor.login', ['phone' => $normalized]), navigate: true);
+
+            return;
+        }
+
+        if (config('doctor.registration_invite_only')) {
+            $this->redirect(URL::temporarySignedRoute('doctor.register', now()->addHours(2), ['phone' => $normalized]), navigate: true);
+
+            return;
+        }
+
+        $this->redirect(route('doctor.register', ['phone' => $normalized]), navigate: true);
+    }
 }; ?>
 
-<div class="flex flex-col items-center gap-8">
+<div class="flex min-h-full flex-col items-center justify-center gap-8">
     <div class="space-y-2 text-center">
-        <flux:heading size="xl" class="font-semibold text-zinc-900">{{ __('doctor.welcome_title') }}</flux:heading>
-        <flux:text class="text-zinc-600">{{ __('doctor.welcome_subtitle') }}</flux:text>
-        <flux:text class="text-xs text-zinc-500">{{ __('doctor.welcome_invite_hint') }}</flux:text>
+        <flux:heading size="xl" class="font-semibold text-zinc-900">{{ __('Enter mobile number') }}</flux:heading>
     </div>
 
-    <div class="flex w-full flex-col gap-3 sm:flex-row sm:justify-center">
-        <flux:button
-            class="w-full !bg-[#132A6E] !text-white hover:!brightness-95 sm:w-auto sm:min-w-[10rem]"
-            :href="route('doctor.login')"
-            wire:navigate
-            variant="primary"
-        >
-            {{ __('doctor.welcome_sign_in') }}
+    <form wire:submit="proceed" class="w-full max-w-md space-y-4">
+        @include('partials.doctor-unified-phone-field')
+        @error('countryIso')
+            <flux:text class="text-sm text-red-600">{{ $message }}</flux:text>
+        @enderror
+        @error('phone')
+            <flux:text class="text-sm text-red-600">{{ $message }}</flux:text>
+        @enderror
+        <flux:button class="w-full bg-[#132A6E]! text-white! hover:brightness-95!" type="submit" variant="primary">
+            {{ __('Continue') }}
         </flux:button>
-        <flux:button class="w-full sm:w-auto sm:min-w-[10rem]" :href="route('doctor.register')" wire:navigate variant="outline">
-            {{ __('doctor.welcome_register') }}
-        </flux:button>
-    </div>
+    </form>
 
     @if (config('doctor.registration_invite_only') && app()->environment('local'))
         <flux:text class="text-center text-xs font-mono text-zinc-500">

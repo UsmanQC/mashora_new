@@ -17,27 +17,11 @@
         >
             <div class="border-b border-white/10 px-4 pb-5 pt-5">
                 @include('partials.doctor-brand-strip', ['density' => 'sidebar'])
-                @auth('doctor')
-                    <p class="mt-3 truncate text-sm text-white/80">{{ auth('doctor')->user()->displayName() }}</p>
-                @endauth
             </div>
             <nav class="flex flex-1 flex-col gap-1 px-2 py-4">
                 @include('partials.doctor-sidebar-nav')
             </nav>
-            <div class="border-t border-white/10 p-3">
-                <form method="POST" action="{{ route('doctor.logout') }}" class="w-full">
-                    @csrf
-                    <flux:button
-                        class="w-full !text-white hover:!bg-white/10"
-                        type="submit"
-                        variant="ghost"
-                        size="sm"
-                        icon="arrow-right-start-on-rectangle"
-                    >
-                        {{ __('doctor.auth.sign_out') }}
-                    </flux:button>
-                </form>
-            </div>
+            <div class="border-t border-white/10 p-3"></div>
         </aside>
 
         <div class="flex min-h-svh min-w-0 flex-col lg:ps-64">
@@ -76,19 +60,33 @@
                         </time>
                     </div>
                     <div class="flex items-center gap-2">
-                        <span
-                            class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-zinc-200/90 bg-zinc-50 text-zinc-400"
-                            title="{{ __('doctor.header.notifications_placeholder') }}"
-                            aria-hidden="true"
-                        >
-                            <flux:icon name="bell" variant="outline" class="size-5" />
-                        </span>
-                        <span
-                            class="inline-flex h-9 min-w-[2.25rem] items-center justify-center rounded-full border border-zinc-200/90 bg-zinc-50 px-2 text-xs font-medium text-zinc-500"
-                            title="{{ __('doctor.header.today_placeholder') }}"
-                        >
-                            —
-                        </span>
+                        <livewire:doctor.components.notifications />
+                        <details class="relative">
+                            <summary
+                                class="inline-flex h-9 min-w-[2.25rem] cursor-pointer list-none items-center justify-center rounded-full border border-zinc-200/90 bg-zinc-50 px-2 text-xs font-semibold text-zinc-700 hover:bg-zinc-100"
+                                title="{{ auth('doctor')->user()?->displayName() }}"
+                            >
+                                <flux:icon name="user" variant="outline" class="size-4" />
+                            </summary>
+
+                            <div class="absolute end-0 z-50 mt-2 w-56 overflow-hidden rounded-xl border border-zinc-200 bg-white p-2 shadow-xl">
+                                <div class="px-2 pb-2 text-xs text-zinc-500">
+                                    {{ auth('doctor')->user()?->displayName() }}
+                                </div>
+                                <form method="POST" action="{{ route('doctor.logout') }}">
+                                    @csrf
+                                    <flux:button
+                                        class="w-full justify-start"
+                                        type="submit"
+                                        variant="ghost"
+                                        size="sm"
+                                        icon="arrow-right-start-on-rectangle"
+                                    >
+                                        {{ __('doctor.auth.sign_out') }}
+                                    </flux:button>
+                                </form>
+                            </div>
+                        </details>
                     </div>
                 </div>
             </header>
