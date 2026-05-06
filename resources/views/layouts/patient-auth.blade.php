@@ -12,6 +12,7 @@
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <link rel="manifest" href="/manifest.webmanifest" />
         @include('partials.head')
+        @stack('styles')
     </head>
     <body class="h-svh max-h-svh overflow-hidden bg-[#F3F5F7] antialiased lg:bg-white">
         <div class="grid h-svh max-h-svh min-h-0 w-full grid-cols-1 overflow-hidden lg:grid-cols-2">
@@ -86,6 +87,7 @@
             </flux:toast.group>
         @endpersist
 
+        @stack('scripts')
         @fluxScripts
     </body>
 </html>
