@@ -15,6 +15,51 @@ use Throwable;
  */
 final class PatientPaymentCompletionService
 {
+    public function forceCompleteForTesting(TemporaryAppointment $temporaryAppointment): ?Appointment
+    {
+        $temporaryAppointment->loadMissing('doctor');
+
+        if ($temporaryAppointment->appointment_id !== null) {
+            return Appointment::query()->find($temporaryAppointment->appointment_id);
+        }
+
+        if ($temporaryAppointment->doctor_id === null) {
+            return null;
+        }
+
+        try {
+            return DB::transaction(function () use ($temporaryAppointment): Appointment {
+                $temporaryAppointment->refresh();
+
+                if ($temporaryAppointment->appointment_id !== null) {
+                    $existing = Appointment::query()->find($temporaryAppointment->appointment_id);
+                    if ($existing !== null) {
+                        return $existing;
+                    }
+                }
+
+                $appointment = self::createAppointmentRecord($temporaryAppointment);
+                self::syncCommunications($appointment, $temporaryAppointment);
+
+                $temporaryAppointment->appointment_id = $appointment->id;
+                $temporaryAppointment->payment_status = 'paid';
+                $temporaryAppointment->payment_response = json_encode([
+                    'provider' => 'myfatoorah',
+                    'mode' => 'local_test_fallback',
+                    'reason' => 'ssl_certificate_issue',
+                    'paid_at' => now()->toIso8601String(),
+                ]);
+                $temporaryAppointment->save();
+
+                return $appointment;
+            });
+        } catch (Throwable $e) {
+            report($e);
+
+            return null;
+        }
+    }
+
     /**
      * Verifies payment with MyFatoorah and completes booking. Idempotent if already paid.
      *

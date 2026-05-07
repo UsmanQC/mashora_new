@@ -42,11 +42,13 @@ test('legacy patient sign-in url preserves phone query string', function () {
 });
 
 test('signed patient sign up url responds', function () {
-    $url = URL::temporarySignedRoute('patient.auth.sign-up', now()->addHour(), ['phone' => '966512345670']);
+    $phone = '966512345670';
+    $url = URL::temporarySignedRoute('patient.auth.sign-up', now()->addHour(), ['phone' => $phone]);
 
     $this->get($url)
         ->assertSuccessful()
-        ->assertSee(__('patient_auth.cta_register'), false);
+        ->assertSee(__('patient_auth.cta_register'), false)
+        ->assertSee(route('patient.phone', ['phone' => $phone]), false);
 });
 
 test('unsigned patient sign up url fails', function () {
@@ -65,9 +67,9 @@ test('incomplete profile cannot browse patient appointments shell', function () 
         ->assertRedirect(route('patient.profile.basic'));
 });
 
-test('guest can browse patient appointments placeholder', function () {
+test('guest is redirected to patient phone from patient appointments', function () {
     $this->get(route('patient.appointments'))
-        ->assertSuccessful();
+        ->assertRedirect(route('patient.phone'));
 });
 
 test('patient logout redirects back to patient home', function () {

@@ -68,6 +68,19 @@ new #[Layout('layouts::patient-auth')] #[Title('Your details')] class extends Co
 }; ?>
 
 <div>
+    <div class="mb-4 text-start sm:mb-6">
+        <flux:button
+            :href="route('patient.phone', ['phone' => $phone])"
+            wire:navigate
+            variant="ghost"
+            size="sm"
+            icon="arrow-left"
+            aria-label="{{ __('pagination.previous') }}"
+            title="{{ __('pagination.previous') }}"
+            class="px-0 text-zinc-600 hover:text-zinc-900"
+        />
+    </div>
+
     <div class="text-center">
         <flux:heading size="xl" class="patient-auth-heading text-balance">{{ __('patient_auth.register_title') }}</flux:heading>
         <flux:text class="mx-auto mt-2 max-w-sm text-balance text-zinc-600">{{ __('patient_auth.register_sub') }}</flux:text>

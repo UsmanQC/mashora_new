@@ -38,7 +38,7 @@ Route::livewire('patient', 'pages::patient.home')
     ->middleware(['patient.profile'])
     ->name('patient.home');
 
-Route::view('patient/appointments', 'patient.appointments')
+Route::livewire('patient/appointments', 'pages::patient.appointments')
     ->middleware(['patient.profile'])
     ->name('patient.appointments');
 

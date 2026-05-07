@@ -6,6 +6,7 @@ use Illuminate\Support\Carbon;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
+use MyFatoorah\Library\MyFatoorah;
 use MyFatoorah\Library\API\Payment\MyFatoorahPayment;
 
 new #[Layout('layouts::patient')] #[Title('Payment')] class extends Component
@@ -13,6 +14,10 @@ new #[Layout('layouts::patient')] #[Title('Payment')] class extends Component
     public TemporaryAppointment $temporaryAppointment;
 
     public string $paymentError = '';
+    public bool $embeddedReady = false;
+    public string $mfSessionId = '';
+    public string $mfCountryCode = '';
+    public string $mfJsDomain = '';
 
     public function mount(TemporaryAppointment $temporaryAppointment): void
     {
@@ -21,6 +26,50 @@ new #[Layout('layouts::patient')] #[Title('Payment')] class extends Component
         }
 
         $this->temporaryAppointment = $temporaryAppointment->load('doctor');
+        $this->initEmbeddedPaymentSession();
+    }
+
+    public function initEmbeddedPaymentSession(): void
+    {
+        if (empty(config('myfatoorah.api_key'))) {
+            return;
+        }
+
+        try {
+            $mfConfig = [
+                'apiKey' => (string) config('myfatoorah.api_key'),
+                'isTest' => (bool) config('myfatoorah.is_test'),
+                'vcCode' => (string) config('myfatoorah.vc_code'),
+            ];
+
+            $temp = $this->temporaryAppointment->fresh();
+            if ($temp === null) {
+                return;
+            }
+
+            $mfObj = new MyFatoorahPayment($mfConfig);
+            $mfSession = $mfObj->getEmbeddedSession('PATIENT-'.$temp->user_id);
+
+            $temp->payment_session_id = (string) ($mfSession->SessionId ?? '');
+            $temp->save();
+
+            $countries = MyFatoorah::getMFCountries();
+            $vcCode = (string) config('myfatoorah.vc_code');
+            $isTest = (bool) config('myfatoorah.is_test');
+            $country = $countries[$vcCode] ?? null;
+
+            if ($country === null) {
+                return;
+            }
+
+            $this->mfSessionId = (string) ($mfSession->SessionId ?? '');
+            $this->mfCountryCode = (string) ($mfSession->CountryCode ?? $vcCode);
+            $this->mfJsDomain = (string) ($isTest ? ($country['testPortal'] ?? '') : ($country['portal'] ?? ''));
+            $this->embeddedReady = $this->mfSessionId !== '' && $this->mfJsDomain !== '';
+        } catch (\Throwable $e) {
+            report($e);
+            $this->embeddedReady = false;
+        }
     }
 
     public function formattedDate(): string
@@ -116,19 +165,22 @@ new #[Layout('layouts::patient')] #[Title('Payment')] class extends Component
     }
 }; ?>
 
-<div class="mx-auto max-w-4xl space-y-8 px-4 py-6 pb-28 sm:pb-12">
+<div class="mx-auto max-w-6xl space-y-6 px-4 py-6 pb-28 sm:pb-12">
     @if (session('flash_payment'))
         <p class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">{{ session('flash_payment') }}</p>
     @endif
-    <header class="space-y-2">
-        <flux:heading size="xl" class="font-semibold text-zinc-900">
-            {{ __('patient_booking.checkout_title') }}
-        </flux:heading>
-        <flux:text class="text-zinc-600">{{ __('patient_booking.checkout_subtitle') }}</flux:text>
-    </header>
 
     <div class="grid gap-8 lg:grid-cols-2">
-        <div class="rounded-2xl border border-zinc-200/90 bg-white p-5 shadow-md shadow-black/10">
+        <div class="space-y-4">
+            <div class="flex flex-wrap items-center gap-2 text-sm font-medium text-[#2f64c9]">
+                <span>{{ __('patient_booking.crumb_find_specialist') }}</span>
+                <span class="text-zinc-400">></span>
+                <span>{{ __('patient_booking.crumb_book') }}</span>
+                <span class="text-zinc-400">></span>
+                <span class="text-zinc-500">{{ __('patient_booking.checkout_title') }}</span>
+            </div>
+
+            <div class="rounded-2xl border border-zinc-200/90 bg-white p-5 shadow-sm">
             <div class="flex justify-between gap-3 border-b border-zinc-100 pb-3">
                 <span class="text-sm font-semibold text-zinc-600">{{ __('patient_booking.specialist_name') }}</span>
                 <span class="min-w-0 text-end text-sm font-semibold text-zinc-900">{{ $this->specialistName() }}</span>
@@ -158,34 +210,96 @@ new #[Layout('layouts::patient')] #[Title('Payment')] class extends Component
                 <span class="text-zinc-800">{{ __('patient_booking.total') }}</span>
                 <span class="tabular-nums text-zinc-900">{{ number_format((float) $this->temporaryAppointment->total, 2) }} {{ __('patient_booking.sar') }}</span>
             </div>
+            </div>
         </div>
 
-        <div class="space-y-4">
+        <div class="space-y-4 rounded-2xl border border-zinc-200/90 bg-white p-5 shadow-sm">
             @if ($paymentError !== '')
                 <p class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{{ $paymentError }}</p>
             @endif
 
             @if (filled(config('myfatoorah.api_key')))
-                <flux:text class="text-sm text-zinc-600">{{ __('patient_booking.payment_secure_note') }}</flux:text>
-                <flux:button
-                    type="button"
-                    variant="primary"
-                    class="w-full border-[#0B163E] !bg-[#0B163E] !text-white hover:!brightness-[0.97] sm:w-auto"
-                    wire:click="startMyFatoorahPayment"
-                    wire:loading.attr="disabled"
-                >
-                    <span wire:loading.remove wire:target="startMyFatoorahPayment">{{ __('patient_booking.pay_now') }}</span>
-                    <span wire:loading wire:target="startMyFatoorahPayment">{{ __('patient_booking.payment_processing') }}</span>
-                </flux:button>
+                @if ($embeddedReady)
+                    <div id="mf-form-element" class="min-h-[155px] w-full rounded-lg border border-zinc-300 bg-white p-2"></div>
+
+                    <button
+                        type="button"
+                        id="embedded-pay-now"
+                        class="w-full rounded-lg border border-[#3d5afe] bg-[#3d5afe] py-3 text-sm font-semibold text-white transition hover:brightness-95"
+                    >
+                        {{ __('patient_booking.pay_now') }}
+                    </button>
+                @else
+                    <flux:button
+                        type="button"
+                        variant="primary"
+                        class="w-full border-[#3d5afe] !bg-[#3d5afe] !text-white hover:!brightness-[0.97]"
+                        wire:click="startMyFatoorahPayment"
+                        wire:loading.attr="disabled"
+                    >
+                        <span wire:loading.remove wire:target="startMyFatoorahPayment">{{ __('patient_booking.pay_now') }}</span>
+                        <span wire:loading wire:target="startMyFatoorahPayment">{{ __('patient_booking.payment_processing') }}</span>
+                    </flux:button>
+                @endif
+
+                <button type="button" class="w-full rounded-lg bg-black py-3 text-sm font-semibold text-white">
+                    Pay with Apple Pay
+                </button>
+
+                <flux:text class="text-xs text-zinc-500">{{ __('patient_booking.payment_secure_note') }}</flux:text>
             @else
                 <p class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">{{ __('patient_booking.payment_api_missing') }}</p>
             @endif
 
-            <div class="pt-2">
+            <div class="pt-1">
                 <flux:link :href="route('patient.home')" wire:navigate>{{ __('patient_booking.back_home') }}</flux:link>
             </div>
         </div>
     </div>
 
-    @include('partials.patient-checkout-payment-methods')
+    @if ($embeddedReady)
+        <form id="embedded-exec-form" action="{{ route('patient.payment.execute', ['temporaryAppointment' => $temporaryAppointment->id]) }}" method="POST" class="hidden">
+            @csrf
+        </form>
+
+        <script src="{{ $mfJsDomain }}/cardview/v2/session.js"></script>
+        <script>
+            const mfConfig = {
+                countryCode: @js($mfCountryCode),
+                sessionId: @js($mfSessionId),
+                cardViewId: "mf-form-element",
+                style: {
+                    direction: @js(App::isLocale('ar') ? 'rtl' : 'ltr'),
+                    cardHeight: 130,
+                    input: {
+                        color: "#111827",
+                        fontSize: "14px",
+                        inputHeight: "42px",
+                        borderColor: "#d4d4d8",
+                        borderWidth: "1px",
+                        borderRadius: "8px",
+                        placeHolder: {
+                            holderName: "Name On Card",
+                            cardNumber: "Card Number",
+                            expiryDate: "MM / YY",
+                            securityCode: "CVV"
+                        }
+                    },
+                    label: { display: false }
+                }
+            };
+
+            window.myFatoorah.init(mfConfig);
+
+            document.getElementById('embedded-pay-now')?.addEventListener('click', function () {
+                window.myFatoorah.submit()
+                    .then(function () {
+                        document.getElementById('embedded-exec-form')?.submit();
+                    })
+                    .catch(function (error) {
+                        alert(error);
+                    });
+            });
+        </script>
+    @endif
 </div>

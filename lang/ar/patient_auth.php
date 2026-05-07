@@ -47,6 +47,7 @@ return [
 
     'register_title' => 'بياناتك',
     'register_sub' => 'اختر كلمة مرور قوية لحماية حسابك.',
+    'back_to_phone' => 'العودة لإدخال الجوال',
     'full_name' => 'الاسم الكامل',
     'password' => 'كلمة المرور',
     'password_confirm' => 'تأكيد كلمة المرور',

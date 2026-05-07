@@ -19,7 +19,7 @@ class EnsurePatientPortalProfileComplete
         $user = $request->user();
 
         if (! $user) {
-            return $next($request);
+            return redirect()->route('patient.phone');
         }
 
         if ($user->profile_completed) {

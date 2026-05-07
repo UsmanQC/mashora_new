@@ -2,8 +2,11 @@
 
 namespace App\Support;
 
+use App\Models\Communication;
+use App\Models\Degree;
 use App\Models\Doctor;
 use App\Models\Speciality;
+use Carbon\Carbon;
 
 final class SpecialistCatalog
 {
@@ -12,6 +15,11 @@ final class SpecialistCatalog
      */
     public static function all(): array
     {
+        $doctorCards = self::approvedDoctorCards();
+        if ($doctorCards !== []) {
+            return $doctorCards;
+        }
+
         /** @var array<int, array<string, mixed>> $entries */
         $entries = config('specialist_catalog.entries', []);
 
@@ -49,9 +57,17 @@ final class SpecialistCatalog
      */
     private static function matchesFilters(array $doc, array $preferences): bool
     {
-        $roleWant = $preferences['specialist_role'] ?? null;
-        if (is_string($roleWant) && $roleWant !== '' && ($doc['specialist_role'] ?? '') !== $roleWant) {
-            return false;
+        $roleWant = $preferences['degree_id'] ?? ($preferences['specialist_role'] ?? null);
+        if (is_string($roleWant) && $roleWant !== '') {
+            $docDegreeId = (string) ($doc['degree_id'] ?? '');
+
+            if (is_numeric($roleWant)) {
+                if ($docDegreeId === '' || $docDegreeId !== $roleWant) {
+                    return false;
+                }
+            } elseif (($doc['specialist_role'] ?? '') !== $roleWant) {
+                return false;
+            }
         }
 
         $genderPref = $preferences['gender_preference'] ?? 'both';
@@ -88,6 +104,130 @@ final class SpecialistCatalog
         }
 
         return true;
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private static function approvedDoctorCards(): array
+    {
+        $doctors = Doctor::query()
+            ->where('status', 'approved')
+            ->with(['degree', 'specialities', 'durations', 'workingDays.workingHours', 'communications'])
+            ->orderBy('id')
+            ->get();
+
+        if ($doctors->isEmpty()) {
+            return [];
+        }
+
+        return $doctors
+            ->map(static fn (Doctor $doctor): array => self::toDoctorCardShape($doctor))
+            ->all();
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private static function toDoctorCardShape(Doctor $doctor): array
+    {
+        $degreeTitle = (string) ($doctor->degree?->title ?? '');
+        $roleKind = str_contains(strtolower($degreeTitle), 'non-doctor')
+            ? 'therapist'
+            : 'physician_specialist';
+
+        $duration = $doctor->durations->sortBy('duration')->first();
+        $sessionMinutes = (int) ($duration?->duration ?? 15);
+        $price = (int) round((float) ($duration?->pivot?->price ?? 0));
+
+        $language = (string) ($doctor->spoken_languages ?? '');
+        $languages = match ($language) {
+            'ar' => ['ar'],
+            'en' => ['en'],
+            default => ['ar', 'en'],
+        };
+
+        /** @var list<string> $specialityIds */
+        $specialityIds = $doctor->specialities
+            ->pluck('id')
+            ->map(static fn (mixed $id): string => (string) $id)
+            ->values()
+            ->all();
+
+        $isAr = app()->getLocale() === 'ar';
+        /** @var list<string> $tags */
+        $tags = $doctor->specialities
+            ->map(function (Speciality $speciality) use ($isAr): string {
+                return $isAr
+                    ? (filled($speciality->title_ar) ? (string) $speciality->title_ar : (string) $speciality->title)
+                    : (filled($speciality->title) ? (string) $speciality->title : (string) $speciality->title_ar);
+            })
+            ->values()
+            ->all();
+
+        /** @var list<string> $communicationCodes */
+        $communicationCodes = $doctor->communications
+            ->pluck('communication')
+            ->map(static fn (mixed $code): string => (string) $code)
+            ->all();
+
+        if ($communicationCodes === []) {
+            $communicationCodes = Communication::query()
+                ->pluck('communication')
+                ->map(static fn (mixed $code): string => (string) $code)
+                ->all();
+        }
+
+        $channels = [
+            'chat' => in_array('chat', $communicationCodes, true),
+            'video' => in_array('video_call', $communicationCodes, true),
+            'voice' => in_array('voice_call', $communicationCodes, true),
+        ];
+
+        /** @var list<string> $slots */
+        $slots = collect($doctor->workingDays)
+            ->where('is_working', true)
+            ->flatMap(static function ($workingDay) {
+                return $workingDay->workingHours->flatMap(static function ($hour) {
+                    if (! filled($hour->start_time) || ! filled($hour->end_time)) {
+                        return [];
+                    }
+
+                    $start = Carbon::createFromFormat('H:i:s', (string) $hour->start_time);
+                    $end = Carbon::createFromFormat('H:i:s', (string) $hour->end_time);
+                    $times = [];
+
+                    while ($start < $end) {
+                        $times[] = $start->format('H:i');
+                        $start = $start->addMinutes(15);
+                    }
+
+                    return $times;
+                });
+            })
+            ->unique()
+            ->take(8)
+            ->values()
+            ->all();
+
+        return [
+            'id' => 'doctor-'.$doctor->id,
+            'name' => $doctor->displayName(),
+            'bio' => $doctor->aboutDisplay(),
+            'role_kind' => $roleKind,
+            'likes' => 0,
+            'price_sar' => $price,
+            'session_minutes' => $sessionMinutes,
+            'channels' => $channels,
+            'slots' => $slots,
+            'tags' => $tags,
+            'specialist_role' => '',
+            'degree_id' => $doctor->degree_id !== null ? (string) $doctor->degree_id : null,
+            'gender' => (string) ($doctor->gender ?? ''),
+            'languages' => $languages,
+            'speciality_ids' => $specialityIds,
+            'doctor_database_id' => $doctor->id,
+        ];
     }
 
     /**
@@ -129,6 +269,7 @@ final class SpecialistCatalog
             'psychologist_non_md' => 'therapist',
             default => 'physician_specialist',
         };
+        $degreeId = self::resolveDegreeIdFromLegacyRole($specialistRole);
 
         $explicitDoctorId = self::normaliseOptionalDoctorId($entry['doctor_database_id'] ?? null);
         $fallbackDoctorId = self::normaliseOptionalDoctorId(config('patient_booking.catalog_doctor_fallback_id'));
@@ -146,6 +287,7 @@ final class SpecialistCatalog
             'tags' => $tags,
 
             'specialist_role' => $specialistRole,
+            'degree_id' => $degreeId !== null ? (string) $degreeId : null,
             'gender' => (string) ($entry['gender'] ?? ''),
             'languages' => is_array($entry['languages'] ?? null) ? $entry['languages'] : [],
             'speciality_ids' => $specialityIdStrings,
@@ -176,6 +318,27 @@ final class SpecialistCatalog
         $id = Doctor::query()
             ->where('status', 'approved')
             ->orderBy('id')
+            ->value('id');
+
+        return self::normaliseOptionalDoctorId($id);
+    }
+
+    private static function resolveDegreeIdFromLegacyRole(string $legacyRole): ?int
+    {
+        $degreeTitle = match ($legacyRole) {
+            'psychiatrist' => 'Doctor (Specialist)',
+            'consultant' => 'Doctor (Consultant)',
+            'psychologist_non_md' => 'Non-Doctor (Therapist)',
+            default => null,
+        };
+
+        if ($degreeTitle === null) {
+            return null;
+        }
+
+        $id = Degree::query()
+            ->where('status', true)
+            ->where('title', $degreeTitle)
             ->value('id');
 
         return self::normaliseOptionalDoctorId($id);

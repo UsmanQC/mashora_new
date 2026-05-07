@@ -1,6 +1,8 @@
 <?php
 
+use App\Models\Degree;
 use App\Models\User;
+use Database\Seeders\DegreeSeeder;
 use Database\Seeders\SpecialitySeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
@@ -8,6 +10,7 @@ uses(RefreshDatabase::class);
 
 beforeEach(function () {
     $this->seed(SpecialitySeeder::class);
+    $this->seed(DegreeSeeder::class);
 });
 
 test('guest cannot open specialist results', function () {
@@ -32,9 +35,12 @@ test('session filter preferences narrow which specialists are listed', function 
     app()->setLocale('en');
 
     $user = User::factory()->create(['profile_completed' => true]);
+    $specialistDegreeId = (string) Degree::query()
+        ->where('title', 'Doctor (Specialist)')
+        ->value('id');
 
     session()->put('session_filter_preferences', [
-        'specialist_role' => 'psychiatrist',
+        'specialist_role' => $specialistDegreeId,
         'gender_preference' => 'male',
         'duration_minutes' => '15',
         'language_preference' => 'both',
@@ -53,9 +59,12 @@ test('specialists page shows empty state when no catalog entry matches filters',
     app()->setLocale('en');
 
     $user = User::factory()->create(['profile_completed' => true]);
+    $specialistDegreeId = (string) Degree::query()
+        ->where('title', 'Doctor (Specialist)')
+        ->value('id');
 
     session()->put('session_filter_preferences', [
-        'specialist_role' => 'psychiatrist',
+        'specialist_role' => $specialistDegreeId,
         'gender_preference' => 'both',
         'duration_minutes' => '15',
         'language_preference' => 'both',

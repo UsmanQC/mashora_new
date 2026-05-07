@@ -29,5 +29,6 @@ test('authenticated patient can open schedule session filter page', function () 
         ->assertSuccessful()
         ->assertSee(__('session_filter.filter_heading'), false)
         ->assertSee('Obsessive', false)
-        ->assertSee('Anorexia', false);
+        ->assertSee('Substance Abuse', false)
+        ->assertDontSee('Anorexia', false);
 });

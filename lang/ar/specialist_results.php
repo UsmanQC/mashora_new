@@ -22,6 +22,8 @@ return [
     'sar' => config('currency.sa_riyal_symbol'),
 
     'available_times' => 'الأوقات المتاحة',
+    'times_timezone_note' => 'الأوقات المعروضة بتوقيت السعودية (Asia/Riyadh).',
+    'no_slots_for_selected_day' => 'لا توجد أوقات قادمة متاحة في اليوم المحدد.',
 
     'like_incremented' => 'تم الإضافة للمفضلة (عرض تجريبي)',
 
@@ -30,4 +32,12 @@ return [
     'no_results_title' => 'لا يوجد أخصائيون مطابقون لهذه المرشحات',
     'no_results_hint' => 'جرّب تغيير المدة أو اللغة أو التخصصات الفرعية — أو عد إلى شاشة التصفية.',
     'adjust_filters' => 'تعديل المرشحات',
+    'search_placeholder' => 'ابحث باسم الطبيب',
+    'filters' => 'المرشحات',
+    'today_short' => 'اليوم',
+    'duration_minutes' => ':minutes دقيقة',
+    'filter_title' => 'فلترة البحث',
+    'all_option' => 'الكل',
+    'clear' => 'مسح',
+    'apply' => 'تطبيق',
 ];

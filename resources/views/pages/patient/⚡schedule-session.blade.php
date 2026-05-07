@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Degree;
 use App\Models\Speciality;
 use Flux\Flux;
 use Illuminate\Support\Facades\Session;
@@ -10,7 +11,7 @@ use Livewire\Component;
 
 new #[Layout('layouts::patient')] #[Title('Session filter')] class extends Component
 {
-    public string $specialistRole = 'psychiatrist';
+    public string $degree_id = '';
 
     public string $genderPreference = 'both';
 
@@ -22,6 +23,53 @@ new #[Layout('layouts::patient')] #[Title('Session filter')] class extends Compo
     public array $subspecialties = [];
 
     public bool $subspecialtiesExpanded = false;
+
+    /**
+     * @return list<array{value: string, label: string}>
+     */
+    #[Computed]
+    public function specialistKindOptions(): array
+    {
+        $degrees = Degree::query()
+            ->where('status', true)
+            ->orderBy('id')
+            ->get(['id', 'title', 'title_ar']);
+
+        if ($degrees->isEmpty()) {
+            return [
+                ['value' => '1', 'label' => __('session_filter.sections.specialist_kind.psychiatrist')],
+                ['value' => '2', 'label' => __('session_filter.sections.specialist_kind.consultant')],
+                ['value' => '3', 'label' => __('session_filter.sections.specialist_kind.psychologist_non_md')],
+            ];
+        }
+
+        $isAr = app()->getLocale() === 'ar';
+
+        return $degrees
+            ->values()
+            ->map(function (Degree $degree) use ($isAr): array {
+                $label = $isAr
+                    ? (filled($degree->title_ar) ? (string) $degree->title_ar : (string) $degree->title)
+                    : (filled($degree->title) ? (string) $degree->title : (string) $degree->title_ar);
+
+                return [
+                    'value' => (string) $degree->id,
+                    'label' => $label,
+                ];
+            })
+            ->all();
+    }
+
+    public function mount(): void
+    {
+        $availableValues = array_column($this->specialistKindOptions, 'value');
+
+        if ($this->degree_id !== '' && in_array($this->degree_id, $availableValues, true)) {
+            return;
+        }
+
+        $this->degree_id = (string) ($availableValues[0] ?? '1');
+    }
 
     /**
      * @return list<array{id: string, label: string}>
@@ -97,7 +145,7 @@ new #[Layout('layouts::patient')] #[Title('Session filter')] class extends Compo
     public function preferenceSnapshot(): array
     {
         return [
-            'specialist_role' => $this->specialistRole,
+            'degree_id' => $this->degree_id,
             'gender_preference' => $this->genderPreference,
             'duration_minutes' => $this->durationMinutes,
             'language_preference' => $this->languagePreference,
@@ -108,7 +156,6 @@ new #[Layout('layouts::patient')] #[Title('Session filter')] class extends Compo
     public function proceedNext(): void
     {
         Session::put('session_filter_preferences', $this->preferenceSnapshot());
-
         Flux::toast(variant: 'success', text: __('session_filter.next_toast'));
 
         $this->redirect(route('patient.schedule.specialists'));
@@ -139,10 +186,10 @@ new #[Layout('layouts::patient')] #[Title('Session filter')] class extends Compo
             <flux:heading id="sess-spec-kind" level="4" size="sm" class="text-zinc-600">
                 {{ __('session_filter.sections.specialist') }}
             </flux:heading>
-            <flux:radio.group variant="pills" wire:model.live="specialistRole" class="gap-2 sm:gap-3">
-                <flux:radio value="psychiatrist">{{ __('session_filter.sections.specialist_kind.psychiatrist') }}</flux:radio>
-                <flux:radio value="consultant">{{ __('session_filter.sections.specialist_kind.consultant') }}</flux:radio>
-                <flux:radio value="psychologist_non_md">{{ __('session_filter.sections.specialist_kind.psychologist_non_md') }}</flux:radio>
+            <flux:radio.group variant="pills" wire:model.live="degree_id" class="gap-2 sm:gap-3">
+                @foreach ($this->specialistKindOptions as $option)
+                    <flux:radio value="{{ $option['value'] }}">{{ $option['label'] }}</flux:radio>
+                @endforeach
             </flux:radio.group>
         </section>
 

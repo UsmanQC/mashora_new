@@ -46,6 +46,7 @@ return [
 
     'register_title' => 'Your details',
     'register_sub' => 'Choose a strong password to protect your account.',
+    'back_to_phone' => 'Back to phone entry',
     'full_name' => 'Full name',
     'password' => 'Password',
     'password_confirm' => 'Confirm password',

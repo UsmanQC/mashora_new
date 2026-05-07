@@ -8,10 +8,9 @@ use Livewire\Livewire;
 
 uses(RefreshDatabase::class);
 
-test('guest patient home does not include mood chrome', function () {
+test('guest patient home is redirected to patient phone', function () {
     $this->get(route('patient.home'))
-        ->assertSuccessful()
-        ->assertDontSee(__('patient.mood_feeling_cta'));
+        ->assertRedirect(route('patient.phone'));
 });
 
 test('authenticated patient sees mood chrome on home', function () {

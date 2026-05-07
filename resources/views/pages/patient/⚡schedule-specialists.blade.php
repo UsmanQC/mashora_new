@@ -1,6 +1,10 @@
 <?php
 
 use App\Support\SpecialistCatalog;
+use App\Models\Duration;
+use App\Models\Degree;
+use App\Models\Doctor;
+use App\Models\Speciality;
 use Flux\Flux;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Session;
@@ -14,8 +18,35 @@ new #[Layout('layouts::patient')] #[Title('Specialists')] class extends Componen
     /** @var array<string, int> */
     public array $likeCounts = [];
 
+    public string $searchDoctor = '';
+
+    public string $selectedDate = '';
+
+    public string $selectedDuration = '';
+
+    public bool $showFilterPanel = false;
+
+    public string $filterGender = 'both';
+
+    public string $filterLanguage = 'both';
+
+    public string $filterDegree = '';
+
+    /** @var list<string> */
+    public array $filterSubspecialties = [];
+
     /** @var list<array<string, mixed>>|null */
     protected ?array $filteredSpecialistsCache = null;
+
+    /** @var array<string, list<string>> */
+    protected array $doctorSlotsCache = [];
+
+    protected function patientTimezone(): string
+    {
+        $appTimezone = (string) config('app.timezone', 'UTC');
+
+        return $appTimezone === 'UTC' ? 'Asia/Riyadh' : $appTimezone;
+    }
 
     /**
      * @return list<array<string, mixed>>
@@ -32,6 +63,22 @@ new #[Layout('layouts::patient')] #[Title('Specialists')] class extends Componen
         foreach ($this->filteredSpecialists() as $specialist) {
             $this->likeCounts[$specialist['id']] = (int) ($specialist['likes'] ?? 0);
         }
+
+        $this->selectedDate = now()->timezone($this->patientTimezone())->toDateString();
+
+        $sessionDuration = (string) (Session::get('session_filter_preferences.duration_minutes') ?? '');
+        if ($sessionDuration !== '') {
+            $this->selectedDuration = $sessionDuration;
+        }
+
+        $this->filterGender = (string) (Session::get('session_filter_preferences.gender_preference') ?? 'both');
+        $this->filterLanguage = (string) (Session::get('session_filter_preferences.language_preference') ?? 'both');
+        $this->filterDegree = (string) (Session::get('session_filter_preferences.degree_id') ?? '');
+        $this->filterSubspecialties = collect(Session::get('session_filter_preferences.subspecialties', []))
+            ->map(static fn (mixed $id): string => (string) $id)
+            ->filter()
+            ->values()
+            ->all();
     }
 
     /**
@@ -41,6 +88,191 @@ new #[Layout('layouts::patient')] #[Title('Specialists')] class extends Componen
     public function specialists(): array
     {
         return $this->filteredSpecialists();
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    #[Computed]
+    public function visibleSpecialists(): array
+    {
+        $items = $this->specialists;
+
+        $search = mb_strtolower(trim($this->searchDoctor));
+        if ($search !== '') {
+            $items = array_values(array_filter(
+                $items,
+                static fn (array $specialist): bool => str_contains(
+                    mb_strtolower((string) ($specialist['name'] ?? '')),
+                    $search
+                )
+            ));
+        }
+
+        if ($this->selectedDuration !== '') {
+            $items = array_values(array_filter(
+                $items,
+                fn (array $specialist): bool => (string) ($specialist['session_minutes'] ?? '') === $this->selectedDuration
+            ));
+        }
+
+        if ($this->filterGender !== 'both') {
+            $items = array_values(array_filter(
+                $items,
+                fn (array $specialist): bool => (string) ($specialist['gender'] ?? '') === $this->filterGender
+            ));
+        }
+
+        if ($this->filterLanguage !== 'both') {
+            $items = array_values(array_filter(
+                $items,
+                fn (array $specialist): bool => in_array($this->filterLanguage, (array) ($specialist['languages'] ?? []), true)
+            ));
+        }
+
+        if ($this->filterDegree !== '') {
+            $items = array_values(array_filter(
+                $items,
+                fn (array $specialist): bool => (string) ($specialist['degree_id'] ?? '') === $this->filterDegree
+            ));
+        }
+
+        if ($this->filterSubspecialties !== []) {
+            $items = array_values(array_filter(
+                $items,
+                function (array $specialist): bool {
+                    $doctorSpecialities = (array) ($specialist['speciality_ids'] ?? []);
+
+                    return count(array_intersect($this->filterSubspecialties, $doctorSpecialities)) > 0;
+                }
+            ));
+        }
+
+        return $items;
+    }
+
+    /**
+     * @return list<array{date: string, day: string, weekday: string, is_today: bool}>
+     */
+    #[Computed]
+    public function dayOptions(): array
+    {
+        $start = now()->timezone($this->patientTimezone())->startOfDay();
+
+        $days = [];
+        for ($i = 0; $i < 8; $i++) {
+            $date = $start->copy()->addDays($i)->locale(app()->getLocale());
+
+            $days[] = [
+                'date' => $date->toDateString(),
+                'day' => $date->translatedFormat('d'),
+                'weekday' => $i === 0 ? __('specialist_results.today_short') : $date->translatedFormat('D'),
+                'is_today' => $i === 0,
+            ];
+        }
+
+        return $days;
+    }
+
+    /**
+     * @return list<string>
+     */
+    #[Computed]
+    public function durationOptions(): array
+    {
+        return Duration::query()
+            ->orderBy('duration')
+            ->pluck('duration')
+            ->map(static fn (mixed $minutes): string => (string) $minutes)
+            ->filter(static fn (string $minutes): bool => $minutes !== '' && $minutes !== '0')
+            ->values()
+            ->all();
+    }
+
+    public function selectDate(string $date): void
+    {
+        $this->selectedDate = $date;
+    }
+
+    public function selectDuration(string $minutes): void
+    {
+        $this->selectedDuration = $minutes;
+    }
+
+    /**
+     * @return list<array{id: string, label: string}>
+     */
+    #[Computed]
+    public function degreeOptions(): array
+    {
+        $isAr = app()->getLocale() === 'ar';
+
+        return Degree::query()
+            ->where('status', true)
+            ->orderBy('id')
+            ->get(['id', 'title', 'title_ar'])
+            ->map(function (Degree $degree) use ($isAr): array {
+                $label = $isAr
+                    ? (filled($degree->title_ar) ? (string) $degree->title_ar : (string) $degree->title)
+                    : (filled($degree->title) ? (string) $degree->title : (string) $degree->title_ar);
+
+                return [
+                    'id' => (string) $degree->id,
+                    'label' => $label,
+                ];
+            })
+            ->all();
+    }
+
+    /**
+     * @return list<array{id: string, label: string}>
+     */
+    #[Computed]
+    public function subspecialityOptions(): array
+    {
+        $isAr = app()->getLocale() === 'ar';
+
+        return Speciality::query()
+            ->where('status', true)
+            ->orderBy('id')
+            ->get(['id', 'title', 'title_ar'])
+            ->map(function (Speciality $speciality) use ($isAr): array {
+                $label = $isAr
+                    ? (filled($speciality->title_ar) ? (string) $speciality->title_ar : (string) $speciality->title)
+                    : (filled($speciality->title) ? (string) $speciality->title : (string) $speciality->title_ar);
+
+                return [
+                    'id' => (string) $speciality->id,
+                    'label' => $label,
+                ];
+            })
+            ->all();
+    }
+
+    public function toggleFilterPanel(): void
+    {
+        $this->showFilterPanel = ! $this->showFilterPanel;
+    }
+
+    public function clearFilterPanel(): void
+    {
+        $this->filterGender = 'both';
+        $this->filterLanguage = 'both';
+        $this->filterDegree = '';
+        $this->filterSubspecialties = [];
+    }
+
+    public function applyFilterPanel(): void
+    {
+        Session::put('session_filter_preferences', [
+            'degree_id' => $this->filterDegree,
+            'gender_preference' => $this->filterGender,
+            'duration_minutes' => $this->selectedDuration,
+            'language_preference' => $this->filterLanguage,
+            'subspecialties' => $this->filterSubspecialties,
+        ]);
+
+        $this->showFilterPanel = false;
     }
 
     public function incrementLike(string $id): void
@@ -61,7 +293,7 @@ new #[Layout('layouts::patient')] #[Title('Specialists')] class extends Componen
 
         $doctorId = $specialist['doctor_database_id'] ?? null;
         if (is_int($doctorId) && $doctorId > 0) {
-            $date = now()->timezone(config('app.timezone'))->format('Y-m-d');
+            $date = $this->selectedDate;
 
             $this->redirect(
                 route('patient.book-appointments', ['doctor' => $doctorId], false)
@@ -81,11 +313,126 @@ new #[Layout('layouts::patient')] #[Title('Specialists')] class extends Componen
         ]);
 
         $formatted = Carbon::createFromFormat('H:i', $slot)
-            ->timezone(config('app.timezone'))
+            ->timezone($this->patientTimezone())
             ->locale(app()->getLocale())
             ->translatedFormat('g:i a');
 
         Flux::toast(text: __('specialist_results.slot_selected_toast', ['time' => $formatted]));
+    }
+
+    /**
+     * @param  array<string, mixed>  $specialist
+     * @return list<string>
+     */
+    public function availableSlots(array $specialist): array
+    {
+        $slots = $this->slotsForSelectedDate($specialist);
+        $timezone = $this->patientTimezone();
+
+        $selectedDate = Carbon::parse($this->selectedDate, $timezone)->startOfDay();
+        $today = now()->timezone($timezone)->startOfDay();
+
+        if (! $selectedDate->equalTo($today)) {
+            return $slots;
+        }
+
+        $now = now()->timezone($timezone);
+
+        return collect($slots)
+            ->filter(function (string $slot) use ($selectedDate, $now, $timezone): bool {
+                try {
+                    $slotAt = Carbon::createFromFormat(
+                        'Y-m-d H:i',
+                        $selectedDate->format('Y-m-d').' '.$slot,
+                        $timezone
+                    );
+
+                    return $slotAt->greaterThan($now);
+                } catch (\Throwable) {
+                    return false;
+                }
+            })
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @param  array<string, mixed>  $specialist
+     * @return list<string>
+     */
+    protected function slotsForSelectedDate(array $specialist): array
+    {
+        $doctorId = $specialist['doctor_database_id'] ?? null;
+
+        if (! is_int($doctorId) || $doctorId <= 0) {
+            /** @var list<string> */
+            return collect($specialist['slots'] ?? [])
+                ->map(static fn (mixed $slot): string => (string) $slot)
+                ->filter()
+                ->values()
+                ->all();
+        }
+
+        $cacheKey = $doctorId.'|'.$this->selectedDate;
+        if (array_key_exists($cacheKey, $this->doctorSlotsCache)) {
+            return $this->doctorSlotsCache[$cacheKey];
+        }
+
+        $timezone = $this->patientTimezone();
+        $selectedDate = Carbon::parse($this->selectedDate, $timezone);
+        $weekday = strtolower($selectedDate->englishDayOfWeek);
+
+        $doctor = Doctor::query()
+            ->with(['workingDays' => function ($query) use ($selectedDate, $weekday): void {
+                $query->where('is_working', true)
+                    ->where(function ($q) use ($selectedDate, $weekday): void {
+                        $q->whereDate('override_date', $selectedDate->toDateString())
+                            ->orWhere(function ($qq) use ($weekday): void {
+                                $qq->whereNull('override_date')
+                                    ->where('day_of_week', $weekday);
+                            });
+                    })
+                    ->with('workingHours');
+            }])
+            ->find($doctorId);
+            if (! $doctor instanceof Doctor || $doctor->workingDays->isEmpty()) {
+            $this->doctorSlotsCache[$cacheKey] = [];
+
+            return [];
+        }
+
+        /** @var list<string> $slots */
+        $slots = $doctor->workingDays
+            ->flatMap(static function ($workingDay) use ($timezone) {
+                return $workingDay->workingHours->flatMap(static function ($hour) use ($timezone) {
+                    if (! filled($hour->start_time) || ! filled($hour->end_time)) {
+                        return [];
+                    }
+
+                    try {
+                        $start = Carbon::createFromFormat('H:i:s', (string) $hour->start_time, $timezone);
+                        $end = Carbon::createFromFormat('H:i:s', (string) $hour->end_time, $timezone);
+                    } catch (\Throwable) {
+                        return [];
+                    }
+
+                    $times = [];
+                    while ($start < $end) {
+                        $times[] = $start->format('H:i');
+                        $start = $start->addMinutes(15);
+                    }
+
+                    return $times;
+                });
+            })
+            ->unique()
+            ->sort()
+            ->values()
+            ->all();
+
+        $this->doctorSlotsCache[$cacheKey] = $slots;
+
+        return $slots;
     }
 
     #[Computed]
@@ -95,7 +442,7 @@ new #[Layout('layouts::patient')] #[Title('Specialists')] class extends Componen
     }
 }; ?>
 
-<div class="relative mx-auto max-w-6xl space-y-6 px-4 py-6 pb-28 sm:pb-14">
+<div class="relative mx-auto w-full max-w-7xl space-y-6 px-3 py-5 pb-28 sm:px-5 sm:py-6 sm:pb-14">
     <header class="space-y-2">
         <flux:heading size="xl" class="font-semibold text-zinc-900">
             {{ __('specialist_results.page_heading') }}
@@ -105,7 +452,137 @@ new #[Layout('layouts::patient')] #[Title('Specialists')] class extends Componen
         </flux:text>
     </header>
 
-    @if (count($this->specialists) === 0)
+    <section class="space-y-4 rounded-3xl border border-zinc-200/80 bg-white/95 p-4 shadow-[0_12px_28px_-20px_rgba(2,6,23,0.35)] backdrop-blur sm:p-5">
+        <div class="flex items-center gap-2.5 sm:gap-3">
+            <div class="relative flex-1">
+                <input
+                    type="text"
+                    wire:model.live.debounce.300ms="searchDoctor"
+                    placeholder="{{ __('specialist_results.search_placeholder') }}"
+                    class="h-12 w-full rounded-2xl border border-zinc-200/90 bg-zinc-50/70 ps-4 pe-11 text-sm font-medium text-zinc-800 placeholder:font-normal placeholder:text-zinc-400 transition focus:border-[#3d63ff] focus:bg-white focus:outline-none focus:ring-4 focus:ring-[#3d63ff]/15"
+                />
+                <flux:icon name="magnifying-glass" class="pointer-events-none absolute end-3 top-1/2 size-5 -translate-y-1/2 text-zinc-400" />
+            </div>
+            <button
+                type="button"
+                wire:click="toggleFilterPanel"
+                class="inline-flex size-12 shrink-0 items-center justify-center rounded-2xl border border-zinc-200/90 bg-zinc-50/70 text-zinc-500 transition hover:border-[#3d63ff]/35 hover:bg-[#3d63ff]/5 hover:text-[#3d63ff]"
+                aria-label="{{ __('specialist_results.filters') }}"
+            >
+                <flux:icon name="adjustments-horizontal" class="size-5" />
+            </button>
+        </div>
+
+        <div class="grid grid-cols-4 gap-2 sm:grid-cols-8 sm:gap-2.5">
+            @foreach ($this->dayOptions as $day)
+                <button
+                    type="button"
+                    wire:key="day-{{ $day['date'] }}"
+                    wire:click="selectDate('{{ $day['date'] }}')"
+                    @class([
+                        'w-full rounded-2xl border px-2.5 py-2.5 text-center text-sm font-semibold transition',
+                        $this->selectedDate === $day['date']
+                            ? 'border-[#335CFF] bg-[#335CFF] text-white shadow-[0_10px_20px_-12px_rgba(51,92,255,0.9)]'
+                            : 'border-zinc-200/80 bg-zinc-50/70 text-[#335CFF] hover:border-[#335CFF]/35 hover:bg-[#335CFF]/5',
+                    ])
+                >
+                    <div>{{ $day['day'] }}</div>
+                    <div class="text-xs font-medium opacity-90">{{ $day['weekday'] }}</div>
+                </button>
+            @endforeach
+        </div>
+
+        <div class="flex flex-wrap justify-center gap-2 pt-0.5">
+            @foreach ($this->durationOptions as $minutes)
+                <button
+                    type="button"
+                    wire:key="duration-{{ $minutes }}"
+                    wire:click="selectDuration('{{ $minutes }}')"
+                    @class([
+                        'rounded-xl border px-3.5 py-2 text-sm font-semibold transition',
+                        $this->selectedDuration === $minutes
+                            ? 'border-[#335CFF] bg-[#335CFF] text-white shadow-[0_10px_20px_-12px_rgba(51,92,255,0.9)]'
+                            : 'border-zinc-200/80 bg-zinc-50/70 text-[#335CFF] hover:border-[#335CFF]/35 hover:bg-[#335CFF]/5',
+                    ])
+                >
+                    {{ __('specialist_results.duration_minutes', ['minutes' => $minutes]) }}
+                </button>
+            @endforeach
+        </div>
+    </section>
+
+    @if ($showFilterPanel)
+        <div class="fixed inset-0 z-50">
+            <button type="button" wire:click="toggleFilterPanel" class="absolute inset-0 bg-black/35" aria-label="Close"></button>
+
+            <div class="absolute inset-y-0 end-0 w-full max-w-md overflow-y-auto border-s border-zinc-200 bg-white p-5 shadow-2xl">
+                <div class="flex items-center justify-between">
+                    <flux:heading size="lg">{{ __('specialist_results.filter_title') }}</flux:heading>
+                    <button type="button" wire:click="toggleFilterPanel" class="rounded-lg p-2 text-zinc-500 hover:bg-zinc-100">
+                        <flux:icon name="x-mark" class="size-5" />
+                    </button>
+                </div>
+
+                <div class="mt-5 space-y-5">
+                    <div class="space-y-2">
+                        <label class="text-sm font-semibold text-zinc-700">{{ __('session_filter.sections.gender_pref') }}</label>
+                        <select wire:model="filterGender" class="h-11 w-full rounded-xl border border-zinc-200 bg-white px-3 text-sm focus:border-[#3d63ff] focus:outline-none focus:ring-2 focus:ring-[#3d63ff]/20">
+                            <option value="both">{{ __('session_filter.sections.gender.both') }}</option>
+                            <option value="male">{{ __('session_filter.sections.gender.male') }}</option>
+                            <option value="female">{{ __('session_filter.sections.gender.female') }}</option>
+                        </select>
+                    </div>
+
+                    <div class="space-y-2">
+                        <label class="text-sm font-semibold text-zinc-700">{{ __('session_filter.sections.language') }}</label>
+                        <select wire:model="filterLanguage" class="h-11 w-full rounded-xl border border-zinc-200 bg-white px-3 text-sm focus:border-[#3d63ff] focus:outline-none focus:ring-2 focus:ring-[#3d63ff]/20">
+                            <option value="both">{{ __('session_filter.sections.lang.both') }}</option>
+                            <option value="ar">{{ __('session_filter.sections.lang.ar') }}</option>
+                            <option value="en">{{ __('session_filter.sections.lang.en') }}</option>
+                        </select>
+                    </div>
+
+                    <div class="space-y-2">
+                        <label class="text-sm font-semibold text-zinc-700">{{ __('session_filter.sections.specialist') }}</label>
+                        <select wire:model="filterDegree" class="h-11 w-full rounded-xl border border-zinc-200 bg-white px-3 text-sm focus:border-[#3d63ff] focus:outline-none focus:ring-2 focus:ring-[#3d63ff]/20">
+                            <option value="">{{ __('specialist_results.all_option') }}</option>
+                            @foreach ($this->degreeOptions as $degree)
+                                <option value="{{ $degree['id'] }}">{{ $degree['label'] }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div class="space-y-2">
+                        <label class="text-sm font-semibold text-zinc-700">{{ __('session_filter.sections.subspecialties') }}</label>
+                        <div class="flex max-h-56 flex-wrap gap-2 overflow-y-auto rounded-xl border border-zinc-200 bg-zinc-50/60 p-3">
+                            @foreach ($this->subspecialityOptions as $speciality)
+                                <label class="inline-flex cursor-pointer items-center gap-2 rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700">
+                                    <input
+                                        type="checkbox"
+                                        value="{{ $speciality['id'] }}"
+                                        wire:model.live="filterSubspecialties"
+                                        class="size-3.5 rounded border-zinc-300 text-[#3d63ff] focus:ring-[#3d63ff]/30"
+                                    />
+                                    <span>{{ $speciality['label'] }}</span>
+                                </label>
+                            @endforeach
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-6 flex items-center justify-end gap-2 border-t border-zinc-200 pt-4">
+                    <button type="button" wire:click="clearFilterPanel" class="rounded-xl border border-zinc-200 px-4 py-2 text-sm font-semibold text-zinc-600 hover:bg-zinc-100">
+                        {{ __('specialist_results.clear') }}
+                    </button>
+                    <button type="button" wire:click="applyFilterPanel" class="rounded-xl bg-[#335CFF] px-4 py-2 text-sm font-semibold text-white shadow hover:brightness-95">
+                        {{ __('specialist_results.apply') }}
+                    </button>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    @if (count($this->visibleSpecialists) === 0)
         <div class="rounded-2xl border border-zinc-200/90 bg-white p-8 text-center shadow-md shadow-black/10">
             <flux:heading size="lg" class="text-zinc-900">{{ __('specialist_results.no_results_title') }}</flux:heading>
             <flux:text class="mx-auto mt-2 max-w-md text-zinc-600">{{ __('specialist_results.no_results_hint') }}</flux:text>
@@ -119,11 +596,14 @@ new #[Layout('layouts::patient')] #[Title('Specialists')] class extends Componen
             </flux:button>
         </div>
     @else
-        <div class="grid gap-6 md:grid-cols-2">
-            @foreach ($this->specialists as $specialist)
+        <div class="grid gap-6 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+            @foreach ($this->visibleSpecialists as $specialist)
                 @include('partials.patient-specialist-result-card', [
                     'specialist' => $specialist,
                     'likes' => $this->likeCounts[$specialist['id']] ?? (int) $specialist['likes'],
+                    'selectedDate' => $this->selectedDate,
+                    'availableSlots' => $this->availableSlots($specialist),
+                    'displayTimezone' => $this->patientTimezone(),
                 ])
             @endforeach
         </div>
