@@ -85,9 +85,7 @@
         <flux:text class="mb-2 text-xs font-medium uppercase tracking-wide text-zinc-400">
             {{ __('specialist_results.available_times') }}
         </flux:text>
-        <flux:text class="mb-2 text-[11px] text-zinc-500">
-            {{ __('specialist_results.times_timezone_note') }}
-        </flux:text>
+        
         @if (count($availableSlots) > 0)
             <div class="flex gap-2 overflow-x-auto pb-2" role="group">
                 @foreach ($availableSlots as $slot)

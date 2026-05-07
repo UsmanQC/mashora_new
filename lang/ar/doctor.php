@@ -245,6 +245,8 @@ return [
         'type_message' => 'اكتب رسالة…',
         'send' => 'إرسال',
         'patient_details' => 'تفاصيل المريض',
+        'status' => 'الحالة',
+        'session_label' => 'الجلسة',
         'call_in_progress' => 'المكالمة جارية',
         'call_duration_label' => 'مدة المكالمة',
         'end_call' => 'إنهاء المكالمة',

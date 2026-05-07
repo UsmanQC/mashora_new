@@ -116,3 +116,63 @@ test('patient appointments completed tab shows only completed for authenticated 
         ->assertSee('Patient Completed Visible', false)
         ->assertDontSee('Patient Ongoing Hidden', false);
 });
+
+test('patient appointments show start session link for ongoing records', function () {
+    $user = User::factory()->create(['profile_completed' => true]);
+    $doctor = Doctor::factory()->create();
+
+    $appointment = Appointment::factory()->create([
+        'user_id' => $user->id,
+        'doctor_id' => $doctor->id,
+        'status' => 'in_process',
+    ]);
+
+    $this->actingAs($user)->get(route('patient.appointments'))
+        ->assertSuccessful()
+        ->assertSee(route('patient.appointments.conversation', ['appointment' => $appointment->id]), false)
+        ->assertSee(__('patient.appointments.start_session'), false);
+});
+
+test('patient appointments renders realtime notification scripts', function () {
+    $user = User::factory()->create(['profile_completed' => true]);
+    $doctor = Doctor::factory()->create();
+
+    Appointment::factory()->create([
+        'user_id' => $user->id,
+        'doctor_id' => $doctor->id,
+        'status' => 'new',
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('patient.appointments'))
+        ->assertSuccessful()
+        ->assertSee('patient-appointments-realtime-bootstrap', false)
+        ->assertSee('https://js.pusher.com/8.2.0/pusher.min.js', false);
+});
+
+test('patient can open own appointment conversation and cannot open others', function () {
+    $user = User::factory()->create(['profile_completed' => true]);
+    $otherUser = User::factory()->create(['profile_completed' => true]);
+    $doctor = Doctor::factory()->create();
+
+    $mine = Appointment::factory()->create([
+        'user_id' => $user->id,
+        'doctor_id' => $doctor->id,
+        'status' => 'new',
+    ]);
+
+    $other = Appointment::factory()->create([
+        'user_id' => $otherUser->id,
+        'doctor_id' => $doctor->id,
+        'status' => 'new',
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('patient.appointments.conversation', ['appointment' => $mine->id]))
+        ->assertSuccessful()
+        ->assertSee(__('patient.appointments.type_message'), false);
+
+    $this->actingAs($user)
+        ->get(route('patient.appointments.conversation', ['appointment' => $other->id]))
+        ->assertForbidden();
+});

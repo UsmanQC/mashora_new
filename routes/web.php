@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Patient\PatientAppointmentRealtimeController;
 use App\Http\Controllers\Patient\PatientPaymentController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -41,6 +42,10 @@ Route::livewire('patient', 'pages::patient.home')
 Route::livewire('patient/appointments', 'pages::patient.appointments')
     ->middleware(['patient.profile'])
     ->name('patient.appointments');
+
+Route::livewire('patient/appointments/{appointment}/conversation', 'pages::patient.appointment.conversation')
+    ->middleware(['patient.profile'])
+    ->name('patient.appointments.conversation');
 
 Route::middleware(['patient.profile'])
     ->get('patient/locale/{locale}', function (string $locale) {
@@ -108,6 +113,14 @@ Route::get('patient/payment/failed/{temporaryAppointment}', [PatientPaymentContr
 Route::post('patient/payment/execute/{temporaryAppointment}', [PatientPaymentController::class, 'executePayment'])
     ->middleware(['auth', 'patient.profile'])
     ->name('patient.payment.execute');
+
+Route::post('patient/appointments/{appointment}/realtime/notify-call', [PatientAppointmentRealtimeController::class, 'notifyCall'])
+    ->middleware(['auth', 'patient.profile'])
+    ->name('patient.appointments.realtime.notify-call');
+
+Route::post('patient/appointments/{appointment}/realtime/agora-token', [PatientAppointmentRealtimeController::class, 'refreshAgoraToken'])
+    ->middleware(['auth', 'patient.profile'])
+    ->name('patient.appointments.realtime.agora-token');
 
 Route::view('patient/important-numbers', 'patient.important-numbers')
     ->middleware(['patient.profile'])

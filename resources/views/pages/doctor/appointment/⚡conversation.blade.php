@@ -38,9 +38,7 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
         }
 
         $this->appointment->update([
-            'actual_start_at' => now(),
             'status' => 'in_process',
-            'extend_at' => now()->addMinutes(max(1, (int) $this->appointment->duration)),
         ]);
 
         $this->appointment->refresh();
@@ -110,8 +108,42 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
     }
 }; ?>
 
-<div class="space-y-6">
-    @include('partials.doctor-appointment-workspace-header', ['appointment' => $appointment, 'active' => 'conversation'])
+<div class="space-y-5">
+    <div class="flex items-center justify-between gap-3">
+        <flux:link :href="route('doctor.dashboard')" wire:navigate class="text-sm font-medium text-[#3C5CF7]">
+            <flux:icon name="chevron-left" variant="mini" class="inline size-4 align-middle rtl:rotate-180" />
+            {{ __('doctor.workspace.back_dashboard') }}
+        </flux:link>
+    </div>
+
+    <nav class="-mx-1 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" aria-label="{{ __('doctor.workspace.title') }}">
+        <ul class="flex min-w-max gap-2 px-1">
+            <li>
+                <a href="{{ route('doctor.appointments.medical-history', $appointment) }}" wire:navigate class="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-700 transition hover:border-[#3C5CF7] hover:text-[#3C5CF7]">
+                    <flux:icon name="clipboard-document-list" variant="mini" class="size-4" />
+                    {{ __('doctor.workspace.tab_medical_history') }}
+                </a>
+            </li>
+            <li>
+                <a href="{{ route('doctor.appointments.diagnosis', $appointment) }}" wire:navigate class="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-700 transition hover:border-[#3C5CF7] hover:text-[#3C5CF7]">
+                    <flux:icon name="document-text" variant="mini" class="size-4" />
+                    {{ __('doctor.workspace.tab_diagnosis') }}
+                </a>
+            </li>
+            <li>
+                <a href="{{ route('doctor.appointments.prescription', $appointment) }}" wire:navigate class="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-700 transition hover:border-[#3C5CF7] hover:text-[#3C5CF7]">
+                    <flux:icon name="beaker" variant="mini" class="size-4" />
+                    {{ __('doctor.workspace.tab_prescription') }}
+                </a>
+            </li>
+            <li>
+                <a href="{{ route('doctor.appointments.conversation', $appointment) }}" wire:navigate aria-current="page" class="inline-flex items-center gap-2 rounded-full border !border-[#132A6E] bg-[#132A6E] px-4 py-2 text-sm font-medium text-white transition">
+                    <flux:icon name="chat-bubble-left-right" variant="mini" class="size-4" />
+                    {{ __('doctor.workspace.tab_conversation') }}
+                </a>
+            </li>
+        </ul>
+    </nav>
 
     <div
         id="conversation-page-metrics"
@@ -119,6 +151,7 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
         data-status="{{ $appointment->status }}"
         data-session-start="{{ $appointment->actual_start_at?->toIso8601String() }}"
         data-session-end="{{ $appointment->extend_at?->toIso8601String() }}"
+        data-session-scheduled-time="{{ filled($appointment->start_time) ? \Illuminate\Support\Carbon::createFromFormat('H:i:s', (string) $appointment->start_time)->format('h:i A') : '--:--' }}"
         data-session-not-started="{{ __('doctor.conversation.session_not_started') }}"
         data-label-video="{{ __('doctor.conversation.video_call') }}"
         data-label-voice="{{ __('doctor.conversation.voice_call') }}"
@@ -126,11 +159,12 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
         data-label-connecting="{{ __('doctor.conversation.connecting') }}"
     ></div>
 
-    <div class="overflow-hidden rounded-2xl border border-zinc-200/90 bg-white shadow-sm shadow-zinc-200/40 ring-1 ring-zinc-100">
+    <div class="relative overflow-hidden rounded-3xl border border-zinc-200/90 bg-white shadow-[0_20px_55px_-32px_rgba(15,23,42,0.35)] ring-1 ring-zinc-100">
+        <div class="pointer-events-none absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-[#2f49ca] via-[#3C5CF7] to-[#6f86ff] opacity-85"></div>
         <div class="grid min-h-[36rem] grid-cols-1 lg:grid-cols-12">
             <div class="flex min-h-[28rem] flex-col border-zinc-200 lg:col-span-8 lg:min-h-0 lg:border-e">
                 {{-- Session workspace header --}}
-                <div class="shrink-0 border-b border-zinc-200/90 bg-gradient-to-br from-[#f8faff] via-white to-zinc-50/80 px-4 py-4 sm:px-5">
+                <div class="shrink-0 border-b border-zinc-200/90 bg-gradient-to-br from-[#f6f9ff] via-white to-[#f8fbff] px-4 py-4 sm:px-5">
                     <div class="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
                         <div class="flex min-w-0 items-center gap-3 sm:gap-4">
                             <div class="relative shrink-0">
@@ -152,17 +186,17 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                         {{-- Timers: session elapsed + time until extend_at (client-updated) --}}
                         @if ($appointment->status === 'in_process')
                             <div class="flex flex-wrap items-stretch gap-2 sm:gap-3">
-                                <div class="flex min-w-[7.5rem] flex-1 flex-col justify-center rounded-xl border border-zinc-200/80 bg-white/90 px-3 py-2 shadow-sm backdrop-blur-sm sm:flex-initial sm:min-w-[8.5rem]">
+                                <div class="flex min-w-[7.5rem] flex-1 flex-col justify-center rounded-xl border border-zinc-200/80 bg-gradient-to-br from-white to-zinc-50 px-3 py-2 shadow-sm backdrop-blur-sm sm:flex-initial sm:min-w-[8.5rem]">
                                     <p class="text-[0.65rem] font-semibold uppercase tracking-wider text-zinc-400">{{ __('doctor.conversation.session_elapsed_label') }}</p>
                                     <p id="timer-session-elapsed" class="mt-0.5 font-mono text-lg font-semibold tabular-nums text-zinc-900">00:00</p>
                                 </div>
                                 @if ($appointment->extend_at)
-                                    <div id="wrap-session-remaining" class="flex min-w-[7.5rem] flex-1 flex-col justify-center rounded-xl border border-zinc-200/80 bg-white/90 px-3 py-2 shadow-sm backdrop-blur-sm sm:flex-initial sm:min-w-[8.5rem]">
+                                    <div id="wrap-session-remaining" class="flex min-w-[7.5rem] flex-1 flex-col justify-center rounded-xl border border-zinc-200/80 bg-gradient-to-br from-white to-zinc-50 px-3 py-2 shadow-sm backdrop-blur-sm sm:flex-initial sm:min-w-[8.5rem]">
                                         <p class="text-[0.65rem] font-semibold uppercase tracking-wider text-zinc-400">{{ __('doctor.conversation.session_remaining_label') }}</p>
                                         <p id="timer-session-remaining" class="mt-0.5 font-mono text-lg font-semibold tabular-nums text-[#132A6E]">--:--</p>
                                     </div>
                                 @endif
-                                <div id="call-status-chip" class="hidden min-w-0 flex-1 items-center gap-2.5 rounded-xl border border-emerald-200/80 bg-emerald-50/90 px-3 py-2 shadow-sm sm:flex-initial sm:min-w-[11rem]">
+                                <div id="call-status-chip" class="hidden min-w-0 flex-1 items-center gap-2.5 rounded-xl border border-emerald-200/80 bg-gradient-to-br from-emerald-50 to-emerald-100/70 px-3 py-2 shadow-sm sm:flex-initial sm:min-w-[11rem]">
                                     <span class="relative flex h-2.5 w-2.5 shrink-0">
                                         <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60"></span>
                                         <span class="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500"></span>
@@ -192,7 +226,7 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                                     id="btn-agora-video"
                                     @class([
                                         'inline-flex min-h-10 items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[#3C5CF7] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-45',
-                                        'border-zinc-200 bg-white text-zinc-800 shadow-sm hover:border-[#132A6E]/30 hover:bg-zinc-50' => true,
+                                        'border-zinc-200 bg-gradient-to-b from-white to-zinc-50 text-zinc-800 shadow-sm hover:border-[#132A6E]/30 hover:from-zinc-50 hover:to-zinc-100' => true,
                                     ])
                                     @disabled($agoraAppId === '')
                                     title="{{ $agoraAppId === '' ? __('doctor.conversation.agora_required') : '' }}"
@@ -205,7 +239,7 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                                     id="btn-agora-audio"
                                     @class([
                                         'inline-flex min-h-10 items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[#3C5CF7] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-45',
-                                        'border-zinc-200 bg-white text-zinc-800 shadow-sm hover:border-[#132A6E]/30 hover:bg-zinc-50' => true,
+                                        'border-zinc-200 bg-gradient-to-b from-white to-zinc-50 text-zinc-800 shadow-sm hover:border-[#132A6E]/30 hover:from-zinc-50 hover:to-zinc-100' => true,
                                     ])
                                     @disabled($agoraAppId === '')
                                     title="{{ $agoraAppId === '' ? __('doctor.conversation.agora_required') : '' }}"
@@ -228,7 +262,7 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                 @endif
 
                 <div
-                    class="relative flex min-h-0 flex-1 flex-col bg-gradient-to-b from-zinc-50/90 to-zinc-100/80"
+                    class="relative flex min-h-0 flex-1 flex-col bg-gradient-to-b from-zinc-50/90 via-zinc-50/70 to-zinc-100/80"
                     id="doctor-chat-panel"
                     data-appointment-id="{{ $appointment->id }}"
                     data-notify-url="{{ route('doctor.appointments.realtime.notify-call', $appointment) }}"
@@ -247,9 +281,9 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                             >
                                 <div
                                     @class([
-                                        'max-w-[min(85%,28rem)] rounded-2xl px-3.5 py-2.5 text-sm shadow-sm',
-                                        'bg-[#132A6E] text-white shadow-[#132A6E]/25' => $msg['send_by'] === 'doctor',
-                                        'border border-zinc-200/90 bg-white text-zinc-800 shadow-zinc-200/30' => $msg['send_by'] !== 'doctor',
+                                        'max-w-[min(85%,28rem)] rounded-2xl px-3.5 py-2.5 text-sm shadow-sm ring-1',
+                                        'bg-gradient-to-br from-[#132A6E] to-[#103b9e] text-white shadow-[#132A6E]/25 ring-[#132A6E]/20' => $msg['send_by'] === 'doctor',
+                                        'border border-zinc-200/90 bg-white text-zinc-800 shadow-zinc-200/30 ring-zinc-100' => $msg['send_by'] !== 'doctor',
                                     ])
                                 >
                                     <p class="whitespace-pre-wrap break-words">{{ $msg['body'] }}</p>
@@ -280,7 +314,7 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                 <div class="shrink-0 border-t border-zinc-200/90 bg-white px-4 py-3 pb-[max(0.85rem,env(safe-area-inset-bottom))] sm:px-5 lg:pb-3">
                     <form
                         wire:submit="sendMessage"
-                        class="mx-auto flex max-w-4xl items-end gap-2 rounded-2xl border border-zinc-200/90 bg-zinc-50/50 p-1.5 shadow-inner shadow-zinc-200/20 ring-1 ring-zinc-100/80 @if ($appointment->status !== 'in_process') pointer-events-none opacity-55 @endif"
+                        class="mx-auto flex max-w-4xl items-end gap-2 rounded-2xl border border-zinc-200/90 bg-gradient-to-r from-zinc-50/80 to-zinc-100/70 p-1.5 shadow-inner shadow-zinc-200/20 ring-1 ring-zinc-100/80 @if ($appointment->status !== 'in_process') pointer-events-none opacity-55 @endif"
                     >
                         <div class="min-w-0 flex-1">
                             <flux:input
@@ -308,8 +342,8 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                 </div>
             </div>
 
-            <aside class="hidden bg-gradient-to-b from-white to-zinc-50/50 lg:col-span-4 lg:block">
-                <div class="border-b border-zinc-200/90 px-5 py-4">
+            <aside class="hidden bg-gradient-to-b from-white via-zinc-50/30 to-zinc-50/70 lg:col-span-4 lg:block">
+                <div class="border-b border-zinc-200/90 bg-gradient-to-r from-[#f7f9ff] to-white px-5 py-4">
                     <h3 class="text-base font-semibold text-zinc-900">{{ __('doctor.conversation.patient_details') }}</h3>
                     <p class="mt-0.5 text-xs text-zinc-500">{{ __('doctor.workspace.title') }}</p>
                 </div>
@@ -324,18 +358,35 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                             {{ $appointment->patient_phone }}
                         </a>
                     @endif
+
+                    <div class="mt-6 grid gap-2 text-start">
+                        @if (filled($appointment->appointment_number))
+                            <div class="rounded-xl border border-indigo-200/70 bg-indigo-50/60 px-3 py-2 shadow-sm">
+                                <p class="text-[11px] font-semibold uppercase tracking-wide text-indigo-500">Appointment number</p>
+                                <p class="mt-0.5 text-sm font-semibold text-indigo-900">#{{ $appointment->appointment_number }}</p>
+                            </div>
+                        @endif
+                        <div class="rounded-xl border border-zinc-200/80 bg-white/90 px-3 py-2 shadow-sm">
+                            <p class="text-[11px] font-semibold uppercase tracking-wide text-zinc-400">{{ __('doctor.conversation.status') }}</p>
+                            <p class="mt-0.5 text-sm font-semibold text-zinc-800">{{ __('doctor.conversation.status_'.$appointment->status) }}</p>
+                        </div>
+                        <div class="rounded-xl border border-zinc-200/80 bg-white/90 px-3 py-2 shadow-sm">
+                            <p class="text-[11px] font-semibold uppercase tracking-wide text-zinc-400">{{ __('doctor.conversation.session_label') }}</p>
+                            <p class="mt-0.5 text-sm font-semibold text-zinc-800">{{ $appointment->appointment_date?->format('d/m/Y') }} · {{ \Illuminate\Support\Carbon::parse((string) $appointment->start_time)->format('h:i A') }}</p>
+                        </div>
+                    </div>
                 </div>
             </aside>
         </div>
     </div>
 
-    {{-- Agora full-screen overlay --}}
+    {{-- Agora floating modal (keeps details/chat visible) --}}
     <div
         id="agora-call-overlay"
-        class="fixed inset-0 z-[200] hidden flex-col bg-zinc-950 text-white"
+        class="fixed bottom-4 end-4 z-[200] hidden w-[min(94vw,28rem)] overflow-hidden rounded-2xl border border-zinc-700/80 bg-zinc-950 text-white shadow-2xl shadow-black/45 ring-1 ring-white/10"
         aria-hidden="true"
     >
-        <div class="flex items-center justify-between gap-3 border-b border-white/10 bg-zinc-900/80 px-4 py-3 backdrop-blur-md sm:px-5">
+        <div class="flex items-center justify-between gap-3 border-b border-white/10 bg-zinc-900/90 px-3 py-2.5">
             <div class="min-w-0">
                 <p id="agora-call-title" class="truncate text-sm font-semibold">{{ __('doctor.conversation.call_in_progress') }}</p>
                 <p class="mt-0.5 font-mono text-xs tabular-nums text-zinc-400">
@@ -346,27 +397,27 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
             <button
                 type="button"
                 id="agora-leave-btn"
-                class="inline-flex shrink-0 items-center gap-2 rounded-xl bg-rose-600 px-4 py-2.5 text-sm font-semibold shadow-lg shadow-rose-900/30 transition hover:bg-rose-500"
+                class="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-semibold shadow-lg shadow-rose-900/30 transition hover:bg-rose-500"
             >
                 <flux:icon name="x-mark" variant="mini" class="size-4" />
                 {{ __('doctor.conversation.end_call') }}
             </button>
         </div>
-        <div class="relative flex min-h-0 flex-1 flex-col gap-3 p-3 sm:p-4 md:flex-row md:gap-4">
-            <div class="relative min-h-[40vh] flex-1 overflow-hidden rounded-2xl bg-black ring-1 ring-white/10 md:min-h-0">
-                <div id="agora-remote-player" class="h-full min-h-[12rem] w-full"></div>
-            </div>
-            <div class="flex w-full shrink-0 flex-col gap-2 md:w-52">
-                <div id="agora-local-player" class="aspect-video w-full overflow-hidden rounded-xl bg-zinc-800 ring-1 ring-white/10"></div>
-                <p class="text-center text-xs font-medium text-zinc-400">{{ __('doctor.conversation.you') }}</p>
+        <div class="relative p-2.5">
+            <div class="relative h-56 overflow-hidden rounded-xl bg-black ring-1 ring-white/10 sm:h-64">
+                <div id="agora-remote-player" class="h-full w-full"></div>
+                <div class="absolute bottom-2 end-2 w-28 overflow-hidden rounded-lg bg-zinc-900/80 ring-1 ring-white/20 sm:w-32">
+                    <div id="agora-local-player" class="aspect-video w-full bg-zinc-800"></div>
+                    <p class="px-2 py-1 text-center text-[10px] font-medium text-zinc-300">{{ __('doctor.conversation.you') }}</p>
+                </div>
             </div>
         </div>
-        <div class="flex flex-wrap justify-center gap-2 border-t border-white/10 bg-zinc-900/50 px-4 py-3 backdrop-blur-sm">
-            <button type="button" id="agora-toggle-mic" class="inline-flex items-center gap-2 rounded-xl bg-white/10 px-4 py-2.5 text-sm font-medium hover:bg-white/15">
+        <div class="flex flex-wrap justify-center gap-2 border-t border-white/10 bg-zinc-900/60 px-3 py-2.5">
+            <button type="button" id="agora-toggle-mic" class="inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-2 text-xs font-medium hover:bg-white/15">
                 <flux:icon name="microphone" variant="mini" class="size-4" />
                 {{ __('doctor.conversation.mic') }}
             </button>
-            <button type="button" id="agora-toggle-video" class="inline-flex items-center gap-2 rounded-xl bg-white/10 px-4 py-2.5 text-sm font-medium hover:bg-white/15">
+            <button type="button" id="agora-toggle-video" class="inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-2 text-xs font-medium hover:bg-white/15">
                 <flux:icon name="video-camera" variant="mini" class="size-4" />
                 {{ __('doctor.conversation.camera') }}
             </button>
@@ -448,16 +499,17 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                 const status = metrics.dataset.status || '';
                 const startIso = metrics.dataset.sessionStart || '';
                 const endIso = metrics.dataset.sessionEnd || '';
+                const scheduledTime = metrics.dataset.sessionScheduledTime || '--:--';
+
+                // "Session time" should show fixed scheduled time, not elapsed stopwatch.
+                elapsedEl.textContent = scheduledTime;
 
                 if (status !== 'in_process' || !startIso) {
-                    elapsedEl.textContent = metrics.dataset.sessionNotStarted || '—';
                     if (remainingEl) remainingEl.textContent = '—';
                     return;
                 }
 
-                const start = new Date(startIso).getTime();
                 const now = Date.now();
-                elapsedEl.textContent = formatDuration((now - start) / 1000);
 
                 if (remainingEl && endIso) {
                     const end = new Date(endIso).getTime();
@@ -653,7 +705,7 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
 
             async function postNotify(callType, cfg) {
                 if (!notifyUrl) return;
-                await fetch(notifyUrl, {
+                const res = await fetch(notifyUrl, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -667,6 +719,9 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                         call_type: callType,
                     }),
                 });
+
+                if (!res.ok) return null;
+                return res.json();
             }
 
             const labelVideo = metricsEl?.dataset.labelVideo || 'Video call';
@@ -681,7 +736,12 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                         restoreCallButtonsAfterError();
                         return;
                     }
-                    await postNotify('video', cfg);
+                    const notify = await postNotify('video', cfg);
+                    if (metricsEl && notify) {
+                        metricsEl.dataset.status = notify.status || 'in_process';
+                        metricsEl.dataset.sessionStart = notify.actual_start_at || '';
+                        metricsEl.dataset.sessionEnd = notify.extend_at || '';
+                    }
 
                     agoraClient = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
                     agoraClient.on('user-published', async (user, mediaType) => {
@@ -727,7 +787,12 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                         restoreCallButtonsAfterError();
                         return;
                     }
-                    await postNotify('audio', cfg);
+                    const notify = await postNotify('audio', cfg);
+                    if (metricsEl && notify) {
+                        metricsEl.dataset.status = notify.status || 'in_process';
+                        metricsEl.dataset.sessionStart = notify.actual_start_at || '';
+                        metricsEl.dataset.sessionEnd = notify.extend_at || '';
+                    }
 
                     agoraClient = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
                     agoraClient.on('user-published', async (user, mediaType) => {

@@ -125,9 +125,32 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
             return $rawStartTime;
         }
     }
+
+    /**
+     * @return list<int>
+     */
+    public function realtimeAppointmentIds(): array
+    {
+        return $this->baseQuery()
+            ->whereIn('status', ['new', 'in_process'])
+            ->pluck('id')
+            ->map(static fn (mixed $id): int => (int) $id)
+            ->values()
+            ->all();
+    }
 }; ?>
 
 <div class="mx-auto w-full max-w-5xl px-4 py-4 pb-20 sm:px-6 sm:py-5 sm:pb-10">
+    <div id="patient-call-join-banner" class="mb-3 hidden rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+            <p id="patient-call-join-text" class="text-sm font-medium text-emerald-900"></p>
+            <a id="patient-call-join-now" href="#" wire:navigate class="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700">
+                <flux:icon name="chat-bubble-left-right" variant="mini" class="size-4" />
+                {{ __('patient.appointments.start_session') }}
+            </a>
+        </div>
+    </div>
+
     <header class="flex items-center gap-3">
         <a
             href="{{ route('patient.home') }}"
@@ -248,6 +271,19 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
                                 <flux:icon name="user" variant="mini" class="size-4 text-zinc-400" />
                                 <span class="truncate">{{ $appointment->patient_name }}</span>
                             </div>
+
+                            @if (in_array($appointment->status, ['new', 'in_process'], true))
+                                <div class="mt-3">
+                                    <a
+                                        href="{{ route('patient.appointments.conversation', ['appointment' => $appointment->id]) }}"
+                                        wire:navigate
+                                        class="inline-flex items-center gap-1.5 rounded-lg border border-[#1565c0]/30 bg-[#1565c0]/5 px-3 py-1.5 text-xs font-semibold text-[#1565c0] transition hover:bg-[#1565c0]/10"
+                                    >
+                                        <flux:icon name="chat-bubble-left-right" variant="mini" class="size-4" />
+                                        {{ __('patient.appointments.start_session') }}
+                                    </a>
+                                </div>
+                            @endif
                         </div>
                     </div>
 
@@ -266,4 +302,276 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
             </div>
         @endif
     @endif
+
+    <div
+        id="patient-appointments-realtime-bootstrap"
+        class="hidden"
+        data-pusher-key="{{ config('broadcasting.connections.pusher.key') }}"
+        data-pusher-cluster="{{ config('broadcasting.connections.pusher.options.cluster') }}"
+        data-csrf="{{ csrf_token() }}"
+        data-patient-id="{{ (int) auth()->id() }}"
+        data-appointment-ids='@json($this->realtimeAppointmentIds())'
+        data-join-base="{{ route('patient.appointments.conversation', ['appointment' => '__ID__']) }}"
+        data-token-base="{{ route('patient.appointments.realtime.agora-token', ['appointment' => '__ID__']) }}"
+        data-notify-base="{{ route('patient.appointments.realtime.notify-call', ['appointment' => '__ID__']) }}"
+        data-label-call="{{ __('patient.appointments.session_started_join_now') }}"
+    ></div>
+
+    <div id="patient-inline-call-overlay" class="fixed inset-0 z-[210] hidden bg-zinc-950/90 backdrop-blur-sm">
+        <div class="mx-auto flex h-full w-full max-w-6xl flex-col p-3 sm:p-5">
+            <div class="flex items-center justify-between rounded-xl border border-white/10 bg-zinc-900/80 px-4 py-3 text-white">
+                <div>
+                    <p class="text-xs uppercase tracking-wide text-zinc-300">{{ __('patient.appointments.call_in_progress') }}</p>
+                    <p id="patient-inline-call-state" class="text-sm font-semibold text-white">{{ __('patient.appointments.session_started_join_now') }}</p>
+                </div>
+                <button type="button" id="patient-inline-call-end" class="rounded-xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700">
+                    {{ __('patient.appointments.end_call') }}
+                </button>
+            </div>
+
+            <div class="mt-3 grid min-h-0 flex-1 grid-cols-1 gap-3 md:grid-cols-[1fr_18rem]">
+                <div class="min-h-[50vh] overflow-hidden rounded-2xl border border-white/10 bg-black">
+                    <div id="patient-inline-call-remote" class="h-full w-full"></div>
+                </div>
+                <div class="flex flex-col gap-3">
+                    <div class="rounded-xl border border-white/10 bg-zinc-900/80 px-3 py-2 text-xs text-zinc-200">
+                        <p id="patient-inline-doctor-name" class="font-semibold text-white">—</p>
+                        <p id="patient-inline-session-time" class="mt-0.5 text-zinc-300">—</p>
+                    </div>
+                    <div class="overflow-hidden rounded-xl border border-white/10 bg-zinc-900">
+                        <div id="patient-inline-call-local" class="aspect-video w-full"></div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button type="button" id="patient-inline-video" class="inline-flex items-center justify-center rounded-lg bg-white/10 px-3 py-2 text-xs font-semibold text-white hover:bg-white/20">
+                            {{ __('patient.appointments.video_call') }}
+                        </button>
+                        <button type="button" id="patient-inline-audio" class="inline-flex items-center justify-center rounded-lg bg-white/10 px-3 py-2 text-xs font-semibold text-white hover:bg-white/20">
+                            {{ __('patient.appointments.voice_call') }}
+                        </button>
+                    </div>
+                    <a id="patient-inline-open-chat" href="#" wire:navigate class="inline-flex items-center justify-center rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-xs font-semibold text-white hover:bg-white/20">
+                        {{ __('patient.appointments.start_session') }}
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
+
+@push('scripts')
+    <script src="https://js.pusher.com/8.2.0/pusher.min.js"></script>
+    <script src="https://download.agora.io/sdk/release/AgoraRTC_N-4.23.0.js"></script>
+    <script>
+        function initPatientAppointmentsRealtime() {
+            const boot = document.getElementById('patient-appointments-realtime-bootstrap');
+            if (!boot) return;
+            if (boot.dataset.initialized === '1') return;
+            boot.dataset.initialized = '1';
+
+            const pusherKey = boot.dataset.pusherKey || '';
+            if (!pusherKey) return;
+
+            let ids = [];
+            try {
+                ids = JSON.parse(boot.dataset.appointmentIds || '[]');
+            } catch (_) {
+                ids = [];
+            }
+            if (!Array.isArray(ids) || ids.length === 0) return;
+
+            const pusherCluster = boot.dataset.pusherCluster || 'mt1';
+            const csrf = boot.dataset.csrf || '';
+            const patientId = Number(boot.dataset.patientId || 0);
+            const joinBase = boot.dataset.joinBase || '';
+            const tokenBase = boot.dataset.tokenBase || '';
+            const notifyBase = boot.dataset.notifyBase || '';
+            const labelCall = boot.dataset.labelCall || 'Session started. Join now.';
+            const banner = document.getElementById('patient-call-join-banner');
+            const text = document.getElementById('patient-call-join-text');
+            const joinNowBtn = document.getElementById('patient-call-join-now');
+            const overlay = document.getElementById('patient-inline-call-overlay');
+            const remoteWrap = document.getElementById('patient-inline-call-remote');
+            const localWrap = document.getElementById('patient-inline-call-local');
+            const endBtn = document.getElementById('patient-inline-call-end');
+            const openChat = document.getElementById('patient-inline-open-chat');
+            const callState = document.getElementById('patient-inline-call-state');
+            const payloadByAppointment = new Map();
+            let currentAppointmentId = 0;
+            let agoraClient = null;
+            let localAudio = null;
+            let localVideo = null;
+
+            const pusher = new Pusher(pusherKey, {
+                cluster: pusherCluster,
+                authEndpoint: '/broadcasting/auth',
+                auth: {
+                    headers: {
+                        'X-CSRF-TOKEN': csrf,
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                },
+            });
+
+            const showJoin = (appointmentId) => {
+                if (!banner || !text) return;
+                text.textContent = labelCall;
+                banner.classList.remove('hidden');
+                currentAppointmentId = Number(appointmentId) || 0;
+
+                if ('Notification' in window) {
+                    if (Notification.permission === 'granted') {
+                        new Notification(labelCall);
+                    } else if (Notification.permission === 'default') {
+                        Notification.requestPermission().then((permission) => {
+                            if (permission === 'granted') {
+                                new Notification(labelCall);
+                            }
+                        });
+                    }
+                }
+            };
+
+            async function leaveInlineCall() {
+                if (localVideo) {
+                    localVideo.stop();
+                    localVideo.close();
+                    localVideo = null;
+                }
+                if (localAudio) {
+                    localAudio.stop();
+                    localAudio.close();
+                    localAudio = null;
+                }
+                if (agoraClient) {
+                    await agoraClient.leave();
+                    agoraClient = null;
+                }
+                if (remoteWrap) remoteWrap.innerHTML = '';
+                if (localWrap) localWrap.innerHTML = '';
+                if (overlay) overlay.classList.add('hidden');
+            }
+
+            async function fetchAgoraConfig(appointmentId) {
+                if (!tokenBase || !appointmentId) return null;
+                const url = tokenBase.replace('__ID__', String(appointmentId));
+                const res = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': csrf,
+                        'Accept': 'application/json',
+                    },
+                });
+                if (!res.ok) return null;
+                return res.json();
+            }
+
+            async function notifyDoctor(appointmentId, callType, cfg) {
+                if (!notifyBase || !appointmentId) return null;
+                const url = notifyBase.replace('__ID__', String(appointmentId));
+                const res = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': csrf,
+                        'Accept': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        agora_app_id: cfg.agora_app_id,
+                        agora_token: cfg.agora_token,
+                        agora_channel: cfg.agora_channel,
+                        call_type: callType,
+                    }),
+                });
+                if (!res.ok) return null;
+                return res.json();
+            }
+
+            async function joinInlineCall(appointmentId, payload = null, shouldNotify = false, callType = 'video') {
+                if (!window.AgoraRTC || !appointmentId) return;
+                const cfg = payload || await fetchAgoraConfig(appointmentId);
+                if (!cfg) {
+                    window.location.href = joinBase.replace('__ID__', String(appointmentId));
+                    return;
+                }
+
+                if (shouldNotify) {
+                    await notifyDoctor(appointmentId, callType, cfg);
+                }
+
+                await leaveInlineCall();
+                agoraClient = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
+                agoraClient.on('user-published', async (user, mediaType) => {
+                    await agoraClient.subscribe(user, mediaType);
+                    if (mediaType === 'video') user.videoTrack.play('patient-inline-call-remote');
+                    if (mediaType === 'audio') user.audioTrack.play();
+                });
+
+                const resolvedCallType = (payload?.call_type === 'audio' || callType === 'audio') ? 'audio' : 'video';
+                if (resolvedCallType === 'video') {
+                    const [, micTrack, camTrack] = await Promise.all([
+                        agoraClient.join(cfg.agora_app_id, cfg.agora_channel, cfg.agora_token || null, null),
+                        AgoraRTC.createMicrophoneAudioTrack(),
+                        AgoraRTC.createCameraVideoTrack(),
+                    ]);
+                    localAudio = micTrack;
+                    localVideo = camTrack;
+                    camTrack.play('patient-inline-call-local');
+                    await agoraClient.publish([micTrack, camTrack]);
+                } else {
+                    const [, micTrack] = await Promise.all([
+                        agoraClient.join(cfg.agora_app_id, cfg.agora_channel, cfg.agora_token || null, null),
+                        AgoraRTC.createMicrophoneAudioTrack(),
+                    ]);
+                    localAudio = micTrack;
+                    await agoraClient.publish([micTrack]);
+                }
+
+                if (callState) {
+                    callState.textContent = resolvedCallType === 'video'
+                        ? @js(__('patient.appointments.incoming_video'))
+                        : @js(__('patient.appointments.incoming_voice'));
+                }
+                if (openChat) {
+                    openChat.href = joinBase.replace('__ID__', String(appointmentId));
+                }
+                if (overlay) overlay.classList.remove('hidden');
+                banner?.classList.add('hidden');
+            }
+
+            joinNowBtn?.addEventListener('click', () => {
+                const appointmentId = currentAppointmentId;
+                if (!appointmentId) return;
+                joinNowBtn.href = joinBase.replace('__ID__', String(appointmentId));
+            });
+
+            endBtn?.addEventListener('click', () => {
+                leaveInlineCall().catch(() => {});
+            });
+
+            ids.forEach((id) => {
+                const appointmentId = Number(id);
+                if (!appointmentId) return;
+                const channel = pusher.subscribe('private-appointment.' + appointmentId);
+                channel.bind('session.started', (payload) => showJoin(payload?.appointment_id || appointmentId));
+                channel.bind('call.incoming', (payload) => {
+                    const incomingAppointmentId = Number(payload?.appointment_id || appointmentId);
+                    payloadByAppointment.set(incomingAppointmentId, payload || null);
+                    showJoin(incomingAppointmentId);
+                });
+            });
+
+            if (patientId > 0) {
+                const patientChannel = pusher.subscribe('private-patient.' + patientId);
+                patientChannel.bind('session.join-requested', (payload) => {
+                    const appointmentId = Number(payload?.appointment_id || 0);
+                    if (!appointmentId) return;
+                    payloadByAppointment.set(appointmentId, payload || null);
+                    showJoin(appointmentId);
+                });
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', initPatientAppointmentsRealtime);
+        document.addEventListener('livewire:navigated', initPatientAppointmentsRealtime);
+    </script>
+@endpush

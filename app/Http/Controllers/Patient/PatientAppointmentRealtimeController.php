@@ -1,19 +1,20 @@
 <?php
 
-namespace App\Http\Controllers\Doctor;
+namespace App\Http\Controllers\Patient;
 
 use App\Events\AppointmentIncomingCallAnnounced;
 use App\Events\AppointmentSessionStarted;
-use App\Events\PatientSessionJoinRequested;
 use App\Models\Appointment;
 use App\Support\DoctorAgoraChannel;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
-class DoctorAppointmentRealtimeController
+class PatientAppointmentRealtimeController
 {
     public function notifyCall(Request $request, Appointment $appointment): JsonResponse
     {
+        abort_unless((int) $appointment->user_id === (int) auth()->id(), 403);
+
         $validated = $request->validate([
             'agora_app_id' => ['required', 'string'],
             'agora_token' => ['required', 'string'],
@@ -43,12 +44,6 @@ class DoctorAppointmentRealtimeController
             $appointment->extend_at?->toIso8601String(),
         ));
 
-        broadcast(new PatientSessionJoinRequested(
-            (int) $appointment->user_id,
-            (int) $appointment->id,
-            (string) $validated['call_type'],
-        ));
-
         return response()->json([
             'ok' => true,
             'status' => (string) $appointment->status,
@@ -59,6 +54,8 @@ class DoctorAppointmentRealtimeController
 
     public function refreshAgoraToken(Request $request, Appointment $appointment): JsonResponse
     {
+        abort_unless((int) $appointment->user_id === (int) auth()->id(), 403);
+
         if (config('agora.AGORA_APP_ID') === '' || config('agora.AGORA_APP_CERTIFICATE') === '') {
             return response()->json(['message' => 'Agora is not configured.'], 503);
         }

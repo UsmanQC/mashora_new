@@ -244,6 +244,8 @@ return [
         'type_message' => 'Type a message…',
         'send' => 'Send',
         'patient_details' => 'Patient details',
+        'status' => 'Status',
+        'session_label' => 'Session',
         'call_in_progress' => 'Call in progress',
         'call_duration_label' => 'Call time',
         'end_call' => 'End call',

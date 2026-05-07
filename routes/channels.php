@@ -22,3 +22,11 @@ Broadcast::channel('appointment.{appointmentId}', function ($user, int $appointm
 
     return false;
 });
+
+Broadcast::channel('patient.{userId}', function ($user, int $userId) {
+    if (! $user instanceof User) {
+        return false;
+    }
+
+    return (int) $user->id === $userId;
+});

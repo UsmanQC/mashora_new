@@ -98,6 +98,17 @@ class PatientPaymentController extends Controller
             }
         } catch (Throwable $e) {
             report($e);
+
+            if (app()->isLocal() && str_contains(strtolower($e->getMessage()), 'ssl certificate')) {
+                /** @var PatientPaymentCompletionService $completion */
+                $completion = app(PatientPaymentCompletionService::class);
+                $appointment = $completion->forceCompleteForTesting($tempAppointment);
+
+                if ($appointment !== null) {
+                    return Redirect::route('patient.payment.success', $tempAppointment)
+                        ->with('flash_payment', __('patient_booking.payment_local_ssl_fallback'));
+                }
+            }
         }
 
         return Redirect::route('patient.payment.failed', $tempAppointment);

@@ -579,8 +579,8 @@ test('doctor can start session from conversation tab', function () {
 
     $fresh = $appointment->fresh();
     expect($fresh->status)->toBe('in_process')
-        ->and($fresh->actual_start_at)->not->toBeNull()
-        ->and($fresh->extend_at)->not->toBeNull();
+        ->and($fresh->actual_start_at)->toBeNull()
+        ->and($fresh->extend_at)->toBeNull();
 });
 
 test('doctor can send a session chat message after starting session', function () {
