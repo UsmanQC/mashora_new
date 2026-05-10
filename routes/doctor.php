@@ -19,6 +19,10 @@ Route::middleware('doctor.guest')->group(function (): void {
     Route::livewire('/', 'pages::doctor.welcome')->name('welcome');
     Route::livewire('login', 'pages::doctor.login')->name('login');
 
+    Route::livewire('verify-phone', 'pages::doctor.verify-phone')
+        ->middleware(config('doctor.registration_invite_only') ? ['signed'] : [])
+        ->name('verify-phone');
+
     Route::livewire('register', 'pages::doctor.register')
         ->middleware(config('doctor.registration_invite_only') ? ['signed'] : [])
         ->name('register');

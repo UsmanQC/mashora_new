@@ -129,6 +129,12 @@
                         input.addEventListener('countrychange', syncToLivewire);
                         const selectedCountryButton = input.closest('.iti')?.querySelector('.iti__selected-country');
                         selectedCountryButton?.addEventListener('click', () => this.pinPreferredCountries());
+
+                        const form = this.$el.closest('form');
+                        if (form) {
+                            form.addEventListener('submit', syncToLivewire, { capture: true });
+                        }
+
                         syncToLivewire();
                     },
                     pinPreferredCountries() {

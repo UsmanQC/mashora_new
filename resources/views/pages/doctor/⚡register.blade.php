@@ -19,11 +19,22 @@ new #[Layout('layouts::doctor-guest')] #[Title('Doctor registration')] class ext
 
     public function mount(): void
     {
-        $this->phone = (string) request()->string('phone');
+        $raw = (string) request()->string('phone');
+        $normalized = (string) (preg_replace('/\D/', '', $raw) ?? '');
 
-        if ($this->phone === '') {
+        if ($normalized === '') {
             $this->redirect(route('doctor.welcome'), navigate: true);
+
+            return;
         }
+
+        if ((string) session('doctor_otp_verified_phone') !== $normalized) {
+            $this->redirect(route('doctor.welcome'), navigate: true);
+
+            return;
+        }
+
+        $this->phone = $normalized;
     }
 
     public function register(): void
@@ -51,6 +62,8 @@ new #[Layout('layouts::doctor-guest')] #[Title('Doctor registration')] class ext
 
         session()->regenerate();
 
+        session()->forget('doctor_otp_verified_phone');
+
         $this->redirect(route('doctor.register.basic.info'), navigate: true);
     }
 }; ?>
@@ -75,13 +88,13 @@ new #[Layout('layouts::doctor-guest')] #[Title('Doctor registration')] class ext
 
         <flux:field>
             <flux:label>{{ __('doctor.auth.password') }}</flux:label>
-            <flux:input wire:model="password" type="password" autocomplete="new-password" />
+            <flux:input wire:model="password" type="password" autocomplete="new-password" viewable />
             <flux:error name="password" />
         </flux:field>
 
         <flux:field>
             <flux:label>{{ __('doctor.auth.password_confirm') }}</flux:label>
-            <flux:input wire:model="password_confirmation" type="password" autocomplete="new-password" />
+            <flux:input wire:model="password_confirmation" type="password" autocomplete="new-password" viewable />
             <flux:error name="password_confirmation" />
         </flux:field>
 

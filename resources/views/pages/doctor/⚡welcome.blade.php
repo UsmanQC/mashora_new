@@ -55,12 +55,12 @@ new #[Layout('layouts::doctor-guest')] #[Title('Doctor portal')] class extends C
         }
 
         if (config('doctor.registration_invite_only')) {
-            $this->redirect(URL::temporarySignedRoute('doctor.register', now()->addHours(2), ['phone' => $normalized]), navigate: true);
+            $this->redirect(URL::temporarySignedRoute('doctor.verify-phone', now()->addHours(2), ['phone' => $normalized]), navigate: true);
 
             return;
         }
 
-        $this->redirect(route('doctor.register', ['phone' => $normalized]), navigate: true);
+        $this->redirect(route('doctor.verify-phone', ['phone' => $normalized]), navigate: true);
     }
 }; ?>
 
@@ -84,7 +84,7 @@ new #[Layout('layouts::doctor-guest')] #[Title('Doctor portal')] class extends C
 
     @if (config('doctor.registration_invite_only') && app()->environment('local'))
         <flux:text class="text-center text-xs font-mono text-zinc-500">
-            Dev signed URL: {{ URL::temporarySignedRoute('doctor.register', now()->addHours(2)) }}
+            Dev signed URL: {{ URL::temporarySignedRoute('doctor.verify-phone', now()->addHours(2), ['phone' => '966500000000']) }}
         </flux:text>
     @endif
 </div>

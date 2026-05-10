@@ -76,10 +76,10 @@ new #[Layout('layouts::patient-auth')] #[Title('Phone')] class extends Component
         }
 
         $this->redirect(URL::temporarySignedRoute(
-            'patient.auth.sign-up',
+            'patient.auth.verify-phone',
             now()->addHour(),
             ['phone' => $normalized],
-        ));
+        ), navigate: false);
     }
 }; ?>
 

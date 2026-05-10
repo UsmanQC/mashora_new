@@ -5,15 +5,19 @@ use App\Models\Appointment;
 use App\Models\BankAccount;
 use App\Models\ChMessage;
 use App\Models\Communication;
+use App\Models\Degree;
 use App\Models\Diagnosis;
 use App\Models\Doctor;
 use App\Models\Duration;
 use App\Models\Medication;
 use App\Models\Notification;
+use App\Models\Speciality;
 use App\Models\User;
 use App\Models\WorkingDay;
 use App\Models\WorkingHour;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 
 uses(RefreshDatabase::class);
@@ -202,6 +206,8 @@ test('doctor login page renders', function () {
 });
 
 test('doctor register page accepts phone email password in onboarding flow', function () {
+    session(['doctor_otp_verified_phone' => '966511123456']);
+
     Livewire::withQueryParams(['phone' => '966511123456'])
         ->test('pages::doctor.register')
         ->set('email', 'new-doctor@example.com')
@@ -216,6 +222,75 @@ test('doctor register page accepts phone email password in onboarding flow', fun
     expect($doctor)->not->toBeNull()
         ->and($doctor->email)->toBe('new-doctor@example.com')
         ->and($doctor->profile_completed)->toBeFalse();
+});
+
+test('doctor completes multi-step onboarding with professional details and certificate', function () {
+    Storage::fake('public');
+
+    $degree = Degree::query()->create([
+        'title' => 'Doctor (Specialist)',
+        'title_ar' => 'طبيب أخصائي',
+        'status' => true,
+    ]);
+
+    $speciality = Speciality::query()->create([
+        'title' => 'Clinical psychology',
+        'title_ar' => 'علم نفس إكلينيكي',
+        'status' => true,
+    ]);
+
+    $doctor = Doctor::factory()->pendingOnboarding()->create([
+        'phone' => '966511123499',
+        'name' => null,
+        'name_ar' => null,
+        'about' => null,
+    ]);
+
+    $this->actingAs($doctor, 'doctor');
+
+    $pdf = UploadedFile::fake()->create('certificate.pdf', 200, 'application/pdf');
+    $headshot = UploadedFile::fake()->image('headshot.jpg', 400, 400);
+    $signatureFile = UploadedFile::fake()->image('signature.png', 120, 60);
+    $signatureDataUrl = 'data:image/png;base64,'.base64_encode($signatureFile->getContent());
+
+    Livewire::test('pages::doctor.register-basic-info')
+        ->assertSet('step', 1)
+        ->set('name', 'Dr. Onboarding')
+        ->set('name_ar', 'د. تجربة')
+        ->set('about', 'Bio text')
+        ->set('about_ar', 'نص النبذة')
+        ->set('profile_photo', $headshot)
+        ->call('nextFromBasic')
+        ->assertHasNoErrors()
+        ->assertSet('step', 2)
+        ->set('gender', 'female')
+        ->set('degree_id', $degree->id)
+        ->set('speciality_ids', [$speciality->id])
+        ->set('registration_number', 'SCH-999')
+        ->set('experience', 4)
+        ->set('spoken_languages', 'ar_en')
+        ->call('nextFromProfessional')
+        ->assertHasNoErrors()
+        ->assertSet('step', 3)
+        ->set('certificate', $pdf)
+        ->call('finishDocuments', $signatureDataUrl)
+        ->assertHasNoErrors()
+        ->assertRedirect(route('doctor.dashboard'));
+
+    $doctor->refresh();
+
+    expect($doctor->profile_completed)->toBeTrue()
+        ->and($doctor->degree_id)->toBe($degree->id)
+        ->and($doctor->registration_number)->toBe('SCH-999')
+        ->and($doctor->about_ar)->toBe('نص النبذة')
+        ->and($doctor->profile_photo_path)->not->toBeNull()
+        ->and($doctor->profile_detail_path)->not->toBeNull()
+        ->and($doctor->signature)->not->toBeNull()
+        ->and($doctor->specialities->pluck('id')->all())->toBe([$speciality->id]);
+
+    Storage::disk('public')->assertExists((string) $doctor->profile_photo_path);
+    Storage::disk('public')->assertExists((string) $doctor->profile_detail_path);
+    Storage::disk('public')->assertExists((string) $doctor->signature);
 });
 
 test('doctor welcome phone step routes existing doctors to login', function () {
@@ -234,7 +309,7 @@ test('doctor welcome phone step routes new numbers to register', function () {
     Livewire::test('pages::doctor.welcome')
         ->set('phone', '966511777222')
         ->call('proceed')
-        ->assertRedirect(route('doctor.register', ['phone' => '966511777222']));
+        ->assertRedirect(route('doctor.verify-phone', ['phone' => '966511777222']));
 });
 
 test('doctor can logout', function () {

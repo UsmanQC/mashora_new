@@ -19,6 +19,10 @@ Route::get('patient/sign-in', function (Request $request) {
     return redirect()->route('patient.phone', $request->query());
 })->middleware(['patient.redirect'])->name('patient.auth.sign-in');
 
+Route::livewire('patient/verify-phone', 'pages::patient-auth.verify-phone')
+    ->middleware(['patient.redirect', 'signed'])
+    ->name('patient.auth.verify-phone');
+
 Route::livewire('patient/sign-up', 'pages::patient-auth.sign-up')
     ->middleware(['patient.redirect', 'signed'])
     ->name('patient.auth.sign-up');

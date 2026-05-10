@@ -65,13 +65,12 @@ new #[Layout('layouts::patient')] #[Title('Home')] class extends Component
     }
 
     /**
-     * @return array{text: string, badge: string}
+     * @return array{text: string}
      */
     #[Computed]
     public function dailyThought(): array
     {
         return [
-            'badge' => __('patient.thought_badge'),
             'text' => __('patient.daily_balance'),
         ];
     }
@@ -98,16 +97,15 @@ new #[Layout('layouts::patient')] #[Title('Home')] class extends Component
     </header>
 
     <div class="space-y-6 px-4 pt-6">
-        {{-- Carousel: thought + metrics (matches legacy patient-dashboard tiles) --}}
-        <div
-            class="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-        >
+        {{-- Spotlight tiles: original vibrant gradients; grid on sm+ --}}
+        <div class="grid gap-4 sm:grid-cols-2 sm:gap-5">
             <div
-                class="relative flex min-h-[155px] w-[85vw] max-w-[22rem] shrink-0 snap-center flex-col justify-between rounded-2xl bg-gradient-to-br from-amber-400 via-orange-500 to-orange-600 p-5 text-white shadow-lg shadow-orange-500/25"
+                class="relative flex min-h-44 flex-col justify-between rounded-2xl bg-gradient-to-br from-amber-400 via-orange-500 to-orange-600 p-5 text-white shadow-lg shadow-orange-500/25"
             >
-                <flux:text class="leading-relaxed font-medium text-white/95">{{ $this->dailyThought['text'] }}</flux:text>
-                <div class="flex items-center justify-between gap-2 pt-4">
-                    <flux:badge variant="pill" color="zinc">{{ $this->dailyThought['badge'] }}</flux:badge>
+                <flux:text class="relative z-0 text-base leading-relaxed font-medium text-white/95">
+                    {{ $this->dailyThought['text'] }}
+                </flux:text>
+                <div class="relative z-0 flex items-center justify-end gap-2 pt-5">
                     {{-- Alpine payload must stay off <flux:button>: Blade mishandles nested PHP/tags in the opener and drops component compilation. --}}
                     <div
                         class="contents"
@@ -141,7 +139,7 @@ new #[Layout('layouts::patient')] #[Title('Home')] class extends Component
                         <flux:button
                             type="button"
                             variant="ghost"
-                            class="[&]:text-white hover:[&]:bg-white/15"
+                            class="shrink-0 [&]:text-white hover:[&]:bg-white/15"
                             icon="share"
                             x-on:click.prevent="shareThought()"
                         >
@@ -154,18 +152,18 @@ new #[Layout('layouts::patient')] #[Title('Home')] class extends Component
             <a
                 href="{{ auth()->check() ? route('patient.menu') : route('patient.phone') }}"
                 wire:navigate
-                class="flex min-h-[155px] w-[85vw] max-w-[22rem] shrink-0 snap-center flex-col justify-between rounded-2xl bg-gradient-to-br from-emerald-400 via-teal-500 to-emerald-600 p-5 text-white shadow-lg shadow-teal-500/25 outline-none ring-transparent transition hover:ring-2 hover:ring-teal-200/70 focus-visible:ring-2 focus-visible:ring-teal-200/70"
+                class="flex min-h-44 flex-col justify-between rounded-2xl bg-gradient-to-br from-emerald-400 via-teal-500 to-emerald-600 p-5 text-white shadow-lg shadow-teal-500/25 outline-none ring-transparent transition hover:ring-2 hover:ring-teal-200/70 focus-visible:ring-2 focus-visible:ring-teal-200/70"
                 title="{{ __('patient.metrics_description') }}"
             >
                 <div>
                     <flux:text class="text-sm font-semibold uppercase tracking-wide text-white/85">
                         {{ __('patient.metrics_title') }}
                     </flux:text>
-                    <flux:heading size="lg" class="mt-3 text-white">
+                    <flux:heading size="lg" class="mt-3 text-balance text-white">
                         {{ __('patient.metrics_heading') }}
                     </flux:heading>
                 </div>
-                <flux:text class="leading-relaxed text-emerald-50">
+                <flux:text class="mt-3 text-sm leading-relaxed text-emerald-50">
                     {{ __('patient.metrics_description') }}
                 </flux:text>
                 <flux:badge variant="pill" color="lime" class="mt-4 w-fit">

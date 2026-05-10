@@ -20,20 +20,38 @@
                 class="relative hidden min-h-0 flex-col overflow-hidden border-zinc-200 bg-[#3A59F0] px-10 py-10 text-white lg:flex lg:border-e"
             >
                 <div class="flex min-h-0 flex-1 flex-col overflow-hidden">
-                    @if (request()->routeIs('patient.phone'))
+                    @if (request()->routeIs(['patient.phone', 'patient.auth.verify-phone', 'patient.auth.sign-up']))
                         <div class="mt-8 flex min-h-0 flex-1 flex-col items-center justify-center overflow-hidden py-4">
-                            <img
-                                src="{{ asset('images/illulstration-patient.png') }}"
-                                alt=""
-                                width="560"
-                                height="560"
-                                class="h-full max-h-[min(52vh,28rem)] w-full max-w-lg object-contain object-center"
-                                loading="eager"
-                                decoding="async"
-                            />
-                            <p class="mt-4 max-w-md text-center text-2xl font-semibold text-white">
-                                {{ __('patient_auth.illustration_caption') }}
+                            <div class="relative w-full max-w-lg">
+                                <div class="pointer-events-none absolute -inset-6 rounded-[2rem] bg-white/10 blur-2xl"></div>
+                                <img
+                                    src="{{ asset('images/illulstration-patient.png') }}"
+                                    alt=""
+                                    width="560"
+                                    height="560"
+                                    class="relative h-full max-h-[min(52vh,28rem)] w-full object-contain object-center drop-shadow-[0_20px_40px_rgba(0,0,0,0.15)]"
+                                    loading="eager"
+                                    decoding="async"
+                                />
+                            </div>
+                            <p class="mt-5 max-w-md text-center text-2xl font-semibold leading-snug text-white">
+                                @if (request()->routeIs('patient.auth.verify-phone'))
+                                    {{ __('patient_auth.otp_side_caption') }}
+                                @elseif (request()->routeIs('patient.auth.sign-up'))
+                                    {{ __('patient_auth.register_side_caption') }}
+                                @else
+                                    {{ __('patient_auth.illustration_caption') }}
+                                @endif
                             </p>
+                            @if (request()->routeIs('patient.auth.verify-phone'))
+                                <p class="mt-3 max-w-sm text-center text-sm font-medium text-white/85">
+                                    {{ __('patient_auth.otp_side_sub') }}
+                                </p>
+                            @elseif (request()->routeIs('patient.auth.sign-up'))
+                                <p class="mt-3 max-w-sm text-center text-sm font-medium text-white/85">
+                                    {{ __('patient_auth.register_side_sub') }}
+                                </p>
+                            @endif
                         </div>
                     @else
                         <flux:heading size="xl" class="mt-8 max-w-sm text-balance text-zinc-900">

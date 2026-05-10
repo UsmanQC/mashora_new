@@ -10,11 +10,18 @@ return [
     'promo_body' => 'Your appointments, mood check-ins, and resources in one responsive place: desktop or install as an app on your phone.',
     'illustration_caption' => 'Enhance your mental wellness',
 
+    'otp_side_caption' => 'Confirm your mobile number',
+    'otp_side_sub' => 'We sent a short code so only you can finish creating your account.',
+
+    'register_side_caption' => 'Create your Mashora account',
+    'register_side_sub' => 'Add your name and a strong password — your number is already verified.',
+
     'phone_heading' => 'Enter your mobile number',
 
     'start_title' => 'Enter your mobile number',
     'start_hint' => 'If your number is already on file, you\'ll sign in next. If not, you\'ll be taken through creating an account.',
     'phone_label' => 'Mobile number',
+    'phone_verified_label' => 'Verified number',
     'country_code' => 'Country code',
     'phone_national_placeholder' => '5XXXXXXXX',
     'phone_invalid_length' => 'Please enter a valid number for the selected country code.',
@@ -69,4 +76,13 @@ return [
     'forgot_requires_email_note' => 'Use the email on your account. Phone-only accounts can add an email in Profile after signing in.',
 
     'next' => 'Next',
+
+    'otp_heading' => 'Verify your mobile number',
+    'otp_lead' => 'Enter the 4-digit code we sent by SMS.',
+    'otp_label' => 'Verification code',
+    'otp_verify' => 'Verify and continue',
+    'otp_resend' => 'Resend code',
+    'otp_invalid' => 'That code is incorrect. Try again or request a new code.',
+    'verification_sms' => 'Your Mashora verification code is :code.',
+    'otp_dev_banner' => 'Local / test mode: SMS is not sent. Use this code: :code',
 ];

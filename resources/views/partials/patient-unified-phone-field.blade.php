@@ -87,6 +87,12 @@
                         input.addEventListener('input', syncToLivewire);
                         input.addEventListener('blur', syncToLivewire);
                         input.addEventListener('countrychange', syncToLivewire);
+
+                        const form = this.$el.closest('form');
+                        if (form) {
+                            form.addEventListener('submit', syncToLivewire, { capture: true });
+                        }
+
                         syncToLivewire();
                     },
                 };

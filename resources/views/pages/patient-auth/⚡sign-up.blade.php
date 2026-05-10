@@ -34,6 +34,10 @@ new #[Layout('layouts::patient-auth')] #[Title('Your details')] class extends Co
             throw new HttpException(403);
         }
 
+        if ((string) session('patient_otp_verified_phone') !== $digits) {
+            throw new HttpException(403);
+        }
+
         $this->phone = $digits;
     }
 
@@ -63,12 +67,14 @@ new #[Layout('layouts::patient-auth')] #[Title('Your details')] class extends Co
 
         Auth::login($user);
 
+        session()->forget('patient_otp_verified_phone');
+
         $this->redirect(route('patient.profile.basic'));
     }
 }; ?>
 
-<div>
-    <div class="mb-4 text-start sm:mb-6">
+<div class="w-full text-start">
+    <div class="mb-5 sm:mb-6">
         <flux:button
             :href="route('patient.phone', ['phone' => $phone])"
             wire:navigate
@@ -81,12 +87,17 @@ new #[Layout('layouts::patient-auth')] #[Title('Your details')] class extends Co
         />
     </div>
 
-    <div class="text-center">
-        <flux:heading size="xl" class="patient-auth-heading text-balance">{{ __('patient_auth.register_title') }}</flux:heading>
-        <flux:text class="mx-auto mt-2 max-w-sm text-balance text-zinc-600">{{ __('patient_auth.register_sub') }}</flux:text>
-    </div>
+    <header class="border-b border-zinc-200/80 pb-5 sm:pb-6">
+        <flux:heading size="xl" class="patient-auth-heading text-balance text-[#193ADB]">{{ __('patient_auth.register_title') }}</flux:heading>
+        <flux:text class="mt-2 max-w-lg text-balance text-zinc-600">{{ __('patient_auth.register_sub') }}</flux:text>
+        <div class="mt-4 flex flex-wrap items-center gap-2 text-sm text-zinc-600">
+            <flux:icon name="device-phone-mobile" variant="mini" class="size-4 shrink-0 text-[#3C5CF7]" />
+            <span class="font-medium text-zinc-800">{{ __('patient_auth.phone_verified_label') }}</span>
+            <span class="font-semibold tabular-nums text-zinc-900" dir="ltr">+{{ $phone }}</span>
+        </div>
+    </header>
 
-    <form wire:submit="registerPatient" class="mt-6 space-y-4 text-start sm:mt-8 sm:space-y-5">
+    <form wire:submit="registerPatient" class="mt-6 space-y-5 sm:mt-8">
         <flux:input
             wire:model.blur="name"
             type="text"
@@ -94,8 +105,6 @@ new #[Layout('layouts::patient-auth')] #[Title('Your details')] class extends Co
             required
             :label="__('patient_auth.full_name')"
         />
-
-        <flux:input type="text" disabled :value="$phone" :label="__('patient_auth.phone_label')" />
 
         <flux:input wire:model="password" viewable required type="password" :label="__('patient_auth.password')" />
 
@@ -111,6 +120,8 @@ new #[Layout('layouts::patient-auth')] #[Title('Your details')] class extends Co
             <flux:text class="text-sm text-red-600">{{ $message }}</flux:text>
         @enderror
 
-        <flux:button variant="primary" type="submit" class="patient-auth-primary-btn w-full">{{ __('patient_auth.cta_register') }}</flux:button>
+        <flux:button variant="primary" type="submit" class="patient-auth-primary-btn w-full" wire:loading.attr="disabled">
+            {{ __('patient_auth.cta_register') }}
+        </flux:button>
     </form>
 </div>

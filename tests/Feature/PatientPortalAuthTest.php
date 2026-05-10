@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\User;
+use App\Models\VerifyPhoneNumber;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\URL;
 use Livewire\Livewire;
@@ -45,15 +46,64 @@ test('signed patient sign up url responds', function () {
     $phone = '966512345670';
     $url = URL::temporarySignedRoute('patient.auth.sign-up', now()->addHour(), ['phone' => $phone]);
 
-    $this->get($url)
+    $this->withSession(['patient_otp_verified_phone' => $phone])
+        ->get($url)
         ->assertSuccessful()
         ->assertSee(__('patient_auth.cta_register'), false)
         ->assertSee(route('patient.phone', ['phone' => $phone]), false);
 });
 
+test('patient sign up requires otp verified session', function () {
+    $phone = '966512345670';
+    $url = URL::temporarySignedRoute('patient.auth.sign-up', now()->addHour(), ['phone' => $phone]);
+
+    $this->get($url)->assertForbidden();
+});
+
 test('unsigned patient sign up url fails', function () {
     $this->get(route('patient.auth.sign-up', ['phone' => '966512345670']))
         ->assertForbidden();
+});
+
+test('new patient number redirects to phone verification', function () {
+    Livewire::test('pages::patient-auth.phone')
+        ->set('countryIso', 'SA')
+        ->set('phone', '512399988')
+        ->call('continueGuest')
+        ->assertHasNoErrors()
+        ->assertRedirect(URL::temporarySignedRoute(
+            'patient.auth.verify-phone',
+            now()->addHour(),
+            ['phone' => '966512399988'],
+        ));
+});
+
+test('patient can verify otp and reach sign up', function () {
+    $phone = '966512400001';
+
+    Livewire::withQueryParams(['phone' => $phone])
+        ->test('pages::patient-auth.verify-phone')
+        ->assertSet('phone', $phone);
+
+    $code = VerifyPhoneNumber::query()
+        ->where('phone', $phone)
+        ->where('user_type', 'patient')
+        ->value('verification_code');
+
+    expect($code)->not->toBeNull();
+
+    Livewire::withQueryParams(['phone' => $phone])
+        ->test('pages::patient-auth.verify-phone')
+        ->set('code', (string) $code)
+        ->call('verifyOtp')
+        ->assertHasNoErrors()
+        ->assertRedirect(URL::temporarySignedRoute(
+            'patient.auth.sign-up',
+            now()->addHour(),
+            ['phone' => $phone],
+        ));
+
+    expect(session('patient_otp_verified_phone'))->toBe($phone);
 });
 
 test('incomplete profile cannot browse patient appointments shell', function () {
