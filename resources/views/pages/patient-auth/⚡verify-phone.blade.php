@@ -3,7 +3,6 @@
 use App\Models\VerifyPhoneNumber;
 use App\Services\SmsService;
 use App\Support\PatientPhone;
-use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\URL;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
@@ -36,7 +35,7 @@ new #[Layout('layouts::patient-auth')] #[Title('Verify mobile number')] class ex
 
         if (! $recent) {
             $this->sendOtp();
-        } elseif (! App::environment('production')) {
+        } elseif (! app(SmsService::class)->isLive()) {
             $this->devOtpDisplay = VerifyPhoneNumber::query()
                 ->where('phone', $digits)
                 ->where('user_type', 'patient')
@@ -54,7 +53,8 @@ new #[Layout('layouts::patient-auth')] #[Title('Verify mobile number')] class ex
             ->delete();
 
         $message = __('patient_auth.verification_sms', ['code' => $code]);
-        app(SmsService::class)->send($message, $this->phone, $code);
+        $sms = app(SmsService::class);
+        $sms->send($message, $this->phone, $code);
 
         VerifyPhoneNumber::query()->create([
             'phone' => $this->phone,
@@ -62,7 +62,7 @@ new #[Layout('layouts::patient-auth')] #[Title('Verify mobile number')] class ex
             'user_type' => 'patient',
         ]);
 
-        $this->devOtpDisplay = App::environment('production') ? null : $code;
+        $this->devOtpDisplay = $sms->isLive() ? null : $code;
     }
 
     public function verifyOtp(): void

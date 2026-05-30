@@ -12,13 +12,17 @@ final class SmsService
     /**
      * Send SMS OTP. Mirrors Mashorapwa-prod: Dreams.sa for Saudi (+966 / 966…), Twilio Verify for others.
      *
-     * @return mixed Response payload from provider, or true when not in production (dev/testing).
+     * Real delivery happens when the app is in production OR config('sms.live')
+     * is enabled (SMS_LIVE=true). Otherwise the OTP is shown on screen via the
+     * verify-phone dev banner instead.
+     *
+     * @return mixed Response payload from provider, or true when live sending is disabled.
      */
     public function send(string $message, string $to, ?string $verificationCode = null): mixed
     {
         $digits = preg_replace('/\D/', '', $to) ?? '';
 
-        if (! App::environment('production')) {
+        if (! $this->isLive()) {
             return true;
         }
 
@@ -68,5 +72,13 @@ final class SmsService
         return $client->verify->v2->services($verifyServiceSid)
             ->verifications
             ->create($e164, 'sms', ['customCode' => $verificationCode]);
+    }
+
+    /**
+     * Whether real SMS delivery is currently enabled.
+     */
+    public function isLive(): bool
+    {
+        return App::environment('production') || (bool) config('sms.live');
     }
 }
