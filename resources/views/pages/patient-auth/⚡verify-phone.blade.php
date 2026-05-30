@@ -45,7 +45,8 @@ new #[Layout('layouts::patient-auth')] #[Title('Verify mobile number')] class ex
 
     public function sendOtp(): void
     {
-        $code = sprintf('%04d', random_int(0, 9999));
+        // TESTING: static OTP. Restore `sprintf('%04d', random_int(0, 9999))` and uncomment the SMS send below before going live.
+        $code = '1111';
 
         VerifyPhoneNumber::query()
             ->where('phone', $this->phone)
@@ -54,7 +55,7 @@ new #[Layout('layouts::patient-auth')] #[Title('Verify mobile number')] class ex
 
         $message = __('patient_auth.verification_sms', ['code' => $code]);
         $sms = app(SmsService::class);
-        $sms->send($message, $this->phone, $code);
+        // $sms->send($message, $this->phone, $code);
 
         VerifyPhoneNumber::query()->create([
             'phone' => $this->phone,
