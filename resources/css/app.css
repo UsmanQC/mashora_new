@@ -92,7 +92,7 @@ select:focus[data-flux-control] {
     }
 
     .patient-gender-fields [data-flux-field] {
-        @apply items-center;
+        @apply items-center !mb-0;
     }
 
     .patient-gender-fields [data-flux-field] [data-flux-label] {
