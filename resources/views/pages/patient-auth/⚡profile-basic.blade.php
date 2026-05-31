@@ -90,7 +90,6 @@ new #[Layout('layouts::patient-auth')] #[Title('A few more details')] class exte
                 <flux:radio.group wire:model="gender" class="grid gap-3 sm:grid-cols-3 sm:gap-x-6">
                     <flux:radio value="male" :label="__('patient_auth.gender_male')" />
                     <flux:radio value="female" :label="__('patient_auth.gender_female')" />
-                    <flux:radio value="other" :label="__('patient_auth.gender_other')" />
                 </flux:radio.group>
             </div>
             <flux:error name="gender" />
