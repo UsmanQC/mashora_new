@@ -76,7 +76,7 @@ new #[Layout('layouts::patient-auth')] #[Title('A few more details')] class exte
         <flux:field>
             <flux:label>{{ __('patient_auth.gender') }}</flux:label>
             <div class="patient-gender-fields">
-                <flux:radio.group wire:model="gender" class="grid grid-cols-2 gap-3 sm:gap-x-6">
+                <flux:radio.group wire:model="gender" class="flex flex-wrap gap-x-8 gap-y-3">
                     <flux:radio value="male" :label="__('patient_auth.gender_male')" />
                     <flux:radio value="female" :label="__('patient_auth.gender_female')" />
                 </flux:radio.group>
