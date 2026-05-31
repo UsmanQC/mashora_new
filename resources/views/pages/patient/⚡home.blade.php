@@ -237,7 +237,7 @@ new #[Layout('layouts::patient')] #[Title('Home')] class extends Component
         <flux:separator />
         <div class="grid gap-4 sm:grid-cols-3">
             <a
-                href="{{ auth()->check() ? route('patient.schedule.filter') : route('login') }}"
+                href="{{ route('patient.schedule.filter') }}"
                 wire:navigate
                 class="group flex flex-col rounded-2xl border border-orange-200/80 bg-orange-50/90 p-4 shadow-sm transition hover:border-orange-300 hover:shadow-md"
             >
@@ -256,7 +256,7 @@ new #[Layout('layouts::patient')] #[Title('Home')] class extends Component
             </a>
 
             <a
-                href="{{ auth()->check() ? route('patient.schedule.filter') : route('login') }}"
+                href="{{ auth()->check() ? route('patient.schedule.filter') : route('patient.phone') }}"
                 wire:navigate
                 class="group flex flex-col rounded-2xl border border-emerald-200/80 bg-emerald-50/90 p-4 shadow-sm transition hover:border-emerald-300 hover:shadow-md"
             >
@@ -275,7 +275,7 @@ new #[Layout('layouts::patient')] #[Title('Home')] class extends Component
             </a>
 
             <a
-                href="{{ auth()->check() ? route('patient.appointments') : route('login') }}"
+                href="{{ auth()->check() ? route('patient.appointments') : route('patient.phone') }}"
                 wire:navigate
                 class="group flex flex-col rounded-2xl border border-sky-200/80 bg-sky-50/90 p-4 shadow-sm transition hover:border-sky-300 hover:shadow-md sm:col-span-1 sm:aspect-auto sm:justify-start"
             >

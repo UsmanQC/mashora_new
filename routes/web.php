@@ -40,7 +40,7 @@ Route::livewire('patient/register/done', 'pages::patient-auth.congrats')
     ->name('patient.register.done');
 
 Route::livewire('patient', 'pages::patient.home')
-    ->middleware(['patient.profile'])
+    ->middleware(['patient.public'])
     ->name('patient.home');
 
 Route::livewire('patient/appointments', 'pages::patient.appointments')
@@ -88,11 +88,11 @@ Route::view('patient/privacy', 'patient.section-empty', ['titleKey' => 'patient.
     ->name('patient.privacy');
 
 Route::livewire('patient/filter', 'pages::patient.schedule-session')
-    ->middleware(['auth', 'patient.profile'])
+    ->middleware(['patient.public'])
     ->name('patient.schedule.filter');
 
 Route::livewire('patient/specialists', 'pages::patient.schedule-specialists')
-    ->middleware(['auth', 'patient.profile'])
+    ->middleware(['patient.public'])
     ->name('patient.schedule.specialists');
 
 Route::livewire('patient/book-appointments/{doctor}', 'pages::patient.book-appointments')
@@ -127,7 +127,7 @@ Route::post('patient/appointments/{appointment}/realtime/agora-token', [PatientA
     ->name('patient.appointments.realtime.agora-token');
 
 Route::view('patient/important-numbers', 'patient.important-numbers')
-    ->middleware(['patient.profile'])
+    ->middleware(['patient.public'])
     ->name('patient.important-numbers');
 
 Route::middleware(['auth', 'verified'])->group(function () {

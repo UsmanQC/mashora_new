@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\AllowGuestPatientPortalView;
 use App\Http\Middleware\AuthenticateBroadcastParticipant;
 use App\Http\Middleware\EnsureDoctorOwnsAppointment;
 use App\Http\Middleware\EnsureDoctorPortalActive;
@@ -36,12 +37,17 @@ return Application::configure(basePath: dirname(__DIR__))
                 return route('doctor.login');
             }
 
+            if ($request->is('patient', 'patient/*')) {
+                return route('patient.phone');
+            }
+
             return route('login');
         });
 
         $middleware->alias([
             'patient.redirect' => RedirectAuthenticatedPatientVisitor::class,
             'patient.profile' => EnsurePatientPortalProfileComplete::class,
+            'patient.public' => AllowGuestPatientPortalView::class,
             'doctor.profile' => EnsureDoctorProfileCompleted::class,
             'doctor.active' => EnsureDoctorPortalActive::class,
             'doctor.guest' => RedirectIfDoctorAuthenticated::class,

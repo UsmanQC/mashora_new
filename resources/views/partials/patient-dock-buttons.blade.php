@@ -33,9 +33,9 @@
 
     $menuHref = auth()->check() ? route('patient.menu') : $phoneEntry;
 
-    $hrefHome = $guest ? $phoneEntry : route('patient.home');
+    $hrefHome = route('patient.home');
     $hrefAppointments = $guest ? $phoneEntry : route('patient.appointments');
-    $hrefNumbers = $guest ? $phoneEntry : route('patient.important-numbers');
+    $hrefNumbers = route('patient.important-numbers');
 
     $activeHome = request()->routeIs('patient.home');
     $activeAppointments = ! $guest && request()->routeIs([
@@ -48,7 +48,7 @@
         'patient.payment.success',
         'patient.payment.failed',
     ]);
-    $activeNumbers = ! $guest && request()->routeIs('patient.important-numbers');
+    $activeNumbers = request()->routeIs('patient.important-numbers');
     $activeMenu = ! $guest && request()->routeIs([
         'patient.menu',
         'profile.edit',
