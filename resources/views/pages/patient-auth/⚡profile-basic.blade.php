@@ -8,8 +8,7 @@ use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
-new #[Layout('layouts::patient-auth')] #[Title('A few more details')] class extends Component
-{
+new #[Layout('layouts::patient-auth')] #[Title('A few more details')] class extends Component {
     public ?string $email = null;
 
     public ?string $gender = null;
@@ -18,7 +17,7 @@ new #[Layout('layouts::patient-auth')] #[Title('A few more details')] class exte
     {
         $user = Auth::user();
 
-        if (! $user instanceof User) {
+        if (!$user instanceof User) {
             $this->redirect(route('patient.phone'));
 
             return;
@@ -38,20 +37,14 @@ new #[Layout('layouts::patient-auth')] #[Title('A few more details')] class exte
     {
         $patient = Auth::user();
 
-        if (! $patient instanceof User) {
+        if (!$patient instanceof User) {
             $this->redirect(route('patient.phone'));
 
             return;
         }
 
         $validated = $this->validate([
-            'email' => [
-                'nullable',
-                'string',
-                'email',
-                'max:255',
-                Rule::unique(User::class, 'email')->ignore($patient->id),
-            ],
+            'email' => ['nullable', 'string', 'email', 'max:255', Rule::unique(User::class, 'email')->ignore($patient->id)],
             'gender' => ['required', Rule::in(['male', 'female', 'other'])],
         ]);
 
@@ -77,17 +70,13 @@ new #[Layout('layouts::patient-auth')] #[Title('A few more details')] class exte
     <flux:text class="mt-2">{{ __('patient_auth.profile_basic_sub') }}</flux:text>
 
     <form wire:submit="saveBasics" class="mt-8 space-y-6">
-        <flux:input
-            wire:model.blur="email"
-            type="email"
-            autocomplete="email"
-            :label="__('patient_auth.email_optional')"
-        />
+        <flux:input wire:model.blur="email" type="email" autocomplete="email"
+            :label="__('patient_auth.email_optional')" />
 
         <flux:field>
             <flux:label>{{ __('patient_auth.gender') }}</flux:label>
             <div class="patient-gender-fields">
-                <flux:radio.group wire:model="gender" class="grid gap-3 sm:grid-cols-3 sm:gap-x-6">
+                <flux:radio.group wire:model="gender" class="grid grid-cols-2 gap-3 sm:gap-x-6">
                     <flux:radio value="male" :label="__('patient_auth.gender_male')" />
                     <flux:radio value="female" :label="__('patient_auth.gender_female')" />
                 </flux:radio.group>
