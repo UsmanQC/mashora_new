@@ -409,7 +409,15 @@ new #[Layout('layouts::doctor')] #[Title('Complete profile')] class extends Comp
                             await lw.call('finishDocuments', url);
                         },
                     });
-                    document.addEventListener('alpine:init', () => Alpine.data('doctorDocumentsStep', factory));
+                    const register = () => window.Alpine.data('doctorDocumentsStep', factory);
+
+                    // On wire:navigate (SPA) visits `alpine:init` has already fired, so register
+                    // immediately when Alpine is present; otherwise wait for the event (hard load).
+                    if (window.Alpine) {
+                        register();
+                    } else {
+                        document.addEventListener('alpine:init', register);
+                    }
                 })();
             </script>
         @endpush
