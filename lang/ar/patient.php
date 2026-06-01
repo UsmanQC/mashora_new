@@ -2,10 +2,10 @@
 
 return [
     'title' => 'الرئيسية',
-    'brand' => 'مشورة',
+    'brand' => 'أوان',
     'sidebar_label' => 'تنقل بوابة المريض',
     'sidebar_tagline' => 'رعاية ودعم',
-    'sidebar_brand_secondary' => 'Mashora',
+    'sidebar_brand_secondary' => 'Awaan',
     'welcome_user' => 'مرحبًا، :name',
     'welcome_guest' => 'مرحبًا، ضيفنا العزيز',
 
@@ -75,7 +75,7 @@ return [
         'important_numbers' => 'أرقام مهمة',
     ],
 
-    'thought_badge' => 'مشورة',
+    'thought_badge' => 'أوان',
     'daily_balance' => 'احرص على التوازن بين العمل والحياة الشخصية. امنح وقتًا للهوايات وأوقات الفرح لتحسين رفاهيتك النفسية.',
 
     'appointments' => [
@@ -113,7 +113,7 @@ return [
         'patient_details_sub' => 'مساحة الجلسة',
     ],
 
-    'metrics_title' => 'مشورة',
+    'metrics_title' => 'أوان',
     'metrics_heading' => 'مقاييس الصحة العقلية',
     'metrics_description' => 'الإجراءات النفسية هي اختبارات تساعدك على فهم نفسك بشكل أفضل.',
 

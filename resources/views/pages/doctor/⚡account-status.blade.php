@@ -54,6 +54,17 @@ new #[Layout('layouts::doctor')] #[Title('Account status')] class extends Compon
                 {{ $isRejected ? __('doctor.account_status.rejected_body') : __('doctor.account_status.pending_body') }}
             </flux:text>
 
+            @if ($isRejected && filled($doc?->rejection_reason))
+                <div class="mx-auto mt-6 max-w-md rounded-2xl border border-red-100 bg-red-50/70 px-4 py-3 text-start">
+                    <div class="text-xs font-semibold uppercase tracking-wide text-red-600">
+                        {{ __('doctor.account_status.reason_label') }}
+                    </div>
+                    <flux:text class="mt-1 text-sm text-red-700">
+                        {{ $doc->rejection_reason }}
+                    </flux:text>
+                </div>
+            @endif
+
             @unless ($isRejected)
                 <div class="mx-auto mt-6 flex max-w-md items-start gap-3 rounded-2xl border border-blue-100 bg-blue-50/60 px-4 py-3 text-start">
                     <flux:icon name="envelope" variant="outline" class="mt-0.5 size-5 shrink-0 text-[#1565c0]" />

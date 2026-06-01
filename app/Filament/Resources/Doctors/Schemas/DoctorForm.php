@@ -136,7 +136,15 @@ class DoctorForm
                                 'rejected' => 'Rejected',
                             ])
                             ->required()
-                            ->native(false),
+                            ->native(false)
+                            ->live(),
+                        Textarea::make('rejection_reason')
+                            ->label('Rejection reason')
+                            ->helperText('Shared with the doctor by email and shown on their account status page.')
+                            ->rows(3)
+                            ->required(fn ($get): bool => $get('status') === 'rejected')
+                            ->visible(fn ($get): bool => $get('status') === 'rejected')
+                            ->columnSpanFull(),
                         Toggle::make('is_online')
                             ->label('Is working / online')
                             ->inline(false),

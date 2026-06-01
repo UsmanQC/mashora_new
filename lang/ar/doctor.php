@@ -9,7 +9,7 @@ return [
     'welcome_subtitle' => 'سجّل الدخول برقم الجوال وكلمة المرور.',
     'welcome_sign_in' => 'تسجيل الدخول',
     'welcome_register' => 'إنشاء حساب',
-    'welcome_invite_hint' => 'قد يتطلب الحساب الجديد رابط دعوة من مشورة عند تفعيل التسجيل بدعوة فقط.',
+    'welcome_invite_hint' => 'قد يتطلب الحساب الجديد رابط دعوة من أوان عند تفعيل التسجيل بدعوة فقط.',
 
     'nav' => [
         'dashboard' => 'الرئيسية',
@@ -26,7 +26,7 @@ return [
 
     'guest' => [
         'kicker' => 'للممارسين الصحيين',
-        'headline' => 'عيادتك على مشورة',
+        'headline' => 'عيادتك على أوان',
         'subhead' => 'أدار المواعيد وملفك من مكان واحد.',
         'illustration_caption' => 'نحن نساعدك على تقديم أفضل خدمة لمرضاك',
     ],
@@ -50,6 +50,7 @@ return [
         'rejected_title' => 'لم يتم اعتماد التسجيل',
         'pending_body' => 'شكرًا لإكمال ملفك الشخصي. يقوم فريقنا بمراجعة بياناتك للحفاظ على أمان المنصة للمرضى. تستغرق المراجعة عادةً من يوم إلى يومين عمل.',
         'rejected_body' => 'للأسف لم يتم اعتماد تسجيلك. يُرجى مراجعة بياناتك والتواصل مع فريقنا إذا كنت تعتقد أن هناك خطأً.',
+        'reason_label' => 'سبب الرفض',
         'email_note' => 'ستصلك رسالة بريد إلكتروني فور اعتماد حسابك، وعندها يمكنك البدء في استقبال المواعيد.',
         'help_html' => 'بحاجة إلى مساعدة؟ راسلنا على <a class="font-medium text-[#3C5CF7] underline hover:no-underline" href="mailto:contact@mashora.co">contact@mashora.co</a>.',
     ],
@@ -73,7 +74,7 @@ return [
         'otp_verify' => 'تأكيد ومتابعة',
         'otp_resend' => 'إعادة إرسال الرمز',
         'otp_invalid' => 'الرمز غير صحيح. حاول مرة أخرى أو اطلب رمزًا جديدًا.',
-        'verification_sms' => 'رمز مشورة للتحقق: :code',
+        'verification_sms' => 'رمز أوان للتحقق: :code',
         'otp_dev_banner' => 'وضع تجريبي: لا تُرسَل الرسالة. استخدم الرمز: :code',
 
         'basic_info_title' => 'أكمل ملفك',
@@ -85,7 +86,7 @@ return [
         'profile_photo_help' => 'تظهر للمرضى بعد الموافقة. JPG أو PNG أو WebP حتى 2 ميجابايت.',
         'onboarding_progress' => 'الخطوة :current من :total',
         'professional_title' => 'البيانات المهنية',
-        'professional_subtitle' => 'التخصص ومعلومات التسجيل للتحقق من مشورة.',
+        'professional_subtitle' => 'التخصص ومعلومات التسجيل للتحقق من أوان.',
         'documents_title' => 'المستندات',
         'documents_subtitle' => 'ارفع شهادتك المهنية أو السيرة الذاتية (PDF أو صورة).',
         'continue' => 'متابعة',

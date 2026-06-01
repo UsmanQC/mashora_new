@@ -13,7 +13,7 @@ return [
     'otp_side_caption' => 'Confirm your mobile number',
     'otp_side_sub' => 'We sent a short code so only you can finish creating your account.',
 
-    'register_side_caption' => 'Create your Mashora account',
+    'register_side_caption' => 'Create your Awaan account',
     'register_side_sub' => 'Add your name and a strong password — your number is already verified.',
 
     'phone_heading' => 'Enter your mobile number',
@@ -83,6 +83,6 @@ return [
     'otp_verify' => 'Verify and continue',
     'otp_resend' => 'Resend code',
     'otp_invalid' => 'That code is incorrect. Try again or request a new code.',
-    'verification_sms' => 'Your Mashora verification code is :code.',
+    'verification_sms' => 'Your Awaan verification code is :code.',
     'otp_dev_banner' => 'Local / test mode: SMS is not sent. Use this code: :code',
 ];

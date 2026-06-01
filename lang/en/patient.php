@@ -2,7 +2,7 @@
 
 return [
     'title' => 'Home',
-    'brand' => 'Mashora',
+    'brand' => 'Awaan',
     'sidebar_label' => 'Patient portal navigation',
     'sidebar_tagline' => 'Care & support',
     'sidebar_brand_secondary' => 'مشورة',

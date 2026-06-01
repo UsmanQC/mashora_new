@@ -2,7 +2,9 @@
 
 namespace App\Models;
 
+use App\Observers\DoctorObserver;
 use Database\Factories\DoctorFactory;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -14,6 +16,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Storage;
 
+#[ObservedBy([DoctorObserver::class])]
 class Doctor extends Authenticatable
 {
     /** @use HasFactory<DoctorFactory> */
@@ -46,6 +49,7 @@ class Doctor extends Authenticatable
         'accept_instant_appointment',
         'commission',
         'status',
+        'rejection_reason',
         'active_status',
     ];
 

@@ -13,7 +13,7 @@ return [
     'otp_side_caption' => 'تأكيد رقم جوالك',
     'otp_side_sub' => 'أرسلنا رمزًا قصيرًا لضمان أن إنشاء الحساب يتم من طرفك فقط.',
 
-    'register_side_caption' => 'أنشئ حسابك على مشورة',
+    'register_side_caption' => 'أنشئ حسابك على أوان',
     'register_side_sub' => 'أضف اسمك وكلمة مرور قوية — رقمك مُؤكَّد مسبقًا.',
 
     'phone_heading' => 'أدخل رقم الجوال',
@@ -84,6 +84,6 @@ return [
     'otp_verify' => 'تأكيد ومتابعة',
     'otp_resend' => 'إعادة إرسال الرمز',
     'otp_invalid' => 'الرمز غير صحيح. حاول مرة أخرى أو اطلب رمزًا جديدًا.',
-    'verification_sms' => 'رمز مشورة للتحقق: :code',
+    'verification_sms' => 'رمز أوان للتحقق: :code',
     'otp_dev_banner' => 'وضع تجريبي: لا تُرسَل الرسالة. استخدم الرمز: :code',
 ];

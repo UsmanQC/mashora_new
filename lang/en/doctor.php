@@ -9,7 +9,7 @@ return [
     'welcome_subtitle' => 'Sign in with your mobile number and password.',
     'welcome_sign_in' => 'Sign in',
     'welcome_register' => 'Create account',
-    'welcome_invite_hint' => 'New accounts may require an invitation link from Mashora when invite-only registration is enabled.',
+    'welcome_invite_hint' => 'New accounts may require an invitation link from Awaan when invite-only registration is enabled.',
 
     'nav' => [
         'dashboard' => 'Home',
@@ -26,7 +26,7 @@ return [
 
     'guest' => [
         'kicker' => 'For healthcare professionals',
-        'headline' => 'Your practice on Mashora',
+        'headline' => 'Your practice on Awaan',
         'subhead' => 'Manage appointments and your profile in one place.',
         'illustration_caption' => 'We help you provide the best service to your patients',
     ],
@@ -50,6 +50,7 @@ return [
         'rejected_title' => 'Registration not approved',
         'pending_body' => 'Thanks for completing your profile. Our team is verifying your details to keep the platform safe for patients. This usually takes 1–2 business days.',
         'rejected_body' => 'Unfortunately your registration was not approved. Please review your details and get in touch with our team if you believe this is a mistake.',
+        'reason_label' => 'Reason for rejection',
         'email_note' => 'You will receive an email as soon as your account is approved, and you can then start receiving appointments.',
         'help_html' => 'Need help? Email us at <a class="font-medium text-[#3C5CF7] underline hover:no-underline" href="mailto:contact@mashora.co">contact@mashora.co</a>.',
     ],
@@ -72,7 +73,7 @@ return [
         'otp_verify' => 'Verify and continue',
         'otp_resend' => 'Resend code',
         'otp_invalid' => 'That code is incorrect. Try again or request a new code.',
-        'verification_sms' => 'Your Mashora verification code is :code.',
+        'verification_sms' => 'Your Awaan verification code is :code.',
         'otp_dev_banner' => 'Local / test mode: SMS is not sent. Use this code: :code',
 
         'basic_info_title' => 'Complete your profile',
@@ -84,7 +85,7 @@ return [
         'profile_photo_help' => 'Shown to patients after approval. JPG, PNG, or WebP up to 2 MB.',
         'onboarding_progress' => 'Step :current of :total',
         'professional_title' => 'Professional details',
-        'professional_subtitle' => 'Your specialty and registration information for Mashora verification.',
+        'professional_subtitle' => 'Your specialty and registration information for Awaan verification.',
         'documents_title' => 'Documents',
         'documents_subtitle' => 'Upload your professional certificate or CV (PDF or image).',
         'continue' => 'Continue',
