@@ -43,6 +43,17 @@ return [
         'placeholder' => 'More settings from production will be wired here as the product grows.',
     ],
 
+    'account_status' => [
+        'pending_badge' => 'Pending review',
+        'rejected_badge' => 'Not approved',
+        'pending_title' => 'Your account is under review',
+        'rejected_title' => 'Registration not approved',
+        'pending_body' => 'Thanks for completing your profile. Our team is verifying your details to keep the platform safe for patients. This usually takes 1–2 business days.',
+        'rejected_body' => 'Unfortunately your registration was not approved. Please review your details and get in touch with our team if you believe this is a mistake.',
+        'email_note' => 'You will receive an email as soon as your account is approved, and you can then start receiving appointments.',
+        'help_html' => 'Need help? Email us at <a class="font-medium text-[#3C5CF7] underline hover:no-underline" href="mailto:contact@mashora.co">contact@mashora.co</a>.',
+    ],
+
     'auth' => [
         'phone' => 'Mobile number',
         'password' => 'Password',

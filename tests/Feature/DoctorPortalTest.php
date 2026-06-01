@@ -38,7 +38,7 @@ test('authenticated doctor can view dashboard', function () {
     $response->assertOk();
 });
 
-test('doctor pending approval sees verification on dashboard when profile is complete', function () {
+test('doctor pending approval is redirected to account status from portal pages', function () {
     $doctor = Doctor::factory()->create([
         'profile_completed' => true,
         'status' => 'pending',
@@ -47,8 +47,45 @@ test('doctor pending approval sees verification on dashboard when profile is com
 
     $this->actingAs($doctor, 'doctor')
         ->get(route('doctor.dashboard'))
+        ->assertRedirect(route('doctor.account-status'));
+
+    $this->actingAs($doctor, 'doctor')
+        ->get(route('doctor.appointments'))
+        ->assertRedirect(route('doctor.account-status'));
+
+    $this->actingAs($doctor, 'doctor')
+        ->get(route('doctor.account-status'))
         ->assertOk()
-        ->assertSee(__('doctor.dashboard.verification_pending_title'));
+        ->assertSee(__('doctor.account_status.pending_title'));
+});
+
+test('rejected doctor is blocked from the portal and sees the rejected message', function () {
+    $doctor = Doctor::factory()->create([
+        'profile_completed' => true,
+        'status' => 'rejected',
+        'phone' => '966511122256',
+    ]);
+
+    $this->actingAs($doctor, 'doctor')
+        ->get(route('doctor.settings'))
+        ->assertRedirect(route('doctor.account-status'));
+
+    $this->actingAs($doctor, 'doctor')
+        ->get(route('doctor.account-status'))
+        ->assertOk()
+        ->assertSee(__('doctor.account_status.rejected_title'));
+});
+
+test('approved doctor visiting account status is redirected to the dashboard', function () {
+    $doctor = Doctor::factory()->create([
+        'profile_completed' => true,
+        'status' => 'approved',
+        'phone' => '966511122257',
+    ]);
+
+    $this->actingAs($doctor, 'doctor')
+        ->get(route('doctor.account-status'))
+        ->assertRedirect(route('doctor.dashboard'));
 });
 
 test('approved doctor dashboard includes formatted revenue total for revenue-eligible statuses', function () {

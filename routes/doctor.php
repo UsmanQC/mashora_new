@@ -35,7 +35,11 @@ Route::middleware('auth:doctor')->group(function (): void {
         ->middleware('doctor.active')
         ->name('register.basic.info');
 
-    Route::middleware(['doctor.profile', 'doctor.active'])->group(function (): void {
+    Route::livewire('account-status', 'pages::doctor.account-status')
+        ->middleware(['doctor.profile', 'doctor.active'])
+        ->name('account-status');
+
+    Route::middleware(['doctor.profile', 'doctor.active', 'doctor.approved'])->group(function (): void {
         Route::livewire('dashboard', 'pages::doctor.dashboard')->name('dashboard');
         Route::livewire('appointments', 'pages::doctor.appointments')->name('appointments');
 

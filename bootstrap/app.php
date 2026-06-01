@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\AllowGuestPatientPortalView;
 use App\Http\Middleware\AuthenticateBroadcastParticipant;
+use App\Http\Middleware\EnsureDoctorApproved;
 use App\Http\Middleware\EnsureDoctorOwnsAppointment;
 use App\Http\Middleware\EnsureDoctorPortalActive;
 use App\Http\Middleware\EnsureDoctorProfileCompleted;
@@ -50,6 +51,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'patient.public' => AllowGuestPatientPortalView::class,
             'doctor.profile' => EnsureDoctorProfileCompleted::class,
             'doctor.active' => EnsureDoctorPortalActive::class,
+            'doctor.approved' => EnsureDoctorApproved::class,
             'doctor.guest' => RedirectIfDoctorAuthenticated::class,
             'doctor.appointment' => EnsureDoctorOwnsAppointment::class,
         ]);
