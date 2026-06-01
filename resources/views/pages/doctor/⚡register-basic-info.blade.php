@@ -187,6 +187,12 @@ new #[Layout('layouts::doctor')] #[Title('Complete profile')] class extends Comp
         return $path;
     }
 
+    public function removeCertificate(): void
+    {
+        $this->certificate = null;
+        $this->resetErrorBag('certificate');
+    }
+
     public function nextFromProfessional(): void
     {
         $this->speciality_ids = array_values(array_unique(array_map(
@@ -620,44 +626,60 @@ new #[Layout('layouts::doctor')] #[Title('Complete profile')] class extends Comp
             <flux:field>
                 <flux:label>{{ __('doctor.auth.certificate_label') }}</flux:label>
                 <flux:text class="text-sm text-zinc-600">{{ __('doctor.auth.certificate_help') }}</flux:text>
-                <input
-                    type="file"
-                    wire:model="certificate"
-                    accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
-                    class="mt-2 block w-full text-sm text-zinc-600 file:me-4 file:rounded-lg file:border-0 file:bg-[#132A6E] file:px-4 file:py-2 file:font-semibold file:text-white hover:file:brightness-95"
-                />
+                <div class="relative mt-2">
+                    <input
+                        type="file"
+                        wire:model="certificate"
+                        accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+                        class="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0"
+                    />
+                    <div class="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-zinc-300 bg-zinc-50/80 px-6 py-8 text-center transition hover:border-[#132A6E]/50 hover:bg-[#132A6E]/5 dark:border-zinc-600 dark:bg-zinc-900/40">
+                        <flux:icon name="arrow-up-tray" class="size-7 text-zinc-400" />
+                        <flux:text class="text-sm font-medium text-zinc-700">{{ __('doctor.auth.certificate_dropzone_heading') }}</flux:text>
+                        <flux:text class="text-xs text-zinc-500">{{ __('doctor.auth.certificate_help') }}</flux:text>
+                    </div>
+                </div>
+
+                <div wire:loading wire:target="certificate" class="mt-2 text-sm text-zinc-500">
+                    {{ __('doctor.auth.upload_preparing') }}
+                </div>
+
                 @if ($certificate)
                     @php
                         $certMime = (string) ($certificate->getMimeType() ?? '');
                         $certIsImage = str_starts_with($certMime, 'image/');
                     @endphp
-                    <div class="mt-4 space-y-2" wire:loading.remove wire:target="certificate">
-                        <flux:text class="text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                            {{ __('doctor.auth.upload_preview') }}
-                        </flux:text>
+                    <div
+                        class="mt-3 flex items-center gap-3 rounded-xl border border-zinc-200 bg-white px-3 py-2.5 shadow-sm dark:border-zinc-700 dark:bg-zinc-900"
+                        wire:loading.remove
+                        wire:target="certificate"
+                    >
                         @if ($certIsImage)
-                            <img
-                                src="{{ $certificate->temporaryUrl() }}"
-                                alt=""
-                                class="max-h-64 w-full max-w-md rounded-xl border border-zinc-200 bg-zinc-50 object-contain shadow-sm"
-                            />
+                            <img src="{{ $certificate->temporaryUrl() }}" alt="" class="size-11 shrink-0 rounded-lg object-cover" />
                         @else
-                            <div
-                                class="flex max-w-md items-center gap-3 rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 shadow-sm"
-                            >
-                                <flux:icon name="document-text" class="size-10 shrink-0 text-[#132A6E]" />
-                                <div class="min-w-0">
-                                    <flux:text class="truncate text-sm font-medium text-zinc-900">
-                                        {{ $certificate->getClientOriginalName() }}
-                                    </flux:text>
-                                    <flux:text class="text-xs text-zinc-500">
-                                        {{ __('doctor.auth.certificate_pdf_selected') }}
-                                    </flux:text>
-                                </div>
-                            </div>
+                            <span class="flex size-11 shrink-0 items-center justify-center rounded-lg bg-[#132A6E]/10 text-[#132A6E]">
+                                <flux:icon name="document-text" class="size-6" />
+                            </span>
                         @endif
+                        <div class="min-w-0 flex-1">
+                            <flux:text class="truncate text-sm font-medium text-zinc-900">
+                                {{ $certificate->getClientOriginalName() }}
+                            </flux:text>
+                            <flux:text class="text-xs text-zinc-500">
+                                {{ \Illuminate\Support\Number::fileSize((int) $certificate->getSize()) }}
+                            </flux:text>
+                        </div>
+                        <flux:button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            icon="x-mark"
+                            wire:click="removeCertificate"
+                            :aria-label="__('doctor.auth.certificate_remove')"
+                        />
                     </div>
                 @endif
+
                 <flux:error name="certificate" />
             </flux:field>
 

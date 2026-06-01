@@ -95,6 +95,8 @@ return [
         'lang_ar_en' => 'Arabic & English',
         'certificate_label' => 'Certificate or CV',
         'certificate_help' => 'PDF, JPG, or PNG up to 5 MB.',
+        'certificate_dropzone_heading' => 'Drop file here or click to browse',
+        'certificate_remove' => 'Remove file',
         'signature_label' => 'Professional signature',
         'signature_help' => 'Draw your signature in the box below (mouse or finger). Use Clear to start over. It is saved as an image for prescriptions and documents.',
         'signature_clear' => 'Clear signature',

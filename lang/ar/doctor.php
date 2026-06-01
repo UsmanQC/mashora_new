@@ -96,6 +96,8 @@ return [
         'lang_ar_en' => 'العربية والإنجليزية',
         'certificate_label' => 'الشهادة أو السيرة',
         'certificate_help' => 'PDF أو JPG أو PNG حتى 5 ميجابايت.',
+        'certificate_dropzone_heading' => 'أفلت الملف هنا أو انقر للتصفح',
+        'certificate_remove' => 'إزالة الملف',
         'signature_label' => 'التوقيع المهني',
         'signature_help' => 'ارسم توقيعك في المربع أدناه (فأرة أو إصبع). استخدم «مسح» للبدء من جديد. يُحفظ كصورة للوصفات والمستندات.',
         'signature_clear' => 'مسح التوقيع',
