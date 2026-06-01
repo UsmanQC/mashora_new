@@ -114,18 +114,14 @@ new #[Layout('layouts::doctor-guest')] #[Title('Verify mobile number')] class ex
     @endif
 
     <form wire:submit="verifyOtp" class="space-y-4">
-        <flux:field>
-            <flux:label>{{ __('doctor.auth.otp_label') }}</flux:label>
-            <flux:input
-                wire:model="code"
-                type="text"
-                inputmode="numeric"
-                maxlength="4"
-                autocomplete="one-time-code"
-                class="text-center font-mono text-lg tracking-[0.35em]"
-            />
-            <flux:error name="code" />
-        </flux:field>
+        <flux:otp
+            wire:model="code"
+            :length="4"
+            :label="__('doctor.auth.otp_label')"
+            label:sr-only
+            error:class="text-center"
+            class="mx-auto"
+        />
 
         <flux:button class="w-full bg-[#132A6E]! text-white! hover:brightness-95!" type="submit" variant="primary">
             {{ __('doctor.auth.otp_verify') }}

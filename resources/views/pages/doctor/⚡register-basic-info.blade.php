@@ -124,7 +124,7 @@ new #[Layout('layouts::doctor')] #[Title('Complete profile')] class extends Comp
         $doctor->about = $this->about !== '' ? $this->about : null;
         $doctor->about_ar = $this->about_ar !== '' ? $this->about_ar : null;
 
-        $newPhotoPath = $this->profile_photo->store('doctors', 'public');
+        $newPhotoPath = $this->storeProfilePhotoAsWebp();
         $oldPhotoPath = $doctor->profile_photo_path;
         $doctor->profile_photo_path = $newPhotoPath;
         if (filled($oldPhotoPath) && Storage::disk('public')->exists((string) $oldPhotoPath)) {
@@ -136,6 +136,55 @@ new #[Layout('layouts::doctor')] #[Title('Complete profile')] class extends Comp
         $this->profile_photo = null;
 
         $this->step = 2;
+    }
+
+    /**
+     * Convert the uploaded avatar to an optimized WebP (max 512px, quality 80)
+     * for fast loading. Falls back to storing the original when GD/WebP is
+     * unavailable on the host.
+     */
+    private function storeProfilePhotoAsWebp(): string
+    {
+        $file = $this->profile_photo;
+        $contents = @file_get_contents($file->getRealPath());
+
+        if ($contents === false || ! function_exists('imagecreatefromstring') || ! function_exists('imagewebp')) {
+            return $file->store('doctors', 'public');
+        }
+
+        $source = @imagecreatefromstring($contents);
+
+        if ($source === false) {
+            return $file->store('doctors', 'public');
+        }
+
+        $width = imagesx($source);
+        $height = imagesy($source);
+        $maxDimension = 512;
+        $scale = min(1, $maxDimension / max($width, $height));
+        $targetWidth = max(1, (int) round($width * $scale));
+        $targetHeight = max(1, (int) round($height * $scale));
+
+        $canvas = imagecreatetruecolor($targetWidth, $targetHeight);
+        imagealphablending($canvas, false);
+        imagesavealpha($canvas, true);
+        imagecopyresampled($canvas, $source, 0, 0, 0, 0, $targetWidth, $targetHeight, $width, $height);
+
+        ob_start();
+        $encoded = imagewebp($canvas, null, 80);
+        $webp = ob_get_clean();
+
+        imagedestroy($source);
+        imagedestroy($canvas);
+
+        if (! $encoded || ! is_string($webp) || $webp === '') {
+            return $file->store('doctors', 'public');
+        }
+
+        $path = 'doctors/'.Str::uuid()->toString().'.webp';
+        Storage::disk('public')->put($path, $webp);
+
+        return $path;
     }
 
     public function nextFromProfessional(): void
@@ -392,6 +441,45 @@ new #[Layout('layouts::doctor')] #[Title('Complete profile')] class extends Comp
 
     @if ($step === 1)
         <form wire:submit="nextFromBasic" class="space-y-4">
+            <div class="flex flex-col items-center gap-2">
+                <label class="
+                    relative flex items-center justify-center size-24 rounded-full transition-colors cursor-pointer
+                    border border-zinc-200 dark:border-white/10 hover:border-zinc-300 dark:hover:border-white/10
+                    bg-zinc-100 hover:bg-zinc-200 dark:bg-white/10 hover:dark:bg-white/15
+                ">
+                    <input
+                        type="file"
+                        wire:model="profile_photo"
+                        accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
+                        class="sr-only"
+                    />
+
+                    <span class="contents" wire:loading.remove wire:target="profile_photo">
+                        @if ($profile_photo)
+                            <img src="{{ $profile_photo->temporaryUrl() }}" alt="" class="size-full rounded-full object-cover" />
+                        @elseif (filled($this->doctor()->profile_photo_path))
+                            <img src="{{ $this->doctor()->profilePhotoUrl() }}" alt="" class="size-full rounded-full object-cover" />
+                        @else
+                            <flux:icon name="user" variant="solid" class="size-8 text-zinc-500 dark:text-zinc-400" />
+                        @endif
+                    </span>
+
+                    <span
+                        class="absolute inset-0 flex items-center justify-center rounded-full bg-white/70 dark:bg-zinc-900/70"
+                        wire:loading
+                        wire:target="profile_photo"
+                    >
+                        <flux:icon name="arrow-path" variant="solid" class="size-5 animate-spin text-zinc-500" />
+                    </span>
+
+                    <span class="absolute bottom-0 end-0 rounded-full bg-white dark:bg-zinc-800">
+                        <flux:icon name="arrow-up-circle" variant="solid" class="size-6 text-zinc-500 dark:text-zinc-400" />
+                    </span>
+                </label>
+                <flux:text class="text-center text-sm text-zinc-600">{{ __('doctor.auth.profile_photo_help') }}</flux:text>
+                <flux:error name="profile_photo" />
+            </div>
+
             <flux:field>
                 <flux:label>{{ __('doctor.auth.name') }}</flux:label>
                 <flux:input wire:model="name" />
@@ -412,34 +500,6 @@ new #[Layout('layouts::doctor')] #[Title('Complete profile')] class extends Comp
                 <flux:textarea wire:model="about_ar" rows="4" dir="rtl" />
                 <flux:error name="about_ar" />
             </flux:field>
-
-            <flux:field>
-                <flux:label>{{ __('doctor.auth.profile_photo_label') }}</flux:label>
-                <flux:text class="text-sm text-zinc-600">{{ __('doctor.auth.profile_photo_help') }}</flux:text>
-                <input
-                    type="file"
-                    wire:model="profile_photo"
-                    accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
-                    class="mt-2 block w-full text-sm text-zinc-600 file:me-4 file:rounded-lg file:border-0 file:bg-[#132A6E] file:px-4 file:py-2 file:font-semibold file:text-white hover:file:brightness-95"
-                />
-                @if ($profile_photo)
-                    <div class="mt-4" wire:loading.remove wire:target="profile_photo">
-                        <flux:text class="text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                            {{ __('doctor.auth.upload_preview') }}
-                        </flux:text>
-                        <img
-                            src="{{ $profile_photo->temporaryUrl() }}"
-                            alt=""
-                            class="mt-2 max-h-56 w-full max-w-xs rounded-xl border border-zinc-200 bg-zinc-50 object-contain shadow-sm"
-                        />
-                    </div>
-                @endif
-                <flux:error name="profile_photo" />
-            </flux:field>
-
-            <div wire:loading wire:target="profile_photo" class="text-sm text-zinc-500">
-                {{ __('doctor.auth.upload_preparing') }}
-            </div>
 
             <flux:button
                 class="w-full !bg-[#132A6E] !text-white hover:!brightness-95"

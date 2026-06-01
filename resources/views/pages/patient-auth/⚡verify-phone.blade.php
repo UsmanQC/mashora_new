@@ -120,18 +120,14 @@ new #[Layout('layouts::patient-auth')] #[Title('Verify mobile number')] class ex
     @endif
 
     <form wire:submit="verifyOtp" class="mt-8 space-y-5">
-        <flux:input
+        <flux:otp
             wire:model="code"
-            type="text"
-            inputmode="numeric"
-            maxlength="4"
-            autocomplete="one-time-code"
+            :length="4"
             :label="__('patient_auth.otp_label')"
-            class="text-center font-mono text-lg tracking-[0.35em]"
+            label:sr-only
+            error:class="text-center"
+            class="mx-auto"
         />
-        @error('code')
-            <flux:text class="text-sm text-red-600">{{ $message }}</flux:text>
-        @enderror
 
         <flux:button variant="primary" type="submit" class="patient-auth-primary-btn w-full">
             {{ __('patient_auth.otp_verify') }}
