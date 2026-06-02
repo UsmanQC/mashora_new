@@ -61,6 +61,7 @@ return [
     'payment_api_missing' => 'لم تُضبط بوابة الدفع بعد. أضف `MYFATOORAH_API_KEY` (أو `MYFATOORAH_TOKEN` القديم) في ملف `.env` (انظر `config/myfatoorah.php`).',
     'payment_invoice_failed' => 'تعذّر إنشاء فاتورة الدفع. حاول مرة أخرى أو تواصل مع الدعم.',
     'payment_start_failed' => 'حدث خطأ أثناء بدء الدفع. حاول مرة أخرى.',
+    'payment_gateway_misconfigured' => 'بوابة الدفع غير مضبوطة على الخادم (مفتاح MyFatoorah أو الوضع أو الدولة). يرجى التواصل مع الدعم.',
     'payment_pending_configure' => 'أضف مفتاح MyFatoorah في `.env` ثم أعد المحاولة من صفحة الدفع.',
     'payment_still_pending' => 'لم يُؤكد الدفع بعد. أعد المحاولة من صفحة الدفع أو تواصل مع الدعم إذا تم خصم المبلغ.',
     'payment_local_ssl_fallback' => 'تم اكتشاف مشكلة شهادات SSL محليًا. تمّت محاكاة تأكيد الدفع لأغراض الاختبار المحلي.',

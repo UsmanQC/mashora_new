@@ -127,7 +127,23 @@ new #[Layout('layouts::patient')] #[Title('Payment')] class extends Component
         } catch (\Throwable $e) {
             report($e);
             $this->embeddedReady = false;
+            $this->paymentError = $this->paymentErrorFrom($e);
         }
+    }
+
+    public function paymentErrorFrom(\Throwable $e): string
+    {
+        if (str_contains($e->getMessage(), 'Kindly review your MyFatoorah admin configuration')) {
+            return __('patient_booking.payment_gateway_misconfigured');
+        }
+
+        if (empty(config('myfatoorah.api_key'))) {
+            return __('patient_booking.payment_api_missing');
+        }
+
+        return app()->isLocal()
+            ? __('patient_booking.payment_start_failed')." ({$e->getMessage()})"
+            : __('patient_booking.payment_start_failed');
     }
 
     public function formattedDate(): string
@@ -276,9 +292,7 @@ new #[Layout('layouts::patient')] #[Title('Payment')] class extends Component
                 }
             }
 
-            $this->paymentError = app()->isLocal()
-                ? __('patient_booking.payment_start_failed')." ({$e->getMessage()})"
-                : __('patient_booking.payment_start_failed');
+            $this->paymentError = $this->paymentErrorFrom($e);
         }
     }
 }; ?>

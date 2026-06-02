@@ -61,6 +61,7 @@ return [
     'payment_api_missing' => 'Payment is not configured yet. Add `MYFATOORAH_API_KEY` (or legacy `MYFATOORAH_TOKEN`) to your `.env` file (see `config/myfatoorah.php`).',
     'payment_invoice_failed' => 'Could not create a payment invoice. Please try again or contact support.',
     'payment_start_failed' => 'Something went wrong while starting payment. Please try again.',
+    'payment_gateway_misconfigured' => 'Payment gateway is misconfigured on the server (MyFatoorah API key, mode, or country). Please contact support.',
     'payment_pending_configure' => 'Add your MyFatoorah API key to `.env`, then try paying again from checkout.',
     'payment_still_pending' => 'Payment is not confirmed yet. Try again from checkout, or contact support if payment was deducted.',
     'payment_local_ssl_fallback' => 'Local SSL trust issue detected. Payment confirmation was simulated for local testing.',
