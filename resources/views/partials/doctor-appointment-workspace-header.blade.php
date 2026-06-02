@@ -24,6 +24,11 @@
             'route' => route('doctor.appointments.conversation', $appointment),
             'icon' => 'chat-bubble-left-right',
         ],
+        'follow_up' => [
+            'label' => __('doctor.workspace.tab_follow_up'),
+            'route' => route('doctor.appointments.follow-up', $appointment),
+            'icon' => 'calendar-days',
+        ],
     ];
 @endphp
 

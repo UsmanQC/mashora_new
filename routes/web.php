@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Patient\FollowUpPaymentController;
 use App\Http\Controllers\Patient\PatientAppointmentRealtimeController;
 use App\Http\Controllers\Patient\PatientPaymentController;
 use Illuminate\Http\Request;
@@ -67,9 +68,29 @@ Route::view('patient/menu', 'patient.menu')
     ->middleware(['auth', 'patient.profile'])
     ->name('patient.menu');
 
-Route::view('patient/notifications', 'patient.section-empty', ['titleKey' => 'patient.menu.notifications'])
+Route::livewire('patient/notifications', 'pages::patient.notifications')
     ->middleware(['auth', 'patient.profile'])
     ->name('patient.notifications');
+
+Route::livewire('patient/follow-up/{appointment}', 'pages::patient.follow-up-confirm')
+    ->middleware(['auth', 'patient.profile'])
+    ->name('patient.follow-up.confirm');
+
+Route::livewire('patient/follow-up/{appointment}/pay', 'pages::patient.follow-up-pay')
+    ->middleware(['auth', 'patient.profile'])
+    ->name('patient.follow-up.pay');
+
+Route::get('patient/follow-up/payment/success/{appointment}', [FollowUpPaymentController::class, 'success'])
+    ->middleware(['auth', 'patient.profile'])
+    ->name('patient.follow-up.payment.success');
+
+Route::get('patient/follow-up/payment/failed/{appointment}', [FollowUpPaymentController::class, 'failed'])
+    ->middleware(['auth', 'patient.profile'])
+    ->name('patient.follow-up.payment.failed');
+
+Route::post('patient/follow-up/payment/execute/{appointment}', [FollowUpPaymentController::class, 'executePayment'])
+    ->middleware(['auth', 'patient.profile'])
+    ->name('patient.follow-up.payment.execute');
 
 Route::view('patient/medications', 'patient.section-empty', ['titleKey' => 'patient.menu.medications'])
     ->middleware(['auth', 'patient.profile'])

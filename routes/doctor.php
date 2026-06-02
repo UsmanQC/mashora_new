@@ -68,6 +68,10 @@ Route::middleware('auth:doctor')->group(function (): void {
                 'appointments/{appointment}/conversation',
                 'pages::doctor.appointment.conversation',
             )->name('appointments.conversation');
+            Route::livewire(
+                'appointments/{appointment}/follow-up',
+                'pages::doctor.appointment.follow-up',
+            )->name('appointments.follow-up');
             Route::post(
                 'appointments/{appointment}/realtime/notify-call',
                 [DoctorAppointmentRealtimeController::class, 'notifyCall'],

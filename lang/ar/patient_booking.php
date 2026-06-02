@@ -62,6 +62,8 @@ return [
     'payment_invoice_failed' => 'تعذّر إنشاء فاتورة الدفع. حاول مرة أخرى أو تواصل مع الدعم.',
     'payment_start_failed' => 'حدث خطأ أثناء بدء الدفع. حاول مرة أخرى.',
     'payment_gateway_misconfigured' => 'بوابة الدفع غير مضبوطة على الخادم (مفتاح MyFatoorah أو الوضع أو الدولة). يرجى التواصل مع الدعم.',
+    'payment_live_key_missing' => 'الدفع الحي مفعّل لكن `MYFATOORAH_API_KEY` غير موجود. أضف الرمز من بوابة MyFatoorah في `.env` ثم نفّذ `php artisan config:clear`.',
+    'payment_ssl_local' => 'مشكلة SSL محلية (شائعة على WAMP). اضبط `curl.cainfo` في PHP على ملف شهادات CA، أو استخدم `MYFATOORAH_MODE=test` للتجربة.',
     'payment_pending_configure' => 'أضف مفتاح MyFatoorah في `.env` ثم أعد المحاولة من صفحة الدفع.',
     'payment_still_pending' => 'لم يُؤكد الدفع بعد. أعد المحاولة من صفحة الدفع أو تواصل مع الدعم إذا تم خصم المبلغ.',
     'payment_local_ssl_fallback' => 'تم اكتشاف مشكلة شهادات SSL محليًا. تمّت محاكاة تأكيد الدفع لأغراض الاختبار المحلي.',

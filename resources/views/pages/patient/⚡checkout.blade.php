@@ -89,7 +89,9 @@ new #[Layout('layouts::patient')] #[Title('Payment')] class extends Component
 
     public function initEmbeddedPaymentSession(): void
     {
-        if (empty(config('myfatoorah.api_key'))) {
+        if ($this->myFatoorahConfigError() !== null) {
+            $this->paymentError = $this->myFatoorahConfigError() ?? '';
+
             return;
         }
 
@@ -133,8 +135,18 @@ new #[Layout('layouts::patient')] #[Title('Payment')] class extends Component
 
     public function paymentErrorFrom(\Throwable $e): string
     {
+        if ($this->myFatoorahConfigError() !== null && str_contains($e->getMessage(), 'Kindly review your MyFatoorah admin configuration')) {
+            return $this->myFatoorahConfigError() ?? __('patient_booking.payment_gateway_misconfigured');
+        }
+
         if (str_contains($e->getMessage(), 'Kindly review your MyFatoorah admin configuration')) {
             return __('patient_booking.payment_gateway_misconfigured');
+        }
+
+        if (str_contains(strtolower($e->getMessage()), 'ssl certificate')) {
+            return app()->isLocal()
+                ? __('patient_booking.payment_ssl_local')
+                : __('patient_booking.payment_start_failed');
         }
 
         if (empty(config('myfatoorah.api_key'))) {
@@ -144,6 +156,19 @@ new #[Layout('layouts::patient')] #[Title('Payment')] class extends Component
         return app()->isLocal()
             ? __('patient_booking.payment_start_failed')." ({$e->getMessage()})"
             : __('patient_booking.payment_start_failed');
+    }
+
+    public function myFatoorahConfigError(): ?string
+    {
+        if (empty(config('myfatoorah.api_key'))) {
+            return __('patient_booking.payment_api_missing');
+        }
+
+        if (! config('myfatoorah.is_test') && ! filled(env('MYFATOORAH_API_KEY')) && ! filled(env('MYFATOORAH_TOKEN'))) {
+            return __('patient_booking.payment_live_key_missing');
+        }
+
+        return null;
     }
 
     public function formattedDate(): string
@@ -194,8 +219,8 @@ new #[Layout('layouts::patient')] #[Title('Payment')] class extends Component
             return;
         }
 
-        if (empty(config('myfatoorah.api_key'))) {
-            $this->paymentError = __('patient_booking.payment_api_missing');
+        if ($this->myFatoorahConfigError() !== null) {
+            $this->paymentError = $this->myFatoorahConfigError() ?? '';
 
             return;
         }

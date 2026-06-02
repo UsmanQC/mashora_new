@@ -218,7 +218,7 @@ new #[Layout('layouts::patient')] #[Title('Book an appointment')] class extends 
             ->exists();
 
         $conflictingAppointment = Appointment::query()
-            ->whereIn('status', ['new', 'in_process'])
+            ->whereIn('status', ['new', 'in_process', 'pending_follow_up'])
             ->availableFor($this->doctor->id, $startTime, $endTime, $this->appointmentDate)
             ->exists();
 

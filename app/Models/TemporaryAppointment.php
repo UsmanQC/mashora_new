@@ -21,6 +21,9 @@ class TemporaryAppointment extends Model
         'user_id',
         'doctor_id',
         'appointment_id',
+        'parent_id',
+        'is_follow_up',
+        'patient_confirmed_at',
         'scheduled_at',
         'appointment_date',
         'start_time',
@@ -59,6 +62,8 @@ class TemporaryAppointment extends Model
             'tax' => 'decimal:2',
             'total' => 'decimal:2',
             'wallet_amount' => 'decimal:2',
+            'is_follow_up' => 'boolean',
+            'patient_confirmed_at' => 'datetime',
         ];
     }
 
@@ -105,6 +110,14 @@ class TemporaryAppointment extends Model
     public function doctor(): BelongsTo
     {
         return $this->belongsTo(Doctor::class);
+    }
+
+    /**
+     * @return BelongsTo<Appointment, $this>
+     */
+    public function parentAppointment(): BelongsTo
+    {
+        return $this->belongsTo(Appointment::class, 'parent_id');
     }
 
     /**

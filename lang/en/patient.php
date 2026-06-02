@@ -139,4 +139,29 @@ return [
     'metrics_sign_in_prompt' => 'Sign in or create an account to take mental health measures.',
 
     'mood_calendar_coming' => 'Mood history for :date will be available soon.',
+
+    'notifications' => [
+        'subtitle' => 'Updates about your appointments and follow-ups.',
+        'empty' => 'No notifications yet.',
+        'unread' => 'New',
+        'open' => 'View',
+        'follow_up_title' => 'Follow-up appointment scheduled',
+        'follow_up_body' => 'Dr. :doctor invited you to a follow-up on :date at :time. Please confirm and pay to book the session.',
+    ],
+
+    'follow_up' => [
+        'title' => 'Follow-up appointment',
+        'subtitle' => 'Your specialist scheduled a follow-up session for you.',
+        'badge' => 'Awaiting your confirmation',
+        'doctor' => 'Specialist',
+        'date' => 'Date',
+        'time' => 'Time',
+        'duration' => 'Duration',
+        'amount' => 'Session fee',
+        'confirm_hint' => 'Confirm this follow-up to proceed to secure payment. The appointment is booked only after payment.',
+        'confirm_and_pay' => 'Confirm & pay',
+        'later' => 'Maybe later',
+        'pay_title' => 'Pay for follow-up',
+        'pay_subtitle' => 'Complete payment to confirm your follow-up appointment.',
+    ],
 ];

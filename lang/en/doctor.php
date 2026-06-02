@@ -235,7 +235,23 @@ return [
         'tab_diagnosis' => 'Diagnosis',
         'tab_prescription' => 'Prescription',
         'tab_conversation' => 'Conversation',
+        'tab_follow_up' => 'Follow-up',
         'conversation_placeholder' => 'In-session messaging with the patient will appear here.',
+    ],
+
+    'follow_up' => [
+        'title' => 'Schedule follow-up appointment',
+        'subtitle' => 'Pick a date and time for the patient\'s next session. They will receive a notification to confirm and pay.',
+        'date_label' => 'Follow-up date',
+        'time_label' => 'Available time',
+        'no_slots' => 'No available slots on this date. Try another day.',
+        'submit' => 'Send follow-up invitation',
+        'success' => 'Follow-up invitation sent for :date at :time.',
+        'slot_unavailable' => 'That time slot is no longer available.',
+        'already_pending' => 'A follow-up invitation is already waiting for this patient.',
+        'parent_not_eligible' => 'This appointment cannot be used to schedule a follow-up yet.',
+        'patient_missing' => 'This appointment has no linked patient account.',
+        'patient_flow_hint' => 'The patient must confirm the follow-up, then pay before the appointment is booked.',
     ],
 
     'medical_history' => [

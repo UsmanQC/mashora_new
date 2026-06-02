@@ -28,6 +28,7 @@ class Appointment extends Model
             'actual_start_at' => 'datetime',
             'actual_end_at' => 'datetime',
             'extend_at' => 'datetime',
+            'patient_confirmed_at' => 'datetime',
             'amount' => 'decimal:2',
             'discount' => 'decimal:2',
             'tax' => 'decimal:2',
@@ -42,6 +43,8 @@ class Appointment extends Model
         'appointment_number',
         'doctor_id',
         'user_id',
+        'parent_id',
+        'patient_confirmed_at',
         'scheduled_at',
         'appointment_date',
         'start_time',
@@ -116,6 +119,27 @@ class Appointment extends Model
         } catch (\Throwable) {
             return (string) $this->start_time;
         }
+    }
+
+    public function isPendingFollowUp(): bool
+    {
+        return $this->status === 'pending_follow_up';
+    }
+
+    /**
+     * @return BelongsTo<Appointment, $this>
+     */
+    public function parentAppointment(): BelongsTo
+    {
+        return $this->belongsTo(Appointment::class, 'parent_id');
+    }
+
+    /**
+     * @return HasMany<Appointment, $this>
+     */
+    public function followUps(): HasMany
+    {
+        return $this->hasMany(Appointment::class, 'parent_id');
     }
 
     /**

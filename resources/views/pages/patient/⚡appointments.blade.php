@@ -25,7 +25,7 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
     protected function tabStatuses(): array
     {
         return [
-            'ongoing' => ['new', 'in_process'],
+            'ongoing' => ['new', 'in_process', 'pending_follow_up'],
             'completed' => ['completed'],
         ];
     }
@@ -75,14 +75,14 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
     public function getTabCountsProperty(): Collection
     {
         $counts = $this->baseQuery()
-            ->whereIn('status', ['new', 'in_process', 'completed'])
+            ->whereIn('status', ['new', 'in_process', 'pending_follow_up', 'completed'])
             ->selectRaw('status, COUNT(*) as aggregate')
             ->groupBy('status')
             ->pluck('aggregate', 'status')
             ->map(fn ($count): int => (int) $count);
 
         return collect([
-            'ongoing' => (int) ($counts['new'] ?? 0) + (int) ($counts['in_process'] ?? 0),
+            'ongoing' => (int) ($counts['new'] ?? 0) + (int) ($counts['in_process'] ?? 0) + (int) ($counts['pending_follow_up'] ?? 0),
             'completed' => (int) ($counts['completed'] ?? 0),
         ]);
     }
@@ -92,6 +92,7 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
         return match ($status) {
             'new' => __('New'),
             'in_process' => __('In process'),
+            'pending_follow_up' => __('patient.follow_up.badge'),
             'completed' => __('Completed'),
             default => str_replace('_', ' ', $status),
         };
@@ -102,6 +103,7 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
         return match ($status) {
             'new' => 'bg-sky-100 text-sky-700',
             'in_process' => 'bg-amber-100 text-amber-700',
+            'pending_follow_up' => 'bg-violet-100 text-violet-700',
             'completed' => 'bg-emerald-100 text-emerald-700',
             default => 'bg-zinc-100 text-zinc-700',
         };
@@ -272,7 +274,18 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
                                 <span class="truncate">{{ $appointment->patient_name }}</span>
                             </div>
 
-                            @if (in_array($appointment->status, ['new', 'in_process'], true))
+                            @if ($appointment->status === 'pending_follow_up')
+                                <div class="mt-3">
+                                    <a
+                                        href="{{ $appointment->patient_confirmed_at === null ? route('patient.follow-up.confirm', $appointment) : route('patient.follow-up.pay', $appointment) }}"
+                                        wire:navigate
+                                        class="inline-flex items-center gap-1.5 rounded-lg border border-violet-300 bg-violet-50 px-3 py-1.5 text-xs font-semibold text-violet-800 transition hover:bg-violet-100"
+                                    >
+                                        <flux:icon name="credit-card" variant="mini" class="size-4" />
+                                        {{ __('patient.follow_up.confirm_and_pay') }}
+                                    </a>
+                                </div>
+                            @elseif (in_array($appointment->status, ['new', 'in_process'], true))
                                 <div class="mt-3">
                                     <a
                                         href="{{ route('patient.appointments.conversation', ['appointment' => $appointment->id]) }}"

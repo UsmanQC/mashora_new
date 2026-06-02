@@ -62,6 +62,8 @@ return [
     'payment_invoice_failed' => 'Could not create a payment invoice. Please try again or contact support.',
     'payment_start_failed' => 'Something went wrong while starting payment. Please try again.',
     'payment_gateway_misconfigured' => 'Payment gateway is misconfigured on the server (MyFatoorah API key, mode, or country). Please contact support.',
+    'payment_live_key_missing' => 'Live payments are enabled but `MYFATOORAH_API_KEY` is missing. Add your live token from the MyFatoorah portal to `.env`, then run `php artisan config:clear`.',
+    'payment_ssl_local' => 'Local SSL trust issue (common on WAMP). Fix PHP `curl.cainfo` to a CA bundle, or use `MYFATOORAH_MODE=test` for sandbox payments.',
     'payment_pending_configure' => 'Add your MyFatoorah API key to `.env`, then try paying again from checkout.',
     'payment_still_pending' => 'Payment is not confirmed yet. Try again from checkout, or contact support if payment was deducted.',
     'payment_local_ssl_fallback' => 'Local SSL trust issue detected. Payment confirmation was simulated for local testing.',

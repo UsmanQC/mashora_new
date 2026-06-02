@@ -183,6 +183,7 @@ final class PatientPaymentCompletionService
             'appointment_type' => $temporaryAppointment->appointment_type ?? 'regular',
             'instant_counseling' => $temporaryAppointment->instant_counseling,
             'status' => 'new',
+            'parent_id' => $temporaryAppointment->parent_id,
             'payment_invoice_id' => $temporaryAppointment->payment_invoice_id,
             'payment_invoice_url' => $temporaryAppointment->payment_invoice_url,
         ]);
