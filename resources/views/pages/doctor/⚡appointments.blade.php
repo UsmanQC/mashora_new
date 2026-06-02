@@ -2,10 +2,13 @@
 
 use App\Models\Appointment;
 use App\Models\Doctor;
+use App\Services\AppointmentWalletService;
+use Flux\Flux;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Attributes\Url;
@@ -87,6 +90,35 @@ new #[Layout('layouts::doctor')] #[Title('Appointments')] class extends Componen
     {
         return max(1, $this->statusCounts->max() ?? 0);
     }
+
+    /** @var list<string> */
+    public const CANCELLABLE_STATUSES = ['new', 'rescheduled', 'in_process'];
+
+    public function cancelAppointment(int $appointmentId): void
+    {
+        $appointment = $this->baseAppointmentsQuery()->whereKey($appointmentId)->first();
+
+        if (! $appointment instanceof Appointment) {
+            abort(404);
+        }
+
+        if (! in_array($appointment->status, self::CANCELLABLE_STATUSES, true)) {
+            Flux::toast(variant: 'warning', text: __('doctor.appointments.cancel_not_allowed'));
+
+            return;
+        }
+
+        DB::transaction(function () use ($appointment): void {
+            $appointment->forceFill([
+                'status' => 'cancelled',
+                'cancel_status' => 'doctor',
+            ])->save();
+
+            app(AppointmentWalletService::class)->refundToPatient($appointment);
+        });
+
+        Flux::toast(variant: 'success', text: __('doctor.appointments.cancel_refunded'));
+    }
 }; ?>
 
 <div class="space-y-6">
@@ -146,10 +178,11 @@ new #[Layout('layouts::doctor')] #[Title('Appointments')] class extends Componen
             <table class="min-w-full table-fixed divide-y divide-zinc-100 text-sm">
                 <thead class="bg-zinc-50 text-start text-xs font-semibold uppercase text-zinc-500">
                     <tr>
-                        <th class="w-[34%] px-4 py-3 text-start">{{ __('doctor.appointments.patient') }}</th>
-                        <th class="w-[22%] px-4 py-3 text-center">{{ __('doctor.appointments.date') }}</th>
-                        <th class="w-[20%] px-4 py-3 text-center">{{ __('doctor.appointments.time') }}</th>
-                        <th class="w-[24%] px-4 py-3 text-center">{{ __('doctor.appointments.status') }}</th>
+                        <th class="w-[30%] px-4 py-3 text-start">{{ __('doctor.appointments.patient') }}</th>
+                        <th class="w-[16%] px-4 py-3 text-center">{{ __('doctor.appointments.date') }}</th>
+                        <th class="w-[14%] px-4 py-3 text-center">{{ __('doctor.appointments.time') }}</th>
+                        <th class="w-[20%] px-4 py-3 text-center">{{ __('doctor.appointments.status') }}</th>
+                        <th class="w-[20%] px-4 py-3 text-center">{{ __('doctor.appointments.actions') }}</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-zinc-100">
@@ -178,6 +211,22 @@ new #[Layout('layouts::doctor')] #[Title('Appointments')] class extends Componen
                                 <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold capitalize {{ $statusClasses }}">
                                     {{ str_replace('_', ' ', (string) $row->status) }}
                                 </span>
+                            </td>
+                            <td class="px-4 py-3 text-center">
+                                @if (in_array($row->status, ['new', 'rescheduled', 'in_process'], true))
+                                    <flux:button
+                                        type="button"
+                                        size="sm"
+                                        variant="ghost"
+                                        class="text-rose-600! hover:bg-rose-50!"
+                                        wire:click="cancelAppointment({{ $row->id }})"
+                                        wire:confirm="{{ __('doctor.appointments.cancel_confirm') }}"
+                                    >
+                                        {{ __('doctor.appointments.cancel_refund') }}
+                                    </flux:button>
+                                @else
+                                    <span class="text-xs text-zinc-400">—</span>
+                                @endif
                             </td>
                         </tr>
                     @endforeach

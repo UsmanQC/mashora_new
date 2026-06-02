@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Appointment;
 use App\Models\TemporaryAppointment;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use MyFatoorah\Library\API\Payment\MyFatoorahPaymentStatus;
@@ -40,6 +41,7 @@ final class PatientPaymentCompletionService
 
                 $appointment = self::createAppointmentRecord($temporaryAppointment);
                 self::syncCommunications($appointment, $temporaryAppointment);
+                self::finalizeWallet($appointment, $temporaryAppointment);
 
                 $temporaryAppointment->appointment_id = $appointment->id;
                 $temporaryAppointment->payment_status = 'paid';
@@ -95,7 +97,7 @@ final class PatientPaymentCompletionService
                 $keyData['key'],
                 $keyData['type'],
                 (string) $temporaryAppointment->id,
-                (float) $temporaryAppointment->total,
+                self::amountDue($temporaryAppointment),
                 'SAR'
             );
         } catch (Throwable $e) {
@@ -123,6 +125,7 @@ final class PatientPaymentCompletionService
 
                 $appointment = self::createAppointmentRecord($temporaryAppointment);
                 self::syncCommunications($appointment, $temporaryAppointment);
+                self::finalizeWallet($appointment, $temporaryAppointment);
 
                 $temporaryAppointment->appointment_id = $appointment->id;
                 $temporaryAppointment->payment_status = 'paid';
@@ -176,6 +179,7 @@ final class PatientPaymentCompletionService
             'discount' => $temporaryAppointment->discount,
             'tax' => $temporaryAppointment->tax,
             'total' => $temporaryAppointment->total,
+            'wallet_amount' => 0,
             'appointment_type' => $temporaryAppointment->appointment_type ?? 'regular',
             'instant_counseling' => $temporaryAppointment->instant_counseling,
             'status' => 'new',
@@ -210,6 +214,66 @@ final class PatientPaymentCompletionService
                 'communication' => $channel,
             ]);
         }
+    }
+
+    /**
+     * Complete booking fully covered by the patient's wallet (no card charge).
+     */
+    public function completeWithWalletOnly(TemporaryAppointment $temporaryAppointment): ?Appointment
+    {
+        $temporaryAppointment->loadMissing('doctor');
+
+        if ($temporaryAppointment->appointment_id !== null) {
+            return Appointment::query()->find($temporaryAppointment->appointment_id);
+        }
+
+        if ($temporaryAppointment->doctor_id === null) {
+            return null;
+        }
+
+        try {
+            return DB::transaction(function () use ($temporaryAppointment): Appointment {
+                $temporaryAppointment->refresh();
+
+                if ($temporaryAppointment->appointment_id !== null) {
+                    $existing = Appointment::query()->find($temporaryAppointment->appointment_id);
+                    if ($existing !== null) {
+                        return $existing;
+                    }
+                }
+
+                $appointment = self::createAppointmentRecord($temporaryAppointment);
+                self::syncCommunications($appointment, $temporaryAppointment);
+                self::finalizeWallet($appointment, $temporaryAppointment);
+
+                $temporaryAppointment->appointment_id = $appointment->id;
+                $temporaryAppointment->payment_status = 'paid';
+                $temporaryAppointment->payment_response = json_encode([
+                    'provider' => 'wallet',
+                    'mode' => 'wallet_only',
+                    'paid_at' => now()->toIso8601String(),
+                ]);
+                $temporaryAppointment->save();
+
+                return $appointment;
+            });
+        } catch (Throwable $e) {
+            report($e);
+
+            return null;
+        }
+    }
+
+    public static function amountDue(TemporaryAppointment $temporaryAppointment): float
+    {
+        return max(0.0, round((float) $temporaryAppointment->total - (float) $temporaryAppointment->wallet_amount, 2));
+    }
+
+    private static function finalizeWallet(Appointment $appointment, TemporaryAppointment $temporaryAppointment): void
+    {
+        $wallet = App::make(AppointmentWalletService::class);
+        $wallet->chargePatientWallet($appointment, (float) $temporaryAppointment->wallet_amount);
+        $wallet->creditDoctorEarning($appointment);
     }
 
     public static function generateAppointmentNumber(): string

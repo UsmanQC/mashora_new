@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "e21934d5b444723598117e4c65f485a3",
+    "content-hash": "785291a2072043bb1335167558123cdf",
     "packages": [
         {
             "name": "bacon/bacon-qr-code",
@@ -60,6 +60,100 @@
                 "source": "https://github.com/Bacon/BaconQrCode/tree/v3.1.1"
             },
             "time": "2026-04-05T21:06:35+00:00"
+        },
+        {
+            "name": "bavix/laravel-wallet",
+            "version": "12.0.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/bavix/laravel-wallet.git",
+                "reference": "fdcb6cac522b3d6af5bd348e914e30c748abdfaa"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/bavix/laravel-wallet/zipball/fdcb6cac522b3d6af5bd348e914e30c748abdfaa",
+                "reference": "fdcb6cac522b3d6af5bd348e914e30c748abdfaa",
+                "shasum": ""
+            },
+            "require": {
+                "brick/math": ">=0.14.2 <1.0.0",
+                "ext-json": "*",
+                "ext-pdo": "*",
+                "illuminate/contracts": "^13.0",
+                "illuminate/database": "^13.0",
+                "php": "^8.3",
+                "ramsey/uuid": "^4.0"
+            },
+            "require-dev": {
+                "deptrac/deptrac": "^4.2",
+                "driftingly/rector-laravel": "^2.0",
+                "ergebnis/phpstan-rules": "^2.1",
+                "infection/infection": "~0.27",
+                "larastan/larastan": "^3.0",
+                "laravel/cashier": "^16.0",
+                "nunomaduro/collision": "^8.1",
+                "orchestra/testbench": "^11.0",
+                "phpstan/phpstan": "^2.1",
+                "phpunit/phpunit": "^12.0|^13.0",
+                "rector/rector": "^2.0",
+                "symplify/easy-coding-standard": "^13.0"
+            },
+            "suggest": {
+                "bavix/laravel-wallet-swap": "Addition to the laravel-wallet library for quick setting of exchange rates",
+                "bavix/laravel-wallet-uuid": "Addition to the laravel-wallet library uuid support in laravel-wallet",
+                "bavix/laravel-wallet-warmup": "Addition to the laravel-wallet library for refresh balance wallets"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Bavix\\Wallet\\WalletServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Bavix\\Wallet\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Babichev Maxim",
+                    "email": "info@babichev.net"
+                }
+            ],
+            "description": "It's easy to work with a virtual wallet.",
+            "homepage": "https://bavix.github.io/laravel-wallet/",
+            "keywords": [
+                "bavix",
+                "credits",
+                "currency",
+                "laravel",
+                "laravel-package",
+                "laravel-wallet",
+                "payments",
+                "virtual",
+                "wallet"
+            ],
+            "support": {
+                "issues": "https://github.com/bavix/laravel-wallet/issues",
+                "source": "https://github.com/bavix/laravel-wallet/tree/12.0.1"
+            },
+            "funding": [
+                {
+                    "url": "https://www.buymeacoffee.com/babichev",
+                    "type": "buy_me_a_coffee"
+                },
+                {
+                    "url": "https://opencollective.com/laravel-wallet",
+                    "type": "open_collective"
+                }
+            ],
+            "time": "2026-05-13T07:41:05+00:00"
         },
         {
             "name": "blade-ui-kit/blade-heroicons",

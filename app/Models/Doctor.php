@@ -3,6 +3,9 @@
 namespace App\Models;
 
 use App\Observers\DoctorObserver;
+use Bavix\Wallet\Interfaces\Wallet;
+use Bavix\Wallet\Interfaces\WalletFloat;
+use Bavix\Wallet\Traits\HasWalletFloat;
 use Database\Factories\DoctorFactory;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -17,11 +20,12 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Storage;
 
 #[ObservedBy([DoctorObserver::class])]
-class Doctor extends Authenticatable
+class Doctor extends Authenticatable implements Wallet, WalletFloat
 {
     /** @use HasFactory<DoctorFactory> */
     use HasFactory;
 
+    use HasWalletFloat;
     use Notifiable;
     use SoftDeletes;
 

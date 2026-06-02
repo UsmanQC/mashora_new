@@ -69,6 +69,14 @@ return [
     'discount_invalid' => 'This discount code is not valid.',
     'discount_applied' => 'Discount applied.',
 
+    'use_wallet' => 'Use my wallet balance',
+    'wallet_balance' => 'Wallet balance',
+    'wallet_applied' => 'Wallet applied',
+    'amount_due' => 'Amount due',
+    'wallet_covers_full' => 'Your wallet balance covers this booking in full. No card payment is needed.',
+    'wallet_insufficient' => 'Your wallet balance is not enough to cover this booking.',
+    'confirm_booking' => 'Confirm booking',
+
     'appointment_number_label' => 'Reference',
     'view_appointments' => 'My appointments',
 

@@ -2,6 +2,7 @@
 
 use App\Models\Doctor;
 use App\Models\TemporaryAppointment;
+use App\Models\User;
 use App\Services\PatientPaymentCompletionService;
 use Illuminate\Support\Carbon;
 use Livewire\Attributes\Layout;
@@ -19,6 +20,7 @@ new #[Layout('layouts::patient')] #[Title('Payment')] class extends Component
     public string $mfSessionId = '';
     public string $mfCountryCode = '';
     public string $mfJsDomain = '';
+    public bool $useWallet = false;
 
     public function mount(TemporaryAppointment $temporaryAppointment): void
     {
@@ -27,7 +29,62 @@ new #[Layout('layouts::patient')] #[Title('Payment')] class extends Component
         }
 
         $this->temporaryAppointment = $temporaryAppointment->load('doctor');
+        $this->useWallet = (float) $this->temporaryAppointment->wallet_amount > 0;
         $this->initEmbeddedPaymentSession();
+    }
+
+    public function walletBalance(): float
+    {
+        $user = auth()->user();
+
+        return $user instanceof User ? (float) $user->balanceFloat : 0.0;
+    }
+
+    public function walletApplied(): float
+    {
+        if (! $this->useWallet) {
+            return 0.0;
+        }
+
+        return round(min($this->walletBalance(), (float) $this->temporaryAppointment->total), 2);
+    }
+
+    public function amountDue(): float
+    {
+        return max(0.0, round((float) $this->temporaryAppointment->total - $this->walletApplied(), 2));
+    }
+
+    public function updatedUseWallet(): void
+    {
+        $this->temporaryAppointment->wallet_amount = $this->walletApplied();
+        $this->temporaryAppointment->save();
+    }
+
+    public function payWithWalletOnly(): void
+    {
+        if ($this->temporaryAppointment->user_id !== auth()->id()) {
+            abort(403);
+        }
+
+        $this->temporaryAppointment->wallet_amount = $this->walletApplied();
+        $this->temporaryAppointment->save();
+
+        if ($this->amountDue() > 0) {
+            $this->paymentError = __('patient_booking.wallet_insufficient');
+
+            return;
+        }
+
+        $completion = app(PatientPaymentCompletionService::class);
+        $appointment = $completion->completeWithWalletOnly($this->temporaryAppointment->fresh());
+
+        if ($appointment !== null) {
+            $this->redirect(route('patient.payment.success', ['temporaryAppointment' => $this->temporaryAppointment->id]));
+
+            return;
+        }
+
+        $this->paymentError = __('patient_booking.payment_start_failed');
     }
 
     public function initEmbeddedPaymentSession(): void
@@ -112,6 +169,15 @@ new #[Layout('layouts::patient')] #[Title('Payment')] class extends Component
             abort(403);
         }
 
+        $this->temporaryAppointment->wallet_amount = $this->walletApplied();
+        $this->temporaryAppointment->save();
+
+        if ($this->amountDue() <= 0) {
+            $this->payWithWalletOnly();
+
+            return;
+        }
+
         if (empty(config('myfatoorah.api_key'))) {
             $this->paymentError = __('patient_booking.payment_api_missing');
 
@@ -135,7 +201,7 @@ new #[Layout('layouts::patient')] #[Title('Payment')] class extends Component
             $paymentData = [
                 'NotificationOption' => 'LNK',
                 'CustomerName' => (string) ($temp->patient_name ?: auth()->user()?->name ?: 'Patient'),
-                'InvoiceValue' => (float) $temp->total,
+                'InvoiceValue' => PatientPaymentCompletionService::amountDue($temp),
                 'DisplayCurrencyIso' => 'SAR',
                 'CallBackUrl' => route('patient.payment.success', ['temporaryAppointment' => $temp->id]),
                 'ErrorUrl' => route('patient.payment.failed', ['temporaryAppointment' => $temp->id]),
@@ -176,7 +242,7 @@ new #[Layout('layouts::patient')] #[Title('Payment')] class extends Component
                     $mfInvoiceData = $mfObj->getInvoiceURL([
                         'SessionId' => $temp->payment_session_id,
                         'CustomerName' => (string) ($temp->patient_name ?: auth()->user()?->name ?: 'Patient'),
-                        'InvoiceValue' => (float) $temp->total,
+                        'InvoiceValue' => PatientPaymentCompletionService::amountDue($temp),
                         'CallBackUrl' => route('patient.payment.success', ['temporaryAppointment' => $temp->id]),
                         'ErrorUrl' => route('patient.payment.failed', ['temporaryAppointment' => $temp->id]),
                         'CustomerReference' => $temp->id,
@@ -262,6 +328,27 @@ new #[Layout('layouts::patient')] #[Title('Payment')] class extends Component
                 <span class="text-zinc-800">{{ __('patient_booking.total') }}</span>
                 <span class="tabular-nums text-zinc-900">{{ number_format((float) $this->temporaryAppointment->total, 2) }} {{ __('patient_booking.sar') }}</span>
             </div>
+
+            @if ($this->walletBalance() > 0)
+                <label class="mt-4 flex cursor-pointer items-start gap-3 rounded-xl border border-[#3d5afe]/20 bg-[#3d5afe]/5 p-3">
+                    <input type="checkbox" wire:model.live="useWallet" class="mt-0.5 size-4 rounded border-zinc-300 text-[#3d5afe] focus:ring-[#3d5afe]" />
+                    <span class="text-sm">
+                        <span class="font-semibold text-zinc-800">{{ __('patient_booking.use_wallet') }}</span>
+                        <span class="block text-xs text-zinc-500">{{ __('patient_booking.wallet_balance') }}: {{ number_format($this->walletBalance(), 2) }} {{ __('patient_booking.sar') }}</span>
+                    </span>
+                </label>
+
+                @if ($this->walletApplied() > 0)
+                    <div class="mt-3 flex justify-between gap-3 text-sm">
+                        <span class="text-zinc-600">{{ __('patient_booking.wallet_applied') }}</span>
+                        <span class="font-medium tabular-nums text-emerald-600">- {{ number_format($this->walletApplied(), 2) }} {{ __('patient_booking.sar') }}</span>
+                    </div>
+                    <div class="mt-2 flex justify-between gap-3 border-t border-zinc-100 pt-2 text-sm font-semibold">
+                        <span class="text-zinc-800">{{ __('patient_booking.amount_due') }}</span>
+                        <span class="tabular-nums text-zinc-900">{{ number_format($this->amountDue(), 2) }} {{ __('patient_booking.sar') }}</span>
+                    </div>
+                @endif
+            @endif
             </div>
         </div>
 
@@ -270,7 +357,15 @@ new #[Layout('layouts::patient')] #[Title('Payment')] class extends Component
                 <p class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{{ $paymentError }}</p>
             @endif
 
-            @if (filled(config('myfatoorah.api_key')))
+            @if ($this->walletApplied() > 0 && $this->amountDue() <= 0)
+                <p class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+                    {{ __('patient_booking.wallet_covers_full') }}
+                </p>
+                <flux:button type="button" variant="primary" class="w-full bg-[#3d5afe]! text-white!" wire:click="payWithWalletOnly" wire:loading.attr="disabled">
+                    <span wire:loading.remove wire:target="payWithWalletOnly">{{ __('patient_booking.confirm_booking') }}</span>
+                    <span wire:loading wire:target="payWithWalletOnly">{{ __('patient_booking.payment_processing') }}</span>
+                </flux:button>
+            @elseif (filled(config('myfatoorah.api_key')))
                 @if ($embeddedReady)
                     <div id="mf-form-element" class="min-h-[155px] w-full rounded-lg border border-zinc-300 bg-white p-2"></div>
                     <p id="mf-card-error" class="hidden rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
@@ -323,7 +418,7 @@ new #[Layout('layouts::patient')] #[Title('Payment')] class extends Component
         </div>
     </div>
 
-    @if ($embeddedReady)
+    @if ($embeddedReady && $this->amountDue() > 0)
         <form id="embedded-exec-form" action="{{ route('patient.payment.execute', ['temporaryAppointment' => $temporaryAppointment->id]) }}" method="POST" class="hidden">
             @csrf
         </form>

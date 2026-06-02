@@ -3,6 +3,9 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Bavix\Wallet\Interfaces\Wallet;
+use Bavix\Wallet\Interfaces\WalletFloat;
+use Bavix\Wallet\Traits\HasWalletFloat;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -28,10 +31,10 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
     'avatar',
 ])]
 #[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token', 'verification_code'])]
-class User extends Authenticatable
+class User extends Authenticatable implements Wallet, WalletFloat
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable, SoftDeletes, TwoFactorAuthenticatable;
+    use HasFactory, HasWalletFloat, Notifiable, SoftDeletes, TwoFactorAuthenticatable;
 
     protected static function booted(): void
     {

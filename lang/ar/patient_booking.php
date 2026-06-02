@@ -69,6 +69,14 @@ return [
     'discount_invalid' => 'رمز الخصم غير صالح.',
     'discount_applied' => 'تم تطبيق الخصم.',
 
+    'use_wallet' => 'استخدام رصيد محفظتي',
+    'wallet_balance' => 'رصيد المحفظة',
+    'wallet_applied' => 'المبلغ المخصوم من المحفظة',
+    'amount_due' => 'المبلغ المستحق',
+    'wallet_covers_full' => 'رصيد محفظتك يغطي قيمة الحجز بالكامل. لا حاجة للدفع بالبطاقة.',
+    'wallet_insufficient' => 'رصيد محفظتك غير كافٍ لتغطية هذا الحجز.',
+    'confirm_booking' => 'تأكيد الحجز',
+
     'appointment_number_label' => 'المرجع',
     'view_appointments' => 'مواعيدي',
 

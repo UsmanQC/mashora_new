@@ -79,7 +79,7 @@ class PatientPaymentController extends Controller
             $paymentData = [
                 'SessionId' => $tempAppointment->payment_session_id,
                 'CustomerName' => (string) $tempAppointment->patient_name,
-                'InvoiceValue' => (float) $tempAppointment->total,
+                'InvoiceValue' => PatientPaymentCompletionService::amountDue($tempAppointment),
                 'CallBackUrl' => route('patient.payment.success', ['temporaryAppointment' => $tempAppointment->id]),
                 'ErrorUrl' => route('patient.payment.failed', ['temporaryAppointment' => $tempAppointment->id]),
                 'CustomerReference' => $tempAppointment->id,

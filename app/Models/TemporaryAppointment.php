@@ -37,6 +37,7 @@ class TemporaryAppointment extends Model
         'discount',
         'tax',
         'total',
+        'wallet_amount',
         'appointment_type',
         'instant_counseling',
         'payment_session_id',
@@ -57,6 +58,7 @@ class TemporaryAppointment extends Model
             'discount' => 'decimal:2',
             'tax' => 'decimal:2',
             'total' => 'decimal:2',
+            'wallet_amount' => 'decimal:2',
         ];
     }
 

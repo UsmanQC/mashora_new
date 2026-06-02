@@ -28,6 +28,13 @@ class Appointment extends Model
             'actual_start_at' => 'datetime',
             'actual_end_at' => 'datetime',
             'extend_at' => 'datetime',
+            'amount' => 'decimal:2',
+            'discount' => 'decimal:2',
+            'tax' => 'decimal:2',
+            'total' => 'decimal:2',
+            'wallet_amount' => 'decimal:2',
+            'doctor_share' => 'decimal:2',
+            'mashora_share' => 'decimal:2',
         ];
     }
 
@@ -49,9 +56,13 @@ class Appointment extends Model
         'discount',
         'tax',
         'total',
+        'wallet_amount',
+        'doctor_share',
+        'mashora_share',
         'appointment_type',
         'instant_counseling',
         'status',
+        'cancel_status',
         'payment_session_id',
         'payment_invoice_id',
         'payment_invoice_url',

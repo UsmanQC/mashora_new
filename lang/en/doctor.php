@@ -165,6 +165,11 @@ return [
         'date' => 'Date',
         'time' => 'Time',
         'status' => 'Status',
+        'actions' => 'Actions',
+        'cancel_refund' => 'Cancel & refund',
+        'cancel_confirm' => 'Cancel this appointment and refund the full amount to the patient\'s wallet?',
+        'cancel_refunded' => 'Appointment cancelled. The amount was refunded to the patient\'s wallet.',
+        'cancel_not_allowed' => 'This appointment can no longer be cancelled.',
     ],
 
     'appointment_status' => [
