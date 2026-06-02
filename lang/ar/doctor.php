@@ -121,6 +121,17 @@ return [
         'certificate_pdf_selected' => 'تم اختيار ملف PDF',
         'catalog_missing_hint' => 'قائمة الدرجات أو التخصصات فارغة. شغّل بذور قاعدة البيانات أو تواصل مع الدعم.',
         'save_continue' => 'حفظ ومتابعة',
+        'duration_title' => 'مدة الموعد والسعر',
+        'duration_subtitle' => 'اختر مدد الجلسات وحدّد السعر لكل مدة. أدخل سعر 15 دقيقة أولاً — يمكن تعبئة المدد الأخرى تلقائيًا.',
+        'duration_minutes' => ':minutes دقيقة',
+        'appointment_types' => 'أنواع المواعيد',
+        'accept_instant_appointment' => 'قبول إشعارات المواعيد الفورية',
+        'accept_instant_appointment_hint' => 'تلقي إشعار عند طلب مريض جلسة فورية.',
+        'chat_required' => 'المحادثة مطلوبة كنوع موعد.',
+        'duration_price_required' => 'يرجى إدخال سعر لكل مدة محددة.',
+        'duration_price_invalid' => 'يجب أن يكون لكل مدة محددة سعرًا صالحًا موجبًا.',
+        'working_hours_title' => 'ساعات العمل',
+        'working_hours_subtitle' => 'اختر الأيام والأوقات التي يمكن للمرضى الحجز فيها معك.',
     ],
 
     'dashboard' => [

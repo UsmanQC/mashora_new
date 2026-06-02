@@ -120,6 +120,17 @@ return [
         'certificate_pdf_selected' => 'PDF selected',
         'catalog_missing_hint' => 'Degree or speciality lists are empty. Run database seeders or contact support.',
         'save_continue' => 'Save and continue',
+        'duration_title' => 'Appointment duration & price',
+        'duration_subtitle' => 'Choose session lengths and set a price for each. Enter the 15-minute price first — other durations can auto-fill.',
+        'duration_minutes' => ':minutes minutes',
+        'appointment_types' => 'Appointment types',
+        'accept_instant_appointment' => 'Accept instant appointment notifications',
+        'accept_instant_appointment_hint' => 'Get notified when a patient requests an immediate session.',
+        'chat_required' => 'Chat is required as an appointment type.',
+        'duration_price_required' => 'Please provide a price for each selected duration.',
+        'duration_price_invalid' => 'Each selected duration must have a valid positive price.',
+        'working_hours_title' => 'Working hours',
+        'working_hours_subtitle' => 'Choose the days and times when patients can book with you.',
     ],
 
     'dashboard' => [

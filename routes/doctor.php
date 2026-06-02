@@ -35,6 +35,14 @@ Route::middleware('auth:doctor')->group(function (): void {
         ->middleware('doctor.active')
         ->name('register.basic.info');
 
+    Route::livewire('register/duration', 'pages::doctor.register-duration')
+        ->middleware('doctor.active')
+        ->name('register.duration');
+
+    Route::livewire('register/working-hours', 'pages::doctor.register-working-hours')
+        ->middleware('doctor.active')
+        ->name('register.working-hours');
+
     Route::livewire('account-status', 'pages::doctor.account-status')
         ->middleware(['doctor.profile', 'doctor.active'])
         ->name('account-status');

@@ -312,7 +312,29 @@ test('doctor completes multi-step onboarding with professional details and certi
         ->set('certificate', $pdf)
         ->call('finishDocuments', $signatureDataUrl)
         ->assertHasNoErrors()
-        ->assertRedirect(route('doctor.dashboard'));
+        ->assertRedirect(route('doctor.register.duration'));
+
+    Duration::query()->create(['duration' => 15, 'title' => '15 min']);
+    Duration::query()->create(['duration' => 30, 'title' => '30 min']);
+
+    Livewire::test('pages::doctor.register-duration')
+        ->set('doctorDurations', ['15', '30'])
+        ->set('durationPrices.15', 100)
+        ->set('durationPrices.30', 200)
+        ->set('selectedCommunications', ['chat', 'video_call'])
+        ->call('save')
+        ->assertHasNoErrors()
+        ->assertRedirect(route('doctor.register.working-hours'));
+
+    Livewire::test('pages::doctor.register-working-hours')
+        ->set('availabilities', ['sunday', 'monday'])
+        ->set('workingHours.sunday.0.start_time', '10:00:00')
+        ->set('workingHours.sunday.0.end_time', '14:00:00')
+        ->set('workingHours.monday.0.start_time', '10:00:00')
+        ->set('workingHours.monday.0.end_time', '14:00:00')
+        ->call('finish')
+        ->assertHasNoErrors()
+        ->assertRedirect(route('doctor.account-status'));
 
     $doctor->refresh();
 
@@ -323,7 +345,9 @@ test('doctor completes multi-step onboarding with professional details and certi
         ->and($doctor->profile_photo_path)->not->toBeNull()
         ->and($doctor->profile_detail_path)->not->toBeNull()
         ->and($doctor->signature)->not->toBeNull()
-        ->and($doctor->specialities->pluck('id')->all())->toBe([$speciality->id]);
+        ->and($doctor->specialities->pluck('id')->all())->toBe([$speciality->id])
+        ->and($doctor->durations()->count())->toBe(2)
+        ->and($doctor->workingDays()->count())->toBe(2);
 
     Storage::disk('public')->assertExists((string) $doctor->profile_photo_path);
     Storage::disk('public')->assertExists((string) $doctor->profile_detail_path);

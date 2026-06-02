@@ -288,10 +288,9 @@ new #[Layout('layouts::doctor')] #[Title('Complete profile')] class extends Comp
         }
         $doctor->signature = $sigFilename;
 
-        $doctor->profile_completed = true;
         $doctor->save();
 
-        $this->redirect(route('doctor.dashboard'), navigate: true);
+        $this->redirect(route('doctor.register.duration'), navigate: true);
     }
 
     /**
@@ -431,7 +430,7 @@ new #[Layout('layouts::doctor')] #[Title('Complete profile')] class extends Comp
 
     <div class="space-y-2">
         <flux:text class="text-sm font-medium text-zinc-500">
-            {{ __('doctor.auth.onboarding_progress', ['current' => $step, 'total' => 3]) }}
+            {{ __('doctor.auth.onboarding_progress', ['current' => $step, 'total' => 5]) }}
         </flux:text>
         <flux:heading size="xl" class="font-semibold text-zinc-900">
             @if ($step === 1)
