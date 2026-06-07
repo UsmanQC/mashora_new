@@ -119,6 +119,7 @@ return [
 
     'mood_section' => 'How do you feel today?',
     'mood_strip_phone_link_aria' => 'Continue with your phone number',
+    'mood_strip_today_aria' => 'Log how you feel today',
     'view_all' => 'View all',
     'today' => 'Today',
 

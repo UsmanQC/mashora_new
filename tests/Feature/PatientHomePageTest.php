@@ -1,9 +1,11 @@
 <?php
 
+use App\Livewire\PatientMoodPickerModal;
 use App\Models\Appointment;
 use App\Models\Doctor;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Livewire\Livewire;
 
 uses(RefreshDatabase::class);
 
@@ -32,6 +34,38 @@ test('authenticated patient home renders arabic strings when locale is ar', func
     $this->actingAs($user)->get(route('patient.home'))
         ->assertSuccessful()
         ->assertSee(__('patient.portal_greeting', ['name' => 'User']), false);
+});
+
+test('mood week strip opens mood picker instead of linking to phone entry', function () {
+    $user = User::factory()->create(['profile_completed' => true]);
+
+    $this->actingAs($user)
+        ->get(route('patient.home'))
+        ->assertSuccessful()
+        ->assertSee('wire:click="openMoodPicker"', false)
+        ->assertDontSee(__('patient.mood_strip_phone_link_aria'), false);
+});
+
+test('clicking mood day on home dispatches open patient mood picker event', function () {
+    $user = User::factory()->create(['profile_completed' => true]);
+
+    Livewire::actingAs($user)
+        ->test('pages::patient.home')
+        ->call('openMoodPicker')
+        ->assertDispatched('open-patient-mood-picker');
+});
+
+test('saving mood from modal refreshes home mood week strip', function () {
+    app()->setLocale('en');
+
+    $user = User::factory()->create(['profile_completed' => true]);
+
+    Livewire::actingAs($user)
+        ->test(PatientMoodPickerModal::class)
+        ->set('showMoodModal', true)
+        ->call('setMood', 'happy')
+        ->call('saveMood')
+        ->assertDispatched('patient-mood-saved');
 });
 
 test('signed-in patient home links both session cards to schedule filter', function () {

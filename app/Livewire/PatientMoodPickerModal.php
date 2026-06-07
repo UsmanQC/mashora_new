@@ -81,6 +81,7 @@ class PatientMoodPickerModal extends Component
         Flux::toast(variant: 'success', text: __('patient.mood_logged_toast', ['mood' => $label]));
 
         $this->showMoodModal = false;
+        $this->dispatch('patient-mood-saved');
     }
 
     /**

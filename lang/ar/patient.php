@@ -119,6 +119,7 @@ return [
 
     'mood_section' => 'كيف تشعر اليوم؟',
     'mood_strip_phone_link_aria' => 'المتابعة برقم الهاتف',
+    'mood_strip_today_aria' => 'سجّل شعورك اليوم',
     'view_all' => 'عرض الكل',
     'today' => 'اليوم',
 

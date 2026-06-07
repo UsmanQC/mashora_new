@@ -6,6 +6,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\On;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
@@ -62,6 +63,17 @@ new #[Layout('layouts::patient')] #[Title('Home')] class extends Component
         }
 
         return $days;
+    }
+
+    public function openMoodPicker(): void
+    {
+        $this->dispatch('open-patient-mood-picker');
+    }
+
+    #[On('patient-mood-saved')]
+    public function refreshMoodWeek(): void
+    {
+        unset($this->moodWeekDays);
     }
 
     /**
@@ -175,7 +187,7 @@ new #[Layout('layouts::patient')] #[Title('Home')] class extends Component
             </a>
         </div>
 
-        {{-- Mood week strip: header static; tap day row goes to patient phone entry --}}
+        {{-- Mood week strip: tap today to open the same mood picker as the chrome bar --}}
         <flux:separator />
         <div class="space-y-4">
             <div class="flex items-center justify-between gap-4">
@@ -189,48 +201,56 @@ new #[Layout('layouts::patient')] #[Title('Home')] class extends Component
                     <flux:icon name="chevron-{{ app()->getLocale() === 'ar' ? 'left' : 'right' }}" variant="mini" class="size-4 rtl:rotate-180" />
                 </a>
             </div>
-            <a
-                href="{{ route('patient.phone') }}"
-                wire:navigate
-                class="block text-start no-underline focus:outline-none focus-visible:ring-2 focus-visible:ring-[#3c5cf7]/35 focus-visible:ring-offset-2"
-                aria-label="{{ __('patient.mood_strip_phone_link_aria') }}"
+            <div
+                class="flex snap-x snap-mandatory gap-4 overflow-x-auto py-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                x-data
+                x-init="$nextTick(() => { const el = $el.querySelector('[data-today-mood]'); el?.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' }); })"
             >
-                <div
-                    class="flex snap-x snap-mandatory gap-4 overflow-x-auto py-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-                    x-data
-                    x-init="$nextTick(() => { const el = $el.querySelector('[data-today-mood]'); el?.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' }); })"
-                >
-                    @foreach ($this->moodWeekDays as $day)
-                        <div
-                            @if($day['is_today']) data-today-mood @endif
-                            class="{{ $day['is_today'] ? 'border-amber-400 bg-amber-50 ring-2 ring-amber-200/80' : 'border-zinc-200 bg-white' }} flex min-w-[6.75rem] shrink-0 snap-center flex-col items-center gap-3.5 rounded-2xl border px-5 py-5 text-center shadow-sm transition hover:border-amber-300/80"
-                            aria-hidden="true"
+                @foreach ($this->moodWeekDays as $day)
+                    @php($moodSrc = \App\Support\PatientMoodImage::url($day['mood_key'] ?? null))
+                    <button
+                        type="button"
+                        @if($day['is_today']) data-today-mood @endif
+                        wire:click="openMoodPicker"
+                        wire:key="mood-day-{{ $day['iso'] }}"
+                        @class([
+                            'flex min-w-[6.75rem] shrink-0 snap-center cursor-pointer flex-col items-center gap-3.5 rounded-2xl border px-5 py-5 text-center shadow-sm transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[#3c5cf7]/35 focus-visible:ring-offset-2',
+                            'border-amber-400 bg-amber-50 ring-2 ring-amber-200/80 hover:border-amber-300/80' => $day['is_today'],
+                            'border-zinc-200 bg-white hover:border-amber-300/60' => ! $day['is_today'],
+                        ])
+                        aria-label="{{ $day['is_today'] ? __('patient.mood_strip_today_aria') : $day['label'] }}"
+                    >
+                        <span
+                            @class([
+                                'flex size-[3.75rem] shrink-0 items-center justify-center overflow-hidden rounded-full p-1',
+                                'bg-amber-500 text-white shadow-inner ring-2 ring-white/40' => $day['is_today'],
+                                'border border-[#1565c0]/20 bg-[#e3f2fd]/80 shadow-sm' => ! $day['is_today'],
+                            ])
                         >
-                            @php($moodSrc = \App\Support\PatientMoodImage::url($day['mood_key'] ?? null))
-                            <span
-                                class="{{ $day['is_today'] ? 'bg-amber-500 text-white shadow-inner ring-2 ring-white/40' : 'border border-[#1565c0]/20 bg-[#e3f2fd]/80 shadow-sm' }} flex size-[3.75rem] shrink-0 items-center justify-center overflow-hidden rounded-full p-1"
-                            >
-                                @if ($moodSrc !== null)
-                                    <img
-                                        src="{{ $moodSrc }}"
-                                        alt=""
-                                        class="pointer-events-none size-[2.875rem] object-contain"
-                                        decoding="async"
-                                        loading="lazy"
-                                    />
-                                @else
-                                    <flux:icon
-                                        name="{{ $day['is_today'] ? 'face-smile' : 'sparkles' }}"
-                                        variant="mini"
-                                        class="size-7 shrink-0 {{ $day['is_today'] ? '!text-white' : 'text-[#1565c0]' }}"
-                                    />
-                                @endif
-                            </span>
-                            <flux:text class="text-sm font-semibold leading-tight text-zinc-700">{{ $day['label'] }}</flux:text>
-                        </div>
-                    @endforeach
-                </div>
-            </a>
+                            @if ($moodSrc !== null)
+                                <img
+                                    src="{{ $moodSrc }}"
+                                    alt=""
+                                    class="pointer-events-none size-[2.875rem] object-contain"
+                                    decoding="async"
+                                    loading="lazy"
+                                />
+                            @else
+                                <flux:icon
+                                    name="{{ $day['is_today'] ? 'face-smile' : 'sparkles' }}"
+                                    variant="mini"
+                                    @class([
+                                        'size-7 shrink-0',
+                                        '!text-white' => $day['is_today'],
+                                        'text-[#1565c0]' => ! $day['is_today'],
+                                    ])
+                                />
+                            @endif
+                        </span>
+                        <flux:text class="text-sm font-semibold leading-tight text-zinc-700">{{ $day['label'] }}</flux:text>
+                    </button>
+                @endforeach
+            </div>
         </div>
 
         {{-- Three appointment actions --}}
