@@ -1,6 +1,8 @@
 <?php
 
 use App\Livewire\PatientMoodPickerModal;
+use App\Livewire\PatientPortalChromeBar;
+use App\Models\Notification;
 use App\Models\PatientMood;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -100,6 +102,54 @@ test('mood detail panel appears after selecting a mood', function () {
         ->assertDontSee(__('patient.mood_tracker_pick_hint'))
         ->assertSee(__('patient.mood_tracker_note_label'), false)
         ->assertSee(__('patient.mood_tracker_save'), false);
+});
+
+test('chrome bar renders safely without authenticated user', function () {
+    Livewire::test(PatientPortalChromeBar::class)
+        ->assertOk()
+        ->assertDontSee(__('patient.mood_feeling_cta'), false);
+});
+
+test('bell dropdown shows unread notifications for patient', function () {
+    app()->setLocale('en');
+
+    $user = User::factory()->create(['profile_completed' => true]);
+
+    Notification::query()->create([
+        'type' => 'appointment_cancelled',
+        'title' => 'Appointment cancelled',
+        'message' => 'Your session was cancelled by the doctor.',
+        'userable_type' => User::class,
+        'userable_id' => $user->id,
+        'action' => route('patient.appointments', ['tab' => 'cancelled']),
+    ]);
+
+    Livewire::actingAs($user)
+        ->test(PatientPortalChromeBar::class)
+        ->assertSee('Appointment cancelled', false)
+        ->assertSee(__('patient.notifications.view_all'), false);
+
+    expect(Livewire::actingAs($user)->test(PatientPortalChromeBar::class)->get('unreadNotificationCount'))->toBe(1);
+});
+
+test('opening notification from bell marks it read and redirects', function () {
+    $user = User::factory()->create(['profile_completed' => true]);
+
+    $notification = Notification::query()->create([
+        'type' => 'appointment_cancelled',
+        'title' => 'Cancelled',
+        'message' => 'Cancelled body',
+        'userable_type' => User::class,
+        'userable_id' => $user->id,
+        'action' => route('patient.appointments', ['tab' => 'cancelled']),
+    ]);
+
+    Livewire::actingAs($user)
+        ->test(PatientPortalChromeBar::class)
+        ->call('openNotification', $notification->id)
+        ->assertRedirect(route('patient.appointments', ['tab' => 'cancelled']));
+
+    expect($notification->fresh()->read_at)->not->toBeNull();
 });
 
 test('mood modal opens when bar dispatches open event', function () {

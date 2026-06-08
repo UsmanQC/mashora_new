@@ -32,7 +32,7 @@ class DoctorAvailabilityService
         $timezone = config('app.timezone');
         $duration = max(self::SLOT_MINUTES, $durationMinutes);
 
-        $baseSlots = $this->baseSlotsForDate($doctor, $date, $timezone);
+        $baseSlots = $this->baseSlotsForDate($doctor, $date, $timezone, $duration);
         if ($baseSlots === []) {
             return [];
         }
@@ -75,13 +75,47 @@ class DoctorAvailabilityService
     }
 
     /**
+     * First calendar date (Y-m-d) within the lookahead window that has at least one bookable slot.
+     */
+    public function firstDateWithSlots(
+        Doctor $doctor,
+        int $durationMinutes,
+        ?string $preferredDate = null,
+        int $lookaheadDays = 60,
+    ): ?string {
+        $timezone = config('app.timezone');
+        $start = $preferredDate !== null
+            ? Carbon::parse($preferredDate, $timezone)->startOfDay()
+            : now($timezone)->startOfDay();
+
+        if ($start->lessThan(now($timezone)->startOfDay())) {
+            $start = now($timezone)->startOfDay();
+        }
+
+        for ($offset = 0; $offset < $lookaheadDays; $offset++) {
+            $candidate = $start->copy()->addDays($offset)->format('Y-m-d');
+
+            if ($this->availableSlots($doctor, $candidate, $durationMinutes) !== []) {
+                return $candidate;
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * Raw working-hour slots (H:i) for a date, ignoring conflicts.
      *
      * @return list<string>
      */
-    public function baseSlotsForDate(Doctor $doctor, string $date, ?string $timezone = null): array
-    {
+    public function baseSlotsForDate(
+        Doctor $doctor,
+        string $date,
+        ?string $timezone = null,
+        int $durationMinutes = self::SLOT_MINUTES,
+    ): array {
         $timezone ??= config('app.timezone');
+        $duration = max(self::SLOT_MINUTES, $durationMinutes);
 
         try {
             $selectedDate = Carbon::parse($date, $timezone);
@@ -108,23 +142,25 @@ class DoctorAvailabilityService
         }
 
         return $workingDays
-            ->flatMap(function ($workingDay) use ($timezone) {
-                return $workingDay->workingHours->flatMap(function ($hour) use ($timezone) {
+            ->flatMap(function ($workingDay) use ($timezone, $duration) {
+                return $workingDay->workingHours->flatMap(function ($hour) use ($timezone, $duration) {
                     if (! filled($hour->start_time) || ! filled($hour->end_time)) {
                         return [];
                     }
 
-                    try {
-                        $start = Carbon::createFromFormat('H:i:s', (string) $hour->start_time, $timezone);
-                        $end = Carbon::createFromFormat('H:i:s', (string) $hour->end_time, $timezone);
-                    } catch (\Throwable) {
+                    $start = $this->parseClockTime((string) $hour->start_time, $timezone);
+                    $end = $this->parseClockTime((string) $hour->end_time, $timezone);
+
+                    if ($start === null || $end === null || $start->greaterThanOrEqualTo($end)) {
                         return [];
                     }
 
                     $times = [];
-                    while ($start < $end) {
-                        $times[] = $start->format('H:i');
-                        $start = $start->addMinutes(self::SLOT_MINUTES);
+                    $cursor = $start->copy();
+
+                    while ($cursor->copy()->addMinutes($duration)->lessThanOrEqualTo($end)) {
+                        $times[] = $cursor->format('H:i');
+                        $cursor = $cursor->addMinutes(self::SLOT_MINUTES);
                     }
 
                     return $times;
@@ -134,6 +170,27 @@ class DoctorAvailabilityService
             ->sort()
             ->values()
             ->all();
+    }
+
+    private function parseClockTime(string $time, string $timezone): ?Carbon
+    {
+        foreach (['H:i:s', 'H:i'] as $format) {
+            try {
+                $parsed = Carbon::createFromFormat($format, $time, $timezone);
+
+                if ($parsed !== false) {
+                    return $parsed;
+                }
+            } catch (\Throwable) {
+                continue;
+            }
+        }
+
+        try {
+            return Carbon::parse($time, $timezone);
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     /**

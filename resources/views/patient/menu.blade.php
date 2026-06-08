@@ -17,6 +17,15 @@
                 </a>
 
                 <a
+                    href="{{ route('patient.wallet') }}"
+                    wire:navigate
+                    class="group flex cursor-pointer flex-col gap-5 rounded-2xl border border-zinc-200/90 bg-white p-6 text-center shadow-[0_1px_4px_-1px_rgba(15,23,42,0.08)] outline-none ring-offset-2 ring-offset-white transition hover:border-[#3c5cf7]/35 hover:shadow-[0_4px_20px_-10px_rgba(60,92,247,0.35)] focus-visible:ring-2 focus-visible:ring-[#3c5cf7]/35 sm:p-8"
+                >
+                    <flux:icon name="banknotes" variant="outline" class="mx-auto size-12 transition text-zinc-500 group-hover:text-[#3c5cf7]" />
+                    <span class="block text-[0.8rem] font-semibold leading-snug text-zinc-900 group-hover:text-[#3c5cf7] sm:text-sm">{{ __('patient.menu.wallet') }}</span>
+                </a>
+
+                <a
                     href="{{ route('patient.medications') }}"
                     wire:navigate
                     class="group flex cursor-pointer flex-col gap-5 rounded-2xl border border-zinc-200/90 bg-white p-6 text-center shadow-[0_1px_4px_-1px_rgba(15,23,42,0.08)] outline-none ring-offset-2 ring-offset-white transition hover:border-[#3c5cf7]/35 hover:shadow-[0_4px_20px_-10px_rgba(60,92,247,0.35)] focus-visible:ring-2 focus-visible:ring-[#3c5cf7]/35 sm:p-8"

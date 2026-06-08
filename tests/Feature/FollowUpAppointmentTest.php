@@ -54,6 +54,30 @@ function seedDoctorWithSlots(): Doctor
     return $doctor;
 }
 
+test('follow-up page picks first date with working hours when suggested day has none', function () {
+    $doctor = seedDoctorWithSlots();
+    $user = User::factory()->create();
+
+    $appointment = Appointment::factory()->create([
+        'doctor_id' => $doctor->id,
+        'user_id' => $user->id,
+        'status' => 'completed',
+        'duration' => 30,
+        'appointment_date' => now()->format('Y-m-d'),
+        'start_time' => '10:00:00',
+        'end_time' => '10:30:00',
+    ]);
+
+    $preferredWithoutHours = now()->addDays(3)->format('Y-m-d');
+    $firstWithHours = now()->addDays(15)->format('Y-m-d');
+
+    $this->actingAs($doctor, 'doctor');
+
+    Livewire::test('pages::doctor.appointment.follow-up', ['appointment' => $appointment])
+        ->assertSet('newDate', $firstWithHours)
+        ->assertSee('10:00', false);
+});
+
 test('doctor can schedule follow-up and patient receives notification', function () {
     $doctor = seedDoctorWithSlots();
     $user = User::factory()->create(['profile_completed' => true]);

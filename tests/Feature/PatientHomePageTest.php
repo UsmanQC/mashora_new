@@ -127,6 +127,54 @@ test('patient appointments ongoing tab shows only new and in process for authent
         ->assertDontSee('Other User Ongoing Hidden', false);
 });
 
+test('patient appointments rescheduled tab shows only rescheduled for authenticated user', function () {
+    $user = User::factory()->create(['profile_completed' => true]);
+    $doctor = Doctor::factory()->create();
+
+    Appointment::factory()->create([
+        'user_id' => $user->id,
+        'doctor_id' => $doctor->id,
+        'patient_name' => 'Patient Rescheduled Visible',
+        'status' => 'rescheduled',
+    ]);
+
+    Appointment::factory()->create([
+        'user_id' => $user->id,
+        'doctor_id' => $doctor->id,
+        'patient_name' => 'Patient Ongoing Hidden',
+        'status' => 'new',
+    ]);
+
+    $this->actingAs($user)->get(route('patient.appointments', ['tab' => 'rescheduled']))
+        ->assertSuccessful()
+        ->assertSee('Patient Rescheduled Visible', false)
+        ->assertDontSee('Patient Ongoing Hidden', false);
+});
+
+test('patient appointments cancelled tab shows only cancelled for authenticated user', function () {
+    $user = User::factory()->create(['profile_completed' => true]);
+    $doctor = Doctor::factory()->create();
+
+    Appointment::factory()->create([
+        'user_id' => $user->id,
+        'doctor_id' => $doctor->id,
+        'patient_name' => 'Patient Cancelled Visible',
+        'status' => 'cancelled',
+    ]);
+
+    Appointment::factory()->create([
+        'user_id' => $user->id,
+        'doctor_id' => $doctor->id,
+        'patient_name' => 'Patient Ongoing Hidden',
+        'status' => 'new',
+    ]);
+
+    $this->actingAs($user)->get(route('patient.appointments', ['tab' => 'cancelled']))
+        ->assertSuccessful()
+        ->assertSee('Patient Cancelled Visible', false)
+        ->assertDontSee('Patient Ongoing Hidden', false);
+});
+
 test('patient appointments completed tab shows only completed for authenticated user', function () {
     $user = User::factory()->create(['profile_completed' => true]);
     $doctor = Doctor::factory()->create();

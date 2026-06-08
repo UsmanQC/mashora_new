@@ -2,8 +2,8 @@
 
 use App\Models\Appointment;
 use App\Models\Doctor;
+use App\Services\AppointmentRescheduleService;
 use App\Services\DoctorAvailabilityService;
-use App\Services\FollowUpAppointmentService;
 use Carbon\Carbon;
 use Flux\Flux;
 use Illuminate\Support\Facades\Auth;
@@ -12,7 +12,7 @@ use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
-new #[Layout('layouts::doctor')] #[Title('Follow-up appointment')] class extends Component
+new #[Layout('layouts::doctor')] #[Title('Reschedule appointment')] class extends Component
 {
     public Appointment $appointment;
 
@@ -28,16 +28,17 @@ new #[Layout('layouts::doctor')] #[Title('Follow-up appointment')] class extends
         $this->durationMinutes = max(15, (int) $appointment->duration);
 
         $timezone = config('app.timezone');
-        $suggested = $appointment->appointment_date
-            ? Carbon::parse($appointment->appointment_date, $timezone)->addDays(15)
-            : now($timezone)->addDays(15);
+        $today = now($timezone)->startOfDay();
 
-        if ($suggested->lessThan(now($timezone)->startOfDay())) {
-            $suggested = now($timezone)->addDays(15);
+        $preferredDate = $appointment->appointment_date
+            ? Carbon::parse($appointment->appointment_date, $timezone)->format('Y-m-d')
+            : $today->format('Y-m-d');
+
+        if (Carbon::parse($preferredDate, $timezone)->lessThan($today)) {
+            $preferredDate = $today->format('Y-m-d');
         }
 
         $doctor = Auth::guard('doctor')->user();
-        $preferredDate = $suggested->format('Y-m-d');
 
         if ($doctor instanceof Doctor) {
             $firstAvailable = app(DoctorAvailabilityService::class)->firstDateWithSlots(
@@ -47,6 +48,7 @@ new #[Layout('layouts::doctor')] #[Title('Follow-up appointment')] class extends
             );
 
             $this->newDate = $firstAvailable ?? $preferredDate;
+            $this->preselectCurrentTime();
 
             return;
         }
@@ -110,6 +112,7 @@ new #[Layout('layouts::doctor')] #[Title('Follow-up appointment')] class extends
             $this->doctor(),
             $this->newDate,
             $this->durationMinutes,
+            $this->appointment->id,
         );
     }
 
@@ -124,6 +127,23 @@ new #[Layout('layouts::doctor')] #[Title('Follow-up appointment')] class extends
         }
     }
 
+    private function preselectCurrentTime(): void
+    {
+        if (! filled($this->appointment->start_time)) {
+            return;
+        }
+
+        try {
+            $currentSlot = Carbon::parse($this->appointment->start_time, config('app.timezone'))->format('H:i');
+        } catch (\Throwable) {
+            return;
+        }
+
+        if (in_array($currentSlot, $this->availableSlots, true)) {
+            $this->selectedTime = $currentSlot;
+        }
+    }
+
     public function save(): void
     {
         $this->validate([
@@ -132,7 +152,7 @@ new #[Layout('layouts::doctor')] #[Title('Follow-up appointment')] class extends
         ]);
 
         try {
-            app(FollowUpAppointmentService::class)->create(
+            app(AppointmentRescheduleService::class)->reschedule(
                 $this->doctor(),
                 $this->appointment,
                 $this->newDate,
@@ -144,7 +164,7 @@ new #[Layout('layouts::doctor')] #[Title('Follow-up appointment')] class extends
 
         Flux::toast(
             variant: 'success',
-            text: __('doctor.follow_up.success', [
+            text: __('doctor.reschedule.success', [
                 'date' => Carbon::parse($this->newDate)->locale(app()->getLocale())->translatedFormat('d M Y'),
                 'time' => $this->displaySlot($this->selectedTime),
             ]),
@@ -155,33 +175,33 @@ new #[Layout('layouts::doctor')] #[Title('Follow-up appointment')] class extends
 }; ?>
 
 <div class="mx-auto w-full max-w-2xl space-y-6">
-    @include('partials.doctor-appointment-workspace-header', ['appointment' => $appointment, 'active' => 'follow_up'])
+    @include('partials.doctor-appointment-workspace-header', ['appointment' => $appointment, 'active' => 'reschedule'])
 
     <div class="rounded-2xl border border-zinc-200/90 bg-white p-5 shadow-sm sm:p-6">
-        <flux:heading size="lg" class="font-semibold text-zinc-900">{{ __('doctor.follow_up.title') }}</flux:heading>
-        <flux:text class="mt-2 text-zinc-600">{{ __('doctor.follow_up.subtitle') }}</flux:text>
+        <flux:heading size="lg" class="font-semibold text-zinc-900">{{ __('doctor.reschedule.title') }}</flux:heading>
+        <flux:text class="mt-2 text-zinc-600">{{ __('doctor.reschedule.subtitle') }}</flux:text>
 
         <form wire:submit="save" class="mt-6 space-y-5">
             <flux:field>
-                <flux:label>{{ __('doctor.follow_up.date_label') }}</flux:label>
+                <flux:label>{{ __('doctor.reschedule.date_label') }}</flux:label>
                 <flux:input wire:model.live="newDate" type="date" min="{{ $this->minDate() }}" required />
                 <flux:error name="newDate" />
             </flux:field>
 
             <flux:field>
-                <flux:label>{{ __('doctor.follow_up.time_label') }}</flux:label>
+                <flux:label>{{ __('doctor.reschedule.time_label') }}</flux:label>
                 @if ($this->availableSlots === [])
                     <flux:callout variant="warning" icon="exclamation-circle" class="mt-2">
                         <div class="space-y-2">
-                            <p>{{ __('doctor.follow_up.no_slots') }}</p>
+                            <p>{{ __('doctor.reschedule.no_slots') }}</p>
                             @if ($weekday = $this->selectedWeekdayLabel())
                                 <p class="text-sm opacity-90">
-                                    {{ __('doctor.follow_up.no_slots_weekday', ['day' => $weekday]) }}
+                                    {{ __('doctor.reschedule.no_slots_weekday', ['day' => $weekday]) }}
                                 </p>
                             @endif
                             @if (! $this->doctorHasWorkingHours())
                                 <flux:link :href="route('doctor.settings.working-hours')" wire:navigate class="text-sm font-semibold">
-                                    {{ __('doctor.follow_up.configure_working_hours') }}
+                                    {{ __('doctor.reschedule.configure_working_hours') }}
                                 </flux:link>
                             @endif
                         </div>
@@ -207,7 +227,7 @@ new #[Layout('layouts::doctor')] #[Title('Follow-up appointment')] class extends
             </flux:field>
 
             <flux:text class="text-sm text-zinc-500">
-                {{ __('doctor.follow_up.patient_flow_hint') }}
+                {{ __('doctor.reschedule.patient_flow_hint') }}
             </flux:text>
 
             <div class="flex flex-col gap-3 sm:flex-row sm:justify-end">
@@ -215,7 +235,7 @@ new #[Layout('layouts::doctor')] #[Title('Follow-up appointment')] class extends
                     {{ __('doctor.auth.back') }}
                 </flux:button>
                 <flux:button type="submit" variant="primary" class="!bg-[#132A6E] !text-white hover:!brightness-95">
-                    {{ __('doctor.follow_up.submit') }}
+                    {{ __('doctor.reschedule.submit') }}
                 </flux:button>
             </div>
         </form>

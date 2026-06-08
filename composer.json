@@ -16,6 +16,7 @@
         "livewire/livewire": "^4.1",
         "myfatoorah/laravel-package": "^2.2",
         "pusher/pusher-php-server": "^7.2",
+        "stripe/stripe-php": "^20.2",
         "twilio/sdk": "8.2",
         "yasserbelhimer/agora-access-token-generator": "^1.0"
     },

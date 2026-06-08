@@ -1,9 +1,11 @@
 <?php
 
+use App\Livewire\Concerns\InteractsWithPatientWalletPayment;
 use App\Models\Doctor;
 use App\Models\TemporaryAppointment;
-use App\Models\User;
 use App\Services\PatientPaymentCompletionService;
+use App\Services\StripeCheckoutService;
+use App\Support\PaymentGateway;
 use Illuminate\Support\Carbon;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
@@ -13,6 +15,8 @@ use MyFatoorah\Library\API\Payment\MyFatoorahPayment;
 
 new #[Layout('layouts::patient')] #[Title('Payment')] class extends Component
 {
+    use InteractsWithPatientWalletPayment;
+
     public TemporaryAppointment $temporaryAppointment;
 
     public string $paymentError = '';
@@ -20,7 +24,6 @@ new #[Layout('layouts::patient')] #[Title('Payment')] class extends Component
     public string $mfSessionId = '';
     public string $mfCountryCode = '';
     public string $mfJsDomain = '';
-    public bool $useWallet = false;
 
     public function mount(TemporaryAppointment $temporaryAppointment): void
     {
@@ -29,32 +32,50 @@ new #[Layout('layouts::patient')] #[Title('Payment')] class extends Component
         }
 
         $this->temporaryAppointment = $temporaryAppointment->load('doctor');
-        $this->useWallet = (float) $this->temporaryAppointment->wallet_amount > 0;
-        $this->initEmbeddedPaymentSession();
+        $this->bootPatientWalletPayment((float) $this->temporaryAppointment->wallet_amount);
+        $this->persistWalletAmountOnBooking();
+
+        if ($this->usesMyFatoorah()) {
+            $this->initEmbeddedPaymentSession();
+        }
+    }
+
+    public function usesStripe(): bool
+    {
+        return PaymentGateway::isStripe();
+    }
+
+    public function usesMyFatoorah(): bool
+    {
+        return PaymentGateway::isMyFatoorah();
+    }
+
+    public function paymentGatewayConfigured(): bool
+    {
+        return PaymentGateway::isConfigured();
     }
 
     public function walletBalance(): float
     {
-        $user = auth()->user();
-
-        return $user instanceof User ? (float) $user->balanceFloat : 0.0;
+        return $this->patientWalletBalance();
     }
 
     public function walletApplied(): float
     {
-        if (! $this->useWallet) {
-            return 0.0;
-        }
-
-        return round(min($this->walletBalance(), (float) $this->temporaryAppointment->total), 2);
+        return $this->walletAppliedToward((float) $this->temporaryAppointment->total);
     }
 
     public function amountDue(): float
     {
-        return max(0.0, round((float) $this->temporaryAppointment->total - $this->walletApplied(), 2));
+        return $this->amountDueAfterWallet((float) $this->temporaryAppointment->total);
     }
 
     public function updatedUseWallet(): void
+    {
+        $this->persistWalletAmountOnBooking();
+    }
+
+    private function persistWalletAmountOnBooking(): void
     {
         $this->temporaryAppointment->wallet_amount = $this->walletApplied();
         $this->temporaryAppointment->save();
@@ -202,6 +223,67 @@ new #[Layout('layouts::patient')] #[Title('Payment')] class extends Component
         }
 
         return '';
+    }
+
+    public function startCardPayment(): void
+    {
+        if ($this->usesStripe()) {
+            $this->startStripePayment();
+
+            return;
+        }
+
+        $this->startMyFatoorahPayment();
+    }
+
+    public function startStripePayment(): void
+    {
+        if ($this->temporaryAppointment->user_id !== auth()->id()) {
+            abort(403);
+        }
+
+        $this->temporaryAppointment->wallet_amount = $this->walletApplied();
+        $this->temporaryAppointment->save();
+
+        if ($this->amountDue() <= 0) {
+            $this->payWithWalletOnly();
+
+            return;
+        }
+
+        if (! PaymentGateway::isConfigured()) {
+            $this->paymentError = __('patient_booking.payment_stripe_missing');
+
+            return;
+        }
+
+        try {
+            /** @var StripeCheckoutService $stripe */
+            $stripe = app(StripeCheckoutService::class);
+            $temp = $this->temporaryAppointment->fresh();
+
+            if ($temp === null) {
+                abort(404);
+            }
+
+            $session = $stripe->createBookingSession($temp, PatientPaymentCompletionService::amountDue($temp));
+
+            $temp->payment_session_id = (string) $session->id;
+            $temp->save();
+
+            if (filled($session->url)) {
+                $this->redirect($session->url);
+
+                return;
+            }
+
+            $this->paymentError = __('patient_booking.payment_invoice_failed');
+        } catch (\Throwable $e) {
+            report($e);
+            $this->paymentError = app()->isLocal()
+                ? __('patient_booking.payment_start_failed')." ({$e->getMessage()})"
+                : __('patient_booking.payment_start_failed');
+        }
     }
 
     public function startMyFatoorahPayment(): void
@@ -369,13 +451,19 @@ new #[Layout('layouts::patient')] #[Title('Payment')] class extends Component
             </div>
 
             @if ($this->walletBalance() > 0)
-                <label class="mt-4 flex cursor-pointer items-start gap-3 rounded-xl border border-[#3d5afe]/20 bg-[#3d5afe]/5 p-3">
-                    <input type="checkbox" wire:model.live="useWallet" class="mt-0.5 size-4 rounded border-zinc-300 text-[#3d5afe] focus:ring-[#3d5afe]" />
-                    <span class="text-sm">
+                <div class="mt-4 flex items-start justify-between gap-3 rounded-xl border border-[#3d5afe]/20 bg-[#3d5afe]/5 p-3">
+                    <div class="min-w-0 text-sm">
                         <span class="font-semibold text-zinc-800">{{ __('patient_booking.use_wallet') }}</span>
-                        <span class="block text-xs text-zinc-500">{{ __('patient_booking.wallet_balance') }}: {{ number_format($this->walletBalance(), 2) }} {{ __('patient_booking.sar') }}</span>
-                    </span>
-                </label>
+                        <span class="mt-1 block text-xs text-zinc-500">
+                            {{ __('patient_booking.wallet_balance') }}:
+                            {{ number_format($this->walletBalance(), 2) }} {{ __('patient_booking.sar') }}
+                        </span>
+                        <flux:link :href="route('patient.wallet')" wire:navigate class="mt-1 inline-block text-xs font-medium text-[#3d5afe]">
+                            {{ __('patient_booking.view_wallet') }}
+                        </flux:link>
+                    </div>
+                    <flux:switch wire:model.live="useWallet" />
+                </div>
 
                 @if ($this->walletApplied() > 0)
                     <div class="mt-3 flex justify-between gap-3 text-sm">
@@ -401,11 +489,38 @@ new #[Layout('layouts::patient')] #[Title('Payment')] class extends Component
                     {{ __('patient_booking.wallet_covers_full') }}
                 </p>
                 <flux:button type="button" variant="primary" class="w-full bg-[#3d5afe]! text-white!" wire:click="payWithWalletOnly" wire:loading.attr="disabled">
-                    <span wire:loading.remove wire:target="payWithWalletOnly">{{ __('patient_booking.confirm_booking') }}</span>
+                    <span wire:loading.remove wire:target="payWithWalletOnly">{{ __('patient_booking.pay_with_wallet_only') }}</span>
                     <span wire:loading wire:target="payWithWalletOnly">{{ __('patient_booking.payment_processing') }}</span>
                 </flux:button>
-            @elseif (filled(config('myfatoorah.api_key')))
-                @if ($embeddedReady)
+            @elseif ($this->paymentGatewayConfigured())
+                @if ($this->walletApplied() > 0 && $this->amountDue() > 0)
+                    <p class="rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900">
+                        {{ __('patient_booking.wallet_partial_hint') }}
+                    </p>
+                @endif
+                @if ($this->usesStripe())
+                    <flux:button
+                        type="button"
+                        variant="primary"
+                        class="w-full border-[#3d5afe] !bg-[#3d5afe] !text-white hover:!brightness-[0.97]"
+                        wire:click="startStripePayment"
+                        wire:loading.attr="disabled"
+                    >
+                        <span wire:loading.remove wire:target="startStripePayment">
+                            @if ($this->walletApplied() > 0)
+                                {{ __('patient_booking.pay_wallet_and_card', [
+                                    'wallet' => number_format($this->walletApplied(), 2),
+                                    'due' => number_format($this->amountDue(), 2),
+                                ]) }}
+                            @else
+                                {{ __('patient_booking.pay_now_stripe') }}
+                            @endif
+                        </span>
+                        <span wire:loading wire:target="startStripePayment">{{ __('patient_booking.payment_processing') }}</span>
+                    </flux:button>
+
+                    <flux:text class="text-xs text-zinc-500">{{ __('patient_booking.payment_stripe_note') }}</flux:text>
+                @elseif ($embeddedReady)
                     <div id="mf-form-element" class="min-h-[155px] w-full rounded-lg border border-zinc-300 bg-white p-2"></div>
                     <p id="mf-card-error" class="hidden rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
                         {{ __('patient_booking.payment_embedded_unavailable') }}
@@ -423,32 +538,36 @@ new #[Layout('layouts::patient')] #[Title('Payment')] class extends Component
                         type="button"
                         variant="ghost"
                         class="w-full"
-                        wire:click="startMyFatoorahPayment"
+                        wire:click="startCardPayment"
                         wire:loading.attr="disabled"
                     >
-                        <span wire:loading.remove wire:target="startMyFatoorahPayment">{{ __('patient_booking.pay_now_fallback') }}</span>
-                        <span wire:loading wire:target="startMyFatoorahPayment">{{ __('patient_booking.payment_processing') }}</span>
+                        <span wire:loading.remove wire:target="startCardPayment">{{ __('patient_booking.pay_now_fallback') }}</span>
+                        <span wire:loading wire:target="startCardPayment">{{ __('patient_booking.payment_processing') }}</span>
                     </flux:button>
                 @else
                     <flux:button
                         type="button"
                         variant="primary"
                         class="w-full border-[#3d5afe] !bg-[#3d5afe] !text-white hover:!brightness-[0.97]"
-                        wire:click="startMyFatoorahPayment"
+                        wire:click="startCardPayment"
                         wire:loading.attr="disabled"
                     >
-                        <span wire:loading.remove wire:target="startMyFatoorahPayment">{{ __('patient_booking.pay_now') }}</span>
-                        <span wire:loading wire:target="startMyFatoorahPayment">{{ __('patient_booking.payment_processing') }}</span>
+                        <span wire:loading.remove wire:target="startCardPayment">{{ __('patient_booking.pay_now') }}</span>
+                        <span wire:loading wire:target="startCardPayment">{{ __('patient_booking.payment_processing') }}</span>
                     </flux:button>
                 @endif
 
-                <button type="button" class="w-full rounded-lg bg-black py-3 text-sm font-semibold text-white">
-                    Pay with Apple Pay
-                </button>
+                @if ($this->usesMyFatoorah())
+                    <button type="button" class="w-full rounded-lg bg-black py-3 text-sm font-semibold text-white">
+                        Pay with Apple Pay
+                    </button>
 
-                <flux:text class="text-xs text-zinc-500">{{ __('patient_booking.payment_secure_note') }}</flux:text>
+                    <flux:text class="text-xs text-zinc-500">{{ __('patient_booking.payment_secure_note') }}</flux:text>
+                @endif
             @else
-                <p class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">{{ __('patient_booking.payment_api_missing') }}</p>
+                <p class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                    {{ $this->usesStripe() ? __('patient_booking.payment_stripe_missing') : __('patient_booking.payment_api_missing') }}
+                </p>
             @endif
 
             <div class="pt-1">
@@ -457,7 +576,7 @@ new #[Layout('layouts::patient')] #[Title('Payment')] class extends Component
         </div>
     </div>
 
-    @if ($embeddedReady && $this->amountDue() > 0)
+    @if ($this->usesMyFatoorah() && $embeddedReady && $this->amountDue() > 0)
         <form id="embedded-exec-form" action="{{ route('patient.payment.execute', ['temporaryAppointment' => $temporaryAppointment->id]) }}" method="POST" class="hidden">
             @csrf
         </form>

@@ -67,6 +67,11 @@ return [
     'payment_pending_configure' => 'أضف مفتاح MyFatoorah في `.env` ثم أعد المحاولة من صفحة الدفع.',
     'payment_still_pending' => 'لم يُؤكد الدفع بعد. أعد المحاولة من صفحة الدفع أو تواصل مع الدعم إذا تم خصم المبلغ.',
     'payment_local_ssl_fallback' => 'تم اكتشاف مشكلة شهادات SSL محليًا. تمّت محاكاة تأكيد الدفع لأغراض الاختبار المحلي.',
+    'payment_stripe_missing' => 'لم يُضبط Stripe بعد. اضبط `PAYMENT_GATEWAY=stripe` و`STRIPE_KEY` و`STRIPE_SECRET` في ملف `.env`.',
+    'payment_stripe_note' => 'ستُعاد توجيهك إلى Stripe Checkout للدفع ببطاقة اختبار.',
+    'pay_now_stripe' => 'الدفع عبر Stripe',
+    'stripe_product_booking' => 'موعد Mashora',
+    'stripe_product_follow_up' => 'موعد متابعة Mashora',
 
     'discount_apply' => 'تطبيق',
     'discount_invalid' => 'رمز الخصم غير صالح.',
@@ -77,7 +82,11 @@ return [
     'wallet_applied' => 'المبلغ المخصوم من المحفظة',
     'amount_due' => 'المبلغ المستحق',
     'wallet_covers_full' => 'رصيد محفظتك يغطي قيمة الحجز بالكامل. لا حاجة للدفع بالبطاقة.',
+    'wallet_partial_hint' => 'سيُخصم من محفظتك أولاً، والمبلغ المتبقي يُدفع بالبطاقة.',
     'wallet_insufficient' => 'رصيد محفظتك غير كافٍ لتغطية هذا الحجز.',
+    'pay_with_wallet_only' => 'الدفع من المحفظة',
+    'pay_wallet_and_card' => 'خصم :wallet ر.س من المحفظة ودفع :due ر.س بالبطاقة',
+    'view_wallet' => 'عرض المحفظة',
     'confirm_booking' => 'تأكيد الحجز',
 
     'appointment_number_label' => 'المرجع',

@@ -45,6 +45,7 @@ return [
 
     'menu' => [
         'notifications' => 'التنبيهات',
+        'wallet' => 'المحفظة',
         'medications' => 'وصفات الدواء',
         'password' => 'كلمة المرور',
         'personal_profile' => 'الملف الشخصي',
@@ -82,7 +83,9 @@ return [
         'title' => 'المواعيد',
         'back_aria' => 'العودة إلى الرئيسية',
         'tab_ongoing' => 'قيد التنفيذ',
+        'tab_rescheduled' => 'معاد جدولتها',
         'tab_completed' => 'المكتملة',
+        'tab_cancelled' => 'الملغاة',
         'book_new' => 'حجز موعد جديد',
         'tabs_aria' => 'تصفية المواعيد',
         'start_session' => 'بدء الجلسة',
@@ -141,13 +144,36 @@ return [
 
     'mood_calendar_coming' => 'أرشيف المزاج ليوم :date سيتاح قريبًا.',
 
+    'wallet' => [
+        'title' => 'محفظتي',
+        'subtitle' => 'رصيد الاستردادات ومدفوعات جلساتك.',
+        'available_balance' => 'الرصيد المتاح',
+        'balance_hint' => 'استخدم هذا الرصيد عند حجز موعد أو دفع موعد متابعة.',
+        'month_credited' => 'مُضاف هذا الشهر',
+        'month_spent' => 'مُنفق هذا الشهر',
+        'transactions_title' => 'آخر المعاملات',
+        'transactions_empty' => 'لا توجد حركات في المحفظة بعد.',
+        'type_refund' => 'استرداد موعد',
+        'type_payment' => 'دفع موعد',
+        'type_credit' => 'إيداع',
+        'type_debit' => 'خصم',
+    ],
+
     'notifications' => [
         'subtitle' => 'تحديثات عن مواعيدك ومواعيد المتابعة.',
         'empty' => 'لا توجد إشعارات بعد.',
         'unread' => 'جديد',
+        'unread_count' => '{0} لا جديد|{1} :count غير مقروء|[2,*] :count غير مقروء',
+        'view_all' => 'عرض كل الإشعارات',
         'open' => 'عرض',
         'follow_up_title' => 'موعد متابعة مجدول',
         'follow_up_body' => 'د. :doctor دعاك إلى متابعة في :date الساعة :time. يرجى التأكيد والدفع لإتمام الحجز.',
+        'rescheduled_title' => 'تم إعادة جدولة الموعد',
+        'rescheduled_message' => 'أعاد د. :doctor جدولة جلستك إلى :date الساعة :time.',
+        'cancelled_title' => 'تم إلغاء الموعد',
+        'cancelled_message' => 'ألغى د. :doctor جلستك في :date الساعة :time. وُجد أي مبلغ مستحق إلى محفظتك.',
+        'start_reminder_title' => 'جلستك تبدأ قريبًا',
+        'start_reminder_message' => 'جلستك مع :doctor تبدأ الساعة :time يوم :date.',
     ],
 
     'follow_up' => [

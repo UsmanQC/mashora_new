@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Appointment;
+use App\Support\PaymentGateway;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\DB;
@@ -29,8 +30,12 @@ final class FollowUpPaymentCompletionService
             return ['appointment' => null, 'state' => 'failed'];
         }
 
-        if (empty(config('myfatoorah.api_key'))) {
+        if (! PaymentGateway::isConfigured()) {
             return ['appointment' => null, 'state' => 'needs_config'];
+        }
+
+        if (PaymentGateway::isStripe()) {
+            return $this->confirmStripeIfPaid($appointment, $request);
         }
 
         try {
@@ -107,6 +112,73 @@ final class FollowUpPaymentCompletionService
     public static function amountDue(Appointment $appointment): float
     {
         return max(0.0, round((float) $appointment->total - (float) $appointment->wallet_amount, 2));
+    }
+
+    /**
+     * @return array{appointment: ?Appointment, state: 'paid'|'needs_config'|'pending'|'failed'}
+     */
+    private function confirmStripeIfPaid(Appointment $appointment, Request $request): array
+    {
+        $sessionId = $request->string('session_id')->toString();
+
+        if ($sessionId === '') {
+            $sessionId = (string) ($appointment->payment_session_id ?? '');
+        }
+
+        if ($sessionId === '' || ! str_starts_with($sessionId, 'cs_')) {
+            return ['appointment' => null, 'state' => 'failed'];
+        }
+
+        /** @var StripeCheckoutService $stripe */
+        $stripe = App::make(StripeCheckoutService::class);
+        $session = $stripe->retrieveSession($sessionId);
+
+        if ($session === null) {
+            return ['appointment' => null, 'state' => 'failed'];
+        }
+
+        if (! $stripe->sessionBelongsToFollowUp($session, $appointment)) {
+            return ['appointment' => null, 'state' => 'failed'];
+        }
+
+        if ($session->payment_status === 'unpaid') {
+            return ['appointment' => null, 'state' => 'pending'];
+        }
+
+        if (! $stripe->isSessionPaid($session)) {
+            return ['appointment' => null, 'state' => 'failed'];
+        }
+
+        try {
+            $paymentReferenceId = $stripe->paymentReferenceId($session);
+
+            $booked = DB::transaction(function () use ($appointment, $session, $paymentReferenceId): Appointment {
+                $appointment->refresh();
+
+                if (! $appointment->isPendingFollowUp()) {
+                    return $appointment;
+                }
+
+                $activated = $this->activate($appointment, (float) $appointment->wallet_amount, [
+                    'provider' => PaymentGateway::DRIVER_STRIPE,
+                    'session_id' => $session->id,
+                    'payment_status' => $session->payment_status,
+                    'InvoiceId' => $paymentReferenceId,
+                ]);
+
+                $activated->forceFill([
+                    'payment_session_id' => (string) $session->id,
+                ])->save();
+
+                return $activated;
+            });
+        } catch (Throwable $e) {
+            report($e);
+
+            return ['appointment' => null, 'state' => 'failed'];
+        }
+
+        return ['appointment' => $booked, 'state' => 'paid'];
     }
 
     /**

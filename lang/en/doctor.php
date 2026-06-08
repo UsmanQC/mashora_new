@@ -236,7 +236,24 @@ return [
         'tab_prescription' => 'Prescription',
         'tab_conversation' => 'Conversation',
         'tab_follow_up' => 'Follow-up',
+        'tab_reschedule' => 'Reschedule',
         'conversation_placeholder' => 'In-session messaging with the patient will appear here.',
+    ],
+
+    'reschedule' => [
+        'title' => 'Reschedule appointment',
+        'subtitle' => 'Pick a new date and time for this session. The patient will be notified immediately.',
+        'date_label' => 'New date',
+        'time_label' => 'Available time',
+        'no_slots' => 'No available slots on this date. Try another day.',
+        'no_slots_weekday' => ':day is not in your working schedule, or all times are already booked.',
+        'configure_working_hours' => 'Set your working hours',
+        'submit' => 'Save new time',
+        'success' => 'Appointment rescheduled to :date at :time.',
+        'slot_unavailable' => 'That time slot is no longer available.',
+        'not_eligible' => 'This appointment cannot be rescheduled.',
+        'patient_missing' => 'This appointment has no linked patient account.',
+        'patient_flow_hint' => 'The patient will receive a notification with the updated date and time.',
     ],
 
     'follow_up' => [
@@ -245,6 +262,8 @@ return [
         'date_label' => 'Follow-up date',
         'time_label' => 'Available time',
         'no_slots' => 'No available slots on this date. Try another day.',
+        'no_slots_weekday' => ':day is not in your working schedule, or all times are already booked.',
+        'configure_working_hours' => 'Set your working hours',
         'submit' => 'Send follow-up invitation',
         'success' => 'Follow-up invitation sent for :date at :time.',
         'slot_unavailable' => 'That time slot is no longer available.',
@@ -323,6 +342,24 @@ return [
         'medication_removed' => 'Medication removed.',
         'prescription_toggle_on' => 'Marked as no prescription needed.',
         'prescription_toggle_off' => 'Prescription required again.',
+    ],
+
+    'wallet' => [
+        'title' => 'Wallet',
+        'subtitle' => 'Earnings from sessions and payouts to your bank.',
+        'available_balance' => 'Available balance',
+        'balance_hint' => 'This balance is paid out when Mashora marks your monthly invoice as paid.',
+        'month_earned' => 'Earned this month',
+        'month_paid_out' => 'Paid out this month',
+        'invoices_link' => 'Monthly invoices',
+        'view_invoices' => 'View invoices',
+        'transactions_title' => 'Recent transactions',
+        'transactions_empty' => 'No wallet activity yet.',
+        'type_earning' => 'Session earning',
+        'type_refund_reversal' => 'Refund reversal',
+        'type_payout' => 'Invoice payout',
+        'type_credit' => 'Credit',
+        'type_debit' => 'Debit',
     ],
 
     'conversation' => [

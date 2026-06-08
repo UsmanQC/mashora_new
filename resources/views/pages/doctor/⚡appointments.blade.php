@@ -3,6 +3,7 @@
 use App\Models\Appointment;
 use App\Models\Doctor;
 use App\Services\AppointmentWalletService;
+use App\Services\PatientAppointmentNotifier;
 use Flux\Flux;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -108,14 +109,20 @@ new #[Layout('layouts::doctor')] #[Title('Appointments')] class extends Componen
             return;
         }
 
+        $doctor = Auth::guard('doctor')->user();
+        abort_unless($doctor instanceof Doctor, 403);
+
         DB::transaction(function () use ($appointment): void {
             $appointment->forceFill([
                 'status' => 'cancelled',
                 'cancel_status' => 'doctor',
             ])->save();
 
-            app(AppointmentWalletService::class)->refundToPatient($appointment);
+            app(AppointmentWalletService::class)->refundToPatient($appointment->fresh());
         });
+
+        $appointment->refresh()->loadMissing('doctor');
+        app(PatientAppointmentNotifier::class)->notifyCancelled($appointment, $doctor);
 
         Flux::toast(variant: 'success', text: __('doctor.appointments.cancel_refunded'));
     }
@@ -214,16 +221,27 @@ new #[Layout('layouts::doctor')] #[Title('Appointments')] class extends Componen
                             </td>
                             <td class="px-4 py-3 text-center">
                                 @if (in_array($row->status, ['new', 'rescheduled', 'in_process'], true))
-                                    <flux:button
-                                        type="button"
-                                        size="sm"
-                                        variant="ghost"
-                                        class="text-rose-600! hover:bg-rose-50!"
-                                        wire:click="cancelAppointment({{ $row->id }})"
-                                        wire:confirm="{{ __('doctor.appointments.cancel_confirm') }}"
-                                    >
-                                        {{ __('doctor.appointments.cancel_refund') }}
-                                    </flux:button>
+                                    <div class="flex flex-wrap items-center justify-center gap-1">
+                                        <flux:button
+                                            :href="route('doctor.appointments.reschedule', $row)"
+                                            wire:navigate
+                                            size="sm"
+                                            variant="ghost"
+                                            class="text-[#132A6E]! hover:bg-[#132A6E]/5!"
+                                        >
+                                            {{ __('doctor.workspace.tab_reschedule') }}
+                                        </flux:button>
+                                        <flux:button
+                                            type="button"
+                                            size="sm"
+                                            variant="ghost"
+                                            class="text-rose-600! hover:bg-rose-50!"
+                                            wire:click="cancelAppointment({{ $row->id }})"
+                                            wire:confirm="{{ __('doctor.appointments.cancel_confirm') }}"
+                                        >
+                                            {{ __('doctor.appointments.cancel_refund') }}
+                                        </flux:button>
+                                    </div>
                                 @else
                                     <span class="text-xs text-zinc-400">—</span>
                                 @endif

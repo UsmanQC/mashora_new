@@ -237,7 +237,24 @@ return [
         'tab_prescription' => 'الوصفة',
         'tab_conversation' => 'المحادثة',
         'tab_follow_up' => 'موعد متابعة',
+        'tab_reschedule' => 'إعادة الجدولة',
         'conversation_placeholder' => 'ستظهر هنا الرسائل أثناء الجلسة مع المريض.',
+    ],
+
+    'reschedule' => [
+        'title' => 'إعادة جدولة الموعد',
+        'subtitle' => 'اختر تاريخًا ووقتًا جديدين لهذه الجلسة. سيصل المريض إشعار فورًا.',
+        'date_label' => 'التاريخ الجديد',
+        'time_label' => 'الوقت المتاح',
+        'no_slots' => 'لا توجد أوقات متاحة في هذا التاريخ. جرّب يومًا آخر.',
+        'no_slots_weekday' => ':day غير مضاف في جدول عملك، أو جميع الأوقات محجوزة.',
+        'configure_working_hours' => 'ضبط ساعات العمل',
+        'submit' => 'حفظ الوقت الجديد',
+        'success' => 'تمت إعادة جدولة الموعد إلى :date الساعة :time.',
+        'slot_unavailable' => 'هذا الوقت لم يعد متاحًا.',
+        'not_eligible' => 'لا يمكن إعادة جدولة هذا الموعد.',
+        'patient_missing' => 'لا يوجد حساب مريض مرتبط بهذا الموعد.',
+        'patient_flow_hint' => 'سيصل المريض إشعار بالتاريخ والوقت الجديدين.',
     ],
 
     'follow_up' => [
@@ -246,6 +263,8 @@ return [
         'date_label' => 'تاريخ المتابعة',
         'time_label' => 'الوقت المتاح',
         'no_slots' => 'لا توجد أوقات متاحة في هذا التاريخ. جرّب يومًا آخر.',
+        'no_slots_weekday' => ':day غير مضاف في جدول عملك، أو جميع الأوقات محجوزة.',
+        'configure_working_hours' => 'ضبط ساعات العمل',
         'submit' => 'إرسال دعوة المتابعة',
         'success' => 'تم إرسال دعوة المتابعة في :date الساعة :time.',
         'slot_unavailable' => 'هذا الوقت لم يعد متاحًا.',
@@ -324,6 +343,24 @@ return [
         'medication_removed' => 'تم حذف الدواء.',
         'prescription_toggle_on' => 'تم وضع علامة "لا حاجة لوصفة".',
         'prescription_toggle_off' => 'الوصفة مطلوبة مرة أخرى.',
+    ],
+
+    'wallet' => [
+        'title' => 'المحفظة',
+        'subtitle' => 'أرباح الجلسات والتحويلات إلى حسابك البنكي.',
+        'available_balance' => 'الرصيد المتاح',
+        'balance_hint' => 'يُصرف هذا الرصيد عندما تعتمد مشورة فاتورتك الشهرية كمدفوعة.',
+        'month_earned' => 'أُضيف هذا الشهر',
+        'month_paid_out' => 'صُرف هذا الشهر',
+        'invoices_link' => 'الفواتير الشهرية',
+        'view_invoices' => 'عرض الفواتير',
+        'transactions_title' => 'آخر المعاملات',
+        'transactions_empty' => 'لا توجد حركات في المحفظة بعد.',
+        'type_earning' => 'أرباح جلسة',
+        'type_refund_reversal' => 'عكس استرداد',
+        'type_payout' => 'صرف فاتورة',
+        'type_credit' => 'إيداع',
+        'type_debit' => 'خصم',
     ],
 
     'conversation' => [

@@ -25,6 +25,7 @@ new #[Layout('layouts::doctor')] #[Title('Menu')] class extends Component
             ['label' => __('Personal account'), 'icon' => 'user-circle', 'route' => 'doctor.settings.profile', 'available' => Route::has('doctor.settings.profile')],
             ['label' => __('Notifications'), 'icon' => 'bell', 'route' => 'doctor.settings.notifications', 'available' => Route::has('doctor.settings.notifications')],
             ['label' => __('Bank account'), 'icon' => 'credit-card', 'route' => 'doctor.settings.bank-account', 'available' => Route::has('doctor.settings.bank-account')],
+            ['label' => __('Wallet'), 'icon' => 'banknotes', 'route' => 'doctor.settings.wallet', 'available' => Route::has('doctor.settings.wallet')],
             ['label' => __('Support'), 'icon' => 'lifebuoy', 'route' => 'doctor.settings.support', 'available' => Route::has('doctor.settings.support')],
             ['label' => __('Privacy policy'), 'icon' => 'shield-check', 'route' => 'doctor.settings.privacy-policy', 'available' => Route::has('doctor.settings.privacy-policy')],
             ['label' => __('Invoices'), 'icon' => 'document-text', 'route' => 'doctor.settings.invoices', 'available' => Route::has('doctor.settings.invoices')],

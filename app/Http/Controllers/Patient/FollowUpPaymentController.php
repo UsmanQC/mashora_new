@@ -42,9 +42,27 @@ class FollowUpPaymentController extends Controller
         return Redirect::route('patient.follow-up.payment.failed', $appointment);
     }
 
-    public function failed(Appointment $appointment): View
+    public function failed(Request $request, Appointment $appointment): RedirectResponse|View
     {
         abort_unless($appointment->user_id === auth()->id(), 403);
+
+        if ($appointment->status === 'new') {
+            return view('patient.payment-success', [
+                'temporaryAppointment' => null,
+                'appointment' => $appointment->fresh(),
+            ]);
+        }
+
+        /** @var FollowUpPaymentCompletionService $completion */
+        $completion = app(FollowUpPaymentCompletionService::class);
+        $result = $completion->confirmIfPaid($appointment->fresh(), $request);
+
+        if ($result['state'] === 'paid' && $result['appointment'] !== null) {
+            return view('patient.payment-success', [
+                'temporaryAppointment' => null,
+                'appointment' => $result['appointment'],
+            ]);
+        }
 
         return view('patient.payment-failed', [
             'temporaryAppointment' => null,

@@ -67,6 +67,11 @@ return [
     'payment_pending_configure' => 'Add your MyFatoorah API key to `.env`, then try paying again from checkout.',
     'payment_still_pending' => 'Payment is not confirmed yet. Try again from checkout, or contact support if payment was deducted.',
     'payment_local_ssl_fallback' => 'Local SSL trust issue detected. Payment confirmation was simulated for local testing.',
+    'payment_stripe_missing' => 'Stripe is not configured yet. Set `PAYMENT_GATEWAY=stripe`, `STRIPE_KEY`, and `STRIPE_SECRET` in your `.env` file.',
+    'payment_stripe_note' => 'You will be redirected to Stripe Checkout to pay with a test card.',
+    'pay_now_stripe' => 'Pay with Stripe',
+    'stripe_product_booking' => 'Mashora appointment',
+    'stripe_product_follow_up' => 'Mashora follow-up appointment',
 
     'discount_apply' => 'Apply',
     'discount_invalid' => 'This discount code is not valid.',
@@ -77,7 +82,11 @@ return [
     'wallet_applied' => 'Wallet applied',
     'amount_due' => 'Amount due',
     'wallet_covers_full' => 'Your wallet balance covers this booking in full. No card payment is needed.',
+    'wallet_partial_hint' => 'Your wallet will be charged first. The remaining amount will be paid by card.',
     'wallet_insufficient' => 'Your wallet balance is not enough to cover this booking.',
+    'pay_with_wallet_only' => 'Pay with wallet',
+    'pay_wallet_and_card' => 'Pay :wallet SAR from wallet & :due SAR by card',
+    'view_wallet' => 'View wallet',
     'confirm_booking' => 'Confirm booking',
 
     'appointment_number_label' => 'Reference',

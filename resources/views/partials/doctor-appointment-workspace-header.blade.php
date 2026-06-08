@@ -29,6 +29,11 @@
             'route' => route('doctor.appointments.follow-up', $appointment),
             'icon' => 'calendar-days',
         ],
+        'reschedule' => [
+            'label' => __('doctor.workspace.tab_reschedule'),
+            'route' => route('doctor.appointments.reschedule', $appointment),
+            'icon' => 'clock',
+        ],
     ];
 @endphp
 

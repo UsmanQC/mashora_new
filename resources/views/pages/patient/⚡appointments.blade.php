@@ -26,7 +26,9 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
     {
         return [
             'ongoing' => ['new', 'in_process', 'pending_follow_up'],
+            'rescheduled' => ['rescheduled'],
             'completed' => ['completed'],
+            'cancelled' => ['cancelled'],
         ];
     }
 
@@ -75,7 +77,7 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
     public function getTabCountsProperty(): Collection
     {
         $counts = $this->baseQuery()
-            ->whereIn('status', ['new', 'in_process', 'pending_follow_up', 'completed'])
+            ->whereIn('status', ['new', 'in_process', 'pending_follow_up', 'rescheduled', 'completed', 'cancelled'])
             ->selectRaw('status, COUNT(*) as aggregate')
             ->groupBy('status')
             ->pluck('aggregate', 'status')
@@ -83,7 +85,9 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
 
         return collect([
             'ongoing' => (int) ($counts['new'] ?? 0) + (int) ($counts['in_process'] ?? 0) + (int) ($counts['pending_follow_up'] ?? 0),
+            'rescheduled' => (int) ($counts['rescheduled'] ?? 0),
             'completed' => (int) ($counts['completed'] ?? 0),
+            'cancelled' => (int) ($counts['cancelled'] ?? 0),
         ]);
     }
 
@@ -93,7 +97,9 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
             'new' => __('New'),
             'in_process' => __('In process'),
             'pending_follow_up' => __('patient.follow_up.badge'),
+            'rescheduled' => __('patient.appointments.tab_rescheduled'),
             'completed' => __('Completed'),
+            'cancelled' => __('patient.appointments.tab_cancelled'),
             default => str_replace('_', ' ', $status),
         };
     }
@@ -104,7 +110,9 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
             'new' => 'bg-sky-100 text-sky-700',
             'in_process' => 'bg-amber-100 text-amber-700',
             'pending_follow_up' => 'bg-violet-100 text-violet-700',
+            'rescheduled' => 'bg-indigo-100 text-indigo-700',
             'completed' => 'bg-emerald-100 text-emerald-700',
+            'cancelled' => 'bg-rose-100 text-rose-700',
             default => 'bg-zinc-100 text-zinc-700',
         };
     }
@@ -134,7 +142,7 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
     public function realtimeAppointmentIds(): array
     {
         return $this->baseQuery()
-            ->whereIn('status', ['new', 'in_process'])
+            ->whereIn('status', ['new', 'in_process', 'rescheduled'])
             ->pluck('id')
             ->map(static fn (mixed $id): int => (int) $id)
             ->values()
@@ -173,7 +181,7 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
         </p>
     </div>
 
-    <div class="mt-4 grid grid-cols-2 gap-2.5 lg:max-w-xl">
+    <div class="mt-4 grid grid-cols-2 gap-2.5 sm:grid-cols-4 lg:max-w-3xl">
         <button
             type="button"
             wire:click="selectTab('ongoing')"
@@ -184,11 +192,27 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
         </button>
         <button
             type="button"
+            wire:click="selectTab('rescheduled')"
+            class="rounded-xl border p-3 text-start shadow-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1565c0]/30 {{ $tab === 'rescheduled' ? 'border-[#1565c0] bg-[#1565c0]/5' : 'border-zinc-200 bg-white hover:border-[#1565c0]/35' }}"
+        >
+            <p class="text-xs font-semibold uppercase tracking-wide text-zinc-500">{{ __('patient.appointments.tab_rescheduled') }}</p>
+            <p class="mt-1 text-2xl font-bold text-[#1565c0]">{{ $this->tabCounts['rescheduled'] ?? 0 }}</p>
+        </button>
+        <button
+            type="button"
             wire:click="selectTab('completed')"
             class="rounded-xl border p-3 text-start shadow-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1565c0]/30 {{ $tab === 'completed' ? 'border-[#1565c0] bg-[#1565c0]/5' : 'border-zinc-200 bg-white hover:border-[#1565c0]/35' }}"
         >
             <p class="text-xs font-semibold uppercase tracking-wide text-zinc-500">{{ __('patient.appointments.tab_completed') }}</p>
             <p class="mt-1 text-2xl font-bold text-[#1565c0]">{{ $this->tabCounts['completed'] ?? 0 }}</p>
+        </button>
+        <button
+            type="button"
+            wire:click="selectTab('cancelled')"
+            class="rounded-xl border p-3 text-start shadow-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1565c0]/30 {{ $tab === 'cancelled' ? 'border-[#1565c0] bg-[#1565c0]/5' : 'border-zinc-200 bg-white hover:border-[#1565c0]/35' }}"
+        >
+            <p class="text-xs font-semibold uppercase tracking-wide text-zinc-500">{{ __('patient.appointments.tab_cancelled') }}</p>
+            <p class="mt-1 text-2xl font-bold text-[#1565c0]">{{ $this->tabCounts['cancelled'] ?? 0 }}</p>
         </button>
     </div>
 
@@ -215,11 +239,29 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
             <flux:button
                 type="button"
                 role="tab"
+                wire:click="selectTab('rescheduled')"
+                :aria-selected="$tab === 'rescheduled'"
+                class="min-h-11 shrink-0 {{ $tab === 'rescheduled' ? $tabActive : $tabInactive }}"
+            >
+                {{ __('patient.appointments.tab_rescheduled') }}
+            </flux:button>
+            <flux:button
+                type="button"
+                role="tab"
                 wire:click="selectTab('completed')"
                 :aria-selected="$tab === 'completed'"
                 class="min-h-11 shrink-0 {{ $tab === 'completed' ? $tabActive : $tabInactive }}"
             >
                 {{ __('patient.appointments.tab_completed') }}
+            </flux:button>
+            <flux:button
+                type="button"
+                role="tab"
+                wire:click="selectTab('cancelled')"
+                :aria-selected="$tab === 'cancelled'"
+                class="min-h-11 shrink-0 {{ $tab === 'cancelled' ? $tabActive : $tabInactive }}"
+            >
+                {{ __('patient.appointments.tab_cancelled') }}
             </flux:button>
         </div>
 
@@ -285,7 +327,7 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
                                         {{ __('patient.follow_up.confirm_and_pay') }}
                                     </a>
                                 </div>
-                            @elseif (in_array($appointment->status, ['new', 'in_process'], true))
+                            @elseif (in_array($appointment->status, ['new', 'in_process', 'rescheduled'], true))
                                 <div class="mt-3">
                                     <a
                                         href="{{ route('patient.appointments.conversation', ['appointment' => $appointment->id]) }}"

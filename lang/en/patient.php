@@ -45,6 +45,7 @@ return [
 
     'menu' => [
         'notifications' => 'Notifications',
+        'wallet' => 'Wallet',
         'medications' => 'Medication prescriptions',
         'password' => 'Password',
         'personal_profile' => 'Personal profile',
@@ -79,7 +80,9 @@ return [
         'title' => 'Appointments',
         'back_aria' => 'Back to home',
         'tab_ongoing' => 'Ongoing',
+        'tab_rescheduled' => 'Rescheduled',
         'tab_completed' => 'Completed',
+        'tab_cancelled' => 'Cancelled',
         'book_new' => 'Book a new appointment',
         'tabs_aria' => 'Filter appointments',
         'start_session' => 'Start session',
@@ -141,13 +144,36 @@ return [
 
     'mood_calendar_coming' => 'Mood history for :date will be available soon.',
 
+    'wallet' => [
+        'title' => 'My wallet',
+        'subtitle' => 'Balance from refunds and payments for your sessions.',
+        'available_balance' => 'Available balance',
+        'balance_hint' => 'Use this balance when booking or paying for follow-up appointments.',
+        'month_credited' => 'Credited this month',
+        'month_spent' => 'Spent this month',
+        'transactions_title' => 'Recent transactions',
+        'transactions_empty' => 'No wallet activity yet.',
+        'type_refund' => 'Appointment refund',
+        'type_payment' => 'Appointment payment',
+        'type_credit' => 'Credit',
+        'type_debit' => 'Debit',
+    ],
+
     'notifications' => [
         'subtitle' => 'Updates about your appointments and follow-ups.',
         'empty' => 'No notifications yet.',
         'unread' => 'New',
+        'unread_count' => '{0} No unread|{1} :count unread|[2,*] :count unread',
+        'view_all' => 'View all notifications',
         'open' => 'View',
         'follow_up_title' => 'Follow-up appointment scheduled',
         'follow_up_body' => 'Dr. :doctor invited you to a follow-up on :date at :time. Please confirm and pay to book the session.',
+        'rescheduled_title' => 'Appointment rescheduled',
+        'rescheduled_message' => 'Dr. :doctor moved your session to :date at :time.',
+        'cancelled_title' => 'Appointment cancelled',
+        'cancelled_message' => 'Dr. :doctor cancelled your session on :date at :time. Any eligible refund was returned to your wallet.',
+        'start_reminder_title' => 'Session starting soon',
+        'start_reminder_message' => 'Your session with :doctor starts at :time on :date.',
     ],
 
     'follow_up' => [

@@ -10,7 +10,12 @@ use Illuminate\Support\Carbon;
 uses(RefreshDatabase::class);
 
 test('payment success redirects to checkout when myfatoorah is not configured', function () {
-    config(['myfatoorah.api_key' => '']);
+    config([
+        'payment.driver' => 'myfatoorah',
+        'myfatoorah.api_key' => '',
+        'stripe.key' => '',
+        'stripe.secret' => '',
+    ]);
 
     $user = User::factory()->create(['profile_completed' => true]);
 

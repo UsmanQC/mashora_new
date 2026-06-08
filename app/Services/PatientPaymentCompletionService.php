@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Appointment;
 use App\Models\TemporaryAppointment;
+use App\Support\PaymentGateway;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\DB;
@@ -46,7 +47,7 @@ final class PatientPaymentCompletionService
                 $temporaryAppointment->appointment_id = $appointment->id;
                 $temporaryAppointment->payment_status = 'paid';
                 $temporaryAppointment->payment_response = json_encode([
-                    'provider' => 'myfatoorah',
+                    'provider' => PaymentGateway::driver(),
                     'mode' => 'local_test_fallback',
                     'reason' => 'ssl_certificate_issue',
                     'paid_at' => now()->toIso8601String(),
@@ -85,8 +86,12 @@ final class PatientPaymentCompletionService
             return ['appointment' => null, 'state' => 'failed'];
         }
 
-        if (empty(config('myfatoorah.api_key'))) {
+        if (! PaymentGateway::isConfigured()) {
             return ['appointment' => null, 'state' => 'needs_config'];
+        }
+
+        if (PaymentGateway::isStripe()) {
+            return $this->confirmStripeIfPaid($temporaryAppointment, $request);
         }
 
         try {
@@ -144,6 +149,82 @@ final class PatientPaymentCompletionService
     }
 
     /**
+     * @return array{appointment: ?Appointment, state: 'paid'|'needs_config'|'pending'|'failed'}
+     */
+    private function confirmStripeIfPaid(TemporaryAppointment $temporaryAppointment, Request $request): array
+    {
+        $sessionId = $request->string('session_id')->toString();
+
+        if ($sessionId === '') {
+            $sessionId = (string) ($temporaryAppointment->payment_session_id ?? '');
+        }
+
+        if ($sessionId === '' || ! str_starts_with($sessionId, 'cs_')) {
+            return ['appointment' => null, 'state' => 'failed'];
+        }
+
+        /** @var StripeCheckoutService $stripe */
+        $stripe = App::make(StripeCheckoutService::class);
+        $session = $stripe->retrieveSession($sessionId);
+
+        if ($session === null) {
+            return ['appointment' => null, 'state' => 'failed'];
+        }
+
+        if (! $stripe->sessionBelongsToBooking($session, $temporaryAppointment)) {
+            return ['appointment' => null, 'state' => 'failed'];
+        }
+
+        if ($session->payment_status === 'unpaid') {
+            return ['appointment' => null, 'state' => 'pending'];
+        }
+
+        if (! $stripe->isSessionPaid($session)) {
+            return ['appointment' => null, 'state' => 'failed'];
+        }
+
+        try {
+            $paymentReferenceId = $stripe->paymentReferenceId($session);
+
+            $appointment = DB::transaction(function () use ($temporaryAppointment, $session, $paymentReferenceId): Appointment {
+                $temporaryAppointment->refresh();
+
+                if ($temporaryAppointment->appointment_id !== null) {
+                    $found = Appointment::query()->find($temporaryAppointment->appointment_id);
+                    if ($found !== null) {
+                        return $found;
+                    }
+                }
+
+                $appointment = self::createAppointmentRecord($temporaryAppointment);
+                self::syncCommunications($appointment, $temporaryAppointment);
+                self::finalizeWallet($appointment, $temporaryAppointment);
+
+                $temporaryAppointment->appointment_id = $appointment->id;
+                $temporaryAppointment->payment_status = 'paid';
+                $temporaryAppointment->payment_session_id = (string) $session->id;
+                $temporaryAppointment->payment_invoice_id = $paymentReferenceId;
+                $temporaryAppointment->payment_response = json_encode([
+                    'provider' => PaymentGateway::DRIVER_STRIPE,
+                    'session_id' => $session->id,
+                    'payment_status' => $session->payment_status,
+                    'amount_total' => $session->amount_total,
+                    'currency' => $session->currency,
+                ]);
+                $temporaryAppointment->save();
+
+                return $appointment;
+            });
+        } catch (Throwable $e) {
+            report($e);
+
+            return ['appointment' => null, 'state' => 'failed'];
+        }
+
+        return ['appointment' => $appointment, 'state' => 'paid'];
+    }
+
+    /**
      * @return array{key: string|int, type: string}
      */
     private static function resolveStatusKey(TemporaryAppointment $temporaryAppointment, Request $request): array
@@ -179,7 +260,7 @@ final class PatientPaymentCompletionService
             'discount' => $temporaryAppointment->discount,
             'tax' => $temporaryAppointment->tax,
             'total' => $temporaryAppointment->total,
-            'wallet_amount' => 0,
+            'wallet_amount' => (float) $temporaryAppointment->wallet_amount,
             'appointment_type' => $temporaryAppointment->appointment_type ?? 'regular',
             'instant_counseling' => $temporaryAppointment->instant_counseling,
             'status' => 'new',

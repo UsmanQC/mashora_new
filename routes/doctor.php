@@ -72,6 +72,10 @@ Route::middleware('auth:doctor')->group(function (): void {
                 'appointments/{appointment}/follow-up',
                 'pages::doctor.appointment.follow-up',
             )->name('appointments.follow-up');
+            Route::livewire(
+                'appointments/{appointment}/reschedule',
+                'pages::doctor.appointment.reschedule',
+            )->name('appointments.reschedule');
             Route::post(
                 'appointments/{appointment}/realtime/notify-call',
                 [DoctorAppointmentRealtimeController::class, 'notifyCall'],
@@ -90,6 +94,7 @@ Route::middleware('auth:doctor')->group(function (): void {
         Route::livewire('settings/support', 'pages::doctor.settings.support')->name('settings.support');
         Route::livewire('settings/privacy-policy', 'pages::doctor.settings.privacy-policy')->name('settings.privacy-policy');
         Route::livewire('settings/invoices', 'pages::doctor.settings.invoices')->name('settings.invoices');
+        Route::livewire('settings/wallet', 'pages::doctor.settings.wallet')->name('settings.wallet');
         Route::livewire('settings/working-hours', 'pages::doctor.settings.working-hours')->name('settings.working-hours');
         Route::livewire('settings/duration', 'pages::doctor.settings.duration')->name('settings.duration');
     });

@@ -96,7 +96,7 @@ new #[Layout('layouts::patient')] #[Title('Home')] class extends Component
             <div>
                 <flux:heading level="2" size="xl" class="font-semibold text-blue-700">
                     @if (auth()->check())
-                        {{ __('patient.welcome_user', ['name' => Auth::user()->name]) }}
+                        {{ __('patient.welcome_user', ['name' => Auth::user()?->name ?? '']) }}
                     @else
                         {{ __('patient.welcome_guest') }}
                     @endif

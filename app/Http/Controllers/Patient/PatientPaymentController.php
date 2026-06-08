@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Patient;
 
 use App\Http\Controllers\Controller;
+use App\Models\Appointment;
 use App\Models\TemporaryAppointment;
 use App\Services\PatientPaymentCompletionService;
 use Illuminate\Http\RedirectResponse;
@@ -17,6 +18,17 @@ class PatientPaymentController extends Controller
     public function success(Request $request, TemporaryAppointment $temporaryAppointment): RedirectResponse|View
     {
         abort_unless($temporaryAppointment->user_id === auth()->id(), 403);
+
+        $temporaryAppointment->refresh();
+
+        $alreadyBooked = $this->resolveBookedAppointment($temporaryAppointment);
+
+        if ($alreadyBooked !== null) {
+            return view('patient.payment-success', [
+                'temporaryAppointment' => $temporaryAppointment,
+                'appointment' => $alreadyBooked,
+            ]);
+        }
 
         /** @var PatientPaymentCompletionService $completion */
         $completion = app(PatientPaymentCompletionService::class);
@@ -42,13 +54,44 @@ class PatientPaymentController extends Controller
         return Redirect::route('patient.payment.failed', $temporaryAppointment);
     }
 
-    public function failed(TemporaryAppointment $temporaryAppointment): View
+    public function failed(Request $request, TemporaryAppointment $temporaryAppointment): RedirectResponse|View
     {
         abort_unless($temporaryAppointment->user_id === auth()->id(), 403);
+
+        $temporaryAppointment->refresh();
+
+        $alreadyBooked = $this->resolveBookedAppointment($temporaryAppointment);
+
+        if ($alreadyBooked !== null) {
+            return view('patient.payment-success', [
+                'temporaryAppointment' => $temporaryAppointment,
+                'appointment' => $alreadyBooked,
+            ]);
+        }
+
+        /** @var PatientPaymentCompletionService $completion */
+        $completion = app(PatientPaymentCompletionService::class);
+        $result = $completion->confirmIfPaid($temporaryAppointment, $request);
+
+        if ($result['state'] === 'paid' && $result['appointment'] !== null) {
+            return view('patient.payment-success', [
+                'temporaryAppointment' => $temporaryAppointment->fresh(),
+                'appointment' => $result['appointment'],
+            ]);
+        }
 
         return view('patient.payment-failed', [
             'temporaryAppointment' => $temporaryAppointment,
         ]);
+    }
+
+    private function resolveBookedAppointment(TemporaryAppointment $temporaryAppointment): ?Appointment
+    {
+        if ($temporaryAppointment->payment_status !== 'paid' || $temporaryAppointment->appointment_id === null) {
+            return null;
+        }
+
+        return Appointment::query()->find($temporaryAppointment->appointment_id);
     }
 
     /**

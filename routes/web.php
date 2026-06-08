@@ -72,6 +72,10 @@ Route::livewire('patient/notifications', 'pages::patient.notifications')
     ->middleware(['auth', 'patient.profile'])
     ->name('patient.notifications');
 
+Route::livewire('patient/wallet', 'pages::patient.wallet')
+    ->middleware(['auth', 'patient.profile'])
+    ->name('patient.wallet');
+
 Route::livewire('patient/follow-up/{appointment}', 'pages::patient.follow-up-confirm')
     ->middleware(['auth', 'patient.profile'])
     ->name('patient.follow-up.confirm');
