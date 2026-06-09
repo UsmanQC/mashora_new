@@ -29,4 +29,11 @@ return [
         'team' => 'The :app Team',
         'rights' => 'All rights reserved.',
     ],
+
+    'tickets' => [
+        'new_admin_subject' => '[:app] New support ticket :number',
+        'new_admin_heading' => 'New support ticket',
+        'new_admin_intro' => 'A new support ticket was submitted on :app.',
+        'view_in_admin' => 'View in admin panel',
+    ],
 ];

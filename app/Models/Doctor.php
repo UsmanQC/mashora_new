@@ -136,6 +136,14 @@ class Doctor extends Authenticatable implements Wallet, WalletFloat
     }
 
     /**
+     * @return MorphMany<Ticket, $this>
+     */
+    public function tickets(): MorphMany
+    {
+        return $this->morphMany(Ticket::class, 'creator');
+    }
+
+    /**
      * @return BelongsTo<Degree, $this>
      */
     public function degree(): BelongsTo

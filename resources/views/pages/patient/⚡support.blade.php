@@ -1,23 +1,23 @@
 <?php
 
-use App\Models\Doctor;
 use App\Models\Ticket;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
-new #[Layout('layouts::doctor')] #[Title('Support')] class extends Component
+new #[Layout('layouts::patient')] #[Title('Support')] class extends Component
 {
-    protected function doctor(): Doctor
+    protected function patient(): User
     {
-        $doctor = Auth::guard('doctor')->user();
-        if (! $doctor instanceof Doctor) {
+        $user = Auth::user();
+        if (! $user instanceof User) {
             abort(403);
         }
 
-        return $doctor;
+        return $user;
     }
 
     /**
@@ -27,7 +27,7 @@ new #[Layout('layouts::doctor')] #[Title('Support')] class extends Component
     {
         return Ticket::query()
             ->with('category')
-            ->forCreator($this->doctor())
+            ->forCreator($this->patient())
             ->latest()
             ->limit(50)
             ->get();
@@ -54,16 +54,18 @@ new #[Layout('layouts::doctor')] #[Title('Support')] class extends Component
     }
 }; ?>
 
-<div class="space-y-6">
-    <div class="flex items-center justify-between gap-3">
+<div class="mx-auto max-w-2xl space-y-6 px-4 py-8">
+    <div class="flex items-start justify-between gap-4">
         <div>
-            <flux:heading size="xl" class="font-semibold text-zinc-900">{{ __('tickets.title') }}</flux:heading>
+            <flux:heading size="xl" class="font-semibold text-[#193ADB]">{{ __('tickets.title') }}</flux:heading>
             <flux:text class="mt-1 text-zinc-600">{{ __('tickets.subtitle') }}</flux:text>
         </div>
-        <flux:button :href="route('doctor.settings')" wire:navigate variant="ghost" size="sm" icon="arrow-left">{{ __('Back') }}</flux:button>
+        <flux:button :href="route('patient.menu')" wire:navigate variant="ghost" size="sm" icon="arrow-left">
+            {{ __('patient.empty_state.menu_crumb') }}
+        </flux:button>
     </div>
 
-    <flux:button :href="route('doctor.settings.support.create')" wire:navigate variant="primary" class="!bg-[#132A6E] !text-white">
+    <flux:button :href="route('patient.support.create')" wire:navigate variant="primary" class="w-full sm:w-auto">
         {{ __('tickets.new_ticket') }}
     </flux:button>
 
@@ -75,9 +77,9 @@ new #[Layout('layouts::doctor')] #[Title('Support')] class extends Component
         <div class="space-y-3">
             @foreach ($this->tickets as $ticket)
                 <a
-                    href="{{ route('doctor.settings.support.show', $ticket) }}"
+                    href="{{ route('patient.support.show', $ticket) }}"
                     wire:navigate
-                    class="block rounded-2xl border border-zinc-200/90 bg-white p-4 shadow-sm transition hover:border-[#3C5CF7]/35 hover:shadow-md"
+                    class="block rounded-2xl border border-zinc-200/90 bg-white p-4 shadow-sm transition hover:border-[#193ADB]/30 hover:shadow-md"
                 >
                     <div class="flex items-start justify-between gap-3">
                         <div class="min-w-0">

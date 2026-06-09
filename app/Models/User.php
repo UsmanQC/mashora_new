@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -95,5 +96,21 @@ class User extends Authenticatable implements Wallet, WalletFloat
     public function appointments(): HasMany
     {
         return $this->hasMany(Appointment::class);
+    }
+
+    /**
+     * @return MorphMany<Notification, $this>
+     */
+    public function notifications(): MorphMany
+    {
+        return $this->morphMany(Notification::class, 'userable');
+    }
+
+    /**
+     * @return MorphMany<Ticket, $this>
+     */
+    public function tickets(): MorphMany
+    {
+        return $this->morphMany(Ticket::class, 'creator');
     }
 }

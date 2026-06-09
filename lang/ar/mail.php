@@ -29,4 +29,11 @@ return [
         'team' => 'فريق :app',
         'rights' => 'جميع الحقوق محفوظة.',
     ],
+
+    'tickets' => [
+        'new_admin_subject' => '[:app] تذكرة دعم جديدة :number',
+        'new_admin_heading' => 'تذكرة دعم جديدة',
+        'new_admin_intro' => 'تم إرسال تذكرة دعم جديدة على :app.',
+        'view_in_admin' => 'عرض في لوحة الإدارة',
+    ],
 ];

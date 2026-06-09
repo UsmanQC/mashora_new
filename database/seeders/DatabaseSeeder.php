@@ -20,16 +20,17 @@ class DatabaseSeeder extends Seeder
         $this->call(SpecialitySeeder::class);
         $this->call(DegreeSeeder::class);
 
-        //$this->call(DoseUnitSeeder::class);
-        //$this->call(RouteSeeder::class);
+        // $this->call(DoseUnitSeeder::class);
+        // $this->call(RouteSeeder::class);
         $this->call(FrequencySeeder::class);
-        //$this->call(PrimaryDiagnosisSeeder::class);
-       // $this->call(CountrySeeder::class);
+        // $this->call(PrimaryDiagnosisSeeder::class);
+        // $this->call(CountrySeeder::class);
         $this->call(DurationSeeder::class);
         $this->call(InstantAppointmentPricesSeeder::class);
         $this->call(CommunicationSeeder::class);
         $this->call(ExamSeeder::class);
         $this->call(ThoughtsSeeder::class);
+        $this->call(TicketCategorySeeder::class);
         $this->call(InstantAppointmentPricesSeeder::class);
         // $this->call(DoctorSeeder::class);
     }

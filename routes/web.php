@@ -104,9 +104,17 @@ Route::view('patient/favorites', 'patient.section-empty', ['titleKey' => 'patien
     ->middleware(['auth', 'patient.profile'])
     ->name('patient.favorites');
 
-Route::view('patient/support', 'patient.section-empty', ['titleKey' => 'patient.menu.support'])
+Route::livewire('patient/support', 'pages::patient.support')
     ->middleware(['auth', 'patient.profile'])
     ->name('patient.support');
+
+Route::livewire('patient/support/create', 'pages::patient.support-create')
+    ->middleware(['auth', 'patient.profile'])
+    ->name('patient.support.create');
+
+Route::livewire('patient/support/{ticket}', 'pages::patient.support-show')
+    ->middleware(['auth', 'patient.profile'])
+    ->name('patient.support.show');
 
 Route::view('patient/privacy', 'patient.section-empty', ['titleKey' => 'patient.menu.privacy'])
     ->middleware(['auth', 'patient.profile'])

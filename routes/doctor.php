@@ -92,6 +92,8 @@ Route::middleware('auth:doctor')->group(function (): void {
         Route::livewire('settings/notifications', 'pages::doctor.settings.notifications')->name('settings.notifications');
         Route::livewire('settings/bank-account', 'pages::doctor.settings.bank-account')->name('settings.bank-account');
         Route::livewire('settings/support', 'pages::doctor.settings.support')->name('settings.support');
+        Route::livewire('settings/support/create', 'pages::doctor.settings.support-create')->name('settings.support.create');
+        Route::livewire('settings/support/{ticket}', 'pages::doctor.settings.support-show')->name('settings.support.show');
         Route::livewire('settings/privacy-policy', 'pages::doctor.settings.privacy-policy')->name('settings.privacy-policy');
         Route::livewire('settings/invoices', 'pages::doctor.settings.invoices')->name('settings.invoices');
         Route::livewire('settings/wallet', 'pages::doctor.settings.wallet')->name('settings.wallet');
