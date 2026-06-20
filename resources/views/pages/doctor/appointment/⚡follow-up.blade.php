@@ -113,6 +113,16 @@ new #[Layout('layouts::doctor')] #[Title('Follow-up appointment')] class extends
         );
     }
 
+    public function getCanScheduleFollowUpProperty(): bool
+    {
+        return app(FollowUpAppointmentService::class)->parentCanScheduleFollowUp($this->appointment);
+    }
+
+    public function getPendingFollowUpProperty(): ?Appointment
+    {
+        return app(FollowUpAppointmentService::class)->pendingFollowUpFor($this->appointment);
+    }
+
     public function displaySlot(string $slot): string
     {
         try {
@@ -161,6 +171,23 @@ new #[Layout('layouts::doctor')] #[Title('Follow-up appointment')] class extends
         <flux:heading size="lg" class="font-semibold text-zinc-900">{{ __('doctor.follow_up.title') }}</flux:heading>
         <flux:text class="mt-2 text-zinc-600">{{ __('doctor.follow_up.subtitle') }}</flux:text>
 
+        @if ($this->pendingFollowUp)
+            <flux:callout variant="success" icon="check-circle" class="mt-6">
+                <div class="space-y-2">
+                    <p class="font-semibold">{{ __('doctor.follow_up.pending_title') }}</p>
+                    <p class="text-sm">{{ __('doctor.follow_up.pending_body') }}</p>
+                    <p class="text-sm font-medium">
+                        {{ __('doctor.follow_up.pending_status') }} —
+                        {{ $this->pendingFollowUp->appointment_date?->format('d/m/Y') }}
+                        {{ $this->displaySlot(substr((string) $this->pendingFollowUp->start_time, 0, 5)) }}
+                    </p>
+                </div>
+            </flux:callout>
+        @elseif (! $this->canScheduleFollowUp)
+            <flux:callout variant="warning" icon="exclamation-circle" class="mt-6">
+                {{ __('doctor.follow_up.complete_session_first') }}
+            </flux:callout>
+        @else
         <form wire:submit="save" class="mt-6 space-y-5">
             <flux:field>
                 <flux:label>{{ __('doctor.follow_up.date_label') }}</flux:label>
@@ -219,5 +246,6 @@ new #[Layout('layouts::doctor')] #[Title('Follow-up appointment')] class extends
                 </flux:button>
             </div>
         </form>
+        @endif
     </div>
 </div>

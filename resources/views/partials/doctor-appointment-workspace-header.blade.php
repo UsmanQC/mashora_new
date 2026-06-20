@@ -24,17 +24,23 @@
             'route' => route('doctor.appointments.conversation', $appointment),
             'icon' => 'chat-bubble-left-right',
         ],
-        'follow_up' => [
+    ];
+
+    if ($appointment->status === 'completed' && $appointment->parent_id === null) {
+        $tabs['follow_up'] = [
             'label' => __('doctor.workspace.tab_follow_up'),
             'route' => route('doctor.appointments.follow-up', $appointment),
             'icon' => 'calendar-days',
-        ],
-        'reschedule' => [
+        ];
+    }
+
+    if (in_array($appointment->status, ['new', 'in_process', 'rescheduled'], true)) {
+        $tabs['reschedule'] = [
             'label' => __('doctor.workspace.tab_reschedule'),
             'route' => route('doctor.appointments.reschedule', $appointment),
             'icon' => 'clock',
-        ],
-    ];
+        ];
+    }
 @endphp
 
 <div class="space-y-5">

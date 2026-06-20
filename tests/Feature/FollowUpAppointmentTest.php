@@ -54,6 +54,30 @@ function seedDoctorWithSlots(): Doctor
     return $doctor;
 }
 
+test('doctor appointments list shows follow-up action for completed sessions', function () {
+    app()->setLocale('en');
+
+    $doctor = seedDoctorWithSlots();
+    $user = User::factory()->create();
+
+    $appointment = Appointment::factory()->create([
+        'doctor_id' => $doctor->id,
+        'user_id' => $user->id,
+        'status' => 'completed',
+        'duration' => 30,
+        'patient_name' => $user->name,
+        'appointment_date' => now()->format('Y-m-d'),
+        'start_time' => '10:00:00',
+        'end_time' => '10:30:00',
+    ]);
+
+    $this->actingAs($doctor, 'doctor');
+
+    Livewire::test('pages::doctor.appointments')
+        ->assertSee(__('doctor.workspace.tab_follow_up'), false)
+        ->assertSee(route('doctor.appointments.follow-up', $appointment), false);
+});
+
 test('follow-up page picks first date with working hours when suggested day has none', function () {
     $doctor = seedDoctorWithSlots();
     $user = User::factory()->create();
@@ -164,6 +188,28 @@ test('patient confirms follow-up then completes booking via wallet', function ()
     expect($booked)->toBeInstanceOf(Appointment::class)
         ->and($booked->parent_id)->toBe($parent->id)
         ->and($booked->status)->toBe('new');
+
+    expect(Notification::query()
+        ->where('userable_id', $user->id)
+        ->where('type', 'follow_up_booked')
+        ->exists())->toBeTrue();
+});
+
+test('follow up service rejects scheduling before session is completed', function () {
+    $doctor = seedDoctorWithSlots();
+    $user = User::factory()->create();
+
+    $parent = Appointment::factory()->create([
+        'doctor_id' => $doctor->id,
+        'user_id' => $user->id,
+        'status' => 'in_process',
+        'duration' => 30,
+    ]);
+
+    $service = app(FollowUpAppointmentService::class);
+
+    expect(fn () => $service->create($doctor, $parent, now()->addDays(16)->format('Y-m-d'), '10:00'))
+        ->toThrow(ValidationException::class);
 });
 
 test('follow up service rejects duplicate pending invitation', function () {
@@ -173,7 +219,7 @@ test('follow up service rejects duplicate pending invitation', function () {
     $parent = Appointment::factory()->create([
         'doctor_id' => $doctor->id,
         'user_id' => $user->id,
-        'status' => 'in_process',
+        'status' => 'completed',
         'duration' => 30,
     ]);
 

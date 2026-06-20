@@ -3,6 +3,7 @@
 use App\Models\Appointment;
 use App\Models\Doctor;
 use App\Services\AppointmentWalletService;
+use App\Services\FollowUpAppointmentService;
 use App\Services\PatientAppointmentNotifier;
 use Flux\Flux;
 use Illuminate\Database\Eloquent\Builder;
@@ -30,11 +31,13 @@ new #[Layout('layouts::doctor')] #[Title('Appointments')] class extends Componen
     {
         return [
             'all' => __('All'),
-            'in_process' => __('In Process'),
-            'completed' => __('Completed'),
-            'cancelled' => __('Cancelled'),
-            'rescheduled' => __('Rescheduled'),
-            'not_attended' => __('No attended'),
+            'new' => __('doctor.appointment_status.new'),
+            'in_process' => __('doctor.appointment_status.in_process'),
+            'completed' => __('doctor.appointment_status.completed'),
+            'pending_follow_up' => __('doctor.appointment_status.pending_follow_up'),
+            'cancelled' => __('doctor.appointment_status.cancelled'),
+            'rescheduled' => __('doctor.appointment_status.rescheduled'),
+            'not_attended' => __('doctor.appointment_status.not_attended'),
         ];
     }
 
@@ -65,10 +68,26 @@ new #[Layout('layouts::doctor')] #[Title('Appointments')] class extends Componen
     public function getAppointmentsProperty(): LengthAwarePaginator
     {
         return $this->baseAppointmentsQuery()
+            ->with([
+                'followUps' => fn ($query) => $query
+                    ->where('status', 'pending_follow_up')
+                    ->latest('id'),
+                'parentAppointment',
+            ])
             ->when($this->status !== 'all', fn (Builder $query) => $query->where('status', $this->status))
             ->orderByDesc('appointment_date')
             ->orderByDesc('start_time')
             ->paginate(12);
+    }
+
+    public function canScheduleFollowUp(Appointment $appointment): bool
+    {
+        return app(FollowUpAppointmentService::class)->parentCanScheduleFollowUp($appointment);
+    }
+
+    public function pendingFollowUpFor(Appointment $appointment): ?Appointment
+    {
+        return app(FollowUpAppointmentService::class)->pendingFollowUpFor($appointment);
     }
 
     /**
@@ -199,9 +218,14 @@ new #[Layout('layouts::doctor')] #[Title('Appointments')] class extends Componen
                                 'completed' => 'bg-emerald-100 text-emerald-700',
                                 'in_process' => 'bg-amber-100 text-amber-700',
                                 'new' => 'bg-sky-100 text-sky-700',
+                                'pending_follow_up' => 'bg-violet-100 text-violet-700',
                                 'cancelled' => 'bg-rose-100 text-rose-700',
                                 default => 'bg-zinc-100 text-zinc-700',
                             };
+                            $statusLabel = __('doctor.appointment_status.'.$row->status);
+                            $pendingFollowUp = $this->canScheduleFollowUp($row)
+                                ? $this->pendingFollowUpFor($row)
+                                : null;
                         @endphp
                         <tr class="transition hover:bg-zinc-50/70">
                             <td class="px-4 py-3 font-medium text-zinc-900">
@@ -215,13 +239,23 @@ new #[Layout('layouts::doctor')] #[Title('Appointments')] class extends Componen
                             <td class="px-4 py-3 text-center tabular-nums text-zinc-700">{{ $row->appointment_date?->format('d/m/Y') }}</td>
                             <td class="px-4 py-3 text-center tabular-nums text-zinc-700">{{ \Illuminate\Support\Str::limit((string) $row->start_time, 8, '') }}</td>
                             <td class="px-4 py-3 text-center">
-                                <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold capitalize {{ $statusClasses }}">
-                                    {{ str_replace('_', ' ', (string) $row->status) }}
+                                <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold {{ $statusClasses }}">
+                                    {{ $statusLabel }}
                                 </span>
                             </td>
                             <td class="px-4 py-3 text-center">
                                 @if (in_array($row->status, ['new', 'rescheduled', 'in_process'], true))
                                     <div class="flex flex-wrap items-center justify-center gap-1">
+                                        <flux:button
+                                            :href="route('doctor.appointments.conversation', $row)"
+                                            wire:navigate
+                                            size="sm"
+                                            variant="ghost"
+                                            icon="chat-bubble-left-right"
+                                            class="text-[#132A6E]! hover:bg-[#132A6E]/5!"
+                                        >
+                                            {{ __('doctor.appointments.open_session') }}
+                                        </flux:button>
                                         <flux:button
                                             :href="route('doctor.appointments.reschedule', $row)"
                                             wire:navigate
@@ -242,6 +276,52 @@ new #[Layout('layouts::doctor')] #[Title('Appointments')] class extends Componen
                                             {{ __('doctor.appointments.cancel_refund') }}
                                         </flux:button>
                                     </div>
+                                @elseif ($this->canScheduleFollowUp($row))
+                                    <div class="flex flex-wrap items-center justify-center gap-1">
+                                        @if ($pendingFollowUp instanceof \App\Models\Appointment)
+                                            <flux:button
+                                                :href="route('doctor.appointments.follow-up', $row)"
+                                                wire:navigate
+                                                size="sm"
+                                                variant="outline"
+                                                icon="clock"
+                                                class="!border-violet-300 !text-violet-700 hover:!bg-violet-50"
+                                            >
+                                                {{ __('doctor.appointments.follow_up_pending') }}
+                                            </flux:button>
+                                        @else
+                                            <flux:button
+                                                :href="route('doctor.appointments.follow-up', $row)"
+                                                wire:navigate
+                                                size="sm"
+                                                variant="primary"
+                                                icon="calendar-days"
+                                                class="!bg-[#132A6E] hover:!brightness-95"
+                                            >
+                                                {{ __('doctor.workspace.tab_follow_up') }}
+                                            </flux:button>
+                                        @endif
+                                        <flux:button
+                                            :href="route('doctor.appointments.conversation', $row)"
+                                            wire:navigate
+                                            size="sm"
+                                            variant="ghost"
+                                            class="text-[#132A6E]! hover:bg-[#132A6E]/5!"
+                                        >
+                                            {{ __('doctor.appointments.view_session') }}
+                                        </flux:button>
+                                    </div>
+                                @elseif ($row->status === 'pending_follow_up' && $row->parentAppointment instanceof \App\Models\Appointment)
+                                    <flux:button
+                                        :href="route('doctor.appointments.follow-up', $row->parentAppointment)"
+                                        wire:navigate
+                                        size="sm"
+                                        variant="outline"
+                                        icon="calendar-days"
+                                        class="!border-violet-300 !text-violet-700 hover:!bg-violet-50"
+                                    >
+                                        {{ __('doctor.appointments.follow_up_pending') }}
+                                    </flux:button>
                                 @else
                                     <span class="text-xs text-zinc-400">—</span>
                                 @endif

@@ -13,6 +13,8 @@
                 </p>
 
                 <div class="flex shrink-0 items-center gap-2 sm:gap-3">
+                    @include('partials.patient-language-switch', ['variant' => 'chrome'])
+
                     <flux:button
                         type="button"
                         variant="filled"
@@ -83,6 +85,8 @@
                             </flux:menu.item>
                         </flux:menu>
                     </flux:dropdown>
+
+                    @include('partials.patient-user-account-menu', ['density' => 'chrome'])
                 </div>
             </div>
         </div>

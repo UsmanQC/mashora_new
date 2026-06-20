@@ -243,7 +243,7 @@ new #[Layout('layouts::doctor')] #[Title('Dashboard')] class extends Component
 
         Flux::toast(variant: 'success', text: __('doctor.complete_flow.success'));
 
-        $this->redirect(route('doctor.dashboard'));
+        $this->redirect(route('doctor.appointments.follow-up', $appointment), navigate: true);
     }
 }; ?>
 

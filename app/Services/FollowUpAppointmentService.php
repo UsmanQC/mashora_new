@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Models\Appointment;
 use App\Models\Doctor;
-use App\Models\Notification;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -15,10 +14,11 @@ final class FollowUpAppointmentService
     /**
      * @var list<string>
      */
-    public const SCHEDULABLE_PARENT_STATUSES = ['new', 'in_process', 'rescheduled', 'completed'];
+    public const SCHEDULABLE_PARENT_STATUSES = ['completed'];
 
     public function __construct(
         private readonly DoctorAvailabilityService $availability,
+        private readonly PatientAppointmentNotifier $notifier,
     ) {}
 
     public function create(Doctor $doctor, Appointment $parent, string $date, string $time): Appointment
@@ -95,9 +95,18 @@ final class FollowUpAppointmentService
             return $appointment;
         });
 
-        $this->notifyPatient($followUp, $doctor, $start);
+        $this->notifier->notifyFollowUpScheduled($followUp, $doctor, $start);
 
         return $followUp;
+    }
+
+    public function pendingFollowUpFor(Appointment $parent): ?Appointment
+    {
+        return Appointment::query()
+            ->where('parent_id', $parent->id)
+            ->where('status', 'pending_follow_up')
+            ->latest('id')
+            ->first();
     }
 
     public function confirm(Appointment $appointment, User $user): Appointment
@@ -119,22 +128,10 @@ final class FollowUpAppointmentService
         return $appointment->fresh();
     }
 
-    public function notifyPatient(Appointment $appointment, Doctor $doctor, Carbon $start): void
+    public function parentCanScheduleFollowUp(Appointment $parent): bool
     {
-        Notification::query()->create([
-            'type' => 'follow_up_appointment',
-            'title' => __('patient.notifications.follow_up_title'),
-            'message' => __('patient.notifications.follow_up_body', [
-                'doctor' => $doctor->displayName(),
-                'date' => $start->locale(app()->getLocale())->translatedFormat('d M Y'),
-                'time' => $start->locale(app()->getLocale())->translatedFormat('g:i a'),
-            ]),
-            'userable_type' => User::class,
-            'userable_id' => $appointment->user_id,
-            'senderable_type' => Doctor::class,
-            'senderable_id' => $doctor->id,
-            'action' => route('patient.follow-up.confirm', $appointment),
-        ]);
+        return in_array((string) $parent->status, self::SCHEDULABLE_PARENT_STATUSES, true)
+            && $parent->parent_id === null;
     }
 
     private function sessionPrice(Doctor $doctor, int $durationMinutes): float

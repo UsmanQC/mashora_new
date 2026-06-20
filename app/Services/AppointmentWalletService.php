@@ -5,6 +5,8 @@ namespace App\Services;
 use App\Models\Appointment;
 use App\Models\Doctor;
 use App\Models\User;
+use Bavix\Wallet\Enums\TransactionType;
+use Bavix\Wallet\Models\Transaction;
 
 /**
  * Wallet movements for appointment payments and refunds (bavix/laravel-wallet).
@@ -72,16 +74,27 @@ final class AppointmentWalletService
     }
 
     /**
-     * Refund a cancelled appointment to the patient wallet and reverse doctor earning.
+     * Refund a doctor-cancelled appointment: full session total to the patient wallet,
+     * full session total debited from the doctor wallet (including commission share),
+     * and platform commission waived on the booking record.
      */
     public function refundToPatient(Appointment $appointment): void
     {
         $appointment->loadMissing(['doctor', 'user']);
 
+        if ($this->hasExistingRefund($appointment) || ! $this->appointmentWasPaid($appointment)) {
+            return;
+        }
+
         $refund = (float) $appointment->total;
+
+        if ($refund <= 0) {
+            return;
+        }
+
         $patient = $appointment->user;
 
-        if ($patient instanceof User && $refund > 0) {
+        if ($patient instanceof User) {
             $patient->depositFloat($refund, [
                 'type' => 'appointment_refund',
                 'appointment_id' => $appointment->id,
@@ -90,15 +103,50 @@ final class AppointmentWalletService
         }
 
         $doctor = $appointment->doctor;
-        $doctorShare = (float) $appointment->doctor_share;
 
-        if ($doctor instanceof Doctor && $doctorShare > 0) {
-            $doctor->forceWithdrawFloat($doctorShare, [
+        if ($doctor instanceof Doctor) {
+            $doctor->forceWithdrawFloat($refund, [
                 'type' => 'appointment_refund_reversal',
                 'appointment_id' => $appointment->id,
                 'appointment_number' => $appointment->appointment_number,
+                'doctor_share' => (float) $appointment->doctor_share,
+                'mashora_share' => (float) $appointment->mashora_share,
             ]);
         }
+
+        $appointment->forceFill([
+            'doctor_share' => 0,
+            'mashora_share' => 0,
+        ])->save();
+    }
+
+    private function appointmentWasPaid(Appointment $appointment): bool
+    {
+        return (float) $appointment->doctor_share > 0
+            || filled($appointment->payment_invoice_id)
+            || (float) $appointment->wallet_amount > 0;
+    }
+
+    private function hasExistingRefund(Appointment $appointment): bool
+    {
+        $patient = $appointment->user;
+
+        if (! $patient instanceof User) {
+            return false;
+        }
+
+        return Transaction::query()
+            ->where('payable_type', $patient::class)
+            ->where('payable_id', $patient->id)
+            ->where('type', TransactionType::Deposit)
+            ->where('confirmed', true)
+            ->get()
+            ->contains(function (Transaction $transaction) use ($appointment): bool {
+                $meta = is_array($transaction->meta) ? $transaction->meta : [];
+
+                return ($meta['type'] ?? null) === 'appointment_refund'
+                    && (int) ($meta['appointment_id'] ?? 0) === (int) $appointment->id;
+            });
     }
 
     /**

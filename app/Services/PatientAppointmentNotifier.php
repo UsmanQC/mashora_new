@@ -118,6 +118,71 @@ final class PatientAppointmentNotifier
         ]);
     }
 
+    public function notifyFollowUpScheduled(Appointment $appointment, Doctor $doctor, CarbonInterface $start): void
+    {
+        $user = $this->patientUser($appointment);
+        if ($user === null) {
+            return;
+        }
+
+        $locale = app()->getLocale();
+        $title = __('patient.notifications.follow_up_title');
+        $message = __('patient.notifications.follow_up_body', [
+            'doctor' => $doctor->displayName(),
+            'date' => $start->locale($locale)->translatedFormat('d M Y'),
+            'time' => $start->locale($locale)->translatedFormat('g:i a'),
+        ]);
+
+        Notification::query()->create([
+            'type' => 'follow_up_appointment',
+            'title' => $title,
+            'message' => $message,
+            'userable_type' => User::class,
+            'userable_id' => $user->id,
+            'senderable_type' => Doctor::class,
+            'senderable_id' => $doctor->id,
+            'action' => route('patient.follow-up.confirm', $appointment),
+        ]);
+
+        $this->push->sendToUser($user, $title, $message, [
+            'type' => 'follow_up_appointment',
+            'appointment_id' => (string) $appointment->id,
+        ]);
+    }
+
+    public function notifyFollowUpBooked(Appointment $appointment, Doctor $doctor): void
+    {
+        $user = $this->patientUser($appointment);
+        if ($user === null) {
+            return;
+        }
+
+        $startsAt = $this->appointmentStartsAt($appointment);
+        $locale = app()->getLocale();
+        $title = __('patient.notifications.follow_up_booked_title');
+        $message = __('patient.notifications.follow_up_booked_body', [
+            'doctor' => $doctor->displayName(),
+            'date' => $startsAt?->locale($locale)->translatedFormat('d M Y') ?? '--',
+            'time' => $startsAt?->locale($locale)->translatedFormat('g:i a') ?? '--',
+        ]);
+
+        Notification::query()->create([
+            'type' => 'follow_up_booked',
+            'title' => $title,
+            'message' => $message,
+            'userable_type' => User::class,
+            'userable_id' => $user->id,
+            'senderable_type' => Doctor::class,
+            'senderable_id' => $doctor->id,
+            'action' => route('patient.appointments'),
+        ]);
+
+        $this->push->sendToUser($user, $title, $message, [
+            'type' => 'follow_up_booked',
+            'appointment_id' => (string) $appointment->id,
+        ]);
+    }
+
     private function patientUser(Appointment $appointment): ?User
     {
         if ($appointment->user_id === null) {

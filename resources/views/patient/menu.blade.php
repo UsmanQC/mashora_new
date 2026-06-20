@@ -1,122 +1,143 @@
+@php
+    $menuSections = [
+        [
+            'heading' => __('patient.sidebar.group_account'),
+            'items' => [
+                [
+                    'href' => route('patient.notifications'),
+                    'icon' => 'bell',
+                    'label' => __('patient.menu.notifications'),
+                    'sub' => __('patient.menu.notifications_sub'),
+                ],
+                [
+                    'href' => route('patient.wallet'),
+                    'icon' => 'banknotes',
+                    'label' => __('patient.menu.wallet'),
+                    'sub' => __('patient.menu.wallet_sub'),
+                ],
+                [
+                    'href' => route('profile.edit'),
+                    'icon' => 'user-circle',
+                    'label' => __('patient.menu.account_settings'),
+                    'sub' => __('patient.menu.account_settings_sub'),
+                ],
+            ],
+        ],
+        [
+            'heading' => __('patient.sidebar.group_health'),
+            'items' => [
+                [
+                    'href' => route('patient.medications'),
+                    'icon' => 'clipboard-document',
+                    'label' => __('patient.menu.medications'),
+                    'sub' => __('patient.menu.medications_sub'),
+                ],
+                [
+                    'href' => route('patient.favorites'),
+                    'icon' => 'heart',
+                    'label' => __('patient.menu.favorites'),
+                    'sub' => __('patient.menu.favorites_sub'),
+                ],
+            ],
+        ],
+        [
+            'heading' => __('patient.sidebar.group_help'),
+            'items' => [
+                [
+                    'href' => route('patient.support'),
+                    'icon' => 'question-mark-circle',
+                    'label' => __('patient.menu.support'),
+                    'sub' => __('patient.menu.support_sub'),
+                ],
+                [
+                    'href' => route('patient.privacy'),
+                    'icon' => 'shield-check',
+                    'label' => __('patient.menu.privacy'),
+                    'sub' => __('patient.menu.privacy_sub'),
+                ],
+            ],
+        ],
+    ];
+@endphp
+
 <x-layouts::patient>
-    <div class="mx-auto max-w-5xl pb-28 sm:pb-14">
-        <div class="px-4 py-8 sm:px-6 lg:px-8">
-            <flux:heading size="xl" class="sr-only">{{ __('patient.nav.menu') }}</flux:heading>
-
-            <div
-                class="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-5"
-                aria-label="{{ __('patient.menu.grid_aria') }}"
-            >
-                <a
-                    href="{{ route('patient.notifications') }}"
-                    wire:navigate
-                    class="group flex cursor-pointer flex-col gap-5 rounded-2xl border border-zinc-200/90 bg-white p-6 text-center shadow-[0_1px_4px_-1px_rgba(15,23,42,0.08)] outline-none ring-offset-2 ring-offset-white transition hover:border-[#3c5cf7]/35 hover:shadow-[0_4px_20px_-10px_rgba(60,92,247,0.35)] focus-visible:ring-2 focus-visible:ring-[#3c5cf7]/35 sm:p-8"
-                >
-                    <flux:icon name="bell" variant="outline" class="mx-auto size-12 transition text-zinc-500 group-hover:text-[#3c5cf7]" />
-                    <span class="block text-[0.8rem] font-semibold leading-snug text-zinc-900 group-hover:text-[#3c5cf7] sm:text-sm">{{ __('patient.menu.notifications') }}</span>
-                </a>
-
-                <a
-                    href="{{ route('patient.wallet') }}"
-                    wire:navigate
-                    class="group flex cursor-pointer flex-col gap-5 rounded-2xl border border-zinc-200/90 bg-white p-6 text-center shadow-[0_1px_4px_-1px_rgba(15,23,42,0.08)] outline-none ring-offset-2 ring-offset-white transition hover:border-[#3c5cf7]/35 hover:shadow-[0_4px_20px_-10px_rgba(60,92,247,0.35)] focus-visible:ring-2 focus-visible:ring-[#3c5cf7]/35 sm:p-8"
-                >
-                    <flux:icon name="banknotes" variant="outline" class="mx-auto size-12 transition text-zinc-500 group-hover:text-[#3c5cf7]" />
-                    <span class="block text-[0.8rem] font-semibold leading-snug text-zinc-900 group-hover:text-[#3c5cf7] sm:text-sm">{{ __('patient.menu.wallet') }}</span>
-                </a>
-
-                <a
-                    href="{{ route('patient.medications') }}"
-                    wire:navigate
-                    class="group flex cursor-pointer flex-col gap-5 rounded-2xl border border-zinc-200/90 bg-white p-6 text-center shadow-[0_1px_4px_-1px_rgba(15,23,42,0.08)] outline-none ring-offset-2 ring-offset-white transition hover:border-[#3c5cf7]/35 hover:shadow-[0_4px_20px_-10px_rgba(60,92,247,0.35)] focus-visible:ring-2 focus-visible:ring-[#3c5cf7]/35 sm:p-8"
-                >
-                    <flux:icon name="clipboard-document" variant="outline" class="mx-auto size-12 transition text-zinc-500 group-hover:text-[#3c5cf7]" />
-                    <span class="block text-[0.8rem] font-semibold leading-snug text-zinc-900 group-hover:text-[#3c5cf7] sm:text-sm">{{ __('patient.menu.medications') }}</span>
-                </a>
-
-                <a
-                    href="{{ route('profile.edit') }}"
-                    wire:navigate
-                    class="group flex cursor-pointer flex-col gap-5 rounded-2xl border border-zinc-200/90 bg-white p-6 text-center shadow-[0_1px_4px_-1px_rgba(15,23,42,0.08)] outline-none ring-offset-2 ring-offset-white transition hover:border-[#3c5cf7]/35 hover:shadow-[0_4px_20px_-10px_rgba(60,92,247,0.35)] focus-visible:ring-2 focus-visible:ring-[#3c5cf7]/35 sm:p-8"
-                >
-                    <flux:icon name="lock-closed" variant="outline" class="mx-auto size-12 transition text-zinc-500 group-hover:text-[#3c5cf7]" />
-                    <span class="block text-[0.8rem] font-semibold leading-snug text-zinc-900 group-hover:text-[#3c5cf7] sm:text-sm">{{ __('patient.menu.password') }}</span>
-                </a>
-
-                <a
-                    href="{{ route('profile.edit') }}"
-                    wire:navigate
-                    class="group flex cursor-pointer flex-col gap-5 rounded-2xl border border-zinc-200/90 bg-white p-6 text-center shadow-[0_1px_4px_-1px_rgba(15,23,42,0.08)] outline-none ring-offset-2 ring-offset-white transition hover:border-[#3c5cf7]/35 hover:shadow-[0_4px_20px_-10px_rgba(60,92,247,0.35)] focus-visible:ring-2 focus-visible:ring-[#3c5cf7]/35 sm:p-8"
-                >
-                    <flux:icon name="user-circle" variant="outline" class="mx-auto size-12 transition text-zinc-500 group-hover:text-[#3c5cf7]" />
-                    <span class="block text-[0.8rem] font-semibold leading-snug text-zinc-900 group-hover:text-[#3c5cf7] sm:text-sm">{{ __('patient.menu.personal_profile') }}</span>
-                </a>
-
-                <a
-                    href="{{ route('patient.phone') }}"
-                    wire:navigate
-                    class="group flex cursor-pointer flex-col gap-5 rounded-2xl border border-zinc-200/90 bg-white p-6 text-center shadow-[0_1px_4px_-1px_rgba(15,23,42,0.08)] outline-none ring-offset-2 ring-offset-white transition hover:border-[#3c5cf7]/35 hover:shadow-[0_4px_20px_-10px_rgba(60,92,247,0.35)] focus-visible:ring-2 focus-visible:ring-[#3c5cf7]/35 sm:p-8"
-                >
-                    <flux:icon name="phone" variant="outline" class="mx-auto size-12 transition text-zinc-500 group-hover:text-[#3c5cf7]" />
-                    <span class="block text-[0.8rem] font-semibold leading-snug text-zinc-900 group-hover:text-[#3c5cf7] sm:text-sm">{{ __('patient.menu.phone_number') }}</span>
-                </a>
-
-                <a
-                    href="{{ route('patient.favorites') }}"
-                    wire:navigate
-                    class="group flex cursor-pointer flex-col gap-5 rounded-2xl border border-zinc-200/90 bg-white p-6 text-center shadow-[0_1px_4px_-1px_rgba(15,23,42,0.08)] outline-none ring-offset-2 ring-offset-white transition hover:border-[#3c5cf7]/35 hover:shadow-[0_4px_20px_-10px_rgba(60,92,247,0.35)] focus-visible:ring-2 focus-visible:ring-[#3c5cf7]/35 sm:p-8"
-                >
-                    <flux:icon name="heart" variant="outline" class="mx-auto size-12 transition text-zinc-500 group-hover:text-[#3c5cf7]" />
-                    <span class="block text-[0.8rem] font-semibold leading-snug text-zinc-900 group-hover:text-[#3c5cf7] sm:text-sm">{{ __('patient.menu.favorites') }}</span>
-                </a>
-
-                <a
-                    href="{{ route('patient.support') }}"
-                    wire:navigate
-                    class="group flex cursor-pointer flex-col gap-5 rounded-2xl border border-zinc-200/90 bg-white p-6 text-center shadow-[0_1px_4px_-1px_rgba(15,23,42,0.08)] outline-none ring-offset-2 ring-offset-white transition hover:border-[#3c5cf7]/35 hover:shadow-[0_4px_20px_-10px_rgba(60,92,247,0.35)] focus-visible:ring-2 focus-visible:ring-[#3c5cf7]/35 sm:p-8"
-                >
-                    <flux:icon name="question-mark-circle" variant="outline" class="mx-auto size-12 transition text-zinc-500 group-hover:text-[#3c5cf7]" />
-                    <span class="block text-[0.8rem] font-semibold leading-snug text-zinc-900 group-hover:text-[#3c5cf7] sm:text-sm">{{ __('patient.menu.support') }}</span>
-                </a>
-
-                <div
-                    class="flex flex-col gap-5 rounded-2xl border border-zinc-200/90 bg-white p-6 text-center shadow-[0_1px_4px_-1px_rgba(15,23,42,0.08)] outline-none ring-offset-2 ring-offset-white sm:p-8"
-                    role="group"
-                    aria-label="{{ __('patient.menu.language_aria') }}"
-                >
-                    <flux:icon name="language" variant="outline" class="mx-auto size-12 text-zinc-500" />
-                    <span class="block text-[0.8rem] font-semibold leading-snug text-zinc-900 sm:text-sm">{{ __('patient.menu.language') }}</span>
-                    <div class="flex flex-wrap items-center justify-center gap-2 pt-2">
-                        <a
-                            href="{{ route('patient.locale', ['locale' => 'en']) }}"
-                            wire:navigate="false"
-                            class="rounded-full px-3 py-1 text-xs font-semibold transition hover:opacity-90 {{ app()->getLocale() === 'en' ? 'bg-mashora-brand text-white shadow-sm' : 'bg-zinc-100 text-zinc-700 hover:bg-zinc-200' }}"
-                        >
-                            {{ __('patient.menu.locale_en') }}
-                        </a>
-                        <a
-                            href="{{ route('patient.locale', ['locale' => 'ar']) }}"
-                            wire:navigate="false"
-                            class="rounded-full px-3 py-1 text-xs font-semibold transition hover:opacity-90 {{ app()->getLocale() === 'ar' ? 'bg-mashora-brand text-white shadow-sm' : 'bg-zinc-100 text-zinc-700 hover:bg-zinc-200' }}"
-                        >
-                            {{ __('patient.menu.locale_ar_short') }}
-                        </a>
-                    </div>
-                </div>
-
-                <a
-                    href="{{ route('patient.privacy') }}"
-                    wire:navigate
-                    class="group flex cursor-pointer flex-col gap-5 rounded-2xl border border-zinc-200/90 bg-white p-6 text-center shadow-[0_1px_4px_-1px_rgba(15,23,42,0.08)] outline-none ring-offset-2 ring-offset-white transition hover:border-[#3c5cf7]/35 hover:shadow-[0_4px_20px_-10px_rgba(60,92,247,0.35)] focus-visible:ring-2 focus-visible:ring-[#3c5cf7]/35 sm:p-8"
-                >
-                    <flux:icon name="shield-check" variant="outline" class="mx-auto size-12 transition text-zinc-500 group-hover:text-[#3c5cf7]" />
-                    <span class="block text-[0.8rem] font-semibold leading-snug text-zinc-900 group-hover:text-[#3c5cf7] sm:text-sm">{{ __('patient.menu.privacy') }}</span>
-                </a>
+    <div class="mx-auto max-w-5xl space-y-8 px-4 py-8 pb-28 sm:px-6 sm:pb-10 lg:px-8">
+        <div class="flex items-start justify-between gap-4">
+            <div>
+                <flux:heading size="xl" class="font-semibold text-[#1565c0]">{{ __('patient.nav.menu') }}</flux:heading>
+                <flux:text class="mt-1 text-zinc-600">{{ __('patient.menu.page_subtitle') }}</flux:text>
             </div>
-
-            @auth
-                
-            @endauth
+            <flux:button
+                :href="route('patient.home')"
+                wire:navigate
+                variant="ghost"
+                size="sm"
+                icon="arrow-left"
+                :aria-label="__('patient.appointments.back_aria')"
+            />
         </div>
+
+        @auth
+            <div class="rounded-2xl border border-[#1565c0]/20 bg-gradient-to-r from-[#1565c0]/8 via-white to-white p-5 shadow-sm sm:p-6">
+                <div class="flex flex-col gap-4 sm:flex-row sm:items-center">
+                    <flux:avatar :name="auth()->user()->name" circle size="xl" class="shrink-0 ring-2 ring-[#1565c0]/15" />
+                    <div class="min-w-0 flex-1">
+                        <p class="truncate text-lg font-semibold text-zinc-900">{{ auth()->user()->name }}</p>
+                        <div class="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-zinc-500">
+                            @if (filled(auth()->user()->email))
+                                <span class="truncate">{{ auth()->user()->email }}</span>
+                            @endif
+                            @if (filled(auth()->user()->phone))
+                                <span class="truncate" dir="ltr">{{ auth()->user()->phone }}</span>
+                            @endif
+                        </div>
+                    </div>
+                    <flux:button
+                        :href="route('profile.edit')"
+                        wire:navigate
+                        variant="primary"
+                        size="sm"
+                        icon="cog-6-tooth"
+                        class="w-full shrink-0 !bg-[#1565c0] !text-white hover:!brightness-95 sm:w-auto"
+                    >
+                        {{ __('patient.menu.account_settings') }}
+                    </flux:button>
+                </div>
+            </div>
+        @endauth
+
+        <nav class="space-y-8" aria-label="{{ __('patient.menu.grid_aria') }}">
+            @foreach ($menuSections as $section)
+                <section>
+                    <div class="mb-3 px-0.5">
+                        <p class="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                            {{ $section['heading'] }}
+                        </p>
+                    </div>
+
+                    <div
+                        class="-mx-4 flex gap-3 overflow-x-auto px-4 pb-1 snap-x snap-mandatory scroll-smooth sm:mx-0 sm:grid sm:grid-cols-2 sm:gap-4 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-3 xl:grid-cols-4"
+                    >
+                        @foreach ($section['items'] as $item)
+                            <a
+                                href="{{ $item['href'] }}"
+                                wire:navigate
+                                class="group flex w-[11.5rem] shrink-0 snap-start flex-col rounded-2xl border border-zinc-200/90 bg-white p-4 shadow-sm transition hover:border-[#1565c0]/35 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1565c0]/30 sm:w-auto sm:min-h-[8.5rem]"
+                            >
+                                <span class="inline-flex size-11 items-center justify-center rounded-xl bg-[#1565c0]/10 text-[#1565c0] transition group-hover:bg-[#1565c0]/15">
+                                    <flux:icon :name="$item['icon']" variant="outline" class="size-5" />
+                                </span>
+                                <span class="mt-3 block text-sm font-semibold leading-snug text-zinc-900 group-hover:text-[#1565c0]">
+                                    {{ $item['label'] }}
+                                </span>
+                                <span class="mt-1 line-clamp-2 text-xs leading-relaxed text-zinc-500">
+                                    {{ $item['sub'] }}
+                                </span>
+                            </a>
+                        @endforeach
+                    </div>
+                </section>
+            @endforeach
+        </nav>
     </div>
 </x-layouts::patient>

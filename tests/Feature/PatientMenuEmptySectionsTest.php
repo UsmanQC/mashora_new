@@ -10,6 +10,19 @@ test('guest is redirected from patient notifications', function () {
         ->assertRedirect(route('login'));
 });
 
+test('authenticated patient menu shows grouped shortcuts', function () {
+    $user = User::factory()->create(['profile_completed' => true]);
+
+    $response = $this->actingAs($user)->get(route('patient.menu'));
+
+    $response->assertSuccessful()
+        ->assertSeeText(__('patient.sidebar.group_account'))
+        ->assertSeeText(__('patient.menu.account_settings'))
+        ->assertSeeText(__('patient.menu.support'))
+        ->assertSee(route('patient.wallet'), false)
+        ->assertSee('snap-x', false);
+});
+
 test('authenticated patient sees no data on notifications page', function () {
     $user = User::factory()->create();
 

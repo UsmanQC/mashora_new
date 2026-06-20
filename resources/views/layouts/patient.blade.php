@@ -41,12 +41,6 @@
             <nav class="flex-1 overflow-y-auto px-2.5 pb-3 pt-2" aria-label="{{ __('patient.nav.label') }}">
                 @include('partials.patient-dock-buttons', ['orientation' => 'vertical', 'theme' => 'legacy'])
             </nav>
-
-            @auth
-                <footer class="mt-auto shrink-0 border-t border-white/15 px-4 py-4">
-                    @include('partials.patient-user-account-menu', ['density' => 'sidebar'])
-                </footer>
-            @endauth
         </aside>
 
         <main class="relative min-h-svh min-w-0 flex-1">

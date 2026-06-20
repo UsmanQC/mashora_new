@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Appointment;
+use App\Models\Doctor;
 use App\Support\PaymentGateway;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\App;
@@ -216,6 +217,11 @@ final class FollowUpPaymentCompletionService
             $appointment->forceFill([
                 'payment_invoice_id' => data_get($paymentResponse, 'InvoiceId') ?? $appointment->payment_invoice_id,
             ])->save();
+        }
+
+        $appointment->loadMissing('doctor');
+        if ($appointment->doctor instanceof Doctor) {
+            app(PatientAppointmentNotifier::class)->notifyFollowUpBooked($appointment, $appointment->doctor);
         }
 
         return $appointment->fresh();

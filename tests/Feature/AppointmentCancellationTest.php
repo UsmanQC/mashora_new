@@ -37,7 +37,12 @@ test('doctor cancelling appointment notifies patient and shows in cancelled tab'
         'end_time' => '10:30:00',
         'scheduled_at' => now()->addDays(3)->format('Y-m-d').' 10:00:00',
         'total' => 200,
+        'doctor_share' => 140,
+        'mashora_share' => 60,
+        'wallet_amount' => 200,
     ]);
+
+    $doctor->depositFloat(140.00);
 
     $this->actingAs($doctor, 'doctor');
 
@@ -48,7 +53,11 @@ test('doctor cancelling appointment notifies patient and shows in cancelled tab'
     $appointment->refresh();
 
     expect($appointment->status)->toBe('cancelled')
-        ->and($appointment->cancel_status)->toBe('doctor');
+        ->and($appointment->cancel_status)->toBe('doctor')
+        ->and((float) $user->fresh()->balanceFloat)->toBe(200.0)
+        ->and((float) $doctor->fresh()->balanceFloat)->toBe(-60.0)
+        ->and((float) $appointment->doctor_share)->toBe(0.0)
+        ->and((float) $appointment->mashora_share)->toBe(0.0);
 
     $notification = Notification::query()
         ->where('userable_id', $user->id)

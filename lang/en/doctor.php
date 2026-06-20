@@ -181,6 +181,9 @@ return [
         'cancel_confirm' => 'Cancel this appointment and refund the full amount to the patient\'s wallet?',
         'cancel_refunded' => 'Appointment cancelled. The amount was refunded to the patient\'s wallet.',
         'cancel_not_allowed' => 'This appointment can no longer be cancelled.',
+        'open_session' => 'Open session',
+        'view_session' => 'View session',
+        'follow_up_pending' => 'Follow-up pending',
     ],
 
     'appointment_status' => [
@@ -190,6 +193,7 @@ return [
         'cancelled' => 'Cancelled',
         'rescheduled' => 'Rescheduled',
         'not_attended' => 'Not attended',
+        'pending_follow_up' => 'Follow-up pending',
     ],
 
     'card' => [
@@ -219,6 +223,7 @@ return [
         'prescription_body' => 'Please add the prescription after you can complete the appointment',
         'ok' => 'OK',
         'success' => 'Completed! Appointment has been completed.',
+        'follow_up_next' => 'You can now invite the patient to a follow-up session.',
     ],
 
     'workspace' => [
@@ -268,9 +273,13 @@ return [
         'success' => 'Follow-up invitation sent for :date at :time.',
         'slot_unavailable' => 'That time slot is no longer available.',
         'already_pending' => 'A follow-up invitation is already waiting for this patient.',
-        'parent_not_eligible' => 'This appointment cannot be used to schedule a follow-up yet.',
+        'parent_not_eligible' => 'Mark this session as completed before sending a follow-up invitation.',
         'patient_missing' => 'This appointment has no linked patient account.',
         'patient_flow_hint' => 'The patient must confirm the follow-up, then pay before the appointment is booked.',
+        'complete_session_first' => 'Complete this session first, then you can invite the patient to a follow-up.',
+        'pending_title' => 'Follow-up invitation sent',
+        'pending_body' => 'Waiting for the patient to confirm and pay. You can send a new invitation only after this one is resolved.',
+        'pending_status' => 'Awaiting patient confirmation',
     ],
 
     'medical_history' => [

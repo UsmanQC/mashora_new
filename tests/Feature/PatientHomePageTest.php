@@ -24,6 +24,29 @@ test('guest is redirected to patient phone from important numbers', function () 
         ->assertRedirect(route('patient.phone'));
 });
 
+test('authenticated patient navbar shows language switch', function () {
+    $user = User::factory()->create(['profile_completed' => true]);
+
+    $this->actingAs($user)->get(route('patient.home'))
+        ->assertSuccessful()
+        ->assertSee('data-test="patient-navbar-language-switch"', false)
+        ->assertSee(route('patient.locale', ['locale' => 'en']), false)
+        ->assertSee(route('patient.locale', ['locale' => 'ar']), false)
+        ->assertSee(__('patient.menu.locale_en'), false)
+        ->assertSee(__('patient.menu.locale_ar_short'), false);
+});
+
+test('authenticated patient sidebar shows dock navigation links', function () {
+    $user = User::factory()->create(['profile_completed' => true]);
+
+    $response = $this->actingAs($user)->get(route('patient.home'));
+
+    $response->assertSuccessful()
+        ->assertSee(__('patient.nav.home'), false)
+        ->assertSee(__('patient.nav.appointments'), false)
+        ->assertSee(route('patient.menu'), false);
+});
+
 test('authenticated patient home renders arabic strings when locale is ar', function () {
     app()->setLocale('ar');
     $user = User::factory()->create([
@@ -77,13 +100,15 @@ test('signed-in patient home links both session cards to schedule filter', funct
     expect(substr_count($response->content(), $filterUrl))->toBe(2);
 });
 
-test('signed-in patient layout exposes account menu logout control', function () {
+test('signed-in patient navbar exposes account menu with logout', function () {
     $user = User::factory()->create(['profile_completed' => true]);
 
     $this->actingAs($user)->get(route('patient.home'))
         ->assertSuccessful()
+        ->assertSee('data-test="patient-account-menu-button"', false)
         ->assertSee('data-test="patient-logout-button"', false)
-        ->assertSee(route('logout'), false);
+        ->assertSee(route('logout'), false)
+        ->assertSee(route('profile.edit'), false);
 });
 
 test('patient appointments ongoing tab shows only new and in process for authenticated user', function () {
