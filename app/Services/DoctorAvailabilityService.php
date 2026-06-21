@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Appointment;
 use App\Models\Doctor;
+use App\Support\AppTimezone;
 use Carbon\Carbon;
 
 class DoctorAvailabilityService
@@ -29,7 +30,7 @@ class DoctorAvailabilityService
         int $durationMinutes,
         ?int $excludeAppointmentId = null,
     ): array {
-        $timezone = config('app.timezone');
+        $timezone = AppTimezone::name();
         $duration = max(self::SLOT_MINUTES, $durationMinutes);
 
         $baseSlots = $this->baseSlotsForDate($doctor, $date, $timezone, $duration);
@@ -44,7 +45,7 @@ class DoctorAvailabilityService
         }
 
         $now = now()->timezone($timezone);
-        $isToday = $selectedDate->isSameDay($now);
+        $isToday = $selectedDate->toDateString() === $now->toDateString();
 
         $taken = $this->takenRanges($doctor->id, $date, $excludeAppointmentId);
 
@@ -56,7 +57,7 @@ class DoctorAvailabilityService
                     return false;
                 }
 
-                if ($isToday && $start->lessThanOrEqualTo($now)) {
+                if ($isToday && ! $start->greaterThan($now)) {
                     return false;
                 }
 
@@ -83,7 +84,7 @@ class DoctorAvailabilityService
         ?string $preferredDate = null,
         int $lookaheadDays = 60,
     ): ?string {
-        $timezone = config('app.timezone');
+        $timezone = AppTimezone::name();
         $start = $preferredDate !== null
             ? Carbon::parse($preferredDate, $timezone)->startOfDay()
             : now($timezone)->startOfDay();
@@ -114,7 +115,7 @@ class DoctorAvailabilityService
         ?string $timezone = null,
         int $durationMinutes = self::SLOT_MINUTES,
     ): array {
-        $timezone ??= config('app.timezone');
+        $timezone ??= AppTimezone::name();
         $duration = max(self::SLOT_MINUTES, $durationMinutes);
 
         try {
@@ -200,7 +201,7 @@ class DoctorAvailabilityService
      */
     private function takenRanges(int $doctorId, string $date, ?int $excludeAppointmentId): array
     {
-        $timezone = config('app.timezone');
+        $timezone = AppTimezone::name();
 
         return Appointment::query()
             ->where('doctor_id', $doctorId)

@@ -37,7 +37,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
 
     public function sendMessage(): void
     {
-        if (! in_array($this->appointment->status, ['new', 'in_process'], true)) {
+        if ($this->appointment->status !== 'in_process') {
             return;
         }
 
@@ -176,6 +176,16 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
         data-session-started-banner="{{ __('patient.appointments.session_started_join_now') }}"
     ></div>
 
+    @if (in_array($appointment->status, ['new', 'rescheduled'], true))
+        <flux:callout variant="secondary" icon="clock" class="border-zinc-200">
+            {{ __('patient.appointments.chat_locked_until_doctor_starts') }}
+        </flux:callout>
+    @elseif ($appointment->status === 'completed')
+        <flux:callout variant="secondary" icon="check-circle" class="border-zinc-200">
+            {{ __('patient.appointments.session_closed') }}
+        </flux:callout>
+    @endif
+
     <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:max-w-xl">
         <div class="rounded-xl border border-zinc-200/80 bg-gradient-to-br from-white to-zinc-50 px-3 py-2 shadow-sm">
             <p class="text-[11px] font-semibold uppercase tracking-wide text-zinc-400">{{ __('patient.appointments.session_elapsed_label') }}</p>
@@ -237,9 +247,9 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                     type="text"
                     :placeholder="__('patient.appointments.type_message')"
                     class="flex-1 !border-0 !bg-transparent !shadow-none"
-                    :disabled="! in_array($appointment->status, ['new', 'in_process'], true)"
+                    :disabled="$appointment->status !== 'in_process'"
                 />
-                <flux:button type="submit" variant="primary" icon="paper-airplane" class="shadow-md shadow-[#132A6E]/25" wire:loading.attr="disabled" :disabled="! in_array($appointment->status, ['new', 'in_process'], true)">
+                <flux:button type="submit" variant="primary" icon="paper-airplane" class="shadow-md shadow-[#132A6E]/25" wire:loading.attr="disabled" :disabled="$appointment->status !== 'in_process'">
                     {{ __('patient.appointments.send') }}
                 </flux:button>
             </form>
@@ -561,8 +571,8 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 showOverlay(true);
             }
 
-            videoBtn?.addEventListener('click', () => joinCall('video', null, true));
-            audioBtn?.addEventListener('click', () => joinCall('audio', null, true));
+            videoBtn?.addEventListener('click', () => joinCall('video', null, false));
+            audioBtn?.addEventListener('click', () => joinCall('audio', null, false));
             leaveBtn?.addEventListener('click', () => leaveCall().catch(() => {}));
             toggleMicBtn?.addEventListener('click', () => {
                 if (localAudio) {

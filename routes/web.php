@@ -6,7 +6,7 @@ use App\Http\Controllers\Patient\PatientPaymentController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
-Route::view('/', 'welcome')->name('home');
+Route::redirect('/', '/patient')->name('home');
 
 Route::middleware(['patient.redirect'])->group(function () {
     Route::redirect('patient/start', '/patient/phone', 302)
@@ -164,7 +164,7 @@ Route::view('patient/important-numbers', 'patient.important-numbers')
     ->name('patient.important-numbers');
 
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::view('dashboard', 'dashboard')->name('dashboard');
+    Route::redirect('dashboard', '/patient')->name('dashboard');
 });
 
 require __DIR__.'/settings.php';

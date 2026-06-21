@@ -12,6 +12,7 @@
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <link rel="manifest" href="/manifest.webmanifest" />
         @include('partials.head')
+        @include('partials.intl-tel-input-patient-styles')
         @stack('styles')
     </head>
     <body class="h-svh max-h-svh overflow-hidden bg-[#F3F5F7] antialiased lg:bg-white">
@@ -103,6 +104,7 @@
             </flux:toast.group>
         @endpersist
 
+        @include('partials.intl-tel-input-patient-scripts')
         @stack('scripts')
         @fluxScripts
     </body>

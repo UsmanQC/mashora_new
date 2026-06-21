@@ -9,8 +9,15 @@ use Livewire\Livewire;
 
 uses(RefreshDatabase::class);
 
-test('guest is redirected to patient phone from patient home', function () {
+test('guest can view patient home', function () {
     $this->get(route('patient.home'))
+        ->assertSuccessful()
+        ->assertSee(__('patient.mood_section'), false);
+});
+
+test('guest mood day click redirects to patient phone entry', function () {
+    Livewire::test('pages::patient.home')
+        ->call('selectMoodDay')
         ->assertRedirect(route('patient.phone'));
 });
 
@@ -59,22 +66,21 @@ test('authenticated patient home renders arabic strings when locale is ar', func
         ->assertSee(__('patient.portal_greeting', ['name' => 'User']), false);
 });
 
-test('mood week strip opens mood picker instead of linking to phone entry', function () {
+test('mood week strip opens mood picker for authenticated patients', function () {
     $user = User::factory()->create(['profile_completed' => true]);
 
     $this->actingAs($user)
         ->get(route('patient.home'))
         ->assertSuccessful()
-        ->assertSee('wire:click="openMoodPicker"', false)
-        ->assertDontSee(__('patient.mood_strip_phone_link_aria'), false);
+        ->assertSee('wire:click="selectMoodDay"', false);
 });
 
-test('clicking mood day on home dispatches open patient mood picker event', function () {
+test('clicking mood day on home dispatches open patient mood picker event for authenticated patients', function () {
     $user = User::factory()->create(['profile_completed' => true]);
 
     Livewire::actingAs($user)
         ->test('pages::patient.home')
-        ->call('openMoodPicker')
+        ->call('selectMoodDay')
         ->assertDispatched('open-patient-mood-picker');
 });
 
@@ -109,6 +115,29 @@ test('signed-in patient navbar exposes account menu with logout', function () {
         ->assertSee('data-test="patient-logout-button"', false)
         ->assertSee(route('logout'), false)
         ->assertSee(route('profile.edit'), false);
+});
+
+test('patient ongoing appointment shows countdown timer next to waiting status', function () {
+    $user = User::factory()->create(['profile_completed' => true]);
+    $doctor = Doctor::factory()->create();
+    $startsAt = now()->addHours(3);
+
+    Appointment::factory()->create([
+        'user_id' => $user->id,
+        'doctor_id' => $doctor->id,
+        'patient_name' => 'Patient Test',
+        'status' => 'new',
+        'appointment_date' => $startsAt->toDateString(),
+        'start_time' => $startsAt->format('H:i:s'),
+        'scheduled_at' => $startsAt,
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('patient.appointments'))
+        ->assertSuccessful()
+        ->assertSee(__('patient.appointments.status_new'), false)
+        ->assertSee('appointmentStartTimer', false)
+        ->assertSee($startsAt->toIso8601String(), false);
 });
 
 test('patient appointments ongoing tab shows only new and in process for authenticated user', function () {
@@ -224,7 +253,7 @@ test('patient appointments completed tab shows only completed for authenticated 
         ->assertDontSee('Patient Ongoing Hidden', false);
 });
 
-test('patient appointments show start session link for ongoing records', function () {
+test('patient appointments show join session link after doctor starts', function () {
     $user = User::factory()->create(['profile_completed' => true]);
     $doctor = Doctor::factory()->create();
 
@@ -232,12 +261,13 @@ test('patient appointments show start session link for ongoing records', functio
         'user_id' => $user->id,
         'doctor_id' => $doctor->id,
         'status' => 'in_process',
+        'actual_start_at' => now(),
     ]);
 
     $this->actingAs($user)->get(route('patient.appointments'))
         ->assertSuccessful()
         ->assertSee(route('patient.appointments.conversation', ['appointment' => $appointment->id]), false)
-        ->assertSee(__('patient.appointments.start_session'), false);
+        ->assertSee(__('patient.appointments.join_session'), false);
 });
 
 test('patient appointments renders realtime notification scripts', function () {

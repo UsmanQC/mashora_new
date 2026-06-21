@@ -3,6 +3,7 @@
 use App\Events\AppointmentChatMessageSent;
 use App\Models\Appointment;
 use App\Models\ChMessage;
+use App\Services\AppointmentSessionService;
 use App\Support\DoctorAgoraChannel;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
@@ -31,15 +32,16 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
         $this->loadMessages();
     }
 
-    public function startSession(): void
+    public function startSession(AppointmentSessionService $sessions): void
     {
-        if ($this->appointment->status !== 'new') {
+        $doctor = auth('doctor')->user();
+        if ($doctor === null) {
             return;
         }
 
-        $this->appointment->update([
-            'status' => 'in_process',
-        ]);
+        if (! $sessions->start($doctor, $this->appointment)) {
+            return;
+        }
 
         $this->appointment->refresh();
         $this->refreshAgoraCredentials();
@@ -109,41 +111,7 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
 }; ?>
 
 <div class="space-y-5">
-    <div class="flex items-center justify-between gap-3">
-        <flux:link :href="route('doctor.dashboard')" wire:navigate class="text-sm font-medium text-[#3C5CF7]">
-            <flux:icon name="chevron-left" variant="mini" class="inline size-4 align-middle rtl:rotate-180" />
-            {{ __('doctor.workspace.back_dashboard') }}
-        </flux:link>
-    </div>
-
-    <nav class="-mx-1 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" aria-label="{{ __('doctor.workspace.title') }}">
-        <ul class="flex min-w-max gap-2 px-1">
-            <li>
-                <a href="{{ route('doctor.appointments.medical-history', $appointment) }}" wire:navigate class="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-700 transition hover:border-[#3C5CF7] hover:text-[#3C5CF7]">
-                    <flux:icon name="clipboard-document-list" variant="mini" class="size-4" />
-                    {{ __('doctor.workspace.tab_medical_history') }}
-                </a>
-            </li>
-            <li>
-                <a href="{{ route('doctor.appointments.diagnosis', $appointment) }}" wire:navigate class="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-700 transition hover:border-[#3C5CF7] hover:text-[#3C5CF7]">
-                    <flux:icon name="document-text" variant="mini" class="size-4" />
-                    {{ __('doctor.workspace.tab_diagnosis') }}
-                </a>
-            </li>
-            <li>
-                <a href="{{ route('doctor.appointments.prescription', $appointment) }}" wire:navigate class="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-700 transition hover:border-[#3C5CF7] hover:text-[#3C5CF7]">
-                    <flux:icon name="beaker" variant="mini" class="size-4" />
-                    {{ __('doctor.workspace.tab_prescription') }}
-                </a>
-            </li>
-            <li>
-                <a href="{{ route('doctor.appointments.conversation', $appointment) }}" wire:navigate aria-current="page" class="inline-flex items-center gap-2 rounded-full border !border-[#132A6E] bg-[#132A6E] px-4 py-2 text-sm font-medium text-white transition">
-                    <flux:icon name="chat-bubble-left-right" variant="mini" class="size-4" />
-                    {{ __('doctor.workspace.tab_conversation') }}
-                </a>
-            </li>
-        </ul>
-    </nav>
+    @include('partials.doctor-appointment-workspace-header', ['appointment' => $appointment, 'active' => 'conversation'])
 
     <div
         id="conversation-page-metrics"
@@ -215,7 +183,7 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                         @endif
 
                         <div class="flex flex-wrap items-center gap-2 xl:justify-end">
-                            @if ($appointment->status === 'new')
+                            @if (in_array($appointment->status, ['new', 'rescheduled'], true))
                                 <flux:button type="button" variant="primary" icon="play" class="min-h-10 shadow-md shadow-[#132A6E]/20" wire:click="startSession" wire:loading.attr="disabled">
                                     {{ __('doctor.conversation.start_session') }}
                                 </flux:button>
@@ -336,7 +304,7 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                             <span class="hidden sm:inline">{{ __('doctor.conversation.send') }}</span>
                         </flux:button>
                     </form>
-                    @if ($appointment->status === 'new')
+                    @if (in_array($appointment->status, ['new', 'rescheduled'], true))
                         <p class="mt-2.5 text-center text-xs text-zinc-500">{{ __('doctor.conversation.chat_locked_until_started') }}</p>
                     @endif
                 </div>

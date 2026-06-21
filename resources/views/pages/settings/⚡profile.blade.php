@@ -87,7 +87,7 @@ new #[Layout('layouts::patient')] #[Title('Personal profile')] class extends Com
         $user = Auth::user();
 
         if ($user->hasVerifiedEmail()) {
-            $this->redirectIntended(default: route('dashboard', absolute: false));
+            $this->redirectIntended(default: route('patient.home', absolute: false));
 
             return;
         }

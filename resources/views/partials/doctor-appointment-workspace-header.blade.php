@@ -70,28 +70,28 @@
                 </p>
             </div>
         </div>
-    </div>
 
-    <nav class="-mx-1 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" aria-label="{{ __('doctor.workspace.title') }}">
-        <ul class="flex min-w-max gap-2 px-1">
-            @foreach ($tabs as $key => $tab)
-                @php $isActive = $key === $active; @endphp
-                <li>
-                    <a
-                        href="{{ $tab['route'] }}"
-                        wire:navigate
-                        @class([
-                            'inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition',
-                            '!border-[#132A6E] bg-[#132A6E] text-white' => $isActive,
-                            'border-zinc-200 bg-white text-zinc-700 hover:border-[#3C5CF7] hover:text-[#3C5CF7]' => ! $isActive,
-                        ])
-                        @if ($isActive) aria-current="page" @endif
-                    >
-                        <flux:icon :name="$tab['icon']" variant="mini" class="size-4" />
-                        {{ $tab['label'] }}
-                    </a>
-                </li>
-            @endforeach
-        </ul>
-    </nav>
+        <nav class="mt-4 border-t border-zinc-100 pt-4" aria-label="{{ __('doctor.workspace.title') }}">
+            <ul class="flex flex-wrap gap-2">
+                @foreach ($tabs as $key => $tab)
+                    @php $isActive = $key === $active; @endphp
+                    <li class="min-w-0">
+                        <a
+                            href="{{ $tab['route'] }}"
+                            wire:navigate
+                            @class([
+                                'inline-flex max-w-full items-center gap-1.5 rounded-full border px-3 py-2 text-xs font-semibold transition sm:gap-2 sm:px-4 sm:text-sm',
+                                '!border-[#132A6E] bg-[#132A6E] text-white shadow-sm' => $isActive,
+                                'border-zinc-200 bg-zinc-50 text-zinc-700 hover:border-[#3C5CF7] hover:bg-white hover:text-[#3C5CF7]' => ! $isActive,
+                            ])
+                            @if ($isActive) aria-current="page" @endif
+                        >
+                            <flux:icon :name="$tab['icon']" variant="mini" class="size-4 shrink-0" />
+                            <span class="whitespace-nowrap">{{ $tab['label'] }}</span>
+                        </a>
+                    </li>
+                @endforeach
+            </ul>
+        </nav>
+    </div>
 </div>

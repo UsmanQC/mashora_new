@@ -43,9 +43,7 @@ new #[Layout('layouts::patient')] #[Title('Specialists')] class extends Componen
 
     protected function patientTimezone(): string
     {
-        $appTimezone = (string) config('app.timezone', 'UTC');
-
-        return $appTimezone === 'UTC' ? 'Asia/Riyadh' : $appTimezone;
+        return \App\Support\AppTimezone::name();
     }
 
     /**

@@ -126,19 +126,6 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
         };
     }
 
-    public function statusAccentClasses(string $status): string
-    {
-        return match ($status) {
-            'new' => 'border-s-sky-500',
-            'in_process' => 'border-s-amber-500',
-            'pending_follow_up' => 'border-s-violet-500',
-            'rescheduled' => 'border-s-indigo-500',
-            'completed' => 'border-s-emerald-500',
-            'cancelled' => 'border-s-rose-500',
-            default => 'border-s-zinc-300',
-        };
-    }
-
     public function statusBadgeClasses(string $status): string
     {
         return match ($status) {
@@ -171,6 +158,20 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
         }
     }
 
+    public function shouldShowStartTimer(Appointment $appointment): bool
+    {
+        if (! in_array($appointment->status, ['new', 'rescheduled'], true)) {
+            return false;
+        }
+
+        return $appointment->sessionStartsAt() !== null;
+    }
+
+    public function sessionStartsAtIso(Appointment $appointment): ?string
+    {
+        return $appointment->sessionStartsAt()?->toIso8601String();
+    }
+
     /**
      * @return list<int>
      */
@@ -185,212 +186,151 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
     }
 }; ?>
 
-@php
-    $tabCardActive = 'border-[#1565c0] bg-[#1565c0]/5 shadow-md ring-1 ring-[#1565c0]/20';
-    $tabCardInactive = 'border-zinc-200/90 bg-white hover:border-[#1565c0]/30 hover:shadow-md';
-@endphp
-
-<div class="mx-auto max-w-3xl space-y-6 px-4 py-8 pb-28 sm:pb-10">
-    <div id="patient-call-join-banner" class="hidden rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50 to-white px-4 py-3 shadow-sm">
-        <div class="flex flex-wrap items-center justify-between gap-3">
-            <div class="flex min-w-0 items-center gap-2">
-                <span class="inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
-                    <flux:icon name="video-camera" variant="mini" class="size-4" />
-                </span>
+<div class="pb-28 sm:pb-10">
+    <div id="patient-call-join-banner" class="mx-auto hidden max-w-5xl px-4 pt-4 lg:px-8">
+        <div class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+            <div class="flex flex-wrap items-center justify-between gap-3">
                 <p id="patient-call-join-text" class="text-sm font-medium text-emerald-900"></p>
+                <a
+                    id="patient-call-join-now"
+                    href="#"
+                    wire:navigate
+                    class="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-700"
+                >
+                    {{ __('patient.appointments.join_session') }}
+                </a>
             </div>
-            <a
-                id="patient-call-join-now"
-                href="#"
-                wire:navigate
-                class="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-700"
-            >
-                <flux:icon name="chat-bubble-left-right" variant="mini" class="size-4" />
-                {{ __('patient.appointments.start_session') }}
-            </a>
         </div>
     </div>
 
-    <div class="flex items-start justify-between gap-4">
-        <div>
-            <flux:heading size="xl" class="font-semibold text-[#1565c0]">{{ __('patient.appointments.title') }}</flux:heading>
-            <flux:text class="mt-1 text-zinc-600">{{ __('patient.appointments.subtitle') }}</flux:text>
-        </div>
-        <flux:button
-            :href="route('patient.home')"
-            wire:navigate
-            variant="ghost"
-            size="sm"
-            icon="arrow-left"
-            :aria-label="__('patient.appointments.back_aria')"
-        />
-    </div>
-
-    <div class="rounded-2xl border border-[#1565c0]/20 bg-gradient-to-br from-[#1565c0]/8 via-white to-white p-5 shadow-sm sm:p-6">
-        <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    {{-- Page header --}}
+    <div class="border-b border-slate-200/80 bg-white px-4 py-5 sm:px-6 lg:px-8">
+        <div class="mx-auto flex max-w-5xl items-start justify-between gap-4">
             <div class="min-w-0">
-                <p class="text-base font-semibold text-zinc-900">{{ __('patient.appointments.book_card_title') }}</p>
-                <p class="mt-1 text-sm text-zinc-600">{{ __('patient.appointments.book_card_sub') }}</p>
+                <flux:heading size="xl" class="font-semibold text-[#1565c0]">{{ __('patient.appointments.title') }}</flux:heading>
+                <flux:text class="mt-1 text-sm text-zinc-500">{{ __('patient.appointments.subtitle') }}</flux:text>
             </div>
             <flux:button
-                :href="route('patient.schedule.filter')"
+                :href="route('patient.home')"
                 wire:navigate
-                variant="primary"
-                icon="calendar-days"
-                class="w-full shrink-0 !bg-[#1565c0] !text-white hover:!brightness-95 sm:w-auto"
-            >
-                {{ __('patient.appointments.book_new') }}
-            </flux:button>
+                variant="ghost"
+                size="sm"
+                icon="arrow-left"
+                :aria-label="__('patient.appointments.back_aria')"
+            />
         </div>
     </div>
 
-    <div class="grid grid-cols-2 gap-3 sm:grid-cols-4" role="tablist" aria-label="{{ __('patient.appointments.tabs_aria') }}">
-        @foreach ([
-            'ongoing' => ['label' => __('patient.appointments.tab_ongoing'), 'icon' => 'clock'],
-            'rescheduled' => ['label' => __('patient.appointments.tab_rescheduled'), 'icon' => 'arrow-path'],
-            'completed' => ['label' => __('patient.appointments.tab_completed'), 'icon' => 'check-circle'],
-            'cancelled' => ['label' => __('patient.appointments.tab_cancelled'), 'icon' => 'x-circle'],
-        ] as $tabKey => $tabMeta)
-            <button
-                type="button"
-                role="tab"
-                wire:click="selectTab('{{ $tabKey }}')"
-                aria-selected="{{ $tab === $tabKey ? 'true' : 'false' }}"
-                class="rounded-2xl border p-4 text-start shadow-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1565c0]/30 {{ $tab === $tabKey ? $tabCardActive : $tabCardInactive }}"
-            >
-                <div class="flex items-center justify-between gap-2">
-                    <flux:icon :name="$tabMeta['icon']" variant="mini" @class(['size-4', $tab === $tabKey ? 'text-[#1565c0]' : 'text-zinc-400']) />
-                    <span class="text-2xl font-bold tabular-nums text-[#1565c0]">{{ $this->tabCounts[$tabKey] ?? 0 }}</span>
-                </div>
-                <p class="mt-2 text-xs font-semibold uppercase tracking-wide text-zinc-500">{{ $tabMeta['label'] }}</p>
-            </button>
-        @endforeach
-    </div>
-
-    <section class="rounded-2xl border border-zinc-200/90 bg-white shadow-sm" role="tabpanel" aria-live="polite">
-        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-100 px-5 py-4 sm:px-6">
-            <div>
-                <flux:heading size="lg" class="font-semibold text-zinc-900">{{ $this->tabHeading() }}</flux:heading>
-                <flux:text class="mt-0.5 text-sm text-zinc-500">{{ __('patient.appointments.list_heading') }}</flux:text>
-            </div>
-            <span class="inline-flex items-center rounded-full bg-[#1565c0]/10 px-3 py-1 text-xs font-semibold text-[#1565c0]">
-                {{ $this->tabCounts[$tab] ?? 0 }}
+    <div class="mx-auto max-w-5xl space-y-5 px-4 py-6 lg:space-y-6 lg:px-8 lg:py-8">
+        {{-- Book CTA --}}
+        <a
+            href="{{ route('patient.schedule.filter') }}"
+            wire:navigate
+            class="flex items-center gap-4 rounded-2xl bg-[#1565c0] p-4 text-white shadow-md shadow-[#1565c0]/25 transition hover:brightness-105 sm:p-5 lg:gap-5"
+        >
+            <span class="flex size-11 shrink-0 items-center justify-center rounded-xl bg-white/15 lg:size-12">
+                <flux:icon name="calendar-days" variant="mini" class="size-5 lg:size-6" />
             </span>
+            <span class="min-w-0 flex-1">
+                <span class="block text-sm font-semibold sm:text-base">{{ __('patient.appointments.book_card_title') }}</span>
+                <span class="mt-0.5 block text-xs text-white/80 sm:text-sm">{{ __('patient.appointments.book_card_sub') }}</span>
+            </span>
+            <span class="hidden shrink-0 items-center gap-1.5 rounded-xl bg-white/15 px-4 py-2 text-sm font-semibold sm:inline-flex">
+                <flux:icon name="plus" variant="mini" class="size-4" />
+                {{ __('patient.appointments.book_new') }}
+            </span>
+            <flux:icon name="chevron-{{ app()->getLocale() === 'ar' ? 'left' : 'right' }}" variant="mini" class="size-5 shrink-0 opacity-80 sm:hidden rtl:rotate-180" />
+        </a>
+
+        {{-- Tab filters --}}
+        <div
+            class="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-2.5"
+            role="tablist"
+            aria-label="{{ __('patient.appointments.tabs_aria') }}"
+        >
+            @foreach ([
+                'ongoing' => __('patient.appointments.tab_ongoing'),
+                'rescheduled' => __('patient.appointments.tab_rescheduled'),
+                'completed' => __('patient.appointments.tab_completed'),
+                'cancelled' => __('patient.appointments.tab_cancelled'),
+            ] as $tabKey => $tabLabel)
+                @php($isActiveTab = $tab === $tabKey)
+                @php($tabCount = $this->tabCounts[$tabKey] ?? 0)
+                <button
+                    type="button"
+                    role="tab"
+                    wire:click="selectTab('{{ $tabKey }}')"
+                    wire:loading.attr="disabled"
+                    aria-selected="{{ $isActiveTab ? 'true' : 'false' }}"
+                    @class([
+                        'group relative flex min-h-[5.25rem] flex-col items-center justify-center gap-1.5 rounded-xl border px-3 py-3 text-center transition-all duration-200 sm:min-h-[5.75rem] sm:px-4 sm:py-3.5',
+                        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1565c0]/40 focus-visible:ring-offset-2',
+                        'cursor-pointer disabled:cursor-wait disabled:opacity-70',
+                        $isActiveTab
+                            ? 'border-[#1565c0] bg-[#1565c0] text-white shadow-lg shadow-[#1565c0]/25'
+                            : 'border-zinc-200 bg-white text-zinc-700 shadow-sm hover:-translate-y-0.5 hover:border-[#1565c0]/35 hover:bg-[#1565c0]/[0.04] hover:shadow-md active:translate-y-0',
+                    ])
+                >
+                    <span @class([
+                        'inline-flex min-h-8 min-w-8 items-center justify-center rounded-lg px-2.5 text-xl font-bold tabular-nums leading-none sm:text-2xl',
+                        $isActiveTab
+                            ? 'bg-white/20 text-white'
+                            : 'bg-zinc-100 text-zinc-800 group-hover:bg-[#1565c0]/10 group-hover:text-[#1565c0]',
+                    ])>
+                        {{ $tabCount }}
+                    </span>
+                    <span @class([
+                        'text-xs font-semibold leading-tight sm:text-sm',
+                        $isActiveTab ? 'text-white' : 'text-zinc-600 group-hover:text-[#1565c0]',
+                    ])>
+                        {{ $tabLabel }}
+                    </span>
+                </button>
+            @endforeach
         </div>
 
-        @if ($this->appointments->isEmpty())
-            <div class="flex flex-col items-center px-6 py-12 text-center sm:py-16">
-                @include('partials.patient-empty-record-illustration')
-                <p class="mt-6 max-w-sm text-sm font-medium text-zinc-500 sm:text-base">
-                    {{ $this->tabEmptyMessage() }}
-                </p>
-                @if ($tab === 'ongoing')
-                    <flux:button
-                        :href="route('patient.schedule.filter')"
-                        wire:navigate
-                        variant="primary"
-                        class="mt-6 !bg-[#1565c0] !text-white hover:!brightness-95"
-                    >
-                        {{ __('patient.appointments.book_new') }}
-                    </flux:button>
-                @endif
-            </div>
-        @else
-            <div class="space-y-3 p-4 sm:p-5">
-                @foreach ($this->appointments as $appointment)
-                    <article
-                        @class([
-                            'overflow-hidden rounded-2xl border border-zinc-200/90 bg-white shadow-sm transition hover:border-[#1565c0]/25 hover:shadow-md',
-                            'border-s-4',
-                            $this->statusAccentClasses((string) $appointment->status),
-                        ])
-                    >
-                        <div class="p-4 sm:p-5">
-                            <div class="flex items-start gap-4">
-                                <flux:avatar
-                                    :name="$appointment->doctor?->displayName() ?: 'DR'"
-                                    circle
-                                    size="lg"
-                                    class="shrink-0 bg-[#1565c0]/10 text-[#1565c0] ring-2 ring-[#1565c0]/10"
-                                />
-
-                                <div class="min-w-0 flex-1">
-                                    <div class="flex flex-wrap items-start justify-between gap-2">
-                                        <div class="min-w-0">
-                                            <p class="text-[0.65rem] font-semibold uppercase tracking-wide text-zinc-500">
-                                                {{ __('patient.appointments.specialist_label') }}
-                                            </p>
-                                            <h2 class="truncate text-base font-semibold text-zinc-900">
-                                                {{ $appointment->doctor?->displayName() ?: __('patient.appointments.title') }}
-                                            </h2>
-                                        </div>
-                                        <span class="shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold {{ $this->statusBadgeClasses((string) $appointment->status) }}">
-                                            {{ $this->statusLabel((string) $appointment->status) }}
-                                        </span>
-                                    </div>
-
-                                    <div class="mt-3 flex flex-wrap gap-2">
-                                        <span class="inline-flex items-center gap-1.5 rounded-full bg-zinc-100 px-3 py-1.5 text-xs font-medium text-zinc-700">
-                                            <flux:icon name="calendar-days" variant="mini" class="size-3.5 text-zinc-500" />
-                                            {{ $this->formattedSessionDate($appointment) }}
-                                        </span>
-                                        <span class="inline-flex items-center gap-1.5 rounded-full bg-zinc-100 px-3 py-1.5 text-xs font-medium text-zinc-700">
-                                            <flux:icon name="clock" variant="mini" class="size-3.5 text-zinc-500" />
-                                            {{ $this->formattedSessionTime($appointment) }}
-                                        </span>
-                                    </div>
-
-                                    <div class="mt-2 inline-flex items-center gap-1.5 text-xs text-zinc-500">
-                                        <flux:icon name="user" variant="mini" class="size-3.5 text-zinc-400" />
-                                        <span class="truncate">{{ $appointment->patient_name }}</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-zinc-100 pt-4">
-                                @if (filled($appointment->appointment_number))
-                                    <p class="text-xs text-zinc-400">
-                                        {{ __('patient.appointments.reference_label') }}:
-                                        <span class="font-semibold text-zinc-600">#{{ $appointment->appointment_number }}</span>
-                                    </p>
-                                @else
-                                    <span></span>
-                                @endif
-
-                                @if ($appointment->status === 'pending_follow_up')
-                                    <flux:button
-                                        :href="$appointment->patient_confirmed_at === null ? route('patient.follow-up.confirm', $appointment) : route('patient.follow-up.pay', $appointment)"
-                                        wire:navigate
-                                        size="sm"
-                                        icon="credit-card"
-                                        class="!border-violet-300 !bg-violet-50 !text-violet-800 hover:!bg-violet-100"
-                                    >
-                                        {{ __('patient.follow_up.confirm_and_pay') }}
-                                    </flux:button>
-                                @elseif (in_array($appointment->status, ['new', 'in_process', 'rescheduled'], true))
-                                    <flux:button
-                                        :href="route('patient.appointments.conversation', ['appointment' => $appointment->id])"
-                                        wire:navigate
-                                        size="sm"
-                                        icon="chat-bubble-left-right"
-                                        class="!bg-[#1565c0] !text-white hover:!brightness-95"
-                                    >
-                                        {{ __('patient.appointments.start_session') }}
-                                    </flux:button>
-                                @endif
-                            </div>
-                        </div>
-                    </article>
-                @endforeach
-            </div>
-
-            @if ($this->appointments->hasPages())
-                <div class="border-t border-zinc-100 px-4 py-3 sm:px-5">
-                    {{ $this->appointments->links() }}
+        {{-- Appointments list --}}
+        <section role="tabpanel" aria-live="polite">
+            <div class="mb-4 flex flex-wrap items-end justify-between gap-2 border-b border-zinc-200/80 pb-3">
+                <div>
+                    <h2 class="text-lg font-semibold text-zinc-900">{{ $this->tabHeading() }}</h2>
+                    <p class="text-sm text-zinc-500">{{ __('patient.appointments.list_heading') }}</p>
                 </div>
+                <span class="rounded-full bg-[#1565c0]/10 px-3 py-1 text-xs font-semibold text-[#1565c0]">
+                    {{ trans_choice('patient.appointments.sessions_count', $this->tabCounts[$tab] ?? 0, ['count' => $this->tabCounts[$tab] ?? 0]) }}
+                </span>
+            </div>
+
+            @if ($this->appointments->isEmpty())
+                <div class="flex flex-col items-center rounded-2xl bg-white px-6 py-14 text-center shadow-sm ring-1 ring-zinc-200/90">
+                    @include('partials.patient-empty-record-illustration')
+                    <p class="mt-5 max-w-xs text-sm text-zinc-500">{{ $this->tabEmptyMessage() }}</p>
+                    @if ($tab === 'ongoing')
+                        <flux:button
+                            :href="route('patient.schedule.filter')"
+                            wire:navigate
+                            variant="primary"
+                            class="mt-5 !bg-[#1565c0] !text-white"
+                        >
+                            {{ __('patient.appointments.book_new') }}
+                        </flux:button>
+                    @endif
+                </div>
+            @else
+                <div class="grid gap-4 lg:grid-cols-2 lg:gap-5">
+                    @foreach ($this->appointments as $appointment)
+                        @include('partials.patient-appointment-card', ['component' => $this, 'appointment' => $appointment])
+                    @endforeach
+                </div>
+
+                @if ($this->appointments->hasPages())
+                    <div class="pt-2">
+                        {{ $this->appointments->links() }}
+                    </div>
+                @endif
             @endif
-        @endif
-    </section>
+        </section>
+    </div>
 
     <div
         id="patient-appointments-realtime-bootstrap"
@@ -403,7 +343,7 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
         data-join-base="{{ route('patient.appointments.conversation', ['appointment' => '__ID__']) }}"
         data-token-base="{{ route('patient.appointments.realtime.agora-token', ['appointment' => '__ID__']) }}"
         data-notify-base="{{ route('patient.appointments.realtime.notify-call', ['appointment' => '__ID__']) }}"
-        data-label-call="{{ __('patient.appointments.session_started_join_now') }}"
+        data-label-call="{{ __('patient.appointments.join_session') }}"
     ></div>
 
     <div id="patient-inline-call-overlay" class="fixed inset-0 z-[210] hidden bg-zinc-950/90 backdrop-blur-sm">
@@ -439,7 +379,7 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
                         </button>
                     </div>
                     <a id="patient-inline-open-chat" href="#" wire:navigate class="inline-flex items-center justify-center rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-xs font-semibold text-white hover:bg-white/20">
-                        {{ __('patient.appointments.start_session') }}
+                        {{ __('patient.appointments.join_session') }}
                     </a>
                 </div>
             </div>
@@ -448,6 +388,70 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
 </div>
 
 @push('scripts')
+    <script data-navigate-once>
+        function appointmentStartTimer(isoStart) {
+            return {
+                label: '',
+                ariaLabel: '',
+                showPrefix: true,
+                interval: null,
+                labels: {
+                    ready: @json(__('patient.appointments.ready_to_start')),
+                    startsIn: @json(__('patient.appointments.starts_in')),
+                },
+                start() {
+                    this.tick();
+                    this.interval = setInterval(() => this.tick(), 1000);
+                },
+                tick() {
+                    if (! isoStart) {
+                        this.label = '';
+                        this.ariaLabel = '';
+                        this.showPrefix = true;
+
+                        return;
+                    }
+
+                    const target = new Date(isoStart);
+                    const diff = target.getTime() - Date.now();
+
+                    if (diff <= 0) {
+                        this.label = this.labels.ready;
+                        this.ariaLabel = this.labels.ready;
+                        this.showPrefix = false;
+
+                        if (this.interval) {
+                            clearInterval(this.interval);
+                            this.interval = null;
+                        }
+
+                        return;
+                    }
+
+                    this.showPrefix = true;
+
+                    const totalSeconds = Math.floor(diff / 1000);
+                    const days = Math.floor(totalSeconds / 86400);
+                    const hours = Math.floor((totalSeconds % 86400) / 3600);
+                    const minutes = Math.floor((totalSeconds % 3600) / 60);
+                    const seconds = totalSeconds % 60;
+
+                    let timeLabel;
+
+                    if (days > 0) {
+                        timeLabel = `${days}d ${hours}h`;
+                    } else if (hours > 0) {
+                        timeLabel = `${hours}h ${String(minutes).padStart(2, '0')}m`;
+                    } else {
+                        timeLabel = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+                    }
+
+                    this.label = timeLabel;
+                    this.ariaLabel = this.labels.startsIn.replace(':time', timeLabel);
+                },
+            };
+        }
+    </script>
     <script src="https://js.pusher.com/8.2.0/pusher.min.js"></script>
     <script src="https://download.agora.io/sdk/release/AgoraRTC_N-4.23.0.js"></script>
     <script>

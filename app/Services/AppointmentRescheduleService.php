@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Appointment;
 use App\Models\Doctor;
+use App\Support\AppTimezone;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -52,7 +53,7 @@ final class AppointmentRescheduleService
             ]);
         }
 
-        $timezone = config('app.timezone');
+        $timezone = AppTimezone::name();
         $start = Carbon::createFromFormat('Y-m-d H:i', $date.' '.$time, $timezone);
         $end = (clone $start)->addMinutes($durationMinutes);
 

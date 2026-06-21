@@ -121,6 +121,27 @@ class Appointment extends Model
         }
     }
 
+    public function sessionStartsAt(): ?Carbon
+    {
+        if ($this->scheduled_at !== null) {
+            return Carbon::parse($this->scheduled_at)->timezone(config('app.timezone'));
+        }
+
+        if ($this->appointment_date === null || ! filled($this->start_time)) {
+            return null;
+        }
+
+        try {
+            $datePart = $this->appointment_date instanceof Carbon
+                ? $this->appointment_date->format('Y-m-d')
+                : Carbon::parse($this->appointment_date)->format('Y-m-d');
+
+            return Carbon::parse($datePart.' '.(string) $this->start_time, config('app.timezone'));
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
     public function isPendingFollowUp(): bool
     {
         return $this->status === 'pending_follow_up';

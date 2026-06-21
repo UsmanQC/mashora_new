@@ -65,8 +65,14 @@ new #[Layout('layouts::patient')] #[Title('Home')] class extends Component
         return $days;
     }
 
-    public function openMoodPicker(): void
+    public function selectMoodDay(): void
     {
+        if (! Auth::check()) {
+            $this->redirect(route('patient.phone'), navigate: true);
+
+            return;
+        }
+
         $this->dispatch('open-patient-mood-picker');
     }
 
@@ -211,7 +217,7 @@ new #[Layout('layouts::patient')] #[Title('Home')] class extends Component
                     <button
                         type="button"
                         @if($day['is_today']) data-today-mood @endif
-                        wire:click="openMoodPicker"
+                        wire:click="selectMoodDay"
                         wire:key="mood-day-{{ $day['iso'] }}"
                         @class([
                             'flex min-w-[6.75rem] shrink-0 snap-center cursor-pointer flex-col items-center gap-3.5 rounded-2xl border px-5 py-5 text-center shadow-sm transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[#3c5cf7]/35 focus-visible:ring-offset-2',

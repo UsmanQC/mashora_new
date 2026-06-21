@@ -4,6 +4,7 @@ use App\Models\Appointment;
 use App\Models\Doctor;
 use App\Services\AppointmentRescheduleService;
 use App\Services\DoctorAvailabilityService;
+use App\Support\AppTimezone;
 use Carbon\Carbon;
 use Flux\Flux;
 use Illuminate\Support\Facades\Auth;
@@ -27,7 +28,7 @@ new #[Layout('layouts::doctor')] #[Title('Reschedule appointment')] class extend
         $this->appointment = $appointment;
         $this->durationMinutes = max(15, (int) $appointment->duration);
 
-        $timezone = config('app.timezone');
+        $timezone = AppTimezone::name();
         $today = now($timezone)->startOfDay();
 
         $preferredDate = $appointment->appointment_date
@@ -38,22 +39,30 @@ new #[Layout('layouts::doctor')] #[Title('Reschedule appointment')] class extend
             $preferredDate = $today->format('Y-m-d');
         }
 
+        $this->newDate = $preferredDate;
+
         $doctor = Auth::guard('doctor')->user();
 
         if ($doctor instanceof Doctor) {
-            $firstAvailable = app(DoctorAvailabilityService::class)->firstDateWithSlots(
+            $availability = app(DoctorAvailabilityService::class);
+
+            $slotsOnPreferredDate = $availability->availableSlots(
                 $doctor,
+                $this->newDate,
                 $this->durationMinutes,
-                $preferredDate,
+                $this->appointment->id,
             );
 
-            $this->newDate = $firstAvailable ?? $preferredDate;
-            $this->preselectCurrentTime();
-
-            return;
+            if ($slotsOnPreferredDate === []) {
+                $this->newDate = $availability->firstDateWithSlots(
+                    $doctor,
+                    $this->durationMinutes,
+                    $preferredDate,
+                ) ?? $preferredDate;
+            }
         }
 
-        $this->newDate = $preferredDate;
+        $this->preselectCurrentTime();
     }
 
     protected function doctor(): Doctor
@@ -66,14 +75,68 @@ new #[Layout('layouts::doctor')] #[Title('Reschedule appointment')] class extend
         return $doctor;
     }
 
-    public function updatedNewDate(): void
+    public function updatedNewDate(?string $value = null): void
     {
-        $this->selectedTime = '';
+        if ($value !== null && $value !== '') {
+            try {
+                $this->newDate = Carbon::parse($value, AppTimezone::name())->format('Y-m-d');
+            } catch (\Throwable) {
+                $this->newDate = '';
+            }
+        }
+
+        if ($this->isSameDateAsAppointment()) {
+            $this->preselectCurrentTime();
+        } else {
+            $this->selectedTime = '';
+        }
+    }
+
+    private function isSameDateAsAppointment(): bool
+    {
+        if ($this->newDate === '' || $this->appointment->appointment_date === null) {
+            return false;
+        }
+
+        $timezone = AppTimezone::name();
+
+        try {
+            $appointmentDate = Carbon::parse($this->appointment->appointment_date, $timezone)->format('Y-m-d');
+        } catch (\Throwable) {
+            return false;
+        }
+
+        return $this->newDate === $appointmentDate;
+    }
+
+    private function currentAppointmentSlot(): ?string
+    {
+        if ($this->appointment->appointment_date === null || ! filled($this->appointment->start_time)) {
+            return null;
+        }
+
+        try {
+            $timezone = AppTimezone::name();
+            $datePart = Carbon::parse($this->appointment->appointment_date, $timezone)->format('Y-m-d');
+            $clock = (string) $this->appointment->start_time;
+
+            foreach (['Y-m-d H:i:s', 'Y-m-d H:i'] as $format) {
+                $parsed = Carbon::createFromFormat($format, $datePart.' '.$clock, $timezone);
+
+                if ($parsed !== false) {
+                    return $parsed->format('H:i');
+                }
+            }
+        } catch (\Throwable) {
+            return null;
+        }
+
+        return null;
     }
 
     public function minDate(): string
     {
-        return now(config('app.timezone'))->format('Y-m-d');
+        return now(AppTimezone::name())->format('Y-m-d');
     }
 
     public function selectedWeekdayLabel(): string
@@ -83,7 +146,7 @@ new #[Layout('layouts::doctor')] #[Title('Reschedule appointment')] class extend
         }
 
         try {
-            return Carbon::parse($this->newDate, config('app.timezone'))
+            return Carbon::parse($this->newDate, AppTimezone::name())
                 ->locale(app()->getLocale())
                 ->translatedFormat('l');
         } catch (\Throwable) {
@@ -116,10 +179,36 @@ new #[Layout('layouts::doctor')] #[Title('Reschedule appointment')] class extend
         );
     }
 
+    public function isSelectedDateToday(): bool
+    {
+        if ($this->newDate === '') {
+            return false;
+        }
+
+        $timezone = AppTimezone::name();
+
+        try {
+            return Carbon::parse($this->newDate, $timezone)->toDateString() === now($timezone)->toDateString();
+        } catch (\Throwable) {
+            return false;
+        }
+    }
+
+    public function refreshSlotsForToday(): void
+    {
+        if ($this->selectedTime === '') {
+            return;
+        }
+
+        if (! in_array($this->selectedTime, $this->availableSlots, true)) {
+            $this->selectedTime = '';
+        }
+    }
+
     public function displaySlot(string $slot): string
     {
         try {
-            return Carbon::createFromFormat('H:i', $slot, config('app.timezone'))
+            return Carbon::createFromFormat('H:i', $slot, AppTimezone::name())
                 ->locale(app()->getLocale())
                 ->translatedFormat('g:i a');
         } catch (\Throwable) {
@@ -129,13 +218,13 @@ new #[Layout('layouts::doctor')] #[Title('Reschedule appointment')] class extend
 
     private function preselectCurrentTime(): void
     {
-        if (! filled($this->appointment->start_time)) {
+        if (! $this->isSameDateAsAppointment()) {
             return;
         }
 
-        try {
-            $currentSlot = Carbon::parse($this->appointment->start_time, config('app.timezone'))->format('H:i');
-        } catch (\Throwable) {
+        $currentSlot = $this->currentAppointmentSlot();
+
+        if ($currentSlot === null) {
             return;
         }
 
@@ -207,7 +296,11 @@ new #[Layout('layouts::doctor')] #[Title('Reschedule appointment')] class extend
                         </div>
                     </flux:callout>
                 @else
-                    <div class="mt-2 flex flex-wrap gap-2">
+                    <div
+                        @if ($this->isSelectedDateToday()) wire:poll.60s="refreshSlotsForToday" @endif
+                        wire:key="reschedule-slots-{{ $newDate }}"
+                        class="mt-2 flex flex-wrap gap-2"
+                    >
                         @foreach ($this->availableSlots as $slot)
                             <button
                                 type="button"

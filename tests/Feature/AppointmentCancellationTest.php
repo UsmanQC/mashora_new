@@ -47,7 +47,11 @@ test('doctor cancelling appointment notifies patient and shows in cancelled tab'
     $this->actingAs($doctor, 'doctor');
 
     Livewire::test('pages::doctor.appointments')
-        ->call('cancelAppointment', $appointment->id)
+        ->call('promptCancelAppointment', $appointment->id)
+        ->assertSet('showCancelModal', true)
+        ->assertSet('cancelAppointmentId', $appointment->id)
+        ->call('confirmCancelAppointment')
+        ->assertSet('showCancelModal', false)
         ->assertHasNoErrors();
 
     $appointment->refresh();

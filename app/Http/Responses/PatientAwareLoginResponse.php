@@ -14,16 +14,29 @@ class PatientAwareLoginResponse implements LoginResponse
     public function toResponse($request): Response
     {
         /** @var Request $request */
-        if ($request->boolean('patient_flow')) {
-            $user = $request->user();
+        $user = $request->user();
 
-            if ($user && ! $user->profile_completed) {
-                return redirect()->route('patient.profile.basic');
-            }
-
-            return redirect()->route('patient.home');
+        if ($user && ! $user->profile_completed) {
+            return redirect()->route('patient.profile.basic');
         }
 
-        return redirect()->intended(config('fortify.home'));
+        $intended = $request->session()->pull('url.intended');
+
+        if (is_string($intended) && $this->isPatientPortalUrl($intended)) {
+            return redirect()->to($intended);
+        }
+
+        return redirect()->route('patient.home');
+    }
+
+    private function isPatientPortalUrl(string $url): bool
+    {
+        $path = parse_url($url, PHP_URL_PATH);
+
+        if (! is_string($path) || $path === '') {
+            return false;
+        }
+
+        return $path === '/patient' || str_starts_with($path, '/patient/');
     }
 }

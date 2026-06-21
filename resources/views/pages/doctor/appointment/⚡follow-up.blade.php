@@ -4,6 +4,7 @@ use App\Models\Appointment;
 use App\Models\Doctor;
 use App\Services\DoctorAvailabilityService;
 use App\Services\FollowUpAppointmentService;
+use App\Support\AppTimezone;
 use Carbon\Carbon;
 use Flux\Flux;
 use Illuminate\Support\Facades\Auth;
@@ -27,7 +28,7 @@ new #[Layout('layouts::doctor')] #[Title('Follow-up appointment')] class extends
         $this->appointment = $appointment;
         $this->durationMinutes = max(15, (int) $appointment->duration);
 
-        $timezone = config('app.timezone');
+        $timezone = AppTimezone::name();
         $suggested = $appointment->appointment_date
             ? Carbon::parse($appointment->appointment_date, $timezone)->addDays(15)
             : now($timezone)->addDays(15);
@@ -64,14 +65,22 @@ new #[Layout('layouts::doctor')] #[Title('Follow-up appointment')] class extends
         return $doctor;
     }
 
-    public function updatedNewDate(): void
+    public function updatedNewDate(?string $value = null): void
     {
+        if ($value !== null && $value !== '') {
+            try {
+                $this->newDate = Carbon::parse($value, AppTimezone::name())->format('Y-m-d');
+            } catch (\Throwable) {
+                $this->newDate = '';
+            }
+        }
+
         $this->selectedTime = '';
     }
 
     public function minDate(): string
     {
-        return now(config('app.timezone'))->format('Y-m-d');
+        return now(AppTimezone::name())->format('Y-m-d');
     }
 
     public function selectedWeekdayLabel(): string
@@ -81,7 +90,7 @@ new #[Layout('layouts::doctor')] #[Title('Follow-up appointment')] class extends
         }
 
         try {
-            return Carbon::parse($this->newDate, config('app.timezone'))
+            return Carbon::parse($this->newDate, AppTimezone::name())
                 ->locale(app()->getLocale())
                 ->translatedFormat('l');
         } catch (\Throwable) {
@@ -123,10 +132,36 @@ new #[Layout('layouts::doctor')] #[Title('Follow-up appointment')] class extends
         return app(FollowUpAppointmentService::class)->pendingFollowUpFor($this->appointment);
     }
 
+    public function isSelectedDateToday(): bool
+    {
+        if ($this->newDate === '') {
+            return false;
+        }
+
+        $timezone = AppTimezone::name();
+
+        try {
+            return Carbon::parse($this->newDate, $timezone)->toDateString() === now($timezone)->toDateString();
+        } catch (\Throwable) {
+            return false;
+        }
+    }
+
+    public function refreshSlotsForToday(): void
+    {
+        if ($this->selectedTime === '') {
+            return;
+        }
+
+        if (! in_array($this->selectedTime, $this->availableSlots, true)) {
+            $this->selectedTime = '';
+        }
+    }
+
     public function displaySlot(string $slot): string
     {
         try {
-            return Carbon::createFromFormat('H:i', $slot, config('app.timezone'))
+            return Carbon::createFromFormat('H:i', $slot, AppTimezone::name())
                 ->locale(app()->getLocale())
                 ->translatedFormat('g:i a');
         } catch (\Throwable) {
@@ -214,7 +249,11 @@ new #[Layout('layouts::doctor')] #[Title('Follow-up appointment')] class extends
                         </div>
                     </flux:callout>
                 @else
-                    <div class="mt-2 flex flex-wrap gap-2">
+                    <div
+                        @if ($this->isSelectedDateToday()) wire:poll.60s="refreshSlotsForToday" @endif
+                        wire:key="follow-up-slots-{{ $newDate }}"
+                        class="mt-2 flex flex-wrap gap-2"
+                    >
                         @foreach ($this->availableSlots as $slot)
                             <button
                                 type="button"
