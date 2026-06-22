@@ -1,17 +1,20 @@
-{{-- Mashora logo: public/images/logo.png. On blue bars, monochrome white via Tailwind filters. --}}
+{{-- Text brand mark used across patient and doctor chrome. --}}
 @php
-    /** @var string Tailwind img classes */
+    /** @var string Tailwind classes for sizing (legacy imgClass callers). */
     $imgClass ??= 'h-10 w-auto max-w-[min(100%,13rem)] object-contain object-start';
 
-    /** If true, forces a white mark (works best with solid / single-color artwork). Set false for a pre-white PNG. */
+    /** If true, use white text on blue chrome backgrounds. */
     $whiteOnBlue ??= true;
 
-    $filterClasses = $whiteOnBlue ? 'brightness-0 invert' : '';
+    $textSizeClass = match (true) {
+        str_contains($imgClass, 'h-11') => 'text-xl',
+        str_contains($imgClass, 'h-8') => 'text-base',
+        str_contains($imgClass, 'h-9') => 'text-lg',
+        default => 'text-lg',
+    };
+
+    $colorClass = $whiteOnBlue ? 'text-white' : 'text-zinc-900';
 @endphp
-<img
-    src="{{ asset('images/logo.png') }}"
-    alt="{{ __('patient.brand') }}"
-    class="{{ trim($filterClasses.' '.$imgClass) }}"
-    loading="eager"
-    decoding="async"
-/>
+<span class="{{ trim($colorClass.' '.$textSizeClass.' font-bold tracking-tight') }}">
+    {{ __('patient.brand') }}
+</span>

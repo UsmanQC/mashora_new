@@ -15,6 +15,18 @@ test('guest can view patient home', function () {
         ->assertSee(__('patient.mood_section'), false);
 });
 
+test('authenticated patient home shows mood strip above spotlight cards', function () {
+    $user = User::factory()->create(['profile_completed' => true]);
+
+    $content = $this->actingAs($user)
+        ->get(route('patient.home'))
+        ->assertSuccessful()
+        ->getContent();
+
+    expect(strpos($content, __('patient.mood_section')))
+        ->toBeLessThan(strpos($content, __('patient.daily_balance')));
+});
+
 test('guest mood day click redirects to patient phone entry', function () {
     Livewire::test('pages::patient.home')
         ->call('selectMoodDay')

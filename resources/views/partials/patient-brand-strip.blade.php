@@ -1,4 +1,4 @@
-{{-- Logo-only brand link for blue chrome (see patient-brand-logo.blade.php). --}}
+{{-- Text brand link for blue chrome (see patient-brand-logo.blade.php). --}}
 @php
     /** @var 'compact'|'sidebar' */
     $density ??= 'sidebar';
