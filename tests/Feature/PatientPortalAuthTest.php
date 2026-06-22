@@ -85,6 +85,18 @@ test('new patient number redirects to phone verification', function () {
         ));
 });
 
+test('patient verify phone page shows visible otp inputs and test code 1111', function () {
+    $phone = '966512400002';
+
+    Livewire::withQueryParams(['phone' => $phone])
+        ->test('pages::patient-auth.verify-phone')
+        ->assertSee(__('patient_auth.otp_heading'), false)
+        ->assertSee(__('patient_auth.otp_label'), false)
+        ->assertSee(__('patient_auth.otp_resend'), false)
+        ->assertSee('data-flux-otp-input', false)
+        ->assertSet('devOtpDisplay', '1111');
+});
+
 test('patient can verify otp and reach sign up', function () {
     $phone = '966512400001';
 

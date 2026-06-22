@@ -109,7 +109,7 @@ new #[Layout('layouts::patient-auth')] #[Title('Verify mobile number')] class ex
         />
     </div>
 
-    <flux:heading size="xl" class="patient-auth-heading text-balance">{{ __('patient_auth.otp_heading') }}</flux:heading>
+    <flux:heading size="xl" class="patient-auth-heading !text-zinc-900 text-balance">{{ __('patient_auth.otp_heading') }}</flux:heading>
     <flux:text class="mx-auto mt-2 max-w-sm text-balance text-zinc-600">{{ __('patient_auth.otp_lead') }}</flux:text>
     <flux:text class="mt-3 font-medium tabular-nums text-zinc-800" dir="ltr">+{{ $phone }}</flux:text>
 
@@ -120,21 +120,31 @@ new #[Layout('layouts::patient-auth')] #[Title('Verify mobile number')] class ex
     @endif
 
     <form wire:submit="verifyOtp" class="mt-8 space-y-5">
-        <flux:otp
-            wire:model="code"
-            :length="4"
-            :label="__('patient_auth.otp_label')"
-            label:sr-only
-            error:class="text-center"
-            class="mx-auto"
-        />
+        <flux:field class="patient-auth-otp">
+            <flux:label class="!text-zinc-900">{{ __('patient_auth.otp_label') }}</flux:label>
+            <flux:otp
+                wire:model="code"
+                :length="4"
+                label:sr-only
+                error:class="text-center"
+                class="patient-auth-otp-group"
+                input:class="patient-auth-otp-input"
+            />
+            <flux:error name="code" />
+        </flux:field>
 
         <flux:button variant="primary" type="submit" class="patient-auth-primary-btn w-full">
             {{ __('patient_auth.otp_verify') }}
         </flux:button>
 
         <div class="flex flex-col items-center gap-2 text-center text-sm text-zinc-600">
-            <flux:button type="button" variant="ghost" size="sm" wire:click="sendOtp">
+            <flux:button
+                type="button"
+                variant="ghost"
+                size="sm"
+                wire:click="sendOtp"
+                class="!text-zinc-600 hover:!text-zinc-900 dark:!text-zinc-600 dark:hover:!text-zinc-900"
+            >
                 {{ __('patient_auth.otp_resend') }}
             </flux:button>
         </div>

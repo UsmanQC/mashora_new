@@ -133,6 +133,57 @@ select:focus[data-flux-control] {
     color: #18181b !important;
 }
 
+.patient-auth-content .patient-auth-otp ui-otp,
+.patient-auth-content .patient-auth-otp-group {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0.875rem !important;
+    width: 100% !important;
+    isolation: auto !important;
+}
+
+.patient-auth-content .patient-auth-otp ui-otp [data-flux-input] {
+    position: relative !important;
+    width: 3.25rem !important;
+    min-width: 3.25rem !important;
+    max-width: 3.25rem !important;
+    flex: 0 0 3.25rem !important;
+}
+
+.patient-auth-content ui-otp input[data-flux-otp-input],
+.patient-auth-content .patient-auth-otp-input {
+    width: 100% !important;
+    height: 3.5rem !important;
+    min-width: 0 !important;
+    padding: 0 !important;
+    border: 2px solid #d4d4d8 !important;
+    border-radius: 0.875rem !important;
+    background-color: #ffffff !important;
+    color: #18181b !important;
+    font-size: 1.375rem !important;
+    font-weight: 600 !important;
+    text-align: center !important;
+    box-shadow: 0 1px 3px rgb(0 0 0 / 0.08) !important;
+}
+
+.patient-auth-content ui-otp input[data-flux-otp-input]:focus,
+.patient-auth-content .patient-auth-otp-input:focus {
+    border-color: #3c5cf7 !important;
+    outline: 2px solid rgb(60 92 247 / 0.28) !important;
+    outline-offset: 1px !important;
+    box-shadow: 0 0 0 3px rgb(60 92 247 / 0.12) !important;
+}
+
+.patient-auth-content [data-flux-button].bg-transparent {
+    color: #52525b !important;
+}
+
+.patient-auth-content [data-flux-button].bg-transparent:hover {
+    color: #18181b !important;
+}
+
 /* \[:where(&)\]:size-4 {
     @apply size-4;
 } */
