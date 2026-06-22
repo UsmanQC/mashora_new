@@ -76,7 +76,7 @@ final class SpecialistCatalog
         }
 
         $durationWant = isset($preferences['duration_minutes']) ? (string) $preferences['duration_minutes'] : '';
-        if ($durationWant !== '' && (string) ($doc['session_minutes'] ?? '') !== $durationWant) {
+        if ($durationWant !== '' && ! self::offersDuration($doc, $durationWant)) {
             return false;
         }
 
@@ -104,6 +104,29 @@ final class SpecialistCatalog
         }
 
         return true;
+    }
+
+    /**
+     * @param  array<string, mixed>  $doc
+     */
+    public static function offersDuration(array $doc, string $minutes): bool
+    {
+        return in_array($minutes, self::offeredDurationMinutes($doc), true);
+    }
+
+    /**
+     * @param  array<string, mixed>  $doc
+     * @return list<string>
+     */
+    public static function offeredDurationMinutes(array $doc): array
+    {
+        if (is_array($doc['offered_duration_minutes'] ?? null) && $doc['offered_duration_minutes'] !== []) {
+            return array_values(array_map(static fn (mixed $minutes): string => (string) $minutes, $doc['offered_duration_minutes']));
+        }
+
+        $sessionMinutes = (string) ($doc['session_minutes'] ?? '');
+
+        return $sessionMinutes !== '' ? [$sessionMinutes] : [];
     }
 
     /**
@@ -136,9 +159,23 @@ final class SpecialistCatalog
             ? 'therapist'
             : 'physician_specialist';
 
-        $duration = $doctor->durations->sortBy('duration')->first();
-        $sessionMinutes = (int) ($duration?->duration ?? 15);
-        $price = (int) round((float) ($duration?->pivot?->price ?? 0));
+        $offeredDurations = $doctor->durations->sortBy('duration')->values();
+        /** @var list<string> $offeredDurationMinutes */
+        $offeredDurationMinutes = $offeredDurations
+            ->pluck('duration')
+            ->map(static fn (mixed $minutes): string => (string) $minutes)
+            ->values()
+            ->all();
+
+        $preferredDuration = (string) (session('session_filter_preferences.duration_minutes') ?? '');
+        $selectedDuration = $offeredDurations->first();
+
+        if ($preferredDuration !== '' && $offeredDurations->contains('duration', (int) $preferredDuration)) {
+            $selectedDuration = $offeredDurations->firstWhere('duration', (int) $preferredDuration);
+        }
+
+        $sessionMinutes = (int) ($selectedDuration?->duration ?? 15);
+        $price = (int) round((float) ($selectedDuration?->pivot?->price ?? 0));
 
         $language = (string) ($doctor->spoken_languages ?? '');
         $languages = match ($language) {
@@ -218,6 +255,7 @@ final class SpecialistCatalog
             'likes' => 0,
             'price_sar' => $price,
             'session_minutes' => $sessionMinutes,
+            'offered_duration_minutes' => $offeredDurationMinutes,
             'channels' => $channels,
             'slots' => $slots,
             'tags' => $tags,
@@ -282,6 +320,7 @@ final class SpecialistCatalog
             'likes' => (int) ($entry['likes'] ?? 0),
             'price_sar' => (int) ($entry['price_sar'] ?? 0),
             'session_minutes' => (int) ($entry['session_minutes'] ?? 15),
+            'offered_duration_minutes' => [(string) ($entry['session_minutes'] ?? 15)],
             'channels' => is_array($entry['channels'] ?? null) ? $entry['channels'] : [],
             'slots' => is_array($entry['slots'] ?? null) ? $entry['slots'] : [],
             'tags' => $tags,

@@ -64,4 +64,10 @@ return [
     'skip' => 'Skip',
     'next_toast' => 'Preferences saved. Booking will use them when sessions go live.',
     'skip_toast' => 'You can start a session anytime from Appointments.',
+    'validation' => [
+        'specialist_required' => 'Please choose a specialist type.',
+        'gender_required' => 'Please choose a specialist gender.',
+        'duration_required' => 'Please choose a session duration.',
+        'language_required' => 'Please choose a language preference.',
+    ],
 ];

@@ -32,6 +32,6 @@ class DatabaseSeeder extends Seeder
         $this->call(ThoughtsSeeder::class);
         $this->call(TicketCategorySeeder::class);
         $this->call(InstantAppointmentPricesSeeder::class);
-        // $this->call(DoctorSeeder::class);
+        $this->call(DoctorSeeder::class);
     }
 }

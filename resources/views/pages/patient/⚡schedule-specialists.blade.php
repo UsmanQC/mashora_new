@@ -110,7 +110,7 @@ new #[Layout('layouts::patient')] #[Title('Specialists')] class extends Componen
         if ($this->selectedDuration !== '') {
             $items = array_values(array_filter(
                 $items,
-                fn (array $specialist): bool => (string) ($specialist['session_minutes'] ?? '') === $this->selectedDuration
+                fn (array $specialist): bool => SpecialistCatalog::offersDuration($specialist, $this->selectedDuration)
             ));
         }
 

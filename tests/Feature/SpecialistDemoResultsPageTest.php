@@ -2,7 +2,11 @@
 
 use App\Models\Degree;
 use App\Models\User;
+use App\Support\SpecialistCatalog;
+use Database\Seeders\CommunicationSeeder;
 use Database\Seeders\DegreeSeeder;
+use Database\Seeders\DoctorSeeder;
+use Database\Seeders\DurationSeeder;
 use Database\Seeders\SpecialitySeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
@@ -29,6 +33,37 @@ test('patient with completed profile sees catalog specialists when no session fi
         ->assertSee(__('specialist_results.page_heading'), false)
         ->assertSee('Nada Alghamdi', false)
         ->assertSee('Dr. Khalid Mohammed', false);
+});
+
+test('seeded doctors remain visible when session filter requests thirty minute sessions', function () {
+    app()->setLocale('en');
+
+    $this->seed([
+        DurationSeeder::class,
+        CommunicationSeeder::class,
+        DoctorSeeder::class,
+    ]);
+
+    $user = User::factory()->create(['profile_completed' => true]);
+
+    session()->put('session_filter_preferences', [
+        'degree_id' => '',
+        'gender_preference' => 'both',
+        'duration_minutes' => '30',
+        'language_preference' => 'both',
+        'subspecialties' => [],
+    ]);
+
+    $filtered = SpecialistCatalog::filtered(session('session_filter_preferences'));
+
+    expect($filtered)->toHaveCount(DoctorSeeder::SEEDED_DOCTOR_COUNT);
+
+    $this->actingAs($user)
+        ->get(route('patient.schedule.specialists'))
+        ->assertSuccessful()
+        ->assertSee('Dr. Test Doctor', false)
+        ->assertSee('Dr. Nada Alghamdi', false)
+        ->assertSee('Dr. Amira Zayed', false);
 });
 
 test('session filter preferences narrow which specialists are listed', function () {

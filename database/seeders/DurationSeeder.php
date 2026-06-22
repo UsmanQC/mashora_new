@@ -3,9 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Duration;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\DB;
 
 class DurationSeeder extends Seeder
 {
@@ -14,27 +12,37 @@ class DurationSeeder extends Seeder
      */
     public function run(): void
     {
-        //DB::table('durations')->truncate();
+        $durations = [
+            [
+                'duration' => 15,
+                'title' => '15 minutes',
+                'title_ar' => '15 دقيقة',
+            ],
+            [
+                'duration' => 30,
+                'title' => '30 minutes',
+                'title_ar' => '30 دقيقة',
+            ],
+            [
+                'duration' => 45,
+                'title' => '45 minutes',
+                'title_ar' => '45 دقيقة',
+            ],
+            [
+                'duration' => 60,
+                'title' => '60 minutes',
+                'title_ar' => '60 دقيقة',
+            ],
+        ];
 
-        Duration::create([
-            'duration' => 15,
-            'title' => '15 minutes',
-            'title_ar' => '15 دقيقة',
-        ]);
-        Duration::create([
-            'duration' => 30,
-            'title' => '30 minutes',
-            'title_ar' => '30 دقيقة',
-        ]);
-        Duration::create([
-            'duration' => 45,
-            'title' => '45 minutes',
-            'title_ar' => '45 دقيقة',
-        ]);
-        Duration::create([
-            'duration' => 60,
-            'title' => '60 minutes',
-            'title_ar' => '60 دقيقة',
-        ]);
+        foreach ($durations as $duration) {
+            Duration::query()->updateOrCreate(
+                ['duration' => $duration['duration']],
+                [
+                    'title' => $duration['title'],
+                    'title_ar' => $duration['title_ar'],
+                ],
+            );
+        }
     }
 }

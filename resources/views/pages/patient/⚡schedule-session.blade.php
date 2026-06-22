@@ -13,11 +13,11 @@ new #[Layout('layouts::patient')] #[Title('Session filter')] class extends Compo
 {
     public string $degree_id = '';
 
-    public string $genderPreference = 'both';
+    public string $genderPreference = '';
 
-    public string $durationMinutes = '30';
+    public string $durationMinutes = '';
 
-    public string $languagePreference = 'both';
+    public string $languagePreference = '';
 
     /** @var list<string> Speciality primary keys as strings (matches `specialities.id`) */
     public array $subspecialties = [];
@@ -58,17 +58,6 @@ new #[Layout('layouts::patient')] #[Title('Session filter')] class extends Compo
                 ];
             })
             ->all();
-    }
-
-    public function mount(): void
-    {
-        $availableValues = array_column($this->specialistKindOptions, 'value');
-
-        if ($this->degree_id !== '' && in_array($this->degree_id, $availableValues, true)) {
-            return;
-        }
-
-        $this->degree_id = (string) ($availableValues[0] ?? '1');
     }
 
     /**
@@ -155,6 +144,20 @@ new #[Layout('layouts::patient')] #[Title('Session filter')] class extends Compo
 
     public function proceedNext(): void
     {
+        $availableDegreeIds = array_column($this->specialistKindOptions, 'value');
+
+        $this->validate([
+            'degree_id' => ['required', 'string', 'in:'.implode(',', $availableDegreeIds)],
+            'genderPreference' => ['required', 'in:male,female,both'],
+            'durationMinutes' => ['required', 'in:15,30,45,60'],
+            'languagePreference' => ['required', 'in:ar,en,both'],
+        ], [
+            'degree_id.required' => __('session_filter.validation.specialist_required'),
+            'genderPreference.required' => __('session_filter.validation.gender_required'),
+            'durationMinutes.required' => __('session_filter.validation.duration_required'),
+            'languagePreference.required' => __('session_filter.validation.language_required'),
+        ]);
+
         Session::put('session_filter_preferences', $this->preferenceSnapshot());
         Flux::toast(variant: 'success', text: __('session_filter.next_toast'));
 
@@ -191,6 +194,7 @@ new #[Layout('layouts::patient')] #[Title('Session filter')] class extends Compo
                     <flux:radio value="{{ $option['value'] }}">{{ $option['label'] }}</flux:radio>
                 @endforeach
             </flux:radio.group>
+            <flux:error name="degree_id" />
         </section>
 
         <flux:separator variant="subtle" />
@@ -204,6 +208,7 @@ new #[Layout('layouts::patient')] #[Title('Session filter')] class extends Compo
                 <flux:radio value="female">{{ __('session_filter.sections.gender.female') }}</flux:radio>
                 <flux:radio value="both">{{ __('session_filter.sections.gender.both') }}</flux:radio>
             </flux:radio.group>
+            <flux:error name="genderPreference" />
         </section>
 
         <flux:separator variant="subtle" />
@@ -218,6 +223,7 @@ new #[Layout('layouts::patient')] #[Title('Session filter')] class extends Compo
                 <flux:radio value="45">{{ __('session_filter.sections.minutes.45') }}</flux:radio>
                 <flux:radio value="60">{{ __('session_filter.sections.minutes.60') }}</flux:radio>
             </flux:radio.group>
+            <flux:error name="durationMinutes" />
         </section>
 
         <flux:separator variant="subtle" />
@@ -231,6 +237,7 @@ new #[Layout('layouts::patient')] #[Title('Session filter')] class extends Compo
                 <flux:radio value="en">{{ __('session_filter.sections.lang.en') }}</flux:radio>
                 <flux:radio value="both">{{ __('session_filter.sections.lang.both') }}</flux:radio>
             </flux:radio.group>
+            <flux:error name="languagePreference" />
         </section>
 
         <flux:separator variant="subtle" />
