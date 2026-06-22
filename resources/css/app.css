@@ -77,7 +77,12 @@ select:focus[data-flux-control] {
 
 @layer components {
     .patient-auth-heading {
-        @apply text-mashora-brand;
+        @apply font-semibold !text-zinc-900 dark:!text-zinc-900;
+    }
+
+    .patient-auth-content [data-flux-label],
+    .patient-auth-content ui-label[data-flux-label] {
+        @apply font-medium !text-zinc-900 dark:!text-zinc-900;
     }
 
     .patient-auth-primary-btn {
@@ -119,6 +124,13 @@ select:focus[data-flux-control] {
     .patient-mood-detail-panel {
         animation: patient-mood-detail-open 0.28s ease-out forwards;
     }
+}
+
+/* Patient auth: always use dark text on light panels (Flux dark utilities otherwise render white). */
+.patient-auth-content [data-flux-heading],
+.patient-auth-content ui-label[data-flux-label],
+.patient-auth-content .patient-auth-heading {
+    color: #18181b !important;
 }
 
 /* \[:where(&)\]:size-4 {

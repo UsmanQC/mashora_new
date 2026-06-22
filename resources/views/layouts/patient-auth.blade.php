@@ -6,6 +6,7 @@
 >
     <head>
         <meta name="application-name" content="{{ config('app.name') }}" />
+        <meta name="color-scheme" content="light" />
         <meta name="theme-color" content="#ffffff" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -91,7 +92,7 @@
                 </div>
 
                 <div class="flex min-h-0 flex-1 items-center justify-center py-6">
-                    <div class="mx-auto w-full max-w-md">
+                    <div class="patient-auth-content mx-auto w-full max-w-md">
                         {{ $slot }}
                     </div>
                 </div>

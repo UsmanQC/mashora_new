@@ -18,6 +18,8 @@ test('guest can open patient phone entry screen', function () {
         ->assertSee(__('patient.brand'), false)
         ->assertDontSee('images/logo.png', false)
         ->assertSee(__('patient_auth.phone_heading'), false)
+        ->assertSee(__('patient_auth.phone_label'), false)
+        ->assertSee('patient-auth-content', false)
         ->assertSee('intlTelInput.css', false)
         ->assertSee('intlTelInput.min.js', false)
         ->assertSee('patientPhoneField', false);

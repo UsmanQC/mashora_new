@@ -85,7 +85,7 @@ new #[Layout('layouts::patient-auth')] #[Title('Phone')] class extends Component
 
 <div>
     @if ($loginPhoneE164)
-        <flux:heading size="xl" class="patient-auth-heading">{{ __('patient_auth.login_title') }}</flux:heading>
+        <flux:heading size="xl" class="patient-auth-heading !text-zinc-900">{{ __('patient_auth.login_title') }}</flux:heading>
         <flux:text class="mt-2">{{ __('patient_auth.login_password_lead') }}</flux:text>
 
         <flux:text class="mt-3 font-medium tabular-nums text-zinc-700" dir="ltr">
@@ -133,7 +133,7 @@ new #[Layout('layouts::patient-auth')] #[Title('Phone')] class extends Component
             </div>
         </form>
     @else
-        <flux:heading size="xl" class="patient-auth-heading text-[#193ADB]">{{ __('patient_auth.phone_heading') }}</flux:heading>
+        <flux:heading size="xl" class="patient-auth-heading !text-zinc-900">{{ __('patient_auth.phone_heading') }}</flux:heading>
 
         <form wire:submit="continueGuest" class="mt-8 space-y-6">
             @include('partials.patient-unified-phone-field')

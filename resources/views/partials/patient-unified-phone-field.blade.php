@@ -1,6 +1,6 @@
 <div x-data="patientPhoneField(@entangle('countryIso'), @entangle('phone'))" x-init="init()">
     <flux:field>
-        <flux:label>{{ __('patient_auth.phone_label') }}</flux:label>
+        <flux:label class="!text-zinc-900">{{ __('patient_auth.phone_label') }}</flux:label>
         <div wire:ignore>
             <input
                 x-ref="phoneInput"
