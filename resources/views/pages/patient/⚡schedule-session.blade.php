@@ -172,104 +172,179 @@ new #[Layout('layouts::patient')] #[Title('Session filter')] class extends Compo
 
         $this->redirect(route('patient.home'));
     }
+
+    #[Computed]
+    public function requiredFiltersCompleted(): int
+    {
+        return collect([
+            $this->degree_id,
+            $this->genderPreference,
+            $this->durationMinutes,
+            $this->languagePreference,
+        ])->filter(fn (string $value): bool => filled($value))->count();
+    }
+
+    public function requiredFilterProgressPercent(): int
+    {
+        return (int) round(($this->requiredFiltersCompleted / 4) * 100);
+    }
 }; ?>
 
-<div class="schedule-session-accent mx-auto max-w-4xl space-y-8 px-4 py-6 pb-28 [--color-accent:#0b163e] [--color-accent-content:#0b163e] [--color-accent-foreground:#ffffff] sm:pb-12">
-    <div>
-        <flux:heading level="2" size="xl" class="font-semibold text-zinc-900">
-            {{ __('session_filter.title') }}
-        </flux:heading>
-        <flux:heading level="3" size="lg" class="mt-6 text-zinc-800">
-            {{ __('session_filter.filter_heading') }}
-        </flux:heading>
-    </div>
-
-    <div class="space-y-8">
-        <section class="space-y-3" aria-labelledby="sess-spec-kind">
-            <flux:heading id="sess-spec-kind" level="4" size="sm" class="text-zinc-600">
-                {{ __('session_filter.sections.specialist') }}
-            </flux:heading>
-            <flux:radio.group variant="pills" wire:model.live="degree_id" class="gap-2 sm:gap-3">
-                @foreach ($this->specialistKindOptions as $option)
-                    <flux:radio value="{{ $option['value'] }}">{{ $option['label'] }}</flux:radio>
-                @endforeach
-            </flux:radio.group>
-            <flux:error name="degree_id" />
-        </section>
-
-        <flux:separator variant="subtle" />
-
-        <section class="space-y-3" aria-labelledby="sess-gender">
-            <flux:heading id="sess-gender" level="4" size="sm" class="text-zinc-600">
-                {{ __('session_filter.sections.gender_pref') }}
-            </flux:heading>
-            <flux:radio.group variant="pills" wire:model.live="genderPreference">
-                <flux:radio value="male">{{ __('session_filter.sections.gender.male') }}</flux:radio>
-                <flux:radio value="female">{{ __('session_filter.sections.gender.female') }}</flux:radio>
-                <flux:radio value="both">{{ __('session_filter.sections.gender.both') }}</flux:radio>
-            </flux:radio.group>
-            <flux:error name="genderPreference" />
-        </section>
-
-        <flux:separator variant="subtle" />
-
-        <section class="space-y-3" aria-labelledby="sess-duration">
-            <flux:heading id="sess-duration" level="4" size="sm" class="text-zinc-600">
-                {{ __('session_filter.sections.duration') }}
-            </flux:heading>
-            <flux:radio.group variant="pills" wire:model.live="durationMinutes">
-                <flux:radio value="15">{{ __('session_filter.sections.minutes.15') }}</flux:radio>
-                <flux:radio value="30">{{ __('session_filter.sections.minutes.30') }}</flux:radio>
-                <flux:radio value="45">{{ __('session_filter.sections.minutes.45') }}</flux:radio>
-                <flux:radio value="60">{{ __('session_filter.sections.minutes.60') }}</flux:radio>
-            </flux:radio.group>
-            <flux:error name="durationMinutes" />
-        </section>
-
-        <flux:separator variant="subtle" />
-
-        <section class="space-y-3" aria-labelledby="sess-lang">
-            <flux:heading id="sess-lang" level="4" size="sm" class="text-zinc-600">
-                {{ __('session_filter.sections.language') }}
-            </flux:heading>
-            <flux:radio.group variant="pills" wire:model.live="languagePreference">
-                <flux:radio value="ar">{{ __('session_filter.sections.lang.ar') }}</flux:radio>
-                <flux:radio value="en">{{ __('session_filter.sections.lang.en') }}</flux:radio>
-                <flux:radio value="both">{{ __('session_filter.sections.lang.both') }}</flux:radio>
-            </flux:radio.group>
-            <flux:error name="languagePreference" />
-        </section>
-
-        <flux:separator variant="subtle" />
-
-        <section class="space-y-3" aria-labelledby="sess-subs">
-            <flux:heading id="sess-subs" level="4" size="sm" class="text-zinc-600">
-                {{ __('session_filter.sections.subspecialties') }}
-            </flux:heading>
-            <div class="flex flex-wrap gap-2">
-                @foreach ($this->visibleSpecialityOptions as $opt)
-                    <button
-                        type="button"
-                        wire:key="sub-{{ $opt['id'] }}"
-                        wire:click="toggleSubspecialty('{{ $opt['id'] }}')"
-                        aria-pressed="{{ $this->subspecialtyIsSelected($opt['id']) ? 'true' : 'false' }}"
-                        class="@if ($this->subspecialtyIsSelected($opt['id'])) border-mashora-brand bg-mashora-brand/12 text-mashora-brand @else border-zinc-200 bg-white text-zinc-800 hover:border-zinc-300 @endif rounded-full border px-3 py-1.5 text-start text-xs font-medium leading-snug shadow-sm transition sm:text-sm"
-                    >
-                        {{ $opt['label'] }}
-                    </button>
-                @endforeach
+<div class="session-filter-shell mx-auto max-w-3xl px-4 py-6 pb-32 sm:pb-12">
+    <header class="overflow-hidden rounded-3xl border border-[#193ADB]/15 bg-gradient-to-br from-[#193ADB]/12 via-white to-white p-6 shadow-sm sm:p-8">
+        <div class="flex items-start gap-4">
+            <div class="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-[#193ADB] text-white shadow-md shadow-[#193ADB]/25">
+                <flux:icon name="adjustments-horizontal" class="size-6" />
             </div>
-            @if (count($this->specialityOptions) > (int) config('session_filter.subspecialties_collapsed_count', 7))
-                <div>
-                    <flux:button variant="ghost" size="sm" wire:click="toggleSubspecialtiesExpanded" type="button" class="!px-0 text-[#1565c0] hover:!text-[#0B163E]">
-                        {{ $this->subspecialtiesExpanded ? __('session_filter.show_less') : __('session_filter.show_more') }}
-                    </flux:button>
+            <div class="min-w-0 flex-1">
+                <flux:heading level="1" size="xl" class="font-semibold text-[#193ADB]">
+                    {{ __('session_filter.title') }}
+                </flux:heading>
+                <flux:text class="mt-2 text-sm leading-relaxed text-zinc-600">
+                    {{ __('session_filter.subtitle') }}
+                </flux:text>
+            </div>
+        </div>
+
+        <div class="mt-6 rounded-2xl border border-zinc-200/80 bg-white/80 p-4 backdrop-blur-sm">
+            <div class="flex items-center justify-between gap-3 text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                <span>{{ __('session_filter.filter_heading') }}</span>
+                <span class="tabular-nums text-[#193ADB]">
+                    {{ __('session_filter.progress', ['current' => $this->requiredFiltersCompleted, 'total' => 4]) }}
+                </span>
+            </div>
+            <div class="mt-3 h-2 overflow-hidden rounded-full bg-zinc-100">
+                <div
+                    class="h-full rounded-full bg-gradient-to-r from-[#193ADB] to-[#4f6cf7] transition-all duration-300 ease-out"
+                    style="width: {{ $this->requiredFilterProgressPercent() }}%"
+                    role="progressbar"
+                    aria-valuenow="{{ $this->requiredFiltersCompleted }}"
+                    aria-valuemin="0"
+                    aria-valuemax="4"
+                ></div>
+            </div>
+        </div>
+    </header>
+
+    <div class="mt-6 overflow-hidden rounded-3xl border border-zinc-200/90 bg-white shadow-sm">
+        <section class="session-filter-section" aria-labelledby="sess-spec-kind">
+            <div class="flex items-start gap-4">
+                <div class="session-filter-section-icon session-filter-section-icon--specialist">
+                    <flux:icon name="user-circle" class="size-5" />
                 </div>
-            @endif
+                <div class="min-w-0 flex-1 space-y-3">
+                    <flux:heading id="sess-spec-kind" level="4" size="sm" class="font-semibold text-zinc-900">
+                        {{ __('session_filter.sections.specialist') }}
+                    </flux:heading>
+                    <flux:radio.group variant="pills" wire:model.live="degree_id" class="session-filter-pills gap-2 sm:gap-2.5">
+                        @foreach ($this->specialistKindOptions as $option)
+                            <flux:radio value="{{ $option['value'] }}">{{ $option['label'] }}</flux:radio>
+                        @endforeach
+                    </flux:radio.group>
+                    <flux:error name="degree_id" />
+                </div>
+            </div>
+        </section>
+
+        <section class="session-filter-section" aria-labelledby="sess-gender">
+            <div class="flex items-start gap-4">
+                <div class="session-filter-section-icon session-filter-section-icon--gender">
+                    <flux:icon name="users" class="size-5" />
+                </div>
+                <div class="min-w-0 flex-1 space-y-3">
+                    <flux:heading id="sess-gender" level="4" size="sm" class="font-semibold text-zinc-900">
+                        {{ __('session_filter.sections.gender_pref') }}
+                    </flux:heading>
+                    <flux:radio.group variant="pills" wire:model.live="genderPreference" class="session-filter-pills gap-2 sm:gap-2.5">
+                        <flux:radio value="male">{{ __('session_filter.sections.gender.male') }}</flux:radio>
+                        <flux:radio value="female">{{ __('session_filter.sections.gender.female') }}</flux:radio>
+                        <flux:radio value="both">{{ __('session_filter.sections.gender.both') }}</flux:radio>
+                    </flux:radio.group>
+                    <flux:error name="genderPreference" />
+                </div>
+            </div>
+        </section>
+
+        <section class="session-filter-section" aria-labelledby="sess-duration">
+            <div class="flex items-start gap-4">
+                <div class="session-filter-section-icon session-filter-section-icon--duration">
+                    <flux:icon name="clock" class="size-5" />
+                </div>
+                <div class="min-w-0 flex-1 space-y-3">
+                    <flux:heading id="sess-duration" level="4" size="sm" class="font-semibold text-zinc-900">
+                        {{ __('session_filter.sections.duration') }}
+                    </flux:heading>
+                    <flux:radio.group variant="pills" wire:model.live="durationMinutes" class="session-filter-pills gap-2 sm:gap-2.5">
+                        <flux:radio value="15">{{ __('session_filter.sections.minutes.15') }}</flux:radio>
+                        <flux:radio value="30">{{ __('session_filter.sections.minutes.30') }}</flux:radio>
+                        <flux:radio value="45">{{ __('session_filter.sections.minutes.45') }}</flux:radio>
+                        <flux:radio value="60">{{ __('session_filter.sections.minutes.60') }}</flux:radio>
+                    </flux:radio.group>
+                    <flux:error name="durationMinutes" />
+                </div>
+            </div>
+        </section>
+
+        <section class="session-filter-section" aria-labelledby="sess-lang">
+            <div class="flex items-start gap-4">
+                <div class="session-filter-section-icon session-filter-section-icon--language">
+                    <flux:icon name="language" class="size-5" />
+                </div>
+                <div class="min-w-0 flex-1 space-y-3">
+                    <flux:heading id="sess-lang" level="4" size="sm" class="font-semibold text-zinc-900">
+                        {{ __('session_filter.sections.language') }}
+                    </flux:heading>
+                    <flux:radio.group variant="pills" wire:model.live="languagePreference" class="session-filter-pills gap-2 sm:gap-2.5">
+                        <flux:radio value="ar">{{ __('session_filter.sections.lang.ar') }}</flux:radio>
+                        <flux:radio value="en">{{ __('session_filter.sections.lang.en') }}</flux:radio>
+                        <flux:radio value="both">{{ __('session_filter.sections.lang.both') }}</flux:radio>
+                    </flux:radio.group>
+                    <flux:error name="languagePreference" />
+                </div>
+            </div>
+        </section>
+
+        <section class="session-filter-section session-filter-section--last" aria-labelledby="sess-subs">
+            <div class="flex items-start gap-4">
+                <div class="session-filter-section-icon session-filter-section-icon--subspecialty">
+                    <flux:icon name="tag" class="size-5" />
+                </div>
+                <div class="min-w-0 flex-1 space-y-3">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <flux:heading id="sess-subs" level="4" size="sm" class="font-semibold text-zinc-900">
+                            {{ __('session_filter.sections.subspecialties') }}
+                        </flux:heading>
+                        <flux:badge size="sm" color="zinc">{{ __('session_filter.optional') }}</flux:badge>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        @foreach ($this->visibleSpecialityOptions as $opt)
+                            <button
+                                type="button"
+                                wire:key="sub-{{ $opt['id'] }}"
+                                wire:click="toggleSubspecialty('{{ $opt['id'] }}')"
+                                aria-pressed="{{ $this->subspecialtyIsSelected($opt['id']) ? 'true' : 'false' }}"
+                                @class([
+                                    'session-filter-chip',
+                                    'session-filter-chip--selected' => $this->subspecialtyIsSelected($opt['id']),
+                                ])
+                            >
+                                {{ $opt['label'] }}
+                            </button>
+                        @endforeach
+                    </div>
+                    @if (count($this->specialityOptions) > (int) config('session_filter.subspecialties_collapsed_count', 7))
+                        <div>
+                            <flux:button variant="ghost" size="sm" wire:click="toggleSubspecialtiesExpanded" type="button" class="!px-0 !text-[#193ADB] hover:!text-[#0f2a9e]">
+                                {{ $this->subspecialtiesExpanded ? __('session_filter.show_less') : __('session_filter.show_more') }}
+                            </flux:button>
+                        </div>
+                    @endif
+                </div>
+            </div>
         </section>
     </div>
 
-    <div class="flex w-full flex-col gap-3 border-t border-zinc-200/80 pt-6 sm:flex-row sm:justify-end sm:border-t-0 sm:pt-0">
+    <div class="session-filter-actions mt-6 flex w-full flex-col gap-3 sm:flex-row sm:justify-end">
         <flux:button variant="ghost" wire:click="proceedSkip" type="button" class="min-h-11 w-full sm:w-auto sm:min-w-[9rem]" wire:loading.attr="disabled">
             {{ __('session_filter.skip') }}
         </flux:button>
@@ -277,7 +352,7 @@ new #[Layout('layouts::patient')] #[Title('Session filter')] class extends Compo
             variant="primary"
             wire:click="proceedNext"
             type="button"
-            class="min-h-11 w-full border-[#0B163E] !bg-[#0B163E] !text-white hover:!brightness-[0.97] focus-visible:!ring-[#0B163E]/40 sm:w-auto sm:min-w-[9rem]"
+            class="min-h-11 w-full !border-[#193ADB] !bg-[#193ADB] !text-white shadow-md shadow-[#193ADB]/20 hover:!brightness-[0.97] focus-visible:!ring-[#193ADB]/40 sm:w-auto sm:min-w-[9rem]"
             wire:loading.attr="disabled"
         >
             {{ __('session_filter.next') }}

@@ -2,6 +2,7 @@
 
 use App\Models\Appointment;
 use App\Models\Doctor;
+use App\Services\AppointmentMissedService;
 use App\Services\AppointmentWalletService;
 use App\Services\FollowUpAppointmentService;
 use App\Services\PatientAppointmentNotifier;
@@ -20,6 +21,11 @@ use Livewire\WithPagination;
 new #[Layout('layouts::doctor')] #[Title('Appointments')] class extends Component
 {
     use WithPagination;
+
+    public function mount(): void
+    {
+        app(AppointmentMissedService::class)->processDueMissedAppointments();
+    }
 
     #[Url]
     public string $status = 'all';
@@ -356,7 +362,7 @@ new #[Layout('layouts::doctor')] #[Title('Appointments')] class extends Componen
                         <th class="w-[14%] px-4 py-3 text-center">{{ __('doctor.appointments.date') }}</th>
                         <th class="w-[12%] px-4 py-3 text-center">{{ __('doctor.appointments.time') }}</th>
                         <th class="w-[16%] px-4 py-3 text-center">{{ __('doctor.appointments.status') }}</th>
-                        <th class="min-w-[12.5rem] px-4 py-3 text-center">{{ __('doctor.appointments.actions') }}</th>
+                        <th class="min-w-[18rem] px-4 py-3 text-center">{{ __('doctor.appointments.actions') }}</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-zinc-100">
@@ -368,6 +374,8 @@ new #[Layout('layouts::doctor')] #[Title('Appointments')] class extends Componen
                                 'new' => 'bg-sky-100 text-sky-700',
                                 'pending_follow_up' => 'bg-violet-100 text-violet-700',
                                 'cancelled' => 'bg-rose-100 text-rose-700',
+                                'rescheduled' => 'bg-indigo-100 text-indigo-700',
+                                'not_attended' => 'bg-orange-100 text-orange-800',
                                 default => 'bg-zinc-100 text-zinc-700',
                             };
                             $statusLabel = __('doctor.appointment_status.'.$row->status);
@@ -393,29 +401,29 @@ new #[Layout('layouts::doctor')] #[Title('Appointments')] class extends Componen
                             </td>
                             <td class="px-4 py-3">
                                 @if (in_array($row->status, ['new', 'rescheduled', 'in_process'], true))
-                                    <div class="mx-auto flex w-full min-w-[11rem] max-w-[13rem] flex-col gap-1.5">
+                                    <div class="flex flex-wrap items-center justify-center gap-1.5">
                                         <a
                                             href="{{ route('doctor.appointments.conversation', $row) }}"
                                             wire:navigate
-                                            class="inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-[#132A6E] px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:brightness-95"
+                                            class="inline-flex shrink-0 items-center justify-center gap-1 rounded-lg bg-[#132A6E] px-2.5 py-1.5 text-xs font-semibold whitespace-nowrap text-white shadow-sm transition hover:brightness-95"
                                         >
-                                            <flux:icon name="video-camera" variant="mini" class="size-4 shrink-0" />
+                                            <flux:icon name="video-camera" variant="mini" class="size-3.5 shrink-0" />
                                             {{ __('doctor.appointments.open_session') }}
                                         </a>
                                         <a
                                             href="{{ route('doctor.appointments.reschedule', $row) }}"
                                             wire:navigate
-                                            class="inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-[#132A6E]/30 bg-white px-3 py-2 text-xs font-semibold text-[#132A6E] transition hover:bg-[#132A6E]/5"
+                                            class="inline-flex shrink-0 items-center justify-center gap-1 rounded-lg border border-[#132A6E]/30 bg-white px-2.5 py-1.5 text-xs font-semibold whitespace-nowrap text-[#132A6E] transition hover:bg-[#132A6E]/5"
                                         >
-                                            <flux:icon name="arrow-path" variant="mini" class="size-4 shrink-0" />
+                                            <flux:icon name="arrow-path" variant="mini" class="size-3.5 shrink-0" />
                                             {{ __('doctor.workspace.tab_reschedule') }}
                                         </a>
                                         <button
                                             type="button"
                                             wire:click="promptCancelAppointment({{ $row->id }})"
-                                            class="inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-100"
+                                            class="inline-flex shrink-0 items-center justify-center gap-1 rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-xs font-semibold whitespace-nowrap text-rose-700 transition hover:bg-rose-100"
                                         >
-                                            <flux:icon name="x-circle" variant="mini" class="size-4 shrink-0" />
+                                            <flux:icon name="x-circle" variant="mini" class="size-3.5 shrink-0" />
                                             {{ __('doctor.appointments.cancel_refund') }}
                                         </button>
                                     </div>

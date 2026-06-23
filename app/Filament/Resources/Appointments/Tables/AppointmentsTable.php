@@ -99,7 +99,7 @@ class AppointmentsTable
                         'in_process' => 'In process',
                         'completed' => 'Completed',
                         'cancelled' => 'Cancelled',
-                        'not_attended' => 'Not attended',
+                        'not_attended' => 'Missed',
                         'rescheduled' => 'Rescheduled',
                     ]),
                 SelectFilter::make('doctor_id')

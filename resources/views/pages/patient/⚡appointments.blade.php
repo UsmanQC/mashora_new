@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Appointment;
+use App\Services\AppointmentMissedService;
 use Carbon\Carbon;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
@@ -28,6 +29,7 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
             'ongoing' => ['new', 'in_process', 'pending_follow_up'],
             'rescheduled' => ['rescheduled'],
             'completed' => ['completed'],
+            'missed' => ['not_attended'],
             'cancelled' => ['cancelled'],
         ];
     }
@@ -37,6 +39,8 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
         if (! array_key_exists($this->tab, $this->tabStatuses())) {
             $this->tab = 'ongoing';
         }
+
+        app(AppointmentMissedService::class)->processDueMissedAppointments();
     }
 
     public function selectTab(string $tab): void
@@ -77,7 +81,7 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
     public function getTabCountsProperty(): Collection
     {
         $counts = $this->baseQuery()
-            ->whereIn('status', ['new', 'in_process', 'pending_follow_up', 'rescheduled', 'completed', 'cancelled'])
+            ->whereIn('status', ['new', 'in_process', 'pending_follow_up', 'rescheduled', 'completed', 'cancelled', 'not_attended'])
             ->selectRaw('status, COUNT(*) as aggregate')
             ->groupBy('status')
             ->pluck('aggregate', 'status')
@@ -87,6 +91,7 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
             'ongoing' => (int) ($counts['new'] ?? 0) + (int) ($counts['in_process'] ?? 0) + (int) ($counts['pending_follow_up'] ?? 0),
             'rescheduled' => (int) ($counts['rescheduled'] ?? 0),
             'completed' => (int) ($counts['completed'] ?? 0),
+            'missed' => (int) ($counts['not_attended'] ?? 0),
             'cancelled' => (int) ($counts['cancelled'] ?? 0),
         ]);
     }
@@ -100,6 +105,7 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
             'rescheduled' => __('patient.appointments.tab_rescheduled'),
             'completed' => __('patient.appointments.status_completed'),
             'cancelled' => __('patient.appointments.tab_cancelled'),
+            'not_attended' => __('patient.appointments.status_missed'),
             default => str_replace('_', ' ', $status),
         };
     }
@@ -110,6 +116,7 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
             'ongoing' => __('patient.appointments.tab_ongoing'),
             'rescheduled' => __('patient.appointments.tab_rescheduled'),
             'completed' => __('patient.appointments.tab_completed'),
+            'missed' => __('patient.appointments.tab_missed'),
             'cancelled' => __('patient.appointments.tab_cancelled'),
             default => __('patient.appointments.list_heading'),
         };
@@ -121,6 +128,7 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
             'ongoing' => __('patient.appointments.empty_ongoing'),
             'rescheduled' => __('patient.appointments.empty_rescheduled'),
             'completed' => __('patient.appointments.empty_completed'),
+            'missed' => __('patient.appointments.empty_missed'),
             'cancelled' => __('patient.appointments.empty_cancelled'),
             default => __('patient.menu.no_record_found'),
         };
@@ -135,6 +143,7 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
             'rescheduled' => 'bg-indigo-100 text-indigo-700',
             'completed' => 'bg-emerald-100 text-emerald-700',
             'cancelled' => 'bg-rose-100 text-rose-700',
+            'not_attended' => 'bg-orange-100 text-orange-800',
             default => 'bg-zinc-100 text-zinc-700',
         };
     }
@@ -244,7 +253,7 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
 
         {{-- Tab filters --}}
         <div
-            class="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-2.5"
+            class="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5 sm:gap-2.5"
             role="tablist"
             aria-label="{{ __('patient.appointments.tabs_aria') }}"
         >
@@ -252,6 +261,7 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
                 'ongoing' => __('patient.appointments.tab_ongoing'),
                 'rescheduled' => __('patient.appointments.tab_rescheduled'),
                 'completed' => __('patient.appointments.tab_completed'),
+                'missed' => __('patient.appointments.tab_missed'),
                 'cancelled' => __('patient.appointments.tab_cancelled'),
             ] as $tabKey => $tabLabel)
                 @php($isActiveTab = $tab === $tabKey)

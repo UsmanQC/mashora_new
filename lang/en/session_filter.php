@@ -3,6 +3,9 @@
 return [
     'title' => 'Schedule a session',
     'filter_heading' => 'Filter',
+    'subtitle' => 'Tell us what you are looking for so we can match you with the right specialist.',
+    'optional' => 'Optional',
+    'progress' => ':current of :total complete',
     'sections' => [
         'specialist' => 'Choose a specialist',
         'specialist_kind' => [

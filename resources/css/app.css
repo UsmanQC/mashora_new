@@ -124,6 +124,60 @@ select:focus[data-flux-control] {
     .patient-mood-detail-panel {
         animation: patient-mood-detail-open 0.28s ease-out forwards;
     }
+
+    .session-filter-shell {
+        --color-accent: #193adb;
+        --color-accent-content: #193adb;
+        --color-accent-foreground: #ffffff;
+    }
+
+    .session-filter-section {
+        @apply border-b border-zinc-100 px-5 py-6 sm:px-6 sm:py-7;
+    }
+
+    .session-filter-section--last {
+        @apply border-b-0;
+    }
+
+    .session-filter-section-icon {
+        @apply flex size-10 shrink-0 items-center justify-center rounded-xl;
+    }
+
+    .session-filter-section-icon--specialist {
+        @apply bg-[#193ADB]/10 text-[#193ADB];
+    }
+
+    .session-filter-section-icon--gender {
+        @apply bg-violet-100 text-violet-700;
+    }
+
+    .session-filter-section-icon--duration {
+        @apply bg-amber-100 text-amber-700;
+    }
+
+    .session-filter-section-icon--language {
+        @apply bg-emerald-100 text-emerald-700;
+    }
+
+    .session-filter-section-icon--subspecialty {
+        @apply bg-sky-100 text-sky-700;
+    }
+
+    .session-filter-pills ui-radio[data-flux-radio] {
+        @apply !rounded-full !border !border-zinc-200/90 !bg-white !px-4 !py-2.5 !text-sm !font-medium !text-zinc-700 !shadow-sm transition hover:!border-zinc-300;
+    }
+
+    .session-filter-chip {
+        @apply rounded-full border border-zinc-200/90 bg-white px-3.5 py-2 text-start text-xs font-medium leading-snug text-zinc-800 shadow-sm transition hover:border-zinc-300 sm:text-sm;
+    }
+
+    .session-filter-chip--selected {
+        @apply border-[#193ADB] bg-[#193ADB]/10 text-[#193ADB] shadow-md shadow-[#193ADB]/10;
+    }
+
+    .session-filter-actions {
+        @apply rounded-2xl border border-zinc-200/90 bg-white/95 p-4 shadow-lg shadow-zinc-900/5 backdrop-blur-sm sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none sm:backdrop-blur-none;
+    }
 }
 
 /* Patient auth: always use dark text on light panels (Flux dark utilities otherwise render white). */

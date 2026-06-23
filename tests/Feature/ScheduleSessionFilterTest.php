@@ -35,6 +35,7 @@ test('authenticated patient can open schedule session filter page', function () 
     $this->actingAs($user)->get(route('patient.schedule.filter'))
         ->assertSuccessful()
         ->assertSee(__('session_filter.filter_heading'), false)
+        ->assertSee(__('session_filter.subtitle'), false)
         ->assertSee('Obsessive', false)
         ->assertSee('Substance Abuse', false)
         ->assertDontSee('Anorexia', false);

@@ -3,6 +3,9 @@
 return [
     'title' => 'جدولة جلسة',
     'filter_heading' => 'فلتر',
+    'subtitle' => 'أخبرنا بما تبحث عنه لنوصلك بالأخصائي المناسب.',
+    'optional' => 'اختياري',
+    'progress' => ':current من :total مكتمل',
     'sections' => [
         'specialist' => 'اختر أخصائي',
         'specialist_kind' => [

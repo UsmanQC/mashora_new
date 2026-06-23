@@ -203,7 +203,7 @@ return [
         'completed' => 'Completed',
         'cancelled' => 'Cancelled',
         'rescheduled' => 'Rescheduled',
-        'not_attended' => 'Not attended',
+        'not_attended' => 'Missed',
         'pending_follow_up' => 'Follow-up pending',
     ],
 
@@ -407,7 +407,7 @@ return [
         'status_completed' => 'Completed',
         'status_cancelled' => 'Cancelled',
         'status_rescheduled' => 'Rescheduled',
-        'status_not_attended' => 'Not attended',
+        'status_not_attended' => 'Missed',
         'chat_locked_until_started' => 'Start the session to enable messaging and calls.',
         'session_not_started' => 'Start the session before placing a call.',
         'agora_required' => 'Add Agora App ID and certificate in .env to start calls.',

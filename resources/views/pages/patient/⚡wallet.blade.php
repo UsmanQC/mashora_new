@@ -75,16 +75,30 @@ new #[Layout('layouts::patient')] #[Title('Wallet')] class extends Component
 
     <div class="grid gap-3 sm:grid-cols-2">
         <div class="rounded-2xl border border-zinc-200/90 bg-white p-4 shadow-sm">
-            <p class="text-xs font-semibold uppercase text-zinc-500">{{ __('patient.wallet.month_credited') }}</p>
-            <p class="mt-2 text-2xl font-bold tabular-nums text-emerald-600">
-                +{{ number_format($this->monthlySummary['credited'], 2) }} {{ config('currency.sa_riyal_symbol') }}
-            </p>
+            <div class="flex items-start gap-3">
+                <div class="flex size-10 shrink-0 items-center justify-center rounded-full bg-emerald-100">
+                    <flux:icon name="arrow-down" class="size-5 text-emerald-600" />
+                </div>
+                <div class="min-w-0">
+                    <p class="text-xs font-semibold uppercase text-zinc-500">{{ __('patient.wallet.month_credited') }}</p>
+                    <p class="mt-2 text-2xl font-bold tabular-nums text-emerald-600">
+                        +{{ number_format($this->monthlySummary['credited'], 2) }} {{ config('currency.sa_riyal_symbol') }}
+                    </p>
+                </div>
+            </div>
         </div>
         <div class="rounded-2xl border border-zinc-200/90 bg-white p-4 shadow-sm">
-            <p class="text-xs font-semibold uppercase text-zinc-500">{{ __('patient.wallet.month_spent') }}</p>
-            <p class="mt-2 text-2xl font-bold tabular-nums text-zinc-700">
-                -{{ number_format($this->monthlySummary['spent'], 2) }} {{ config('currency.sa_riyal_symbol') }}
-            </p>
+            <div class="flex items-start gap-3">
+                <div class="flex size-10 shrink-0 items-center justify-center rounded-full bg-rose-100">
+                    <flux:icon name="arrow-up" class="size-5 text-rose-600" />
+                </div>
+                <div class="min-w-0">
+                    <p class="text-xs font-semibold uppercase text-zinc-500">{{ __('patient.wallet.month_spent') }}</p>
+                    <p class="mt-2 text-2xl font-bold tabular-nums text-rose-600">
+                        -{{ number_format($this->monthlySummary['spent'], 2) }} {{ config('currency.sa_riyal_symbol') }}
+                    </p>
+                </div>
+            </div>
         </div>
     </div>
 

@@ -64,8 +64,8 @@ new #[Layout('layouts::patient')] #[Title('Notifications')] class extends Compon
                 ])>
                     <div class="flex items-start justify-between gap-3">
                         <div class="min-w-0">
-                            <flux:heading size="sm" class="font-semibold text-zinc-900">{{ $notification->title }}</flux:heading>
-                            <flux:text class="mt-1 text-sm text-zinc-600">{{ $notification->message }}</flux:text>
+                            <flux:heading size="sm" class="font-semibold text-zinc-900">{{ $notification->displayTitle() }}</flux:heading>
+                            <flux:text class="mt-1 text-sm text-zinc-600">{{ $notification->displayMessage() }}</flux:text>
                             <flux:text class="mt-2 text-xs text-zinc-400">{{ $notification->created_at?->diffForHumans() }}</flux:text>
                         </div>
                         @if ($notification->read_at === null)

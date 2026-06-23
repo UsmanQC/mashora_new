@@ -80,6 +80,52 @@ final class PatientAppointmentNotifier
         ]);
     }
 
+    /**
+     * @return array{title: string, message: string}
+     */
+    public function missedNotificationCopy(Appointment $appointment, Doctor $doctor, ?string $locale = null): array
+    {
+        $startsAt = $this->appointmentStartsAt($appointment);
+        $locale ??= app()->getLocale();
+        $refundAmount = number_format((float) $appointment->total, 2);
+
+        return [
+            'title' => __('patient.notifications.missed_title', locale: $locale),
+            'message' => __('patient.notifications.missed_message', [
+                'doctor' => $doctor->displayName(),
+                'date' => $startsAt?->locale($locale)->translatedFormat('d M Y') ?? '--',
+                'time' => $startsAt?->locale($locale)->translatedFormat('g:i a') ?? '--',
+                'amount' => $refundAmount,
+            ], locale: $locale),
+        ];
+    }
+
+    public function notifyMissed(Appointment $appointment, Doctor $doctor): void
+    {
+        $user = $this->patientUser($appointment);
+        if ($user === null) {
+            return;
+        }
+
+        ['title' => $title, 'message' => $message] = $this->missedNotificationCopy($appointment, $doctor);
+
+        Notification::query()->create([
+            'type' => 'appointment_missed',
+            'title' => $title,
+            'message' => $message,
+            'userable_type' => User::class,
+            'userable_id' => $user->id,
+            'senderable_type' => Doctor::class,
+            'senderable_id' => $doctor->id,
+            'action' => route('patient.appointments', ['tab' => 'missed']),
+        ]);
+
+        $this->push->sendToUser($user, $title, $message, [
+            'type' => 'appointment_missed',
+            'appointment_id' => (string) $appointment->id,
+        ]);
+    }
+
     public function notifyStartReminder(Appointment $appointment): void
     {
         $user = $this->patientUser($appointment);

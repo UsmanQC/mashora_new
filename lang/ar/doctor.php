@@ -204,7 +204,7 @@ return [
         'completed' => 'مكتمل',
         'cancelled' => 'ملغاة',
         'rescheduled' => 'معاد جدولتها',
-        'not_attended' => 'لم يحضر',
+        'not_attended' => 'فائت',
         'pending_follow_up' => 'متابعة قيد الانتظار',
     ],
 
@@ -408,7 +408,7 @@ return [
         'status_completed' => 'مكتملة',
         'status_cancelled' => 'ملغاة',
         'status_rescheduled' => 'أعيد جدولتها',
-        'status_not_attended' => 'لم يحضر',
+        'status_not_attended' => 'فائت',
         'chat_locked_until_started' => 'ابدأ الجلسة لتفعيل المراسلة والمكالمات.',
         'session_not_started' => 'ابدأ الجلسة قبل إجراء مكالمة.',
         'agora_required' => 'أضف معرّف Agora والشهادة في ملف .env لبدء المكالمات.',

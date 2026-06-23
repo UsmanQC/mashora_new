@@ -75,7 +75,8 @@ test('authenticated patient home renders arabic strings when locale is ar', func
 
     $this->actingAs($user)->get(route('patient.home'))
         ->assertSuccessful()
-        ->assertSee(__('patient.portal_greeting', ['name' => 'User']), false);
+        ->assertSee(__('patient.portal_greeting_label'), false)
+        ->assertSee('User', false);
 });
 
 test('mood week strip opens mood picker for authenticated patients', function () {

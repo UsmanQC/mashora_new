@@ -30,7 +30,9 @@ test('patient wallet page shows balance and refund transaction', function (): vo
         ->assertSuccessful()
         ->assertSee(__('patient.wallet.title'), false)
         ->assertSee('120.00', false)
-        ->assertSee(__('patient.wallet.type_refund'), false);
+        ->assertSee(__('patient.wallet.type_refund'), false)
+        ->assertSee('bg-emerald-100', false)
+        ->assertSee('text-rose-600', false);
 });
 
 test('doctor wallet page shows balance and earning transaction', function (): void {

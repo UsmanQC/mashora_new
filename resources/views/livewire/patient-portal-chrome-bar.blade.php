@@ -1,42 +1,68 @@
-@php
-    use Illuminate\Support\Str;
-@endphp
-
 <div @if ($user) wire:poll.60s @endif>
     @if ($user)
-        <div
-            class="sticky top-0 z-30 border-b border-zinc-200/90 bg-zinc-50 px-4 py-3 text-[#1565c0] shadow-sm lg:static lg:z-auto lg:border-zinc-200/80 lg:shadow-none xl:px-6"
-        >
-            <div class="mx-auto flex max-w-6xl items-center justify-between gap-4">
-                <p class="min-w-0 truncate text-base font-semibold lg:text-lg">
-                    {{ __('patient.portal_greeting', ['name' => Str::trim(Str::before($user->name, ' ') ?: $user->name)]) }}
-                </p>
+        @php
+            $firstName = \Illuminate\Support\Str::trim(\Illuminate\Support\Str::before($user->name, ' ') ?: $user->name);
+        @endphp
 
-                <div class="flex shrink-0 items-center gap-2 sm:gap-3">
+        <header
+            class="sticky top-0 z-30 border-b border-slate-200/90 bg-white/95 backdrop-blur-md supports-[backdrop-filter]:bg-white/85 lg:static lg:z-auto lg:shadow-none"
+        >
+            <div class="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3 xl:px-6">
+                <div class="min-w-0 flex-1">
+                    <p class="text-[0.6875rem] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                        {{ __('patient.portal_greeting_label') }}
+                    </p>
+                    <p class="truncate text-base font-semibold text-slate-900 lg:text-[1.0625rem]">
+                        {{ $firstName }}
+                    </p>
+                </div>
+
+                <div
+                    class="flex shrink-0 items-center gap-1.5 sm:gap-2"
+                    role="toolbar"
+                    aria-label="{{ __('patient.portal_toolbar_aria') }}"
+                >
                     @include('partials.patient-language-switch', ['variant' => 'chrome'])
+
+                    <span class="mx-0.5 hidden h-7 w-px bg-slate-200 sm:inline" aria-hidden="true"></span>
 
                     <flux:button
                         type="button"
-                        variant="filled"
+                        variant="ghost"
                         size="sm"
+                        icon="heart"
                         wire:click="openMoodPicker"
-                        class="rounded-full! border-[#1565c0]/25! bg-white! px-4! py-2! font-semibold text-[#1565c0]! hover:bg-[#1565c0]/5!"
+                        :aria-label="__('patient.mood_check_in_aria')"
+                        class="hidden rounded-lg! border border-slate-200/90 bg-slate-50/90! px-2.5! py-2! text-slate-700! shadow-none! hover:border-slate-300! hover:bg-white! sm:inline-flex sm:px-3!"
                     >
-                        {{ __('patient.mood_feeling_cta') }}
+                        <span class="hidden md:inline">{{ __('patient.mood_feeling_cta') }}</span>
                     </flux:button>
+
+                    <flux:button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        icon="heart"
+                        wire:click="openMoodPicker"
+                        :aria-label="__('patient.mood_check_in_aria')"
+                        class="inline-flex size-9! rounded-lg! border border-slate-200/90 bg-slate-50/90! p-0! text-slate-700! shadow-none! hover:border-slate-300! hover:bg-white! sm:hidden"
+                    ></flux:button>
+
+                    <span class="mx-0.5 hidden h-7 w-px bg-slate-200 sm:inline" aria-hidden="true"></span>
 
                     <flux:dropdown position="bottom" align="end">
                         <div class="relative">
                             <flux:button
                                 type="button"
                                 variant="ghost"
+                                size="sm"
                                 icon="bell"
-                                class="text-[#1565c0]! [&_[data-slot=icon]]:!text-current"
+                                class="size-9! rounded-lg! border border-transparent! p-0! text-slate-600! hover:border-slate-200/90! hover:bg-slate-50! hover:text-slate-900! [&_[data-slot=icon]]:!size-[1.125rem] [&_[data-slot=icon]]:!text-current"
                                 :aria-label="__('patient.notifications_aria')"
                             ></flux:button>
                             @if ($this->unreadNotificationCount > 0)
                                 <span
-                                    class="pointer-events-none absolute -end-0.5 -top-1 flex min-h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[0.65rem] leading-none font-semibold text-white ring-2 ring-zinc-50"
+                                    class="pointer-events-none absolute end-0.5 top-0.5 flex min-h-[1.125rem] min-w-[1.125rem] items-center justify-center rounded-full bg-rose-600 px-1 text-[0.625rem] leading-none font-semibold text-white ring-2 ring-white"
                                     aria-hidden="true"
                                 >
                                     {{ $this->unreadNotificationCount > 99 ? '99+' : $this->unreadNotificationCount }}
@@ -45,10 +71,10 @@
                         </div>
 
                         <flux:menu class="min-w-[18rem] max-w-sm">
-                            <div class="border-b border-zinc-100 px-3 py-2">
+                            <div class="border-b border-zinc-100 px-3 py-2.5">
                                 <p class="text-sm font-semibold text-zinc-900">{{ __('patient.menu.notifications') }}</p>
                                 @if ($this->unreadNotificationCount > 0)
-                                    <p class="text-xs text-zinc-500">
+                                    <p class="mt-0.5 text-xs text-zinc-500">
                                         {{ trans_choice('patient.notifications.unread_count', $this->unreadNotificationCount, ['count' => $this->unreadNotificationCount]) }}
                                     </p>
                                 @endif
@@ -63,12 +89,12 @@
                                 >
                                     <span class="block w-full">
                                         <span class="flex items-start justify-between gap-2">
-                                            <span class="text-sm font-semibold text-zinc-900">{{ $notification->title }}</span>
+                                            <span class="text-sm font-semibold text-zinc-900">{{ $notification->displayTitle() }}</span>
                                             @if ($notification->read_at === null)
                                                 <span class="mt-1 size-2 shrink-0 rounded-full bg-sky-500" aria-hidden="true"></span>
                                             @endif
                                         </span>
-                                        <span class="mt-1 block line-clamp-2 text-xs text-zinc-600">{{ $notification->message }}</span>
+                                        <span class="mt-1 block line-clamp-2 text-xs text-zinc-600">{{ $notification->displayMessage() }}</span>
                                         <span class="mt-1 block text-[0.65rem] text-zinc-400">{{ $notification->created_at?->diffForHumans() }}</span>
                                     </span>
                                 </flux:menu.item>
@@ -89,6 +115,6 @@
                     @include('partials.patient-user-account-menu', ['density' => 'chrome'])
                 </div>
             </div>
-        </div>
+        </header>
     @endif
 </div>

@@ -1,27 +1,44 @@
 @php
     $density = $density ?? 'sidebar';
+
+    $initials = collect(explode(' ', trim((string) auth()->user()->name)))
+        ->filter()
+        ->take(2)
+        ->map(static fn (string $part): string => \Illuminate\Support\Str::upper(\Illuminate\Support\Str::substr($part, 0, 1)))
+        ->join('');
 @endphp
 
 <flux:dropdown position="bottom" align="{{ $density === 'chrome' ? 'end' : 'start' }}" @class(['w-full' => $density === 'sidebar'])>
-    <flux:button
-        variant="ghost"
-        size="sm"
-        icon="user"
-        type="button"
-        :aria-label="$density === 'chrome' ? __('patient.account_menu_aria') : null"
-        data-test="{{ $density === 'chrome' ? 'patient-account-menu-button' : '' }}"
-        @class([
-            'w-full justify-start text-white hover:!bg-[#132A6E] hover:!text-white active:!bg-[#132A6E] active:!text-white' => $density === 'sidebar',
-            'max-w-[11rem] text-white hover:bg-white/15 hover:!text-white [&]:text-white' => $density === 'header',
-            'text-[#1565c0]! [&_[data-slot=icon]]:!text-current' => $density === 'chrome',
-        ])
-    >
-        @if ($density === 'header')
-            <span class="truncate">{{ \Illuminate\Support\Str::limit(auth()->user()->name, 16) }}</span>
-        @elseif ($density === 'sidebar')
-            {{ auth()->user()->name }}
-        @endif
-    </flux:button>
+    @if ($density === 'chrome')
+        <flux:button
+            variant="ghost"
+            size="sm"
+            type="button"
+            :aria-label="__('patient.account_menu_aria')"
+            data-test="patient-account-menu-button"
+            class="size-9! rounded-full! border border-slate-200/90! bg-[#0B163E]! p-0! text-xs! font-semibold! text-white! shadow-sm! hover:border-slate-300! hover:bg-[#132A6E]!"
+        >
+            <span aria-hidden="true">{{ $initials !== '' ? $initials : 'U' }}</span>
+        </flux:button>
+    @else
+        <flux:button
+            variant="ghost"
+            size="sm"
+            icon="user"
+            type="button"
+            :aria-label="$density === 'header' ? null : null"
+            @class([
+                'w-full justify-start text-white hover:!bg-[#132A6E] hover:!text-white active:!bg-[#132A6E] active:!text-white' => $density === 'sidebar',
+                'max-w-[11rem] text-white hover:bg-white/15 hover:!text-white [&]:text-white' => $density === 'header',
+            ])
+        >
+            @if ($density === 'header')
+                <span class="truncate">{{ \Illuminate\Support\Str::limit(auth()->user()->name, 16) }}</span>
+            @elseif ($density === 'sidebar')
+                {{ auth()->user()->name }}
+            @endif
+        </flux:button>
+    @endif
 
     <flux:menu @class(['min-w-[12rem]' => $density === 'chrome'])>
         <flux:menu.item :href="route('profile.edit')" icon="user" wire:navigate>
