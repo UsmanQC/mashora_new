@@ -12,7 +12,7 @@
     </head>
     <body class="min-h-svh antialiased">
         <aside
-            class="fixed inset-y-0 start-0 z-50 hidden w-64 flex-col bg-[#3C5CF7] text-white shadow-lg lg:flex"
+            class="fixed inset-y-0 start-0 z-50 hidden w-64 flex-col bg-[#10B981] text-white shadow-lg lg:flex"
             aria-label="{{ __('doctor.sidebar_label') }}"
         >
             <div class="border-b border-white/10 px-4 pb-5 pt-5">
@@ -105,7 +105,7 @@
                         wire:navigate
                         variant="ghost"
                         size="sm"
-                        class="min-h-11 px-1 py-1.5 text-[0.65rem] leading-tight sm:text-xs {{ request()->routeIs('doctor.dashboard') ? '!bg-[#132A6E] !text-white' : 'text-zinc-600' }}"
+                        class="min-h-11 px-1 py-1.5 text-[0.65rem] leading-tight sm:text-xs {{ request()->routeIs('doctor.dashboard') ? '!bg-[#047857] !text-white' : 'text-zinc-600' }}"
                         icon="home"
                     >
                         {{ __('doctor.nav.dashboard') }}
@@ -115,7 +115,7 @@
                         wire:navigate
                         variant="ghost"
                         size="sm"
-                        class="min-h-11 px-1 py-1.5 text-[0.65rem] leading-tight sm:text-xs {{ request()->routeIs('doctor.appointments') ? '!bg-[#132A6E] !text-white' : 'text-zinc-600' }}"
+                        class="min-h-11 px-1 py-1.5 text-[0.65rem] leading-tight sm:text-xs {{ request()->routeIs('doctor.appointments') ? '!bg-[#047857] !text-white' : 'text-zinc-600' }}"
                         icon="calendar-days"
                     >
                         {{ __('doctor.nav.appointments') }}
@@ -125,7 +125,7 @@
                         wire:navigate
                         variant="ghost"
                         size="sm"
-                        class="min-h-11 px-1 py-1.5 text-[0.65rem] leading-tight sm:text-xs {{ request()->routeIs('doctor.ratings') ? '!bg-[#132A6E] !text-white' : 'text-zinc-600' }}"
+                        class="min-h-11 px-1 py-1.5 text-[0.65rem] leading-tight sm:text-xs {{ request()->routeIs('doctor.ratings') ? '!bg-[#047857] !text-white' : 'text-zinc-600' }}"
                         icon="star"
                     >
                         {{ __('doctor.nav.ratings') }}
@@ -135,7 +135,7 @@
                         wire:navigate
                         variant="ghost"
                         size="sm"
-                        class="min-h-11 px-1 py-1.5 text-[0.65rem] leading-tight sm:text-xs {{ request()->routeIs('doctor.settings') ? '!bg-[#132A6E] !text-white' : 'text-zinc-600' }}"
+                        class="min-h-11 px-1 py-1.5 text-[0.65rem] leading-tight sm:text-xs {{ request()->routeIs('doctor.settings') ? '!bg-[#047857] !text-white' : 'text-zinc-600' }}"
                         icon="cog-6-tooth"
                     >
                         {{ __('doctor.nav.menu') }}

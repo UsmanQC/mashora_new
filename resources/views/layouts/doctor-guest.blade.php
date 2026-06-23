@@ -6,7 +6,7 @@
 >
     <head>
         <meta name="application-name" content="{{ config('app.name') }} — {{ __('doctor.portal_name') }}" />
-        <meta name="theme-color" content="#3C5CF7" />
+        <meta name="theme-color" content="#10B981" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         @include('partials.head')
         @stack('styles')
@@ -14,12 +14,12 @@
     <body class="min-h-svh antialiased">
         <div class="flex min-h-svh flex-col lg:flex-row">
             <div
-                class="relative flex min-h-[32svh] flex-col justify-start overflow-hidden bg-gradient-to-br from-[#3C5CF7] via-[#3558e6] to-[#2848d4] px-6 pb-8 pt-10 lg:min-h-svh lg:w-1/2 lg:justify-center lg:px-10 lg:pb-0"
+                class="relative flex min-h-[32svh] flex-col justify-start overflow-hidden bg-gradient-to-br from-[#10B981] via-[#3558e6] to-[#2848d4] px-6 pb-8 pt-10 lg:min-h-svh lg:w-1/2 lg:justify-center lg:px-10 lg:pb-0"
             >
                 <div class="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
                     <div class="absolute -start-[10%] -top-[20%] h-72 w-72 rounded-full bg-white/10 blur-3xl"></div>
                     <div class="absolute -bottom-[15%] -end-[5%] h-96 w-96 rounded-full bg-white/10 blur-3xl"></div>
-                    <div class="absolute start-[40%] top-1/3 h-48 w-48 rounded-full bg-[#132A6E]/20 blur-2xl"></div>
+                    <div class="absolute start-[40%] top-1/3 h-48 w-48 rounded-full bg-[#047857]/20 blur-2xl"></div>
                 </div>
                 <div class="relative z-10 flex h-full w-full max-w-md flex-col text-white lg:mx-auto">
                     <div class="hidden flex-1 flex-col items-center justify-center gap-4 lg:flex">

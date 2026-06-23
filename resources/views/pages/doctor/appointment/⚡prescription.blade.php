@@ -174,7 +174,7 @@ new #[Layout('layouts::doctor')] #[Title('Prescription')] class extends Componen
             type="button"
             variant="primary"
             icon="plus"
-            class="!bg-[#3C5CF7] hover:!brightness-95"
+            class="!bg-[#10B981] hover:!brightness-95"
             wire:click="openCreateMedication"
         >
             {{ __('doctor.prescription_form.add_medication') }}
@@ -298,7 +298,7 @@ new #[Layout('layouts::doctor')] #[Title('Prescription')] class extends Componen
                 <flux:button type="button" variant="ghost" wire:click="dismissMedicationModal">
                     {{ __('doctor.prescription_form.cancel') }}
                 </flux:button>
-                <flux:button type="submit" variant="primary" class="!bg-[#3C5CF7] hover:!brightness-95">
+                <flux:button type="submit" variant="primary" class="!bg-[#10B981] hover:!brightness-95">
                     {{ $editingMedicationId
                         ? __('doctor.prescription_form.update')
                         : __('doctor.prescription_form.save') }}

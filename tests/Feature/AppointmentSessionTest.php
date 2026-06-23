@@ -113,10 +113,78 @@ test('appointment session service rejects patient-side start attempts', function
         'doctor_id' => $doctor->id,
         'user_id' => $user->id,
         'status' => 'new',
+        'appointment_date' => now()->toDateString(),
+        'start_time' => now()->format('H:i:s'),
     ]);
 
     $service = app(AppointmentSessionService::class);
 
     expect($service->canPatientJoin($appointment))->toBeFalse()
         ->and($service->canDoctorStart($appointment))->toBeTrue();
+});
+
+test('doctor cannot start session before scheduled time', function () {
+    $user = User::factory()->create();
+    $doctor = Doctor::factory()->create(['profile_completed' => true]);
+
+    $appointment = Appointment::factory()->create([
+        'doctor_id' => $doctor->id,
+        'user_id' => $user->id,
+        'status' => 'new',
+        'scheduled_at' => null,
+        'appointment_date' => now()->addDay()->toDateString(),
+        'start_time' => '10:00:00',
+    ]);
+
+    $service = app(AppointmentSessionService::class);
+
+    expect($service->canDoctorStart($appointment))->toBeFalse();
+
+    Livewire::actingAs($doctor, 'doctor')
+        ->test('pages::doctor.appointment.conversation', ['appointment' => $appointment])
+        ->call('startSession');
+
+    expect($appointment->fresh()->status)->toBe('new');
+});
+
+test('doctor appointments list disables open session before scheduled time', function () {
+    $user = User::factory()->create();
+    $doctor = Doctor::factory()->create(['profile_completed' => true]);
+
+    Appointment::factory()->create([
+        'doctor_id' => $doctor->id,
+        'user_id' => $user->id,
+        'status' => 'new',
+        'patient_name' => 'Patient Test',
+        'scheduled_at' => null,
+        'appointment_date' => now()->addDay()->toDateString(),
+        'start_time' => '10:00:00',
+    ]);
+
+    Livewire::actingAs($doctor, 'doctor')
+        ->test('pages::doctor.appointments')
+        ->assertSee(__('doctor.appointments.starts_in_label'), false)
+        ->assertSee(__('doctor.appointments.open_session_wait'), false)
+        ->assertSee('cursor-not-allowed', false);
+});
+
+test('doctor appointments list shows starts in timer for upcoming new sessions', function () {
+    $user = User::factory()->create();
+    $doctor = Doctor::factory()->create(['profile_completed' => true]);
+
+    Appointment::factory()->create([
+        'doctor_id' => $doctor->id,
+        'user_id' => $user->id,
+        'status' => 'new',
+        'patient_name' => 'Patient Test',
+        'scheduled_at' => null,
+        'appointment_date' => now()->addDay()->toDateString(),
+        'start_time' => '10:00:00',
+    ]);
+
+    Livewire::actingAs($doctor, 'doctor')
+        ->test('pages::doctor.appointments')
+        ->assertSee(__('doctor.appointments.starts_in_label'), false)
+        ->assertSee('appointmentStartTimer', false)
+        ->assertSee(__('doctor.appointments.open_session'), false);
 });

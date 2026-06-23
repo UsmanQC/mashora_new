@@ -166,7 +166,7 @@ new #[Layout('layouts::doctor')] #[Title('Duration and price')] class extends Co
                                 type="checkbox"
                                 wire:model.live="doctorDurations"
                                 value="{{ $durationKey }}"
-                                class="h-4 w-4 rounded border-zinc-300 text-[#132A6E] focus:ring-[#132A6E]"
+                                class="h-4 w-4 rounded border-zinc-300 text-[#047857] focus:ring-[#047857]"
                             />
                             <span class="text-sm font-semibold text-zinc-800">
                                 {{ __('doctor.auth.duration_minutes', ['minutes' => $duration->duration]) }}
@@ -203,7 +203,7 @@ new #[Layout('layouts::doctor')] #[Title('Duration and price')] class extends Co
                             type="checkbox"
                             wire:model="selectedCommunications"
                             value="{{ $communication->communication }}"
-                            class="h-4 w-4 rounded border-zinc-300 text-[#132A6E] focus:ring-[#132A6E]"
+                            class="h-4 w-4 rounded border-zinc-300 text-[#047857] focus:ring-[#047857]"
                         />
                         <span class="text-sm font-medium text-zinc-800">{{ $communication->title ?: str($communication->communication)->replace('_', ' ')->title() }}</span>
                     </label>
@@ -217,7 +217,7 @@ new #[Layout('layouts::doctor')] #[Title('Duration and price')] class extends Co
                 <input
                     type="checkbox"
                     wire:model="acceptInstantAppointment"
-                    class="h-4 w-4 rounded border-zinc-300 text-[#132A6E] focus:ring-[#132A6E]"
+                    class="h-4 w-4 rounded border-zinc-300 text-[#047857] focus:ring-[#047857]"
                 />
                 <span class="text-sm font-semibold text-zinc-800">{{ __('doctor.auth.accept_instant_appointment') }}</span>
             </label>
@@ -229,7 +229,7 @@ new #[Layout('layouts::doctor')] #[Title('Duration and price')] class extends Co
                 {{ __('doctor.auth.back') }}
             </flux:button>
             <flux:button
-                class="order-1 w-full !bg-[#132A6E] !text-white hover:!brightness-95 sm:order-2 sm:w-auto"
+                class="order-1 w-full !bg-[#047857] !text-white hover:!brightness-95 sm:order-2 sm:w-auto"
                 type="submit"
                 variant="primary"
             >

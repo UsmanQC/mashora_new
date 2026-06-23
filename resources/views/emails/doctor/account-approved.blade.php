@@ -20,7 +20,7 @@
             <td align="center">
                 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px; background-color:#ffffff; border-radius:16px; overflow:hidden; box-shadow:0 1px 3px rgba(15,23,42,0.08);">
                     <tr>
-                        <td style="background:linear-gradient(135deg,#1565c0,#42a5f5); padding:32px; text-align:center;">
+                        <td style="background:linear-gradient(135deg,#10B981,#34d399); padding:32px; text-align:center;">
                             <div style="font-size:22px; font-weight:700; color:#ffffff; letter-spacing:0.5px;">{{ $appName }}</div>
                         </td>
                     </tr>
@@ -58,7 +58,7 @@
                         <td style="padding:0 36px 8px; text-align:center;">
                             <table role="presentation" cellpadding="0" cellspacing="0" align="center">
                                 <tr>
-                                    <td style="border-radius:10px; background-color:#1565c0;">
+                                    <td style="border-radius:10px; background-color:#10B981;">
                                         <a href="{{ $loginUrl }}" target="_blank" style="display:inline-block; padding:14px 32px; font-size:15px; font-weight:600; color:#ffffff; text-decoration:none; border-radius:10px;">
                                             {{ __('mail.doctor_approved.cta') }}
                                         </a>

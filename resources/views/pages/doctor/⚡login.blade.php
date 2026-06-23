@@ -82,7 +82,7 @@ new #[Layout('layouts::doctor-guest')] #[Title('Doctor sign in')] class extends 
 <div class="flex min-h-full items-center">
     <div class="w-full py-2">
         <div class="mb-6 text-center">
-            <div class="mx-auto mb-3 inline-flex h-11 w-11 items-center justify-center rounded-full bg-[#132A6E]/10 text-[#132A6E]">
+            <div class="mx-auto mb-3 inline-flex h-11 w-11 items-center justify-center rounded-full bg-[#047857]/10 text-[#047857]">
                 <flux:icon name="shield-check" class="size-5" />
             </div>
             <flux:heading size="xl" class="font-semibold text-zinc-900">{{ __('doctor.auth.sign_in') }}</flux:heading>
@@ -107,7 +107,7 @@ new #[Layout('layouts::doctor-guest')] #[Title('Doctor sign in')] class extends 
 
             <flux:checkbox wire:model.live="remember" :label="__('doctor.auth.remember')" />
 
-            <flux:button class="w-full bg-[#132A6E]! text-white! hover:brightness-95!" type="submit" variant="primary">
+            <flux:button class="w-full bg-[#047857]! text-white! hover:brightness-95!" type="submit" variant="primary">
                 {{ __('doctor.auth.sign_in') }}
             </flux:button>
         </form>

@@ -96,6 +96,29 @@ new #[Layout('layouts::doctor')] #[Title('Appointments')] class extends Componen
         return app(FollowUpAppointmentService::class)->pendingFollowUpFor($appointment);
     }
 
+    public function shouldShowStartTimer(Appointment $appointment): bool
+    {
+        if (! in_array($appointment->status, ['new', 'rescheduled'], true)) {
+            return false;
+        }
+
+        return $appointment->sessionStartsAt() !== null;
+    }
+
+    public function sessionStartsAtIso(Appointment $appointment): ?string
+    {
+        return $appointment->sessionStartsAt()?->toIso8601String();
+    }
+
+    public function canOpenSessionNow(Appointment $appointment): bool
+    {
+        if ((string) $appointment->status === 'in_process') {
+            return true;
+        }
+
+        return app(AppointmentSessionService::class)->canDoctorStart($appointment);
+    }
+
     /**
      * @return Collection<string, int>
      */
@@ -129,11 +152,11 @@ new #[Layout('layouts::doctor')] #[Title('Appointments')] class extends Componen
         return [
             'all' => [
                 'icon' => 'squares-2x2',
-                'active' => 'border-[#132A6E] bg-[#132A6E] text-white shadow-md shadow-[#132A6E]/15',
-                'idle' => 'border-zinc-200/90 bg-white text-zinc-600 hover:border-[#132A6E]/35 hover:bg-[#132A6E]/[0.04] hover:text-[#132A6E]',
+                'active' => 'border-[#047857] bg-[#047857] text-white shadow-md shadow-[#047857]/15',
+                'idle' => 'border-zinc-200/90 bg-white text-zinc-600 hover:border-[#047857]/35 hover:bg-[#047857]/[0.04] hover:text-[#047857]',
                 'badge_active' => 'bg-white/20 text-white',
-                'badge_idle' => 'bg-zinc-100 text-zinc-600 group-hover:bg-[#132A6E]/10 group-hover:text-[#132A6E]',
-                'ring' => 'ring-[#132A6E]/30',
+                'badge_idle' => 'bg-zinc-100 text-zinc-600 group-hover:bg-[#047857]/10 group-hover:text-[#047857]',
+                'ring' => 'ring-[#047857]/30',
             ],
             'new' => [
                 'icon' => 'sparkles',
@@ -283,7 +306,7 @@ new #[Layout('layouts::doctor')] #[Title('Appointments')] class extends Componen
 <div class="space-y-6">
     <div class="flex flex-wrap items-center justify-between gap-3">
         <flux:heading size="xl" class="font-semibold tracking-tight text-zinc-900">{{ __('doctor.appointments.title') }}</flux:heading>
-        <span class="inline-flex items-center rounded-full bg-[#3C5CF7]/10 px-3 py-1 text-xs font-semibold text-[#2f49ca]">
+        <span class="inline-flex items-center rounded-full bg-[#10B981]/10 px-3 py-1 text-xs font-semibold text-[#2f49ca]">
             {{ trans_choice(':count records', $this->appointments->total(), ['count' => $this->appointments->total()]) }}
         </span>
     </div>
@@ -297,7 +320,7 @@ new #[Layout('layouts::doctor')] #[Title('Appointments')] class extends Componen
                 <button
                     type="button"
                     wire:click="$set('status', 'all')"
-                    class="inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-[#132A6E] transition hover:text-[#2f49ca]"
+                    class="inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-[#047857] transition hover:text-[#2f49ca]"
                 >
                     <flux:icon name="x-mark" variant="micro" class="size-3.5" />
                     {{ __('doctor.appointments.clear_filter') }}
@@ -354,15 +377,24 @@ new #[Layout('layouts::doctor')] #[Title('Appointments')] class extends Componen
             <flux:text class="mt-4 text-zinc-600">{{ __('doctor.appointments.empty') }}</flux:text>
         </div>
     @else
-        <div class="overflow-x-auto rounded-2xl border border-zinc-200/90 bg-white shadow-sm">
-            <table class="min-w-full table-fixed divide-y divide-zinc-100 text-sm">
-                <thead class="bg-zinc-50 text-start text-xs font-semibold uppercase text-zinc-500">
+        <div class="overflow-x-auto rounded-2xl border border-zinc-200/90 bg-white shadow-sm lg:overflow-x-visible">
+            <table class="w-full table-fixed divide-y divide-zinc-100 text-sm">
+                <colgroup>
+                    <col class="w-[19%]" />
+                    <col class="w-[11%]" />
+                    <col class="w-[11%]" />
+                    <col class="w-[11%]" />
+                    <col class="w-[36%]" />
+                    <col class="w-[12%]" />
+                </colgroup>
+                <thead class="bg-zinc-50 text-xs font-semibold uppercase text-zinc-500">
                     <tr>
-                        <th class="w-[22%] px-4 py-3 text-start">{{ __('doctor.appointments.patient') }}</th>
-                        <th class="w-[14%] px-4 py-3 text-center">{{ __('doctor.appointments.date') }}</th>
-                        <th class="w-[12%] px-4 py-3 text-center">{{ __('doctor.appointments.time') }}</th>
-                        <th class="w-[16%] px-4 py-3 text-center">{{ __('doctor.appointments.status') }}</th>
-                        <th class="min-w-[18rem] px-4 py-3 text-center">{{ __('doctor.appointments.actions') }}</th>
+                        <th class="px-4 py-3 text-start align-middle">{{ __('doctor.appointments.patient') }}</th>
+                        <th class="px-4 py-3 text-center align-middle whitespace-nowrap">{{ __('doctor.appointments.date') }}</th>
+                        <th class="px-4 py-3 text-center align-middle whitespace-nowrap">{{ __('doctor.appointments.time') }}</th>
+                        <th class="px-4 py-3 text-center align-middle whitespace-nowrap">{{ __('doctor.appointments.status') }}</th>
+                        <th class="px-4 py-3 text-center align-middle whitespace-nowrap">{{ __('doctor.appointments.actions') }}</th>
+                        <th class="px-4 py-3 text-center align-middle whitespace-nowrap">{{ __('doctor.appointments.starts_in_label') }}</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-zinc-100">
@@ -382,8 +414,19 @@ new #[Layout('layouts::doctor')] #[Title('Appointments')] class extends Componen
                             $pendingFollowUp = $this->canScheduleFollowUp($row)
                                 ? $this->pendingFollowUpFor($row)
                                 : null;
+                            $showStartTimer = $this->shouldShowStartTimer($row);
+                            $hasSessionActions = in_array($row->status, ['new', 'rescheduled', 'in_process'], true);
+                            $openSessionHref = route('doctor.appointments.conversation', $row);
                         @endphp
-                        <tr class="transition hover:bg-zinc-50/70">
+                        <tr
+                            class="transition hover:bg-zinc-50/70"
+                            @if ($hasSessionActions && $showStartTimer)
+                                x-data="appointmentStartTimer(@js($this->sessionStartsAtIso($row)))"
+                                x-init="start()"
+                            @elseif ($hasSessionActions)
+                                x-data="{ ready: @js($this->canOpenSessionNow($row)) }"
+                            @endif
+                        >
                             <td class="px-4 py-3 font-medium text-zinc-900">
                                 <div class="flex items-center gap-2">
                                     <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-zinc-100 text-xs font-semibold text-zinc-700">
@@ -399,21 +442,32 @@ new #[Layout('layouts::doctor')] #[Title('Appointments')] class extends Componen
                                     {{ $statusLabel }}
                                 </span>
                             </td>
-                            <td class="px-4 py-3">
-                                @if (in_array($row->status, ['new', 'rescheduled', 'in_process'], true))
-                                    <div class="flex flex-wrap items-center justify-center gap-1.5">
-                                        <a
-                                            href="{{ route('doctor.appointments.conversation', $row) }}"
-                                            wire:navigate
-                                            class="inline-flex shrink-0 items-center justify-center gap-1 rounded-lg bg-[#132A6E] px-2.5 py-1.5 text-xs font-semibold whitespace-nowrap text-white shadow-sm transition hover:brightness-95"
-                                        >
-                                            <flux:icon name="video-camera" variant="mini" class="size-3.5 shrink-0" />
-                                            {{ __('doctor.appointments.open_session') }}
-                                        </a>
+                            <td class="px-4 py-3 align-middle text-center">
+                                @if ($hasSessionActions)
+                                    <div class="inline-flex flex-nowrap items-center justify-center gap-1.5">
+                                        <template x-if="ready">
+                                            <a
+                                                href="{{ $openSessionHref }}"
+                                                wire:navigate
+                                                class="inline-flex shrink-0 items-center justify-center gap-1 rounded-lg bg-[#047857] px-2 py-1.5 text-[0.6875rem] font-semibold whitespace-nowrap text-white shadow-sm transition hover:brightness-95"
+                                            >
+                                                <flux:icon name="video-camera" variant="mini" class="size-3.5 shrink-0" />
+                                                {{ __('doctor.appointments.open_session') }}
+                                            </a>
+                                        </template>
+                                        <template x-if="!ready">
+                                            <span
+                                                class="inline-flex shrink-0 cursor-not-allowed items-center justify-center gap-1 rounded-lg bg-zinc-200 px-2 py-1.5 text-[0.6875rem] font-semibold whitespace-nowrap text-zinc-500"
+                                                title="{{ __('doctor.appointments.open_session_wait') }}"
+                                            >
+                                                <flux:icon name="video-camera" variant="mini" class="size-3.5 shrink-0 opacity-60" />
+                                                {{ __('doctor.appointments.open_session') }}
+                                            </span>
+                                        </template>
                                         <a
                                             href="{{ route('doctor.appointments.reschedule', $row) }}"
                                             wire:navigate
-                                            class="inline-flex shrink-0 items-center justify-center gap-1 rounded-lg border border-[#132A6E]/30 bg-white px-2.5 py-1.5 text-xs font-semibold whitespace-nowrap text-[#132A6E] transition hover:bg-[#132A6E]/5"
+                                            class="inline-flex shrink-0 items-center justify-center gap-1 rounded-lg border border-[#047857]/30 bg-white px-2 py-1.5 text-[0.6875rem] font-semibold whitespace-nowrap text-[#047857] transition hover:bg-[#047857]/5"
                                         >
                                             <flux:icon name="arrow-path" variant="mini" class="size-3.5 shrink-0" />
                                             {{ __('doctor.workspace.tab_reschedule') }}
@@ -421,14 +475,14 @@ new #[Layout('layouts::doctor')] #[Title('Appointments')] class extends Componen
                                         <button
                                             type="button"
                                             wire:click="promptCancelAppointment({{ $row->id }})"
-                                            class="inline-flex shrink-0 items-center justify-center gap-1 rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-xs font-semibold whitespace-nowrap text-rose-700 transition hover:bg-rose-100"
+                                            class="inline-flex shrink-0 items-center justify-center gap-1 rounded-lg border border-rose-200 bg-rose-50 px-2 py-1.5 text-[0.6875rem] font-semibold whitespace-nowrap text-rose-700 transition hover:bg-rose-100"
                                         >
                                             <flux:icon name="x-circle" variant="mini" class="size-3.5 shrink-0" />
                                             {{ __('doctor.appointments.cancel_refund') }}
                                         </button>
                                     </div>
                                 @elseif ($this->canScheduleFollowUp($row))
-                                    <div class="mx-auto flex w-full min-w-[11rem] max-w-[13rem] flex-col gap-1.5">
+                                    <div class="mx-auto inline-flex w-full min-w-[11rem] max-w-[13rem] flex-col gap-1.5">
                                         @if ($pendingFollowUp instanceof \App\Models\Appointment)
                                             <a
                                                 href="{{ route('doctor.appointments.follow-up', $row) }}"
@@ -442,7 +496,7 @@ new #[Layout('layouts::doctor')] #[Title('Appointments')] class extends Componen
                                             <a
                                                 href="{{ route('doctor.appointments.follow-up', $row) }}"
                                                 wire:navigate
-                                                class="inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-[#132A6E] px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:brightness-95"
+                                                class="inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-[#047857] px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:brightness-95"
                                             >
                                                 <flux:icon name="calendar-days" variant="mini" class="size-4 shrink-0" />
                                                 {{ __('doctor.workspace.tab_follow_up') }}
@@ -451,14 +505,14 @@ new #[Layout('layouts::doctor')] #[Title('Appointments')] class extends Componen
                                         <a
                                             href="{{ route('doctor.appointments.conversation', $row) }}"
                                             wire:navigate
-                                            class="inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-[#132A6E]/30 bg-white px-3 py-2 text-xs font-semibold text-[#132A6E] transition hover:bg-[#132A6E]/5"
+                                            class="inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-[#047857]/30 bg-white px-3 py-2 text-xs font-semibold text-[#047857] transition hover:bg-[#047857]/5"
                                         >
                                             <flux:icon name="chat-bubble-left-right" variant="mini" class="size-4 shrink-0" />
                                             {{ __('doctor.appointments.view_session') }}
                                         </a>
                                     </div>
                                 @elseif ($row->status === 'pending_follow_up' && $row->parentAppointment instanceof \App\Models\Appointment)
-                                    <div class="mx-auto w-full min-w-[11rem] max-w-[13rem]">
+                                    <div class="mx-auto inline-flex w-full min-w-[11rem] max-w-[13rem] flex-col">
                                         <a
                                             href="{{ route('doctor.appointments.follow-up', $row->parentAppointment) }}"
                                             wire:navigate
@@ -470,6 +524,19 @@ new #[Layout('layouts::doctor')] #[Title('Appointments')] class extends Componen
                                     </div>
                                 @else
                                     <span class="block text-center text-xs text-zinc-400">—</span>
+                                @endif
+                            </td>
+                            <td class="px-4 py-3 align-middle text-center whitespace-nowrap">
+                                @if ($showStartTimer)
+                                    <div
+                                        class="mx-auto inline-flex w-full max-w-[7rem] items-center justify-center gap-1.5 rounded-md border border-[#10B981]/25 bg-[#10B981]/10 px-2.5 py-2 text-sm font-bold tabular-nums text-[#047857]"
+                                        :aria-label="ariaLabel"
+                                    >
+                                        <flux:icon name="clock" variant="micro" class="size-3.5 shrink-0" />
+                                        <span x-text="label"></span>
+                                    </div>
+                                @else
+                                    <span class="text-xs text-zinc-400">—</span>
                                 @endif
                             </td>
                         </tr>
@@ -541,3 +608,5 @@ new #[Layout('layouts::doctor')] #[Title('Appointments')] class extends Componen
         </div>
     </flux:modal>
 </div>
+
+@include('partials.appointment-start-timer-script')

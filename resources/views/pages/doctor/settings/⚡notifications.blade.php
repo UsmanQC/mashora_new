@@ -70,7 +70,7 @@ new #[Layout('layouts::doctor')] #[Title('Notifications')] class extends Compone
                 <div @class([
                     'rounded-xl border p-3',
                     'border-zinc-200 bg-white' => $notification->read_at,
-                    'border-blue-200 bg-blue-50/40' => ! $notification->read_at,
+                    'border-emerald-200 bg-emerald-50/40' => ! $notification->read_at,
                 ])>
                     <div class="flex items-center justify-between gap-3">
                         <flux:text class="font-semibold text-zinc-900">{{ $notification->title ?: __('Notification') }}</flux:text>
@@ -89,7 +89,7 @@ new #[Layout('layouts::doctor')] #[Title('Notifications')] class extends Compone
 
         @if ($this->notifications->count() < $this->totalNotificationsCount)
             <div class="mt-4 flex justify-center" x-intersect="$wire.loadMore()">
-                <div class="h-6 w-6 animate-spin rounded-full border-2 border-zinc-300 border-t-[#132A6E]"></div>
+                <div class="h-6 w-6 animate-spin rounded-full border-2 border-zinc-300 border-t-[#047857]"></div>
             </div>
         @endif
     </div>

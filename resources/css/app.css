@@ -28,10 +28,10 @@
     --color-accent-foreground: var(--color-white);
 
     /** Patient auth / marketing accent (headings, CTAs) */
-    --color-mashora-brand: #3c5cf7;
-    --color-patient-brand: #1565c0;
-    --color-patient-brand-dark: #1358a8;
-    --color-patient-brand-darker: #132a6e;
+    --color-mashora-brand: #10B981;
+    --color-patient-brand: #10B981;
+    --color-patient-brand-dark: #059669;
+    --color-patient-brand-darker: #047857;
 }
 
 @layer theme {
@@ -94,8 +94,8 @@ select:focus[data-flux-control] {
 
     /** Patient profile gender radios: fix label vs control vertical alignment (especially when selected). */
     .patient-gender-fields {
-        --color-accent: #0b163e;
-        --color-accent-content: #0b163e;
+        --color-accent: #064e3b;
+        --color-accent-content: #064e3b;
         --color-accent-foreground: #ffffff;
     }
 
@@ -145,7 +145,7 @@ select:focus[data-flux-control] {
     }
 
     .session-filter-section-icon--specialist {
-        @apply bg-[#1565c0]/10 text-[#1565c0];
+        @apply bg-[#10B981]/10 text-[#10B981];
     }
 
     .session-filter-section-icon--gender {
@@ -191,16 +191,16 @@ select:focus[data-flux-control] {
 
 .session-filter-shell .session-filter-chip--active,
 .session-filter-shell .session-filter-chip--selected {
-    border-color: #1565c0 !important;
-    background-color: #1565c0 !important;
+    border-color: #10B981 !important;
+    background-color: #10B981 !important;
     color: #ffffff !important;
-    box-shadow: 0 4px 12px rgb(21 101 192 / 0.22);
+    box-shadow: 0 4px 12px rgb(16 185 129 / 0.22);
 }
 
 .session-filter-shell .session-filter-chip--active:hover,
 .session-filter-shell .session-filter-chip--selected:hover {
-    border-color: #1358a8 !important;
-    background-color: #1358a8 !important;
+    border-color: #059669 !important;
+    background-color: #059669 !important;
     color: #ffffff !important;
 }
 
@@ -253,10 +253,10 @@ select:focus[data-flux-control] {
 
 .patient-auth-content ui-otp input[data-flux-otp-input]:focus,
 .patient-auth-content .patient-auth-otp-input:focus {
-    border-color: #3c5cf7 !important;
-    outline: 2px solid rgb(60 92 247 / 0.28) !important;
+    border-color: #10B981 !important;
+    outline: 2px solid rgb(16 185 129 / 0.28) !important;
     outline-offset: 1px !important;
-    box-shadow: 0 0 0 3px rgb(60 92 247 / 0.12) !important;
+    box-shadow: 0 0 0 3px rgb(16 185 129 / 0.12) !important;
 }
 
 .patient-auth-content [data-flux-button].bg-transparent {

@@ -120,13 +120,13 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
 
 <div class="mx-auto w-full max-w-6xl space-y-5 px-4 py-5 pb-24 sm:px-6 sm:pb-10">
     <header class="relative overflow-hidden rounded-2xl border border-zinc-200/80 bg-gradient-to-br from-white via-white to-[#f7f9ff] p-4 shadow-sm shadow-zinc-200/60 ring-1 ring-zinc-100 sm:p-5">
-        <div class="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#1565c0] via-[#42a5f5] to-[#1358a8] opacity-85"></div>
+        <div class="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#10B981] via-[#34d399] to-[#059669] opacity-85"></div>
         <div class="flex flex-wrap items-center justify-between gap-3">
         <div class="flex items-center gap-3">
             <a
                 href="{{ route('patient.appointments') }}"
                 wire:navigate
-                class="inline-flex size-10 items-center justify-center rounded-full border border-zinc-200 bg-white text-[#1565c0] shadow-sm transition hover:bg-zinc-50"
+                class="inline-flex size-10 items-center justify-center rounded-full border border-zinc-200 bg-white text-[#10B981] shadow-sm transition hover:bg-zinc-50"
             >
                 <flux:icon name="chevron-left" variant="outline" class="size-6 rtl:rotate-180" />
             </a>
@@ -146,7 +146,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
             <button
                 type="button"
                 id="btn-patient-video"
-                class="inline-flex min-h-10 items-center gap-2 rounded-xl border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-800 shadow-sm transition hover:border-[#1565c0]/35 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-45"
+                class="inline-flex min-h-10 items-center gap-2 rounded-xl border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-800 shadow-sm transition hover:border-[#10B981]/35 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-45"
                 @disabled($agoraAppId === '' || $appointment->status !== 'in_process')
             >
                 <flux:icon name="video-camera" variant="mini" class="size-4 text-zinc-600" />
@@ -155,7 +155,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
             <button
                 type="button"
                 id="btn-patient-audio"
-                class="inline-flex min-h-10 items-center gap-2 rounded-xl border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-800 shadow-sm transition hover:border-[#1565c0]/35 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-45"
+                class="inline-flex min-h-10 items-center gap-2 rounded-xl border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-800 shadow-sm transition hover:border-[#10B981]/35 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-45"
                 @disabled($agoraAppId === '' || $appointment->status !== 'in_process')
             >
                 <flux:icon name="phone" variant="mini" class="size-4 text-zinc-600" />
@@ -193,7 +193,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
         </div>
         <div id="patient-wrap-session-remaining" class="rounded-xl border border-zinc-200/80 bg-gradient-to-br from-white to-zinc-50 px-3 py-2 shadow-sm">
             <p class="text-[11px] font-semibold uppercase tracking-wide text-zinc-400">{{ __('patient.appointments.session_remaining_label') }}</p>
-            <p id="patient-timer-session-remaining" class="mt-0.5 font-mono text-lg font-semibold tabular-nums text-[#132A6E]">--:--</p>
+            <p id="patient-timer-session-remaining" class="mt-0.5 font-mono text-lg font-semibold tabular-nums text-[#047857]">--:--</p>
         </div>
     </div>
 
@@ -222,7 +222,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 <div @class(['flex', 'justify-end' => $msg['send_by'] === 'patient', 'justify-start' => $msg['send_by'] !== 'patient']) wire:key="patient-chat-{{ $msg['id'] }}">
                     <div @class([
                         'max-w-[min(86%,30rem)] rounded-2xl px-3.5 py-2.5 text-sm shadow-sm ring-1',
-                        'bg-gradient-to-br from-[#1565c0] to-[#1358a8] text-white shadow-[#1565c0]/30 ring-[#1565c0]/20' => $msg['send_by'] === 'patient',
+                        'bg-gradient-to-br from-[#10B981] to-[#059669] text-white shadow-[#10B981]/30 ring-[#10B981]/20' => $msg['send_by'] === 'patient',
                         'border border-zinc-200/90 bg-white text-zinc-800 shadow-zinc-200/30 ring-zinc-100' => $msg['send_by'] !== 'patient',
                     ])>
                         <p class="whitespace-pre-wrap break-words">{{ $msg['body'] }}</p>
@@ -249,7 +249,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                     class="flex-1 !border-0 !bg-transparent !shadow-none"
                     :disabled="$appointment->status !== 'in_process'"
                 />
-                <flux:button type="submit" variant="primary" icon="paper-airplane" class="shadow-md shadow-[#132A6E]/25" wire:loading.attr="disabled" :disabled="$appointment->status !== 'in_process'">
+                <flux:button type="submit" variant="primary" icon="paper-airplane" class="shadow-md shadow-[#047857]/25" wire:loading.attr="disabled" :disabled="$appointment->status !== 'in_process'">
                     {{ __('patient.appointments.send') }}
                 </flux:button>
             </form>
@@ -369,7 +369,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
 
                 const bubble = document.createElement('div');
                 bubble.className = mine
-                    ? 'max-w-[min(86%,30rem)] rounded-2xl bg-[#1565c0] px-3.5 py-2.5 text-sm text-white shadow-sm'
+                    ? 'max-w-[min(86%,30rem)] rounded-2xl bg-[#10B981] px-3.5 py-2.5 text-sm text-white shadow-sm'
                     : 'max-w-[min(86%,30rem)] rounded-2xl border border-zinc-200 bg-white px-3.5 py-2.5 text-sm text-zinc-800 shadow-sm';
 
                 const p = document.createElement('p');
@@ -448,7 +448,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                     remainingEl.textContent = formatDuration(left);
                     remainingEl.classList.toggle('text-amber-700', left > 0 && left <= 300);
                     remainingEl.classList.toggle('text-rose-600', left <= 0);
-                    remainingEl.classList.toggle('text-[#132A6E]', left > 300);
+                    remainingEl.classList.toggle('text-[#047857]', left > 300);
                 }
             }
 

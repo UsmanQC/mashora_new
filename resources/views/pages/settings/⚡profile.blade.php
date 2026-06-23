@@ -120,7 +120,7 @@ new #[Layout('layouts::patient')] #[Title('Personal profile')] class extends Com
 <div class="mx-auto max-w-2xl space-y-6 px-4 py-8 pb-28 sm:pb-10">
     <div class="flex items-start justify-between gap-4">
         <div>
-            <flux:heading size="xl" class="font-semibold text-[#1565c0]">{{ __('patient.settings_page.page_title') }}</flux:heading>
+            <flux:heading size="xl" class="font-semibold text-[#10B981]">{{ __('patient.settings_page.page_title') }}</flux:heading>
             <flux:text class="mt-1 text-zinc-600">{{ __('patient.settings_page.page_subtitle') }}</flux:text>
         </div>
         <flux:button :href="route('patient.menu')" wire:navigate variant="ghost" size="sm" icon="arrow-left">
@@ -128,10 +128,10 @@ new #[Layout('layouts::patient')] #[Title('Personal profile')] class extends Com
         </flux:button>
     </div>
 
-    <div class="rounded-2xl border border-[#1565c0]/20 bg-gradient-to-br from-[#1565c0]/8 via-white to-white p-6 shadow-sm">
+    <div class="rounded-2xl border border-[#10B981]/20 bg-gradient-to-br from-[#10B981]/8 via-white to-white p-6 shadow-sm">
         <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div class="flex min-w-0 items-center gap-4">
-                <flux:avatar :name="$user->name" circle size="2xl" class="ring-2 ring-[#1565c0]/15" />
+                <flux:avatar :name="$user->name" circle size="2xl" class="ring-2 ring-[#10B981]/15" />
                 <div class="min-w-0">
                     <p class="truncate text-lg font-semibold text-zinc-900">{{ $user->name }}</p>
                     <p class="truncate text-sm text-zinc-500">{{ $user->email }}</p>
@@ -153,9 +153,9 @@ new #[Layout('layouts::patient')] #[Title('Personal profile')] class extends Com
                     </div>
                 </div>
             </div>
-            <div class="shrink-0 rounded-xl border border-[#1565c0]/15 bg-white/80 px-4 py-3 text-center shadow-sm">
+            <div class="shrink-0 rounded-xl border border-[#10B981]/15 bg-white/80 px-4 py-3 text-center shadow-sm">
                 <p class="text-[0.65rem] font-semibold uppercase tracking-wide text-zinc-500">{{ __('patient.settings_page.completeness') }}</p>
-                <p class="mt-1 text-2xl font-bold tabular-nums text-[#1565c0]">{{ $profileCompletion }}%</p>
+                <p class="mt-1 text-2xl font-bold tabular-nums text-[#10B981]">{{ $profileCompletion }}%</p>
             </div>
         </div>
         <flux:text class="mt-4 text-sm text-zinc-600">{{ __('patient.settings_page.hero_hint') }}</flux:text>
@@ -208,7 +208,7 @@ new #[Layout('layouts::patient')] #[Title('Personal profile')] class extends Com
                     variant="primary"
                     type="submit"
                     data-test="update-profile-button"
-                    class="!bg-[#1565c0] !text-white hover:!brightness-95"
+                    class="!bg-[#10B981] !text-white hover:!brightness-95"
                 >
                     {{ __('patient.settings_page.save_profile') }}
                 </flux:button>
@@ -249,7 +249,7 @@ new #[Layout('layouts::patient')] #[Title('Personal profile')] class extends Com
                         <flux:tooltip :content="$passwordRequirementsTooltip" position="top">
                             <button
                                 type="button"
-                                class="inline-flex shrink-0 rounded-full text-zinc-400 transition hover:text-[#1565c0] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1565c0]/40"
+                                class="inline-flex shrink-0 rounded-full text-zinc-400 transition hover:text-[#10B981] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#10B981]/40"
                                 aria-label="{{ __('patient.settings_page.password_tooltip_aria') }}"
                             >
                                 <flux:icon name="information-circle" variant="mini" class="size-4" />
@@ -284,7 +284,7 @@ new #[Layout('layouts::patient')] #[Title('Personal profile')] class extends Com
                     variant="primary"
                     type="submit"
                     data-test="update-password-button"
-                    class="!bg-[#1565c0] !text-white hover:!brightness-95"
+                    class="!bg-[#10B981] !text-white hover:!brightness-95"
                 >
                     {{ __('patient.settings_page.save_password') }}
                 </flux:button>

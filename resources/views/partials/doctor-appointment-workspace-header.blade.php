@@ -45,7 +45,7 @@
 
 <div class="space-y-5">
     <div>
-        <flux:link :href="route('doctor.dashboard')" wire:navigate class="text-sm font-medium text-[#3C5CF7]">
+        <flux:link :href="route('doctor.dashboard')" wire:navigate class="text-sm font-medium text-[#10B981]">
             <flux:icon name="chevron-left" variant="mini" class="inline size-4 align-middle rtl:rotate-180" />
             {{ __('doctor.workspace.back_dashboard') }}
         </flux:link>
@@ -81,8 +81,8 @@
                             wire:navigate
                             @class([
                                 'inline-flex max-w-full items-center gap-1.5 rounded-full border px-3 py-2 text-xs font-semibold transition sm:gap-2 sm:px-4 sm:text-sm',
-                                '!border-[#132A6E] bg-[#132A6E] text-white shadow-sm' => $isActive,
-                                'border-zinc-200 bg-zinc-50 text-zinc-700 hover:border-[#3C5CF7] hover:bg-white hover:text-[#3C5CF7]' => ! $isActive,
+                                '!border-[#047857] bg-[#047857] text-white shadow-sm' => $isActive,
+                                'border-zinc-200 bg-zinc-50 text-zinc-700 hover:border-[#10B981] hover:bg-white hover:text-[#10B981]' => ! $isActive,
                             ])
                             @if ($isActive) aria-current="page" @endif
                         >

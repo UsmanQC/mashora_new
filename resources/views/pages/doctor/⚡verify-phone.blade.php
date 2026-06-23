@@ -123,7 +123,7 @@ new #[Layout('layouts::doctor-guest')] #[Title('Verify mobile number')] class ex
             class="mx-auto"
         />
 
-        <flux:button class="w-full bg-[#132A6E]! text-white! hover:brightness-95!" type="submit" variant="primary">
+        <flux:button class="w-full bg-[#047857]! text-white! hover:brightness-95!" type="submit" variant="primary">
             {{ __('doctor.auth.otp_verify') }}
         </flux:button>
 

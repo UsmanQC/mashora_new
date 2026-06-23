@@ -17,7 +17,7 @@
             <flux:button :href="route('patient.appointments')" variant="outline" wire:navigate>
                 {{ __('patient_booking.view_appointments') }}
             </flux:button>
-            <flux:button :href="route('patient.home')" variant="primary" class="border-[#0B163E] !bg-[#0B163E] !text-white hover:!brightness-[0.97]" wire:navigate>
+            <flux:button :href="route('patient.home')" variant="primary" class="border-[#064e3b] !bg-[#064e3b] !text-white hover:!brightness-[0.97]" wire:navigate>
                 {{ __('patient_booking.back_home') }}
             </flux:button>
         </div>

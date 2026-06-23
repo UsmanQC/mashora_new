@@ -118,7 +118,7 @@ new #[Layout('layouts::doctor')] #[Title('Diagnosis')] class extends Component
             <flux:button
                 type="submit"
                 variant="primary"
-                class="!bg-[#3C5CF7] hover:!brightness-95"
+                class="!bg-[#10B981] hover:!brightness-95"
             >
                 {{ __('doctor.diagnosis_form.save') }}
             </flux:button>

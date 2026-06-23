@@ -15,7 +15,11 @@ final class AppointmentSessionService
 
     public function canDoctorStart(Appointment $appointment): bool
     {
-        return in_array((string) $appointment->status, self::STARTABLE_STATUSES, true);
+        if (! in_array((string) $appointment->status, self::STARTABLE_STATUSES, true)) {
+            return false;
+        }
+
+        return $appointment->isSessionStartDue();
     }
 
     public function canPatientJoin(Appointment $appointment): bool

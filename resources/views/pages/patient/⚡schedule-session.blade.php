@@ -193,9 +193,9 @@ new #[Layout('layouts::patient')] #[Title('Schedule a session')] class extends C
 <div class="pb-28 sm:pb-10">
     <div class="mx-auto max-w-5xl space-y-5 px-4 py-6 lg:space-y-6 lg:px-8 lg:py-8">
         {{-- Hero — soft vertical 50/50 (top + bottom) --}}
-        <header class="grid min-h-[11rem] grid-rows-2 overflow-hidden rounded-2xl border border-blue-100/90 bg-white shadow-sm sm:min-h-[10.5rem]">
-            <div class="flex items-center gap-4 bg-blue-50/70 p-4 sm:p-5">
-                <span class="flex size-11 shrink-0 items-center justify-center rounded-xl bg-[#1565c0]/12 text-[#1565c0] lg:size-12">
+        <header class="grid min-h-[11rem] grid-rows-2 overflow-hidden rounded-2xl border border-emerald-100/90 bg-white shadow-sm sm:min-h-[10.5rem]">
+            <div class="flex items-center gap-4 bg-emerald-50/70 p-4 sm:p-5">
+                <span class="flex size-11 shrink-0 items-center justify-center rounded-xl bg-[#10B981]/12 text-[#10B981] lg:size-12">
                     <flux:icon name="calendar-days" variant="mini" class="size-5 lg:size-6" />
                 </span>
                 <div class="min-w-0 flex-1">
@@ -204,16 +204,16 @@ new #[Layout('layouts::patient')] #[Title('Schedule a session')] class extends C
                 </div>
             </div>
 
-            <div class="flex flex-col justify-center border-t border-blue-100/90 bg-white p-4 sm:p-5">
+            <div class="flex flex-col justify-center border-t border-emerald-100/90 bg-white p-4 sm:p-5">
                 <div class="flex items-center justify-between gap-3 text-xs font-semibold uppercase tracking-wide text-zinc-500">
                     <span>{{ __('session_filter.filter_heading') }}</span>
-                    <span class="tabular-nums text-[#1565c0]">
+                    <span class="tabular-nums text-[#10B981]">
                         {{ __('session_filter.progress', ['current' => $this->requiredFiltersCompleted, 'total' => 4]) }}
                     </span>
                 </div>
                 <div class="mt-3 h-2 overflow-hidden rounded-full bg-blue-100/60">
                     <div
-                        class="h-full rounded-full bg-[#42a5f5] transition-all duration-300 ease-out"
+                        class="h-full rounded-full bg-[#34d399] transition-all duration-300 ease-out"
                         style="width: {{ $this->requiredFilterProgressPercent() }}%"
                         role="progressbar"
                         aria-valuenow="{{ $this->requiredFiltersCompleted }}"
@@ -355,7 +355,9 @@ new #[Layout('layouts::patient')] #[Title('Schedule a session')] class extends C
                         <flux:heading id="sess-subs" level="4" size="sm" class="font-semibold text-zinc-900">
                             {{ __('session_filter.sections.subspecialties') }}
                         </flux:heading>
-                        <flux:badge size="sm" color="zinc">{{ __('session_filter.optional') }}</flux:badge>
+                        <span class="inline-flex shrink-0 items-center rounded-full bg-[#10B981]/10 px-2.5 py-0.5 text-[0.6875rem] font-semibold uppercase tracking-wide text-[#10B981] ring-1 ring-[#10B981]/20">
+                            {{ __('session_filter.optional') }}
+                        </span>
                     </div>
                     <div class="flex flex-wrap gap-2">
                         @foreach ($this->visibleSpecialityOptions as $opt)
@@ -375,7 +377,7 @@ new #[Layout('layouts::patient')] #[Title('Schedule a session')] class extends C
                     </div>
                     @if (count($this->specialityOptions) > (int) config('session_filter.subspecialties_collapsed_count', 7))
                         <div>
-                            <flux:button variant="ghost" size="sm" wire:click="toggleSubspecialtiesExpanded" type="button" class="!px-0 !text-[#1565c0] hover:!text-[#1358a8]">
+                            <flux:button variant="ghost" size="sm" wire:click="toggleSubspecialtiesExpanded" type="button" class="!px-0 !text-[#10B981] hover:!text-[#059669]">
                                 {{ $this->subspecialtiesExpanded ? __('session_filter.show_less') : __('session_filter.show_more') }}
                             </flux:button>
                         </div>
@@ -393,7 +395,7 @@ new #[Layout('layouts::patient')] #[Title('Schedule a session')] class extends C
             variant="primary"
             wire:click="proceedNext"
             type="button"
-            class="min-h-11 w-full !border-[#1565c0] !bg-[#1565c0] !text-white shadow-md shadow-[#1565c0]/20 hover:!brightness-[0.97] focus-visible:!ring-[#1565c0]/40 sm:w-auto sm:min-w-[9rem]"
+            class="min-h-11 w-full !border-[#10B981] !bg-[#10B981] !text-white shadow-md shadow-[#10B981]/20 hover:!brightness-[0.97] focus-visible:!ring-[#10B981]/40 sm:w-auto sm:min-w-[9rem]"
             wire:loading.attr="disabled"
         >
             {{ __('session_filter.next') }}

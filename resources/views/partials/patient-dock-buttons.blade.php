@@ -1,7 +1,7 @@
 @php
     /** @var 'horizontal'|'vertical' */
     $orientation ??= 'horizontal';
-    /** @var 'default'|'legacy' Matches legacy patient portal (blue chrome, navy active pill) */
+    /** @var 'default'|'legacy' Matches legacy patient portal (emerald chrome, dark emerald active pill) */
     $theme ??= 'default';
 
     $isVertical = $orientation === 'vertical';
@@ -16,13 +16,13 @@
             : 'flex-1 shrink flex-col gap-0.5 py-2 text-[0.6875rem] [--flux-button-icon-size:1.35rem]';
 
         /**
-         * Selected + hover: #132A6E on #1565c0 chrome.
+         * Selected + hover: #047857 on #10B981 chrome.
          * Inactive: transparent; hover is a soft white veil (not the darker pill).
          */
-        $dockActiveClass = 'rounded-lg !border-0 !bg-[#132A6E] !text-white shadow-md shadow-black/20 ring-1 ring-white/15 hover:!bg-[#132A6E] hover:!text-white hover:ring-white/25 active:!bg-[#132A6E] dark:!border-0 dark:!bg-[#132A6E] dark:!text-white dark:hover:!bg-[#132A6E] [&_svg]:!text-white';
+        $dockActiveClass = 'rounded-lg !border-0 !bg-[#047857] !text-white shadow-md shadow-black/20 ring-1 ring-white/15 hover:!bg-[#047857] hover:!text-white hover:ring-white/25 active:!bg-[#047857] dark:!border-0 dark:!bg-[#047857] dark:!text-white dark:hover:!bg-[#047857] [&_svg]:!text-white';
         $dockInactiveClass = $isVertical
-            ? 'rounded-lg !border-0 !bg-transparent !font-medium !text-white ring-0 hover:!bg-white/20 hover:!text-white active:!bg-[#132A6E] active:!text-white dark:!bg-transparent dark:!text-white dark:hover:!bg-white/22'
-            : '!border-0 !bg-transparent !text-white ring-0 hover:!bg-white/24 hover:!text-white active:!bg-[#132A6E] active:!text-white dark:!text-white dark:hover:!bg-white/26';
+            ? 'rounded-lg !border-0 !bg-transparent !font-medium !text-white ring-0 hover:!bg-white/20 hover:!text-white active:!bg-[#047857] active:!text-white dark:!bg-transparent dark:!text-white dark:hover:!bg-white/22'
+            : '!border-0 !bg-transparent !text-white ring-0 hover:!bg-white/24 hover:!text-white active:!bg-[#047857] active:!text-white dark:!text-white dark:hover:!bg-white/26';
     } else {
         $dockButtonClass = $isVertical
             ? 'w-full shrink-0 justify-start gap-3 px-3 py-2.5 text-sm [--flux-button-icon-size:1.35rem]'

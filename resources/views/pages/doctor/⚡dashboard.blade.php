@@ -254,7 +254,7 @@ new #[Layout('layouts::doctor')] #[Title('Dashboard')] class extends Component
 <div class="space-y-8" @if ($doc?->status === 'approved') wire:poll.45s @endif>
     @if ($doc)
         <div class="relative overflow-hidden rounded-2xl border border-zinc-200/80 bg-white p-4 shadow-sm sm:p-5">
-            <div class="pointer-events-none absolute end-0 top-0 h-20 w-56 bg-gradient-to-l from-[#3C5CF7]/10 to-transparent"></div>
+            <div class="pointer-events-none absolute end-0 top-0 h-20 w-56 bg-gradient-to-l from-[#10B981]/10 to-transparent"></div>
             <div class="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div class="flex min-w-0 items-center gap-4">
                     <div class="rounded-full border border-zinc-200 bg-zinc-50 p-1.5 shadow-sm">
@@ -269,7 +269,7 @@ new #[Layout('layouts::doctor')] #[Title('Dashboard')] class extends Component
                     <div class="min-w-0 space-y-1">
                         <div class="flex flex-wrap items-center gap-2">
                             <p class="truncate text-xl font-semibold tracking-tight text-zinc-900">{{ $doc->displayName() }}</p>
-                            <span class="inline-flex items-center rounded-full bg-[#3C5CF7]/10 px-2.5 py-0.5 text-xs font-semibold text-[#2f49ca]">
+                            <span class="inline-flex items-center rounded-full bg-[#10B981]/10 px-2.5 py-0.5 text-xs font-semibold text-[#2f49ca]">
                                 {{ __('Welcome back') }}
                             </span>
                         </div>
@@ -284,7 +284,7 @@ new #[Layout('layouts::doctor')] #[Title('Dashboard')] class extends Component
                         <flux:button
                             variant="primary"
                             size="sm"
-                            class="shrink-0 !bg-[#3C5CF7] hover:!brightness-95"
+                            class="shrink-0 !bg-[#10B981] hover:!brightness-95"
                             :href="route('patient.book-appointments', $doc)"
                             target="_blank"
                             rel="noopener noreferrer"
@@ -301,7 +301,7 @@ new #[Layout('layouts::doctor')] #[Title('Dashboard')] class extends Component
     @if ($doc && $doc->status !== 'approved')
         <div class="rounded-2xl border border-zinc-200/90 bg-white px-4 py-10 text-center shadow-sm sm:px-8">
             @include('partials.patient-empty-record-illustration')
-            <flux:heading size="lg" class="mt-4 font-semibold text-[#1565c0]">
+            <flux:heading size="lg" class="mt-4 font-semibold text-[#10B981]">
                 {{ $doc->status === 'rejected' ? __('doctor.dashboard.verification_rejected_title') : __('doctor.dashboard.verification_pending_title') }}
             </flux:heading>
             <flux:text class="mx-auto mt-3 max-w-lg text-zinc-600">
@@ -318,7 +318,7 @@ new #[Layout('layouts::doctor')] #[Title('Dashboard')] class extends Component
                             wire:navigate
                             size="sm"
                             :variant="$this->period === $key ? 'primary' : 'outline'"
-                            class="w-full rounded-xl py-2.5 text-sm font-semibold {{ $this->period === $key ? '!bg-[#132A6E] !text-white shadow-sm' : '!border-0 bg-zinc-50 text-zinc-700 hover:!bg-white' }}"
+                            class="w-full rounded-xl py-2.5 text-sm font-semibold {{ $this->period === $key ? '!bg-[#047857] !text-white shadow-sm' : '!border-0 bg-zinc-50 text-zinc-700 hover:!bg-white' }}"
                         >
                             {{ $label }}
                         </flux:button>
@@ -327,16 +327,16 @@ new #[Layout('layouts::doctor')] #[Title('Dashboard')] class extends Component
             </div>
 
             <div class="grid gap-4 lg:grid-cols-3">
-                <div class="rounded-2xl border border-[#3C5CF7]/20 bg-gradient-to-br from-[#eef2ff] via-white to-white p-5 shadow-sm transition hover:shadow-md">
+                <div class="rounded-2xl border border-[#10B981]/20 bg-gradient-to-br from-[#eef2ff] via-white to-white p-5 shadow-sm transition hover:shadow-md">
                     <div class="flex items-start justify-between gap-3">
                         <div class="min-w-0">
                             <p class="text-sm font-semibold text-zinc-500">{{ __('doctor.dashboard.stat_revenue') }}</p>
                             <p class="mt-2 text-3xl font-bold tabular-nums tracking-tight text-zinc-900">
                                 {{ $this->revenueTotalFormatted }}
-                                <span class="text-base font-semibold text-[#3C5CF7]">{{ __('doctor.dashboard.sar_suffix') }}</span>
+                                <span class="text-base font-semibold text-[#10B981]">{{ __('doctor.dashboard.sar_suffix') }}</span>
                             </p>
                         </div>
-                        <span class="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-[#3C5CF7]/10 text-[#3C5CF7]" aria-hidden="true">
+                        <span class="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-[#10B981]/10 text-[#10B981]" aria-hidden="true">
                             <flux:icon name="banknotes" variant="outline" class="size-6" />
                         </span>
                     </div>
@@ -380,7 +380,7 @@ new #[Layout('layouts::doctor')] #[Title('Dashboard')] class extends Component
                 <div>
                     <div class="mb-4 flex items-center justify-between gap-3">
                         <flux:heading size="lg" class="font-semibold text-zinc-900">{{ __('doctor.dashboard.upcoming_title') }}</flux:heading>
-                        <flux:link :href="route('doctor.appointments')" wire:navigate class="text-sm font-medium text-[#3C5CF7]">
+                        <flux:link :href="route('doctor.appointments')" wire:navigate class="text-sm font-medium text-[#10B981]">
                             {{ __('doctor.dashboard.view_all') }}
                             <flux:icon name="chevron-right" variant="mini" class="inline size-4 align-middle rtl:rotate-180" />
                         </flux:link>

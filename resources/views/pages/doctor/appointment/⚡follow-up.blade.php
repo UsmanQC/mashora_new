@@ -28,13 +28,19 @@ new #[Layout('layouts::doctor')] #[Title('Follow-up appointment')] class extends
         $this->appointment = $appointment;
         $this->durationMinutes = max(15, (int) $appointment->duration);
 
+        $followUpService = app(FollowUpAppointmentService::class);
         $timezone = AppTimezone::name();
+        $maxDate = $followUpService->maxSelectableDate($appointment);
         $suggested = $appointment->appointment_date
-            ? Carbon::parse($appointment->appointment_date, $timezone)->addDays(15)
-            : now($timezone)->addDays(15);
+            ? Carbon::parse($appointment->appointment_date, $timezone)->addDays(min(7, FollowUpAppointmentService::windowDays()))
+            : now($timezone)->addDay();
 
         if ($suggested->lessThan(now($timezone)->startOfDay())) {
-            $suggested = now($timezone)->addDays(15);
+            $suggested = now($timezone)->addDay();
+        }
+
+        if ($suggested->greaterThan($maxDate)) {
+            $suggested = $maxDate->copy();
         }
 
         $doctor = Auth::guard('doctor')->user();
@@ -45,6 +51,8 @@ new #[Layout('layouts::doctor')] #[Title('Follow-up appointment')] class extends
                 $doctor,
                 $this->durationMinutes,
                 $preferredDate,
+                FollowUpAppointmentService::windowDays() + 1,
+                $maxDate->format('Y-m-d'),
             );
 
             $this->newDate = $firstAvailable ?? $preferredDate;
@@ -80,7 +88,19 @@ new #[Layout('layouts::doctor')] #[Title('Follow-up appointment')] class extends
 
     public function minDate(): string
     {
-        return now(AppTimezone::name())->format('Y-m-d');
+        return app(FollowUpAppointmentService::class)->windowStart()->format('Y-m-d');
+    }
+
+    public function maxDate(): string
+    {
+        return app(FollowUpAppointmentService::class)
+            ->maxSelectableDate($this->appointment)
+            ->format('Y-m-d');
+    }
+
+    public function windowDays(): int
+    {
+        return FollowUpAppointmentService::windowDays();
     }
 
     public function selectedWeekdayLabel(): string
@@ -172,7 +192,7 @@ new #[Layout('layouts::doctor')] #[Title('Follow-up appointment')] class extends
     public function save(): void
     {
         $this->validate([
-            'newDate' => ['required', 'date', 'after_or_equal:'.$this->minDate()],
+            'newDate' => ['required', 'date', 'after_or_equal:'.$this->minDate(), 'before_or_equal:'.$this->maxDate()],
             'selectedTime' => ['required', 'string'],
         ]);
 
@@ -204,7 +224,7 @@ new #[Layout('layouts::doctor')] #[Title('Follow-up appointment')] class extends
 
     <div class="rounded-2xl border border-zinc-200/90 bg-white p-5 shadow-sm sm:p-6">
         <flux:heading size="lg" class="font-semibold text-zinc-900">{{ __('doctor.follow_up.title') }}</flux:heading>
-        <flux:text class="mt-2 text-zinc-600">{{ __('doctor.follow_up.subtitle') }}</flux:text>
+        <flux:text class="mt-2 text-zinc-600">{{ __('doctor.follow_up.subtitle', ['days' => $this->windowDays()]) }}</flux:text>
 
         @if ($this->pendingFollowUp)
             <flux:callout variant="success" icon="check-circle" class="mt-6">
@@ -226,7 +246,8 @@ new #[Layout('layouts::doctor')] #[Title('Follow-up appointment')] class extends
         <form wire:submit="save" class="mt-6 space-y-5">
             <flux:field>
                 <flux:label>{{ __('doctor.follow_up.date_label') }}</flux:label>
-                <flux:input wire:model.live="newDate" type="date" min="{{ $this->minDate() }}" required />
+                <flux:input wire:model.live="newDate" type="date" min="{{ $this->minDate() }}" max="{{ $this->maxDate() }}" required />
+                <flux:description>{{ __('doctor.follow_up.date_window_hint', ['days' => $this->windowDays(), 'max' => $this->maxDate()]) }}</flux:description>
                 <flux:error name="newDate" />
             </flux:field>
 
@@ -260,8 +281,8 @@ new #[Layout('layouts::doctor')] #[Title('Follow-up appointment')] class extends
                                 wire:click="$set('selectedTime', '{{ $slot }}')"
                                 @class([
                                     'rounded-full border px-4 py-2 text-sm font-semibold transition',
-                                    'border-[#132A6E] bg-[#132A6E] text-white' => $selectedTime === $slot,
-                                    'border-zinc-200 bg-white text-zinc-700 hover:border-[#3C5CF7]' => $selectedTime !== $slot,
+                                    'border-[#047857] bg-[#047857] text-white' => $selectedTime === $slot,
+                                    'border-zinc-200 bg-white text-zinc-700 hover:border-[#10B981]' => $selectedTime !== $slot,
                                 ])
                             >
                                 {{ $this->displaySlot($slot) }}
@@ -276,11 +297,15 @@ new #[Layout('layouts::doctor')] #[Title('Follow-up appointment')] class extends
                 {{ __('doctor.follow_up.patient_flow_hint') }}
             </flux:text>
 
+            <flux:callout variant="success" icon="gift" class="text-sm">
+                {{ __('doctor.follow_up.free_hint') }}
+            </flux:callout>
+
             <div class="flex flex-col gap-3 sm:flex-row sm:justify-end">
                 <flux:button :href="route('doctor.appointments.prescription', $appointment)" wire:navigate variant="ghost">
                     {{ __('doctor.auth.back') }}
                 </flux:button>
-                <flux:button type="submit" variant="primary" class="!bg-[#132A6E] !text-white hover:!brightness-95">
+                <flux:button type="submit" variant="primary" class="!bg-[#047857] !text-white hover:!brightness-95">
                     {{ __('doctor.follow_up.submit') }}
                 </flux:button>
             </div>

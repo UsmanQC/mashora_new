@@ -5,7 +5,7 @@
             <flux:text class="mt-2 text-zinc-600">{{ __('patient.numbers_intro') }}</flux:text>
         </div>
 
-        <figure class="overflow-hidden rounded-2xl border border-[#1565c0]/25 bg-white p-4 shadow-[0_1px_4px_-1px_rgba(15,23,42,0.08)] sm:p-6">
+        <figure class="overflow-hidden rounded-2xl border border-[#10B981]/25 bg-white p-4 shadow-[0_1px_4px_-1px_rgba(15,23,42,0.08)] sm:p-6">
             <img
                 src="{{ asset('images/important-numbers.svg') }}"
                 alt="{{ __('patient.numbers_board_alt') }}"

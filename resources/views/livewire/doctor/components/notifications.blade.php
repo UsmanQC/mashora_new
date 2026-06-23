@@ -7,7 +7,7 @@
         >
             <flux:icon name="bell" variant="outline" class="size-5" />
             @if ($this->unreadCount > 0)
-                <span class="absolute -right-1 -top-1 inline-flex min-w-4 items-center justify-center rounded-full bg-[#3C5CF7] px-1 text-[10px] font-semibold leading-4 text-white">
+                <span class="absolute -right-1 -top-1 inline-flex min-w-4 items-center justify-center rounded-full bg-[#10B981] px-1 text-[10px] font-semibold leading-4 text-white">
                     {{ $this->unreadCount > 9 ? '9+' : $this->unreadCount }}
                 </span>
             @endif
@@ -16,7 +16,7 @@
         <div class="absolute inset-e-0 z-50 mt-2 w-80 overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-xl">
             <div class="flex items-center justify-between border-b border-zinc-100 px-3 py-2">
                 <flux:text class="text-sm font-semibold text-zinc-900">{{ __('Notifications') }}</flux:text>
-                <a href="{{ route('doctor.settings.notifications') }}" wire:navigate class="text-xs font-medium text-[#3C5CF7] hover:underline">
+                <a href="{{ route('doctor.settings.notifications') }}" wire:navigate class="text-xs font-medium text-[#10B981] hover:underline">
                     {{ __('View all') }}
                 </a>
             </div>
@@ -25,7 +25,7 @@
                 @forelse ($this->notifications as $notification)
                     <div @class([
                         'mb-2 rounded-lg border p-2 last:mb-0',
-                        'border-blue-200 bg-blue-50/40' => ! $notification->read_at,
+                        'border-emerald-200 bg-emerald-50/40' => ! $notification->read_at,
                         'border-zinc-200 bg-white' => $notification->read_at,
                     ])>
                         <flux:text class="text-sm font-medium text-zinc-900">{{ $notification->title ?: __('Notification') }}</flux:text>

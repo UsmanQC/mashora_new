@@ -98,7 +98,7 @@ new #[Layout('layouts::doctor-guest')] #[Title('Doctor registration')] class ext
             <flux:error name="password_confirmation" />
         </flux:field>
 
-        <flux:button class="w-full bg-[#132A6E]! text-white! hover:brightness-95!" type="submit" variant="primary">
+        <flux:button class="w-full bg-[#047857]! text-white! hover:brightness-95!" type="submit" variant="primary">
             {{ __('doctor.auth.register_submit') }}
         </flux:button>
     </form>

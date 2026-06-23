@@ -5,9 +5,9 @@
             : route('login');
 
         $tabActive =
-            'rounded-lg border border-[#1565c0] bg-[#1565c0] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition outline-none focus-visible:ring-2 focus-visible:ring-[#1565c0]/40';
+            'rounded-lg border border-[#10B981] bg-[#10B981] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition outline-none focus-visible:ring-2 focus-visible:ring-[#10B981]/40';
         $tabInactive =
-            'rounded-lg border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-[#1565c0] shadow-sm transition outline-none hover:border-[#1565c0]/35 focus-visible:ring-2 focus-visible:ring-[#1565c0]/30';
+            'rounded-lg border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-[#10B981] shadow-sm transition outline-none hover:border-[#10B981]/35 focus-visible:ring-2 focus-visible:ring-[#10B981]/30';
     @endphp
 
     <div class="mx-auto max-w-3xl px-4 py-6 pb-28 sm:px-6 sm:pb-10" x-data="{ tab: 'ongoing' }">
@@ -15,12 +15,12 @@
             <a
                 href="{{ route('patient.home') }}"
                 wire:navigate
-                class="inline-flex size-10 shrink-0 items-center justify-center rounded-full border border-zinc-200/90 bg-white text-[#1565c0] shadow-sm transition hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1565c0]/30"
+                class="inline-flex size-10 shrink-0 items-center justify-center rounded-full border border-zinc-200/90 bg-white text-[#10B981] shadow-sm transition hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#10B981]/30"
                 aria-label="{{ __('patient.appointments.back_aria') }}"
             >
                 <flux:icon name="chevron-left" variant="outline" class="size-6 rtl:rotate-180" />
             </a>
-            <h1 class="min-w-0 truncate text-xl font-bold text-[#1565c0] sm:text-2xl">
+            <h1 class="min-w-0 truncate text-xl font-bold text-[#10B981] sm:text-2xl">
                 {{ __('patient.appointments.title') }}
             </h1>
         </header>

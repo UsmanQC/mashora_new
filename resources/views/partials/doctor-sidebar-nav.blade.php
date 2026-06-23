@@ -9,7 +9,7 @@
     :href="route('doctor.dashboard')"
     wire:navigate
     variant="ghost"
-    class="w-full justify-start !text-white hover:!bg-white/10 {{ $activeDash ? '!bg-[#132A6E] !text-white [&_svg]:!text-white' : '' }}"
+    class="w-full justify-start !text-white hover:!bg-white/10 {{ $activeDash ? '!bg-[#047857] !text-white [&_svg]:!text-white' : '' }}"
     icon="home"
 >
     {{ __('doctor.nav.dashboard') }}
@@ -18,7 +18,7 @@
     :href="route('doctor.appointments')"
     wire:navigate
     variant="ghost"
-    class="w-full justify-start !text-white hover:!bg-white/10 {{ $activeAppt ? '!bg-[#132A6E] !text-white [&_svg]:!text-white' : '' }}"
+    class="w-full justify-start !text-white hover:!bg-white/10 {{ $activeAppt ? '!bg-[#047857] !text-white [&_svg]:!text-white' : '' }}"
     icon="calendar-days"
 >
     {{ __('doctor.nav.appointments') }}
@@ -27,7 +27,7 @@
     :href="route('doctor.ratings')"
     wire:navigate
     variant="ghost"
-    class="w-full justify-start !text-white hover:!bg-white/10 {{ $activeRatings ? '!bg-[#132A6E] !text-white [&_svg]:!text-white' : '' }}"
+    class="w-full justify-start !text-white hover:!bg-white/10 {{ $activeRatings ? '!bg-[#047857] !text-white [&_svg]:!text-white' : '' }}"
     icon="star"
 >
     {{ __('doctor.nav.ratings') }}
@@ -36,7 +36,7 @@
     :href="route('doctor.settings')"
     wire:navigate
     variant="ghost"
-    class="w-full justify-start !text-white hover:!bg-white/10 {{ $activeSettings ? '!bg-[#132A6E] !text-white [&_svg]:!text-white' : '' }}"
+    class="w-full justify-start !text-white hover:!bg-white/10 {{ $activeSettings ? '!bg-[#047857] !text-white [&_svg]:!text-white' : '' }}"
     icon="cog-6-tooth"
 >
     {{ __('doctor.nav.menu') }}

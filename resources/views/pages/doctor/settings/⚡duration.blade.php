@@ -134,7 +134,7 @@ new #[Layout('layouts::doctor')] #[Title('Duration and price')] class extends Co
                                     type="checkbox"
                                     wire:model="doctorDurations"
                                     value="{{ $durationKey }}"
-                                    class="h-4 w-4 rounded border-zinc-300 text-[#132A6E] focus:ring-[#132A6E]"
+                                    class="h-4 w-4 rounded border-zinc-300 text-[#047857] focus:ring-[#047857]"
                                 />
                                 <span class="text-sm font-semibold text-zinc-800">
                                     {{ $duration->duration }} {{ __('minutes') }}
@@ -170,7 +170,7 @@ new #[Layout('layouts::doctor')] #[Title('Duration and price')] class extends Co
                                 type="checkbox"
                                 wire:model="selectedCommunications"
                                 value="{{ $communication->communication }}"
-                                class="h-4 w-4 rounded border-zinc-300 text-[#132A6E] focus:ring-[#132A6E]"
+                                class="h-4 w-4 rounded border-zinc-300 text-[#047857] focus:ring-[#047857]"
                             />
                             <span class="text-sm font-medium text-zinc-800">{{ $communication->title ?: str($communication->communication)->replace('_', ' ')->title() }}</span>
                         </label>
@@ -184,14 +184,14 @@ new #[Layout('layouts::doctor')] #[Title('Duration and price')] class extends Co
                     <input
                         type="checkbox"
                         wire:model="acceptInstantAppointment"
-                        class="h-4 w-4 rounded border-zinc-300 text-[#132A6E] focus:ring-[#132A6E]"
+                        class="h-4 w-4 rounded border-zinc-300 text-[#047857] focus:ring-[#047857]"
                     />
                     <span class="text-sm font-semibold text-zinc-800">{{ __('Accept instant appointment notifications') }}</span>
                 </label>
             </div>
 
             <div class="flex flex-wrap items-center gap-3 pt-1">
-                <flux:button type="submit" variant="primary" class="!bg-[#132A6E] !text-white hover:!brightness-95">
+                <flux:button type="submit" variant="primary" class="!bg-[#047857] !text-white hover:!brightness-95">
                     {{ __('Save') }}
                 </flux:button>
                 <flux:button :href="route('doctor.settings')" wire:navigate variant="ghost">

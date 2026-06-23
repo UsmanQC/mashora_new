@@ -127,7 +127,7 @@ new #[Layout('layouts::patient')] #[Title('Checkout demo')] class extends Compon
             <flux:button
                 type="button"
                 variant="primary"
-                class="w-full border-[#0B163E] !bg-[#0B163E] !text-white hover:!brightness-[0.97] sm:w-auto"
+                class="w-full border-[#064e3b] !bg-[#064e3b] !text-white hover:!brightness-[0.97] sm:w-auto"
                 wire:click="demoPayClick"
             >
                 {{ __('patient_booking.pay_now') }}

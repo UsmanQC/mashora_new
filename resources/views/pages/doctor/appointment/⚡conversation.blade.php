@@ -128,7 +128,7 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
     ></div>
 
     <div class="relative overflow-hidden rounded-3xl border border-zinc-200/90 bg-white shadow-[0_20px_55px_-32px_rgba(15,23,42,0.35)] ring-1 ring-zinc-100">
-        <div class="pointer-events-none absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-[#2f49ca] via-[#3C5CF7] to-[#6f86ff] opacity-85"></div>
+        <div class="pointer-events-none absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-[#2f49ca] via-[#10B981] to-[#6f86ff] opacity-85"></div>
         <div class="grid min-h-[36rem] grid-cols-1 lg:grid-cols-12">
             <div class="flex min-h-[28rem] flex-col border-zinc-200 lg:col-span-8 lg:min-h-0 lg:border-e">
                 {{-- Session workspace header --}}
@@ -161,7 +161,7 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                                 @if ($appointment->extend_at)
                                     <div id="wrap-session-remaining" class="flex min-w-[7.5rem] flex-1 flex-col justify-center rounded-xl border border-zinc-200/80 bg-gradient-to-br from-white to-zinc-50 px-3 py-2 shadow-sm backdrop-blur-sm sm:flex-initial sm:min-w-[8.5rem]">
                                         <p class="text-[0.65rem] font-semibold uppercase tracking-wider text-zinc-400">{{ __('doctor.conversation.session_remaining_label') }}</p>
-                                        <p id="timer-session-remaining" class="mt-0.5 font-mono text-lg font-semibold tabular-nums text-[#132A6E]">--:--</p>
+                                        <p id="timer-session-remaining" class="mt-0.5 font-mono text-lg font-semibold tabular-nums text-[#047857]">--:--</p>
                                     </div>
                                 @endif
                                 <div id="call-status-chip" class="hidden min-w-0 flex-1 items-center gap-2.5 rounded-xl border border-emerald-200/80 bg-gradient-to-br from-emerald-50 to-emerald-100/70 px-3 py-2 shadow-sm sm:flex-initial sm:min-w-[11rem]">
@@ -184,17 +184,43 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
 
                         <div class="flex flex-wrap items-center gap-2 xl:justify-end">
                             @if (in_array($appointment->status, ['new', 'rescheduled'], true))
-                                <flux:button type="button" variant="primary" icon="play" class="min-h-10 shadow-md shadow-[#132A6E]/20" wire:click="startSession" wire:loading.attr="disabled">
-                                    {{ __('doctor.conversation.start_session') }}
-                                </flux:button>
+                                @php
+                                    $sessionStartsAtIso = $appointment->sessionStartsAt()?->toIso8601String();
+                                @endphp
+                                <div
+                                    @if ($sessionStartsAtIso)
+                                        x-data="appointmentStartTimer(@js($sessionStartsAtIso))"
+                                        x-init="start()"
+                                    @else
+                                        x-data="{ ready: true, start() {} }"
+                                    @endif
+                                >
+                                    <template x-if="ready">
+                                        <flux:button type="button" variant="primary" icon="play" class="min-h-10 shadow-md shadow-[#047857]/20" wire:click="startSession" wire:loading.attr="disabled">
+                                            {{ __('doctor.conversation.start_session') }}
+                                        </flux:button>
+                                    </template>
+                                    <template x-if="!ready">
+                                        <flux:button
+                                            type="button"
+                                            variant="primary"
+                                            icon="play"
+                                            class="min-h-10 cursor-not-allowed opacity-50"
+                                            disabled
+                                            title="{{ __('doctor.appointments.open_session_wait') }}"
+                                        >
+                                            {{ __('doctor.conversation.start_session') }}
+                                        </flux:button>
+                                    </template>
+                                </div>
                             @endif
                             @if ($appointment->status === 'in_process')
                                 <button
                                     type="button"
                                     id="btn-agora-video"
                                     @class([
-                                        'inline-flex min-h-10 items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[#3C5CF7] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-45',
-                                        'border-zinc-200 bg-gradient-to-b from-white to-zinc-50 text-zinc-800 shadow-sm hover:border-[#132A6E]/30 hover:from-zinc-50 hover:to-zinc-100' => true,
+                                        'inline-flex min-h-10 items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[#10B981] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-45',
+                                        'border-zinc-200 bg-gradient-to-b from-white to-zinc-50 text-zinc-800 shadow-sm hover:border-[#047857]/30 hover:from-zinc-50 hover:to-zinc-100' => true,
                                     ])
                                     @disabled($agoraAppId === '')
                                     title="{{ $agoraAppId === '' ? __('doctor.conversation.agora_required') : '' }}"
@@ -206,8 +232,8 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                                     type="button"
                                     id="btn-agora-audio"
                                     @class([
-                                        'inline-flex min-h-10 items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[#3C5CF7] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-45',
-                                        'border-zinc-200 bg-gradient-to-b from-white to-zinc-50 text-zinc-800 shadow-sm hover:border-[#132A6E]/30 hover:from-zinc-50 hover:to-zinc-100' => true,
+                                        'inline-flex min-h-10 items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[#10B981] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-45',
+                                        'border-zinc-200 bg-gradient-to-b from-white to-zinc-50 text-zinc-800 shadow-sm hover:border-[#047857]/30 hover:from-zinc-50 hover:to-zinc-100' => true,
                                     ])
                                     @disabled($agoraAppId === '')
                                     title="{{ $agoraAppId === '' ? __('doctor.conversation.agora_required') : '' }}"
@@ -250,7 +276,7 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                                 <div
                                     @class([
                                         'max-w-[min(85%,28rem)] rounded-2xl px-3.5 py-2.5 text-sm shadow-sm ring-1',
-                                        'bg-gradient-to-br from-[#132A6E] to-[#103b9e] text-white shadow-[#132A6E]/25 ring-[#132A6E]/20' => $msg['send_by'] === 'doctor',
+                                        'bg-gradient-to-br from-[#047857] to-[#103b9e] text-white shadow-[#047857]/25 ring-[#047857]/20' => $msg['send_by'] === 'doctor',
                                         'border border-zinc-200/90 bg-white text-zinc-800 shadow-zinc-200/30 ring-zinc-100' => $msg['send_by'] !== 'doctor',
                                     ])
                                 >
@@ -297,7 +323,7 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                             type="submit"
                             variant="primary"
                             icon="paper-airplane"
-                            class="shrink-0 !rounded-xl shadow-md shadow-[#132A6E]/25"
+                            class="shrink-0 !rounded-xl shadow-md shadow-[#047857]/25"
                             wire:loading.attr="disabled"
                             :disabled="$appointment->status !== 'in_process'"
                         >
@@ -433,7 +459,7 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
             const agoraTitle = document.getElementById('agora-call-title');
 
             const btnIdleClass =
-                'inline-flex min-h-10 items-center gap-2 rounded-xl border border-zinc-200 bg-white px-4 py-2 text-sm font-semibold text-zinc-800 shadow-sm transition hover:border-[#132A6E]/30 hover:bg-zinc-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#3C5CF7] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-45';
+                'inline-flex min-h-10 items-center gap-2 rounded-xl border border-zinc-200 bg-white px-4 py-2 text-sm font-semibold text-zinc-800 shadow-sm transition hover:border-[#047857]/30 hover:bg-zinc-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#10B981] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-45';
             const btnActiveClass =
                 'inline-flex min-h-10 items-center gap-2 rounded-xl border-2 border-emerald-500 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-900 shadow-md shadow-emerald-900/10 ring-2 ring-emerald-500/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-45';
 
@@ -485,7 +511,7 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                     remainingEl.textContent = formatDuration(left);
                     remainingEl.classList.toggle('text-amber-700', left > 0 && left <= 300);
                     remainingEl.classList.toggle('text-rose-600', left <= 0);
-                    remainingEl.classList.toggle('text-[#132A6E]', left > 300);
+                    remainingEl.classList.toggle('text-[#047857]', left > 300);
                 }
             }
 
@@ -576,7 +602,7 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
 
                 const bubble = document.createElement('div');
                 bubble.className = isDoctor
-                    ? 'max-w-[min(85%,28rem)] rounded-2xl bg-[#132A6E] px-3.5 py-2.5 text-sm text-white shadow-sm shadow-[#132A6E]/25'
+                    ? 'max-w-[min(85%,28rem)] rounded-2xl bg-[#047857] px-3.5 py-2.5 text-sm text-white shadow-sm shadow-[#047857]/25'
                     : 'max-w-[min(85%,28rem)] rounded-2xl border border-zinc-200/90 bg-white px-3.5 py-2.5 text-sm text-zinc-800 shadow-sm shadow-zinc-200/30';
 
                 const text = document.createElement('p');
@@ -816,3 +842,5 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
         });
     </script>
 @endpush
+
+@include('partials.appointment-start-timer-script')

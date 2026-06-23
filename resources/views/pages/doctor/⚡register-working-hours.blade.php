@@ -191,7 +191,7 @@ new #[Layout('layouts::doctor')] #[Title('Working hours')] class extends Compone
                             type="checkbox"
                             value="{{ $dayOfWeek }}"
                             wire:model.live="availabilities"
-                            class="h-4 w-4 rounded border-zinc-300 text-[#132A6E] focus:ring-[#132A6E]"
+                            class="h-4 w-4 rounded border-zinc-300 text-[#047857] focus:ring-[#047857]"
                         />
                         <span class="text-sm font-semibold capitalize text-zinc-800">{{ __($dayOfWeek) }}</span>
                     </label>
@@ -239,7 +239,7 @@ new #[Layout('layouts::doctor')] #[Title('Working hours')] class extends Compone
                 {{ __('doctor.auth.back') }}
             </flux:button>
             <flux:button
-                class="order-1 w-full !bg-[#132A6E] !text-white hover:!brightness-95 sm:order-2 sm:w-auto"
+                class="order-1 w-full !bg-[#047857] !text-white hover:!brightness-95 sm:order-2 sm:w-auto"
                 type="submit"
                 variant="primary"
             >

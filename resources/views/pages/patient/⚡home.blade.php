@@ -100,7 +100,7 @@ new #[Layout('layouts::patient')] #[Title('Home')] class extends Component
     <header class="border-b border-slate-200/80 bg-slate-100 px-4 py-6">
         <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
-                <flux:heading level="2" size="xl" class="font-semibold text-blue-700">
+                <flux:heading level="2" size="xl" class="font-semibold text-emerald-700">
                     @if (auth()->check())
                         {{ __('patient.welcome_user', ['name' => Auth::user()?->name ?? '']) }}
                     @else
@@ -122,7 +122,7 @@ new #[Layout('layouts::patient')] #[Title('Home')] class extends Component
                 <a
                     href="{{ route('patient.phone') }}"
                     wire:navigate
-                    class="inline-flex shrink-0 items-center gap-1 text-sm font-medium text-[#1565c0] underline-offset-4 transition hover:text-[#2f4dd4] hover:underline focus:outline-none focus-visible:underline"
+                    class="inline-flex shrink-0 items-center gap-1 text-sm font-medium text-[#10B981] underline-offset-4 transition hover:text-[#059669] hover:underline focus:outline-none focus-visible:underline"
                 >
                     {{ __('patient.view_all') }}
                     <flux:icon name="chevron-{{ app()->getLocale() === 'ar' ? 'left' : 'right' }}" variant="mini" class="size-4 rtl:rotate-180" />
@@ -141,7 +141,7 @@ new #[Layout('layouts::patient')] #[Title('Home')] class extends Component
                         wire:click="selectMoodDay"
                         wire:key="mood-day-{{ $day['iso'] }}"
                         @class([
-                            'flex min-w-[6.75rem] shrink-0 snap-center cursor-pointer flex-col items-center gap-3.5 rounded-2xl border px-5 py-5 text-center shadow-sm transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1565c0]/35 focus-visible:ring-offset-2',
+                            'flex min-w-[6.75rem] shrink-0 snap-center cursor-pointer flex-col items-center gap-3.5 rounded-2xl border px-5 py-5 text-center shadow-sm transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[#10B981]/35 focus-visible:ring-offset-2',
                             'border-amber-400 bg-amber-50 ring-2 ring-amber-200/80 hover:border-amber-300/80' => $day['is_today'],
                             'border-zinc-200 bg-white hover:border-amber-300/60' => ! $day['is_today'],
                         ])
@@ -151,7 +151,7 @@ new #[Layout('layouts::patient')] #[Title('Home')] class extends Component
                             @class([
                                 'flex size-[3.75rem] shrink-0 items-center justify-center overflow-hidden rounded-full p-1',
                                 'bg-amber-500 text-white shadow-inner ring-2 ring-white/40' => $day['is_today'],
-                                'border border-[#1565c0]/20 bg-[#ecfdf5]/80 shadow-sm' => ! $day['is_today'],
+                                'border border-[#10B981]/20 bg-[#ecfdf5]/80 shadow-sm' => ! $day['is_today'],
                             ])
                         >
                             @if ($moodSrc !== null)
@@ -169,7 +169,7 @@ new #[Layout('layouts::patient')] #[Title('Home')] class extends Component
                                     @class([
                                         'size-7 shrink-0',
                                         '!text-white' => $day['is_today'],
-                                        'text-[#1565c0]' => ! $day['is_today'],
+                                        'text-[#10B981]' => ! $day['is_today'],
                                     ])
                                 />
                             @endif

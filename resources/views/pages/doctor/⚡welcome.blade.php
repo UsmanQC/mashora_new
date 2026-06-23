@@ -77,7 +77,7 @@ new #[Layout('layouts::doctor-guest')] #[Title('Doctor portal')] class extends C
         @error('phone')
             <flux:text class="text-sm text-red-600">{{ $message }}</flux:text>
         @enderror
-        <flux:button class="w-full bg-[#132A6E]! text-white! hover:brightness-95!" type="submit" variant="primary">
+        <flux:button class="w-full bg-[#047857]! text-white! hover:brightness-95!" type="submit" variant="primary">
             {{ __('Continue') }}
         </flux:button>
     </form>

@@ -61,15 +61,26 @@ new #[Layout('layouts::patient')] #[Title('Follow-up appointment')] class extend
             abort(403);
         }
 
-        $confirmed = app(FollowUpAppointmentService::class)->confirm($this->appointment, $user);
+        $result = app(FollowUpAppointmentService::class)->confirm($this->appointment, $user);
 
-        $this->redirect(route('patient.follow-up.pay', $confirmed));
+        if ($result->status === 'new') {
+            $this->redirect(route('patient.appointments'));
+
+            return;
+        }
+
+        $this->redirect(route('patient.follow-up.pay', $result));
+    }
+
+    public function isFree(): bool
+    {
+        return (float) $this->appointment->total <= 0;
     }
 }; ?>
 
 <div class="mx-auto max-w-xl space-y-6 px-4 py-8">
     <div>
-        <flux:heading size="xl" class="font-semibold text-[#1565c0]">{{ __('patient.follow_up.title') }}</flux:heading>
+        <flux:heading size="xl" class="font-semibold text-[#10B981]">{{ __('patient.follow_up.title') }}</flux:heading>
         <flux:text class="mt-2 text-zinc-600">{{ __('patient.follow_up.subtitle') }}</flux:text>
     </div>
 
@@ -95,21 +106,27 @@ new #[Layout('layouts::patient')] #[Title('Follow-up appointment')] class extend
             </div>
             <div class="flex justify-between gap-4 border-t border-zinc-100 pt-3">
                 <dt class="text-zinc-500">{{ __('patient.follow_up.amount') }}</dt>
-                <dd class="text-lg font-bold text-[#1565c0]">
-                    {{ number_format((float) $appointment->total, 2) }} {{ config('currency.sa_riyal_symbol') }}
+                <dd class="text-lg font-bold text-[#10B981]">
+                    @if ($this->isFree())
+                        {{ __('patient.follow_up.free') }}
+                    @else
+                        {{ number_format((float) $appointment->total, 2) }} {{ config('currency.sa_riyal_symbol') }}
+                    @endif
                 </dd>
             </div>
         </dl>
 
-        <flux:text class="mt-4 text-sm text-zinc-600">{{ __('patient.follow_up.confirm_hint') }}</flux:text>
+        <flux:text class="mt-4 text-sm text-zinc-600">
+            {{ $this->isFree() ? __('patient.follow_up.confirm_hint_free') : __('patient.follow_up.confirm_hint') }}
+        </flux:text>
 
         <div class="mt-6 flex flex-col gap-3 sm:flex-row">
             <flux:button
                 wire:click="confirmAndPay"
                 variant="primary"
-                class="w-full !bg-[#1565c0] !text-white hover:!brightness-95 sm:flex-1"
+                class="w-full !bg-[#10B981] !text-white hover:!brightness-95 sm:flex-1"
             >
-                {{ __('patient.follow_up.confirm_and_pay') }}
+                {{ $this->isFree() ? __('patient.follow_up.confirm_free') : __('patient.follow_up.confirm_and_pay') }}
             </flux:button>
             <flux:button :href="route('patient.appointments')" wire:navigate variant="ghost" class="w-full sm:w-auto">
                 {{ __('patient.follow_up.later') }}

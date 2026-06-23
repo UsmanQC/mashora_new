@@ -63,7 +63,7 @@ new #[Layout('layouts::doctor')] #[Title('Support')] class extends Component
         <flux:button :href="route('doctor.settings')" wire:navigate variant="ghost" size="sm" icon="arrow-left">{{ __('Back') }}</flux:button>
     </div>
 
-    <flux:button :href="route('doctor.settings.support.create')" wire:navigate variant="primary" class="!bg-[#132A6E] !text-white">
+    <flux:button :href="route('doctor.settings.support.create')" wire:navigate variant="primary" class="!bg-[#047857] !text-white">
         {{ __('tickets.new_ticket') }}
     </flux:button>
 
@@ -77,7 +77,7 @@ new #[Layout('layouts::doctor')] #[Title('Support')] class extends Component
                 <a
                     href="{{ route('doctor.settings.support.show', $ticket) }}"
                     wire:navigate
-                    class="block rounded-2xl border border-zinc-200/90 bg-white p-4 shadow-sm transition hover:border-[#3C5CF7]/35 hover:shadow-md"
+                    class="block rounded-2xl border border-zinc-200/90 bg-white p-4 shadow-sm transition hover:border-[#10B981]/35 hover:shadow-md"
                 >
                     <div class="flex items-start justify-between gap-3">
                         <div class="min-w-0">

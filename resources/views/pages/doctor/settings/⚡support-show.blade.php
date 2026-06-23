@@ -57,7 +57,7 @@ new #[Layout('layouts::doctor')] #[Title('Support ticket')] class extends Compon
         @forelse ($ticket->replies as $reply)
             <article @class([
                 'rounded-2xl border p-4 shadow-sm',
-                'border-[#132A6E]/20 bg-[#132A6E]/5' => $reply->isFromAdmin(),
+                'border-[#047857]/20 bg-[#047857]/5' => $reply->isFromAdmin(),
                 'border-zinc-200/90 bg-white' => ! $reply->isFromAdmin(),
             ])>
                 <p class="text-xs font-semibold text-zinc-600">{{ $reply->authorDisplayName() }}</p>

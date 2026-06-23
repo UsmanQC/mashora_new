@@ -515,7 +515,7 @@ new #[Layout('layouts::doctor')] #[Title('Complete profile')] class extends Comp
             </flux:field>
 
             <flux:button
-                class="w-full !bg-[#132A6E] !text-white hover:!brightness-95"
+                class="w-full !bg-[#047857] !text-white hover:!brightness-95"
                 type="submit"
                 variant="primary"
                 wire:loading.attr="disabled"
@@ -547,7 +547,7 @@ new #[Layout('layouts::doctor')] #[Title('Complete profile')] class extends Comp
                 {{-- Native select: Flux select often fails to sync with Livewire on this stack. --}}
                 <select
                     wire:model.live="degree_id"
-                    class="block w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 shadow-xs transition focus:border-[#132A6E] focus:outline-none focus:ring-2 focus:ring-[#132A6E]/25 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
+                    class="block w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 shadow-xs transition focus:border-[#047857] focus:outline-none focus:ring-2 focus:ring-[#047857]/25 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
                 >
                     <option value="">{{ __('doctor.auth.choose') }}</option>
                     @foreach ($this->degrees as $degree)
@@ -606,7 +606,7 @@ new #[Layout('layouts::doctor')] #[Title('Complete profile')] class extends Comp
                     {{ __('doctor.auth.back') }}
                 </flux:button>
                 <flux:button
-                    class="order-1 w-full !bg-[#132A6E] !text-white hover:!brightness-95 sm:order-2 sm:w-auto"
+                    class="order-1 w-full !bg-[#047857] !text-white hover:!brightness-95 sm:order-2 sm:w-auto"
                     type="submit"
                     variant="primary"
                 >
@@ -632,7 +632,7 @@ new #[Layout('layouts::doctor')] #[Title('Complete profile')] class extends Comp
                         accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
                         class="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0"
                     />
-                    <div class="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-zinc-300 bg-zinc-50/80 px-6 py-8 text-center transition hover:border-[#132A6E]/50 hover:bg-[#132A6E]/5 dark:border-zinc-600 dark:bg-zinc-900/40">
+                    <div class="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-zinc-300 bg-zinc-50/80 px-6 py-8 text-center transition hover:border-[#047857]/50 hover:bg-[#047857]/5 dark:border-zinc-600 dark:bg-zinc-900/40">
                         <flux:icon name="arrow-up-tray" class="size-7 text-zinc-400" />
                         <flux:text class="text-sm font-medium text-zinc-700">{{ __('doctor.auth.certificate_dropzone_heading') }}</flux:text>
                         <flux:text class="text-xs text-zinc-500">{{ __('doctor.auth.certificate_help') }}</flux:text>
@@ -656,7 +656,7 @@ new #[Layout('layouts::doctor')] #[Title('Complete profile')] class extends Comp
                         @if ($certIsImage)
                             <img src="{{ $certificate->temporaryUrl() }}" alt="" class="size-11 shrink-0 rounded-lg object-cover" />
                         @else
-                            <span class="flex size-11 shrink-0 items-center justify-center rounded-lg bg-[#132A6E]/10 text-[#132A6E]">
+                            <span class="flex size-11 shrink-0 items-center justify-center rounded-lg bg-[#047857]/10 text-[#047857]">
                                 <flux:icon name="document-text" class="size-6" />
                             </span>
                         @endif
@@ -715,7 +715,7 @@ new #[Layout('layouts::doctor')] #[Title('Complete profile')] class extends Comp
                     {{ __('doctor.auth.back') }}
                 </flux:button>
                 <flux:button
-                    class="order-1 w-full !bg-[#132A6E] !text-white hover:!brightness-95 sm:order-2 sm:w-auto"
+                    class="order-1 w-full !bg-[#047857] !text-white hover:!brightness-95 sm:order-2 sm:w-auto"
                     type="submit"
                     variant="primary"
                     wire:loading.attr="disabled"

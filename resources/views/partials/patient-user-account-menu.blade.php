@@ -16,7 +16,7 @@
             type="button"
             :aria-label="__('patient.account_menu_aria')"
             data-test="patient-account-menu-button"
-            class="size-9! rounded-full! border border-slate-200/90! bg-[#0B163E]! p-0! text-xs! font-semibold! text-white! shadow-sm! hover:border-slate-300! hover:bg-[#132A6E]!"
+            class="size-9! rounded-full! border border-slate-200/90! bg-[#064e3b]! p-0! text-xs! font-semibold! text-white! shadow-sm! hover:border-slate-300! hover:bg-[#047857]!"
         >
             <span aria-hidden="true">{{ $initials !== '' ? $initials : 'U' }}</span>
         </flux:button>
@@ -28,7 +28,7 @@
             type="button"
             :aria-label="$density === 'header' ? null : null"
             @class([
-                'w-full justify-start text-white hover:!bg-[#132A6E] hover:!text-white active:!bg-[#132A6E] active:!text-white' => $density === 'sidebar',
+                'w-full justify-start text-white hover:!bg-[#047857] hover:!text-white active:!bg-[#047857] active:!text-white' => $density === 'sidebar',
                 'max-w-[11rem] text-white hover:bg-white/15 hover:!text-white [&]:text-white' => $density === 'header',
             ])
         >

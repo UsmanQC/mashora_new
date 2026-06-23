@@ -79,7 +79,7 @@ new #[Layout('layouts::doctor')] #[Title('Bank account')] class extends Componen
                 <flux:error name="iban_number" />
             </flux:field>
             <div class="flex flex-wrap items-center gap-3 pt-1">
-                <flux:button type="submit" variant="primary" class="!bg-[#132A6E] !text-white hover:!brightness-95">
+                <flux:button type="submit" variant="primary" class="!bg-[#047857] !text-white hover:!brightness-95">
                     {{ __('Save') }}
                 </flux:button>
                 <flux:button :href="route('doctor.settings')" wire:navigate variant="ghost">

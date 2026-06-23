@@ -5,7 +5,7 @@
     <title>{{ __('mail.tickets.new_admin_subject', ['number' => $ticket->ticket_number, 'app' => config('app.name')]) }}</title>
 </head>
 <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #1f2937;">
-    <h2 style="color: #132A6E;">{{ __('mail.tickets.new_admin_heading') }}</h2>
+    <h2 style="color: #047857;">{{ __('mail.tickets.new_admin_heading') }}</h2>
 
     <p>{{ __('mail.tickets.new_admin_intro', ['app' => config('app.name')]) }}</p>
 
@@ -32,7 +32,7 @@
     <p style="white-space: pre-wrap; background: #f8fafc; padding: 12px; border-radius: 8px;">{{ $ticket->message }}</p>
 
     <p style="margin-top: 1.5rem;">
-        <a href="{{ $adminUrl }}" style="display: inline-block; background: #132A6E; color: #fff; padding: 10px 18px; border-radius: 8px; text-decoration: none;">
+        <a href="{{ $adminUrl }}" style="display: inline-block; background: #047857; color: #fff; padding: 10px 18px; border-radius: 8px; text-decoration: none;">
             {{ __('mail.tickets.view_in_admin') }}
         </a>
     </p>

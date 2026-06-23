@@ -197,7 +197,7 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
 
 <div class="pb-28 sm:pb-10">
     <div id="patient-call-join-banner" class="mx-auto hidden max-w-5xl px-4 pt-4 lg:px-8">
-        <div class="rounded-xl border border-emerald-200 bg-blue-50 px-4 py-3">
+        <div class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
             <div class="flex flex-wrap items-center justify-between gap-3">
                 <p id="patient-call-join-text" class="text-sm font-medium text-emerald-900"></p>
                 <a
@@ -216,7 +216,7 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
     <div class="border-b border-slate-200/80 bg-white px-4 py-5 sm:px-6 lg:px-8">
         <div class="mx-auto flex max-w-5xl items-start justify-between gap-4">
             <div class="min-w-0">
-                <flux:heading size="xl" class="font-semibold text-[#1565c0]">{{ __('patient.appointments.title') }}</flux:heading>
+                <flux:heading size="xl" class="font-semibold text-[#10B981]">{{ __('patient.appointments.title') }}</flux:heading>
                 <flux:text class="mt-1 text-sm text-zinc-500">{{ __('patient.appointments.subtitle') }}</flux:text>
             </div>
             <flux:button
@@ -235,10 +235,10 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
         <a
             href="{{ route('patient.schedule.filter') }}"
             wire:navigate
-            class="grid min-h-[11rem] grid-rows-2 overflow-hidden rounded-2xl border border-blue-100/90 bg-white shadow-sm transition hover:border-blue-200 hover:shadow-md sm:min-h-[10.5rem]"
+            class="grid min-h-[11rem] grid-rows-2 overflow-hidden rounded-2xl border border-emerald-100/90 bg-white shadow-sm transition hover:border-emerald-200 hover:shadow-md sm:min-h-[10.5rem]"
         >
-            <span class="flex items-center gap-4 bg-blue-50/70 p-4 sm:p-5 lg:gap-5">
-                <span class="flex size-11 shrink-0 items-center justify-center rounded-xl bg-[#1565c0]/12 text-[#1565c0] lg:size-12">
+            <span class="flex items-center gap-4 bg-emerald-50/70 p-4 sm:p-5 lg:gap-5">
+                <span class="flex size-11 shrink-0 items-center justify-center rounded-xl bg-[#10B981]/12 text-[#10B981] lg:size-12">
                     <flux:icon name="calendar-days" variant="mini" class="size-5 lg:size-6" />
                 </span>
                 <span class="min-w-0 flex-1">
@@ -246,12 +246,12 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
                     <span class="mt-0.5 block text-xs text-zinc-600 sm:text-sm">{{ __('patient.appointments.book_card_sub') }}</span>
                 </span>
             </span>
-            <span class="flex items-center justify-between gap-3 border-t border-blue-100/90 bg-white px-4 py-4 sm:px-5 sm:py-5">
-                <span class="inline-flex items-center gap-1.5 rounded-xl bg-blue-50 px-4 py-2 text-sm font-semibold text-[#1565c0] ring-1 ring-blue-100">
+            <span class="flex items-center justify-between gap-3 border-t border-emerald-100/90 bg-white px-4 py-4 sm:px-5 sm:py-5">
+                <span class="inline-flex items-center gap-1.5 rounded-xl bg-emerald-50 px-4 py-2 text-sm font-semibold text-[#10B981] ring-1 ring-emerald-100">
                     <flux:icon name="plus" variant="mini" class="size-4" />
                     {{ __('patient.appointments.book_new') }}
                 </span>
-                <flux:icon name="chevron-{{ app()->getLocale() === 'ar' ? 'left' : 'right' }}" variant="mini" class="size-5 shrink-0 text-[#1565c0]/70 rtl:rotate-180" />
+                <flux:icon name="chevron-{{ app()->getLocale() === 'ar' ? 'left' : 'right' }}" variant="mini" class="size-5 shrink-0 text-[#10B981]/70 rtl:rotate-180" />
             </span>
         </a>
 
@@ -278,24 +278,24 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
                     aria-selected="{{ $isActiveTab ? 'true' : 'false' }}"
                     @class([
                         'group relative flex min-h-[5.25rem] flex-col items-center justify-center gap-1.5 rounded-xl border px-3 py-3 text-center transition-all duration-200 sm:min-h-[5.75rem] sm:px-4 sm:py-3.5',
-                        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1565c0]/40 focus-visible:ring-offset-2',
+                        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#10B981]/40 focus-visible:ring-offset-2',
                         'cursor-pointer disabled:cursor-wait disabled:opacity-70',
                         $isActiveTab
-                            ? 'border-[#1565c0] bg-[#1565c0] text-white shadow-lg shadow-[#1565c0]/25'
-                            : 'border-zinc-200 bg-white text-zinc-700 shadow-sm hover:-translate-y-0.5 hover:border-[#1565c0]/35 hover:bg-[#1565c0]/[0.04] hover:shadow-md active:translate-y-0',
+                            ? 'border-[#10B981] bg-[#10B981] text-white shadow-lg shadow-[#10B981]/25'
+                            : 'border-zinc-200 bg-white text-zinc-700 shadow-sm hover:-translate-y-0.5 hover:border-[#10B981]/35 hover:bg-[#10B981]/[0.04] hover:shadow-md active:translate-y-0',
                     ])
                 >
                     <span @class([
                         'inline-flex min-h-8 min-w-8 items-center justify-center rounded-lg px-2.5 text-xl font-bold tabular-nums leading-none sm:text-2xl',
                         $isActiveTab
                             ? 'bg-white/20 text-white'
-                            : 'bg-zinc-100 text-zinc-800 group-hover:bg-[#1565c0]/10 group-hover:text-[#1565c0]',
+                            : 'bg-zinc-100 text-zinc-800 group-hover:bg-[#10B981]/10 group-hover:text-[#10B981]',
                     ])>
                         {{ $tabCount }}
                     </span>
                     <span @class([
                         'text-xs font-semibold leading-tight sm:text-sm',
-                        $isActiveTab ? 'text-white' : 'text-zinc-600 group-hover:text-[#1565c0]',
+                        $isActiveTab ? 'text-white' : 'text-zinc-600 group-hover:text-[#10B981]',
                     ])>
                         {{ $tabLabel }}
                     </span>
@@ -310,7 +310,7 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
                     <h2 class="text-lg font-semibold text-zinc-900">{{ $this->tabHeading() }}</h2>
                     <p class="text-sm text-zinc-500">{{ __('patient.appointments.list_heading') }}</p>
                 </div>
-                <span class="rounded-full bg-[#1565c0]/10 px-3 py-1 text-xs font-semibold text-[#1565c0]">
+                <span class="rounded-full bg-[#10B981]/10 px-3 py-1 text-xs font-semibold text-[#10B981]">
                     {{ trans_choice('patient.appointments.sessions_count', $this->tabCounts[$tab] ?? 0, ['count' => $this->tabCounts[$tab] ?? 0]) }}
                 </span>
             </div>
@@ -324,7 +324,7 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
                             :href="route('patient.schedule.filter')"
                             wire:navigate
                             variant="primary"
-                            class="mt-5 !bg-[#1565c0] !text-white"
+                            class="mt-5 !bg-[#10B981] !text-white"
                         >
                             {{ __('patient.appointments.book_new') }}
                         </flux:button>

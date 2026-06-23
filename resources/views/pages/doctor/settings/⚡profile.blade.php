@@ -150,7 +150,7 @@ new #[Layout('layouts::doctor')] #[Title('Personal account')] class extends Comp
                             <p class="truncate text-lg font-semibold text-zinc-900">{{ auth('doctor')->user()?->displayName() }}</p>
                             <p class="text-sm text-zinc-500">{{ __('Update your profile photo and account details') }}</p>
                             <div class="mt-2 flex items-center gap-2">
-                                <span class="inline-flex items-center rounded-full bg-[#132A6E]/10 px-2.5 py-1 text-xs font-semibold text-[#132A6E]">
+                                <span class="inline-flex items-center rounded-full bg-[#047857]/10 px-2.5 py-1 text-xs font-semibold text-[#047857]">
                                     {{ __('Profile completeness') }}: {{ $profileCompletion }}%
                                 </span>
                             </div>
@@ -209,7 +209,7 @@ new #[Layout('layouts::doctor')] #[Title('Personal account')] class extends Comp
             </div>
 
             <div class="flex flex-wrap items-center gap-3 border-t border-zinc-100 pt-1">
-                <flux:button type="submit" variant="primary" class="!bg-[#132A6E] !text-white hover:!brightness-95">
+                <flux:button type="submit" variant="primary" class="!bg-[#047857] !text-white hover:!brightness-95">
                     {{ __('Save profile') }}
                 </flux:button>
                 <span class="text-xs text-zinc-500">{{ __('Changes are applied immediately to your account.') }}</span>
@@ -246,7 +246,7 @@ new #[Layout('layouts::doctor')] #[Title('Personal account')] class extends Comp
                 </flux:field>
             </div>
             <div class="flex flex-wrap items-center gap-3 border-t border-zinc-100 pt-1">
-                <flux:button type="submit" variant="primary" class="!bg-[#132A6E] !text-white hover:!brightness-95">
+                <flux:button type="submit" variant="primary" class="!bg-[#047857] !text-white hover:!brightness-95">
                     {{ __('Update password') }}
                 </flux:button>
                 <span class="text-xs text-zinc-500">{{ __('Use at least 6 characters for better protection.') }}</span>

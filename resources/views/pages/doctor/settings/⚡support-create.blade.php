@@ -84,7 +84,7 @@ new #[Layout('layouts::doctor')] #[Title('New support ticket')] class extends Co
             <select
                 wire:model="categoryId"
                 required
-                class="h-11 w-full rounded-xl border border-zinc-200 bg-white px-3 text-sm text-zinc-900 focus:border-[#132A6E] focus:outline-none focus:ring-2 focus:ring-[#132A6E]/20"
+                class="h-11 w-full rounded-xl border border-zinc-200 bg-white px-3 text-sm text-zinc-900 focus:border-[#047857] focus:outline-none focus:ring-2 focus:ring-[#047857]/20"
             >
                 <option value="0">{{ __('tickets.category_label') }}</option>
                 @foreach ($this->categories as $category)
@@ -107,7 +107,7 @@ new #[Layout('layouts::doctor')] #[Title('New support ticket')] class extends Co
         </flux:field>
 
         <div class="flex justify-end">
-            <flux:button type="submit" variant="primary" class="!bg-[#132A6E] !text-white">{{ __('tickets.submit') }}</flux:button>
+            <flux:button type="submit" variant="primary" class="!bg-[#047857] !text-white">{{ __('tickets.submit') }}</flux:button>
         </div>
     </form>
 </div>

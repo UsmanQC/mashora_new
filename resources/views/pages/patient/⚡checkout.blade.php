@@ -404,174 +404,236 @@ new #[Layout('layouts::patient')] #[Title('Payment')] class extends Component
     }
 }; ?>
 
-<div class="mx-auto max-w-6xl space-y-6 px-4 py-6 pb-28 sm:pb-12">
-    @if (session('flash_payment'))
-        <p class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">{{ session('flash_payment') }}</p>
-    @endif
+<div class="pb-28 sm:pb-10">
+    <div class="mx-auto max-w-5xl space-y-5 px-4 py-6 lg:space-y-6 lg:px-8 lg:py-8">
+        @if (session('flash_payment'))
+            <p class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">{{ session('flash_payment') }}</p>
+        @endif
 
-    <div class="grid gap-8 lg:grid-cols-2">
-        <div class="space-y-4">
-            <div class="flex flex-wrap items-center gap-2 text-sm font-medium text-[#2f64c9]">
-                <span>{{ __('patient_booking.crumb_find_specialist') }}</span>
-                <span class="text-zinc-400">></span>
-                <span>{{ __('patient_booking.crumb_book') }}</span>
-                <span class="text-zinc-400">></span>
-                <span class="text-zinc-500">{{ __('patient_booking.checkout_title') }}</span>
-            </div>
+        {{-- Booking steps --}}
+        <nav class="flex flex-wrap items-center gap-2 text-xs font-semibold sm:text-sm" aria-label="{{ __('patient_booking.checkout_title') }}">
+            <span class="rounded-full bg-emerald-50 px-3 py-1 text-[#10B981]">{{ __('patient_booking.crumb_find_specialist') }}</span>
+            <flux:icon name="chevron-right" variant="mini" class="size-4 text-zinc-300 rtl:rotate-180" />
+            <span class="rounded-full bg-emerald-50 px-3 py-1 text-[#10B981]">{{ __('patient_booking.crumb_book') }}</span>
+            <flux:icon name="chevron-right" variant="mini" class="size-4 text-zinc-300 rtl:rotate-180" />
+            <span class="rounded-full bg-[#10B981] px-3 py-1 text-white">{{ __('patient_booking.checkout_title') }}</span>
+        </nav>
 
-            <div class="rounded-2xl border border-zinc-200/90 bg-white p-5 shadow-sm">
-            <div class="flex justify-between gap-3 border-b border-zinc-100 pb-3">
-                <span class="text-sm font-semibold text-zinc-600">{{ __('patient_booking.specialist_name') }}</span>
-                <span class="min-w-0 text-end text-sm font-semibold text-zinc-900">{{ $this->specialistName() }}</span>
-            </div>
-            <div class="mt-3 flex justify-between gap-3 text-sm">
-                <span class="text-zinc-600">{{ __('patient_booking.session_date') }}</span>
-                <span class="font-medium text-zinc-900">{{ $this->formattedDate() }}</span>
-            </div>
-            <div class="mt-2 flex justify-between gap-3 text-sm">
-                <span class="text-zinc-600">{{ __('patient_booking.session_time') }}</span>
-                <span class="font-medium text-zinc-900">{{ $this->formattedTime() }}</span>
-            </div>
-            <div class="mt-2 flex justify-between gap-3 text-sm">
-                <span class="text-zinc-600">{{ __('patient_booking.session_duration') }}</span>
-                <span class="font-medium text-zinc-900">{{ $this->temporaryAppointment->duration }}</span>
-            </div>
-            <hr class="my-4 border-zinc-100" />
-            <div class="flex justify-between gap-3 text-sm">
-                <span class="text-zinc-600">{{ __('patient_booking.session_price') }}</span>
-                <span class="font-medium tabular-nums text-zinc-900">{{ number_format((float) $this->temporaryAppointment->amount, 2) }} {{ __('patient_booking.sar') }}</span>
-            </div>
-            <div class="mt-2 flex justify-between gap-3 text-sm">
-                <span class="text-zinc-600">{{ __('patient_booking.discount') }}</span>
-                <span class="font-medium tabular-nums text-zinc-900">{{ number_format((float) $this->temporaryAppointment->discount, 2) }} {{ __('patient_booking.sar') }}</span>
-            </div>
-            <div class="mt-3 flex justify-between gap-3 border-t border-zinc-100 pt-3 text-sm font-semibold">
-                <span class="text-zinc-800">{{ __('patient_booking.total') }}</span>
-                <span class="tabular-nums text-zinc-900">{{ number_format((float) $this->temporaryAppointment->total, 2) }} {{ __('patient_booking.sar') }}</span>
-            </div>
+        @php
+            $checkoutTotal = (float) $this->temporaryAppointment->total;
+            $checkoutDue = $this->amountDue();
+            $showAmountDue = $this->walletApplied() > 0 && $checkoutDue < $checkoutTotal;
+        @endphp
 
-            @if ($this->walletBalance() > 0)
-                <div class="mt-4 flex items-start justify-between gap-3 rounded-xl border border-[#3d5afe]/20 bg-[#3d5afe]/5 p-3">
-                    <div class="min-w-0 text-sm">
-                        <span class="font-semibold text-zinc-800">{{ __('patient_booking.use_wallet') }}</span>
-                        <span class="mt-1 block text-xs text-zinc-500">
-                            {{ __('patient_booking.wallet_balance') }}:
-                            {{ number_format($this->walletBalance(), 2) }} {{ __('patient_booking.sar') }}
-                        </span>
-                        <flux:link :href="route('patient.wallet')" wire:navigate class="mt-1 inline-block text-xs font-medium text-[#3d5afe]">
-                            {{ __('patient_booking.view_wallet') }}
-                        </flux:link>
+        {{-- Hero — soft vertical split --}}
+        <header class="grid min-h-[10.5rem] grid-rows-2 overflow-hidden rounded-2xl border border-emerald-100/90 bg-white shadow-sm">
+            <div class="flex items-center gap-4 bg-emerald-50/70 p-4 sm:p-5">
+                <span class="flex size-11 shrink-0 items-center justify-center rounded-xl bg-[#10B981]/12 text-[#10B981] sm:size-12">
+                    <flux:icon name="credit-card" variant="mini" class="size-5 sm:size-6" />
+                </span>
+                <div class="min-w-0 flex-1">
+                    <p class="text-sm font-semibold text-zinc-900 sm:text-base">{{ __('patient_booking.checkout_title') }}</p>
+                    <p class="mt-0.5 text-xs text-zinc-600 sm:text-sm">{{ __('patient_booking.checkout_subtitle') }}</p>
+                </div>
+            </div>
+            <div class="flex flex-col justify-center border-t border-emerald-100/90 bg-white px-4 py-4 sm:px-5">
+                <p class="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                    {{ $showAmountDue ? __('patient_booking.amount_due') : __('patient_booking.total') }}
+                </p>
+                <p class="mt-1 text-2xl font-bold tabular-nums text-[#10B981] sm:text-3xl">
+                    {{ number_format($showAmountDue ? $checkoutDue : $checkoutTotal, 2) }}
+                    <span class="text-lg font-semibold sm:text-xl">{{ __('patient_booking.sar') }}</span>
+                </p>
+                @if ($showAmountDue)
+                    <p class="mt-1 text-xs text-zinc-500">
+                        {{ __('patient_booking.total') }}:
+                        <span class="tabular-nums line-through">{{ number_format($checkoutTotal, 2) }} {{ __('patient_booking.sar') }}</span>
+                    </p>
+                @endif
+            </div>
+        </header>
+
+        <div class="grid gap-5 lg:grid-cols-5 lg:items-stretch lg:gap-6">
+            {{-- Session summary --}}
+            <div class="flex h-full flex-col lg:col-span-3">
+                <div class="flex h-full flex-col overflow-hidden rounded-2xl border border-zinc-200/90 bg-white shadow-sm">
+                    <div class="border-b border-zinc-100 bg-zinc-50/80 px-5 py-4">
+                        <div class="flex items-center gap-3">
+                            <flux:avatar :name="$this->specialistName()" circle class="shrink-0 ring-2 ring-[#10B981]/15" />
+                            <div class="min-w-0">
+                                <p class="text-xs font-semibold uppercase tracking-wide text-zinc-500">{{ __('patient_booking.specialist_name') }}</p>
+                                <p class="truncate text-base font-semibold text-zinc-900">{{ $this->specialistName() }}</p>
+                            </div>
+                        </div>
                     </div>
-                    <flux:switch wire:model.live="useWallet" />
+
+                    <div class="grid gap-3 px-5 py-4 sm:grid-cols-3">
+                        <div class="rounded-xl border border-zinc-100 bg-zinc-50/50 px-3 py-2.5">
+                            <p class="text-[0.65rem] font-semibold uppercase tracking-wide text-zinc-500">{{ __('patient_booking.session_date') }}</p>
+                            <p class="mt-1 text-sm font-semibold text-zinc-900">{{ $this->formattedDate() }}</p>
+                        </div>
+                        <div class="rounded-xl border border-zinc-100 bg-zinc-50/50 px-3 py-2.5">
+                            <p class="text-[0.65rem] font-semibold uppercase tracking-wide text-zinc-500">{{ __('patient_booking.session_time') }}</p>
+                            <p class="mt-1 text-sm font-semibold text-zinc-900">{{ $this->formattedTime() }}</p>
+                        </div>
+                        <div class="rounded-xl border border-zinc-100 bg-zinc-50/50 px-3 py-2.5 sm:col-span-1">
+                            <p class="text-[0.65rem] font-semibold uppercase tracking-wide text-zinc-500">{{ __('patient_booking.session_duration') }}</p>
+                            <p class="mt-1 text-sm font-semibold text-zinc-900">{{ $this->temporaryAppointment->duration }}</p>
+                        </div>
+                    </div>
+
+                    <div class="space-y-2 border-t border-zinc-100 px-5 py-4 text-sm">
+                        <div class="flex justify-between gap-3">
+                            <span class="text-zinc-600">{{ __('patient_booking.session_price') }}</span>
+                            <span class="font-medium tabular-nums text-zinc-900">{{ number_format((float) $this->temporaryAppointment->amount, 2) }} {{ __('patient_booking.sar') }}</span>
+                        </div>
+                        <div class="flex justify-between gap-3">
+                            <span class="text-zinc-600">{{ __('patient_booking.discount') }}</span>
+                            <span class="font-medium tabular-nums text-zinc-900">{{ number_format((float) $this->temporaryAppointment->discount, 2) }} {{ __('patient_booking.sar') }}</span>
+                        </div>
+                        <div class="flex justify-between gap-3 border-t border-zinc-100 pt-3 font-semibold">
+                            <span class="text-zinc-800">{{ __('patient_booking.total') }}</span>
+                            <span class="tabular-nums text-zinc-900">{{ number_format($checkoutTotal, 2) }} {{ __('patient_booking.sar') }}</span>
+                        </div>
+                    </div>
+
+                    @if ($this->walletBalance() > 0)
+                        <div class="border-t border-zinc-100 px-5 py-4">
+                            <div class="flex items-start justify-between gap-3 rounded-xl border border-[#10B981]/15 bg-[#10B981]/5 p-3">
+                                <div class="min-w-0 text-sm">
+                                    <span class="font-semibold text-zinc-800">{{ __('patient_booking.use_wallet') }}</span>
+                                    <span class="mt-1 block text-xs text-zinc-500">
+                                        {{ __('patient_booking.wallet_balance') }}:
+                                        {{ number_format($this->walletBalance(), 2) }} {{ __('patient_booking.sar') }}
+                                    </span>
+                                    <flux:link :href="route('patient.wallet')" wire:navigate class="mt-1 inline-block text-xs font-medium text-[#10B981]">
+                                        {{ __('patient_booking.view_wallet') }}
+                                    </flux:link>
+                                </div>
+                                <flux:switch wire:model.live="useWallet" />
+                            </div>
+
+                            @if ($this->walletApplied() > 0)
+                                <div class="mt-3 space-y-2 text-sm">
+                                    <div class="flex justify-between gap-3">
+                                        <span class="text-zinc-600">{{ __('patient_booking.wallet_applied') }}</span>
+                                        <span class="font-medium tabular-nums text-emerald-600">- {{ number_format($this->walletApplied(), 2) }} {{ __('patient_booking.sar') }}</span>
+                                    </div>
+                                    <div class="flex justify-between gap-3 rounded-lg bg-emerald-50/80 px-3 py-2 font-semibold text-[#10B981]">
+                                        <span>{{ __('patient_booking.amount_due') }}</span>
+                                        <span class="tabular-nums">{{ number_format($checkoutDue, 2) }} {{ __('patient_booking.sar') }}</span>
+                                    </div>
+                                </div>
+                            @endif
+                        </div>
+                    @endif
+                </div>
+            </div>
+
+            {{-- Payment --}}
+            <div class="flex h-full flex-col lg:col-span-2">
+                <div class="flex h-full flex-col rounded-2xl border border-zinc-200/90 bg-white p-5 shadow-sm">
+                <div class="flex items-center gap-2 border-b border-zinc-100 pb-4">
+                    <span class="flex size-9 items-center justify-center rounded-lg bg-[#10B981]/10 text-[#10B981]">
+                        <flux:icon name="lock-closed" variant="mini" class="size-4" />
+                    </span>
+                    <flux:heading size="sm" class="font-semibold text-zinc-900">{{ __('patient_booking.checkout_accepts') }}</flux:heading>
                 </div>
 
-                @if ($this->walletApplied() > 0)
-                    <div class="mt-3 flex justify-between gap-3 text-sm">
-                        <span class="text-zinc-600">{{ __('patient_booking.wallet_applied') }}</span>
-                        <span class="font-medium tabular-nums text-emerald-600">- {{ number_format($this->walletApplied(), 2) }} {{ __('patient_booking.sar') }}</span>
+                @if ($paymentError !== '')
+                    <p class="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{{ $paymentError }}</p>
+                @endif
+
+                <div class="flex min-h-0 flex-1 flex-col pt-4">
+                    <div class="space-y-3">
+                    @if ($this->walletApplied() > 0 && $checkoutDue <= 0)
+                        <p class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+                            {{ __('patient_booking.wallet_covers_full') }}
+                        </p>
+                        <flux:button type="button" variant="primary" class="min-h-11 w-full !border-[#10B981] !bg-[#10B981] !text-white hover:!brightness-[0.97]" wire:click="payWithWalletOnly" wire:loading.attr="disabled">
+                            <span wire:loading.remove wire:target="payWithWalletOnly">{{ __('patient_booking.pay_with_wallet_only') }}</span>
+                            <span wire:loading wire:target="payWithWalletOnly">{{ __('patient_booking.payment_processing') }}</span>
+                        </flux:button>
+                    @elseif ($this->paymentGatewayConfigured())
+                        @if ($this->walletApplied() > 0 && $checkoutDue > 0)
+                            <p class="rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900">
+                                {{ __('patient_booking.wallet_partial_hint') }}
+                            </p>
+                        @endif
+                        @if ($this->usesStripe())
+                            <flux:button
+                                type="button"
+                                variant="primary"
+                                class="min-h-11 w-full !border-[#10B981] !bg-[#10B981] !text-white shadow-md shadow-[#10B981]/20 hover:!brightness-[0.97]"
+                                wire:click="startStripePayment"
+                                wire:loading.attr="disabled"
+                            >
+                                <span wire:loading.remove wire:target="startStripePayment">
+                                    @if ($this->walletApplied() > 0)
+                                        {{ __('patient_booking.pay_wallet_and_card', [
+                                            'wallet' => number_format($this->walletApplied(), 2),
+                                            'due' => number_format($checkoutDue, 2),
+                                        ]) }}
+                                    @else
+                                        {{ __('patient_booking.pay_now_stripe') }}
+                                    @endif
+                                </span>
+                                <span wire:loading wire:target="startStripePayment">{{ __('patient_booking.payment_processing') }}</span>
+                            </flux:button>
+
+                            <flux:text class="text-center text-xs text-zinc-500">{{ __('patient_booking.payment_stripe_note') }}</flux:text>
+                        @elseif ($embeddedReady)
+                            <div id="mf-form-element" class="min-h-[155px] w-full rounded-xl border border-zinc-200 bg-white p-2"></div>
+                            <p id="mf-card-error" class="hidden rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                                {{ __('patient_booking.payment_embedded_unavailable') }}
+                            </p>
+
+                            <button
+                                type="button"
+                                id="embedded-pay-now"
+                                class="min-h-11 w-full rounded-xl border border-[#10B981] bg-[#10B981] py-3 text-sm font-semibold text-white shadow-md shadow-[#10B981]/20 transition hover:brightness-[0.97]"
+                            >
+                                {{ __('patient_booking.pay_now') }}
+                            </button>
+
+                            <flux:button
+                                type="button"
+                                variant="ghost"
+                                class="w-full"
+                                wire:click="startCardPayment"
+                                wire:loading.attr="disabled"
+                            >
+                                <span wire:loading.remove wire:target="startCardPayment">{{ __('patient_booking.pay_now_fallback') }}</span>
+                                <span wire:loading wire:target="startCardPayment">{{ __('patient_booking.payment_processing') }}</span>
+                            </flux:button>
+                        @else
+                            <flux:button
+                                type="button"
+                                variant="primary"
+                                class="min-h-11 w-full !border-[#10B981] !bg-[#10B981] !text-white shadow-md shadow-[#10B981]/20 hover:!brightness-[0.97]"
+                                wire:click="startCardPayment"
+                                wire:loading.attr="disabled"
+                            >
+                                <span wire:loading.remove wire:target="startCardPayment">{{ __('patient_booking.pay_now') }}</span>
+                                <span wire:loading wire:target="startCardPayment">{{ __('patient_booking.payment_processing') }}</span>
+                            </flux:button>
+                        @endif
+
+                        @if ($this->usesMyFatoorah())
+                            <flux:text class="text-center text-xs text-zinc-500">{{ __('patient_booking.payment_secure_note') }}</flux:text>
+                        @endif
+                    @else
+                        <p class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                            {{ $this->usesStripe() ? __('patient_booking.payment_stripe_missing') : __('patient_booking.payment_api_missing') }}
+                        </p>
+                    @endif
                     </div>
-                    <div class="mt-2 flex justify-between gap-3 border-t border-zinc-100 pt-2 text-sm font-semibold">
-                        <span class="text-zinc-800">{{ __('patient_booking.amount_due') }}</span>
-                        <span class="tabular-nums text-zinc-900">{{ number_format($this->amountDue(), 2) }} {{ __('patient_booking.sar') }}</span>
-                    </div>
-                @endif
-            @endif
-            </div>
-        </div>
 
-        <div class="space-y-4 rounded-2xl border border-zinc-200/90 bg-white p-5 shadow-sm">
-            @if ($paymentError !== '')
-                <p class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{{ $paymentError }}</p>
-            @endif
-
-            @if ($this->walletApplied() > 0 && $this->amountDue() <= 0)
-                <p class="rounded-xl border border-emerald-200 bg-blue-50 px-4 py-3 text-sm text-emerald-800">
-                    {{ __('patient_booking.wallet_covers_full') }}
-                </p>
-                <flux:button type="button" variant="primary" class="w-full bg-[#3d5afe]! text-white!" wire:click="payWithWalletOnly" wire:loading.attr="disabled">
-                    <span wire:loading.remove wire:target="payWithWalletOnly">{{ __('patient_booking.pay_with_wallet_only') }}</span>
-                    <span wire:loading wire:target="payWithWalletOnly">{{ __('patient_booking.payment_processing') }}</span>
-                </flux:button>
-            @elseif ($this->paymentGatewayConfigured())
-                @if ($this->walletApplied() > 0 && $this->amountDue() > 0)
-                    <p class="rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900">
-                        {{ __('patient_booking.wallet_partial_hint') }}
-                    </p>
-                @endif
-                @if ($this->usesStripe())
-                    <flux:button
-                        type="button"
-                        variant="primary"
-                        class="w-full border-[#3d5afe] !bg-[#3d5afe] !text-white hover:!brightness-[0.97]"
-                        wire:click="startStripePayment"
-                        wire:loading.attr="disabled"
-                    >
-                        <span wire:loading.remove wire:target="startStripePayment">
-                            @if ($this->walletApplied() > 0)
-                                {{ __('patient_booking.pay_wallet_and_card', [
-                                    'wallet' => number_format($this->walletApplied(), 2),
-                                    'due' => number_format($this->amountDue(), 2),
-                                ]) }}
-                            @else
-                                {{ __('patient_booking.pay_now_stripe') }}
-                            @endif
-                        </span>
-                        <span wire:loading wire:target="startStripePayment">{{ __('patient_booking.payment_processing') }}</span>
+                    <flux:button :href="route('patient.home')" wire:navigate variant="ghost" class="mt-auto w-full pt-4">
+                        {{ __('patient_booking.back_home') }}
                     </flux:button>
-
-                    <flux:text class="text-xs text-zinc-500">{{ __('patient_booking.payment_stripe_note') }}</flux:text>
-                @elseif ($embeddedReady)
-                    <div id="mf-form-element" class="min-h-[155px] w-full rounded-lg border border-zinc-300 bg-white p-2"></div>
-                    <p id="mf-card-error" class="hidden rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-                        {{ __('patient_booking.payment_embedded_unavailable') }}
-                    </p>
-
-                    <button
-                        type="button"
-                        id="embedded-pay-now"
-                        class="w-full rounded-lg border border-[#3d5afe] bg-[#3d5afe] py-3 text-sm font-semibold text-white transition hover:brightness-95"
-                    >
-                        {{ __('patient_booking.pay_now') }}
-                    </button>
-
-                    <flux:button
-                        type="button"
-                        variant="ghost"
-                        class="w-full"
-                        wire:click="startCardPayment"
-                        wire:loading.attr="disabled"
-                    >
-                        <span wire:loading.remove wire:target="startCardPayment">{{ __('patient_booking.pay_now_fallback') }}</span>
-                        <span wire:loading wire:target="startCardPayment">{{ __('patient_booking.payment_processing') }}</span>
-                    </flux:button>
-                @else
-                    <flux:button
-                        type="button"
-                        variant="primary"
-                        class="w-full border-[#3d5afe] !bg-[#3d5afe] !text-white hover:!brightness-[0.97]"
-                        wire:click="startCardPayment"
-                        wire:loading.attr="disabled"
-                    >
-                        <span wire:loading.remove wire:target="startCardPayment">{{ __('patient_booking.pay_now') }}</span>
-                        <span wire:loading wire:target="startCardPayment">{{ __('patient_booking.payment_processing') }}</span>
-                    </flux:button>
-                @endif
-
-                @if ($this->usesMyFatoorah())
-                    <button type="button" class="w-full rounded-lg bg-black py-3 text-sm font-semibold text-white">
-                        Pay with Apple Pay
-                    </button>
-
-                    <flux:text class="text-xs text-zinc-500">{{ __('patient_booking.payment_secure_note') }}</flux:text>
-                @endif
-            @else
-                <p class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-                    {{ $this->usesStripe() ? __('patient_booking.payment_stripe_missing') : __('patient_booking.payment_api_missing') }}
-                </p>
-            @endif
-
-            <div class="pt-1">
-                <flux:link :href="route('patient.home')" wire:navigate>{{ __('patient_booking.back_home') }}</flux:link>
+                </div>
+                </div>
             </div>
         </div>
     </div>

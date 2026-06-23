@@ -11,14 +11,13 @@ use App\Models\User;
 use App\Models\WorkingDay;
 use App\Models\WorkingHour;
 use App\Services\FollowUpAppointmentService;
-use App\Services\FollowUpPaymentCompletionService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
 use Livewire\Livewire;
 
 uses(RefreshDatabase::class);
 
-function seedDoctorWithSlots(): Doctor
+function seedDoctorWithSlots(int $slotDayOffset = 7): Doctor
 {
     foreach (['chat', 'voice_call', 'video_call'] as $channel) {
         Communication::query()->firstOrCreate(
@@ -41,7 +40,7 @@ function seedDoctorWithSlots(): Doctor
 
     $workingDay = WorkingDay::query()->create([
         'doctor_id' => $doctor->id,
-        'day_of_week' => strtolower(now()->addDays(15)->englishDayOfWeek),
+        'day_of_week' => strtolower(now()->addDays($slotDayOffset)->englishDayOfWeek),
         'is_working' => true,
     ]);
 
@@ -79,7 +78,7 @@ test('doctor appointments list shows follow-up action for completed sessions', f
 });
 
 test('follow-up page picks first date with working hours when suggested day has none', function () {
-    $doctor = seedDoctorWithSlots();
+    $doctor = seedDoctorWithSlots(7);
     $user = User::factory()->create();
 
     $appointment = Appointment::factory()->create([
@@ -92,8 +91,7 @@ test('follow-up page picks first date with working hours when suggested day has 
         'end_time' => '10:30:00',
     ]);
 
-    $preferredWithoutHours = now()->addDays(3)->format('Y-m-d');
-    $firstWithHours = now()->addDays(15)->format('Y-m-d');
+    $firstWithHours = now()->addDays(7)->format('Y-m-d');
 
     $this->actingAs($doctor, 'doctor');
 
@@ -102,11 +100,11 @@ test('follow-up page picks first date with working hours when suggested day has 
         ->assertSee('10:00', false);
 });
 
-test('doctor can schedule follow-up and patient receives notification', function () {
-    $doctor = seedDoctorWithSlots();
+test('doctor can schedule free follow-up and patient receives notification', function () {
+    $doctor = seedDoctorWithSlots(7);
     $user = User::factory()->create(['profile_completed' => true]);
 
-    $followUpDate = now()->addDays(15)->format('Y-m-d');
+    $followUpDate = now()->addDays(7)->format('Y-m-d');
 
     $appointment = Appointment::factory()->create([
         'doctor_id' => $doctor->id,
@@ -133,8 +131,9 @@ test('doctor can schedule follow-up and patient receives notification', function
 
     expect($followUp)->not->toBeNull()
         ->and($followUp->status)->toBe('pending_follow_up')
+        ->and($followUp->is_follow_up)->toBeTrue()
         ->and($followUp->patient_confirmed_at)->toBeNull()
-        ->and((float) $followUp->total)->toBe(250.0);
+        ->and((float) $followUp->total)->toBe(0.0);
 
     expect(Notification::query()
         ->where('userable_id', $user->id)
@@ -142,8 +141,8 @@ test('doctor can schedule follow-up and patient receives notification', function
         ->exists())->toBeTrue();
 });
 
-test('patient confirms follow-up then completes booking via wallet', function () {
-    $doctor = seedDoctorWithSlots();
+test('patient confirms free follow-up without payment', function () {
+    $doctor = seedDoctorWithSlots(7);
     $user = User::factory()->create(['profile_completed' => true]);
 
     $parent = Appointment::factory()->create([
@@ -153,12 +152,13 @@ test('patient confirms follow-up then completes booking via wallet', function ()
         'duration' => 30,
     ]);
 
-    $followUpDate = now()->addDays(15)->format('Y-m-d');
+    $followUpDate = now()->addDays(7)->format('Y-m-d');
 
     $followUp = Appointment::factory()->create([
         'doctor_id' => $doctor->id,
         'user_id' => $user->id,
         'parent_id' => $parent->id,
+        'is_follow_up' => true,
         'status' => 'pending_follow_up',
         'duration' => 30,
         'appointment_date' => $followUpDate,
@@ -166,8 +166,8 @@ test('patient confirms follow-up then completes booking via wallet', function ()
         'end_time' => '10:30:00',
         'patient_name' => $user->name,
         'patient_phone' => $user->phone,
-        'amount' => 250,
-        'total' => 250,
+        'amount' => 0,
+        'total' => 0,
         'wallet_amount' => 0,
     ]);
 
@@ -175,18 +175,11 @@ test('patient confirms follow-up then completes booking via wallet', function ()
 
     Livewire::test('pages::patient.follow-up-confirm', ['appointment' => $followUp])
         ->call('confirmAndPay')
-        ->assertRedirect(route('patient.follow-up.pay', $followUp));
+        ->assertRedirect(route('patient.appointments'));
 
-    $followUp->refresh();
-    expect($followUp->patient_confirmed_at)->not->toBeNull();
+    $booked = $followUp->fresh();
 
-    $followUp->update(['wallet_amount' => 250]);
-    $user->depositFloat(500);
-
-    $booked = app(FollowUpPaymentCompletionService::class)->completeWithWalletOnly($followUp->fresh(['doctor']));
-
-    expect($booked)->toBeInstanceOf(Appointment::class)
-        ->and($booked->parent_id)->toBe($parent->id)
+    expect($booked->patient_confirmed_at)->not->toBeNull()
         ->and($booked->status)->toBe('new');
 
     expect(Notification::query()
@@ -208,7 +201,27 @@ test('follow up service rejects scheduling before session is completed', functio
 
     $service = app(FollowUpAppointmentService::class);
 
-    expect(fn () => $service->create($doctor, $parent, now()->addDays(16)->format('Y-m-d'), '10:00'))
+    expect(fn () => $service->create($doctor, $parent, now()->addDays(7)->format('Y-m-d'), '10:00'))
+        ->toThrow(ValidationException::class);
+});
+
+test('follow up service rejects dates outside the follow-up window', function () {
+    $doctor = seedDoctorWithSlots();
+    $user = User::factory()->create();
+
+    $parent = Appointment::factory()->create([
+        'doctor_id' => $doctor->id,
+        'user_id' => $user->id,
+        'status' => 'completed',
+        'duration' => 30,
+        'appointment_date' => now()->format('Y-m-d'),
+        'start_time' => '10:00:00',
+        'end_time' => '10:30:00',
+    ]);
+
+    $service = app(FollowUpAppointmentService::class);
+
+    expect(fn () => $service->create($doctor, $parent, now()->addDays(15)->format('Y-m-d'), '10:00'))
         ->toThrow(ValidationException::class);
 });
 
@@ -221,6 +234,9 @@ test('follow up service rejects duplicate pending invitation', function () {
         'user_id' => $user->id,
         'status' => 'completed',
         'duration' => 30,
+        'appointment_date' => now()->format('Y-m-d'),
+        'start_time' => '10:00:00',
+        'end_time' => '10:30:00',
     ]);
 
     Appointment::factory()->create([
@@ -229,15 +245,15 @@ test('follow up service rejects duplicate pending invitation', function () {
         'parent_id' => $parent->id,
         'status' => 'pending_follow_up',
         'duration' => 30,
-        'appointment_date' => now()->addDays(15)->format('Y-m-d'),
+        'appointment_date' => now()->addDays(7)->format('Y-m-d'),
         'start_time' => '11:00:00',
         'end_time' => '11:30:00',
-        'amount' => 250,
-        'total' => 250,
+        'amount' => 0,
+        'total' => 0,
     ]);
 
     $service = app(FollowUpAppointmentService::class);
 
-    expect(fn () => $service->create($doctor, $parent, now()->addDays(16)->format('Y-m-d'), '10:00'))
+    expect(fn () => $service->create($doctor, $parent, now()->addDays(8)->format('Y-m-d'), '10:00'))
         ->toThrow(ValidationException::class);
 });

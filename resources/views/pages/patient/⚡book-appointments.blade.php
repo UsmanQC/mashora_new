@@ -284,7 +284,7 @@ new #[Layout('layouts::patient')] #[Title('Book an appointment')] class extends 
         <nav class="mb-3 text-sm text-zinc-600" aria-label="Breadcrumb">
             <ol class="flex flex-wrap items-center gap-2">
                 <li>
-                    <flux:link :href="route('patient.schedule.specialists')" wire:navigate class="font-medium text-[#1565c0] hover:text-[#0B163E]">
+                    <flux:link :href="route('patient.schedule.specialists')" wire:navigate class="font-medium text-[#10B981] hover:text-[#064e3b]">
                         {{ __('patient_booking.crumb_find_specialist') }}
                     </flux:link>
                 </li>
@@ -360,7 +360,7 @@ new #[Layout('layouts::patient')] #[Title('Book an appointment')] class extends 
                     <flux:button variant="ghost" tag="a" :href="route('patient.schedule.specialists')" wire:navigate>
                         {{ __('patient_booking.cancel') }}
                     </flux:button>
-                    <flux:button variant="primary" type="submit" class="border-[#0B163E] !bg-[#0B163E] !text-white hover:!brightness-[0.97]">
+                    <flux:button variant="primary" type="submit" class="border-[#064e3b] !bg-[#064e3b] !text-white hover:!brightness-[0.97]">
                         {{ __('patient_booking.next') }}
                     </flux:button>
                 </div>

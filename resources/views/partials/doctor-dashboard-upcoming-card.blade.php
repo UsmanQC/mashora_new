@@ -51,7 +51,7 @@
 
     <div class="mt-6 grid grid-cols-2 gap-3">
         <flux:button
-            class="min-h-[2.75rem] !border-[#3C5CF7] !text-[#3C5CF7] hover:!bg-[#3C5CF7]/10"
+            class="min-h-[2.75rem] !border-[#10B981] !text-[#10B981] hover:!bg-[#10B981]/10"
             size="sm"
             variant="outline"
             :href="route('doctor.appointments.medical-history', $appointment)"
@@ -60,7 +60,7 @@
             {{ __('doctor.card.medical_history') }}
         </flux:button>
         <flux:button
-            class="min-h-[2.75rem] !border-[#3C5CF7] !text-[#3C5CF7] hover:!bg-[#3C5CF7]/10"
+            class="min-h-[2.75rem] !border-[#10B981] !text-[#10B981] hover:!bg-[#10B981]/10"
             size="sm"
             variant="outline"
             :href="route('doctor.appointments.diagnosis', $appointment)"
@@ -69,7 +69,7 @@
             {{ __('doctor.card.diagnosis') }}
         </flux:button>
         <flux:button
-            class="min-h-[2.75rem] !border-[#3C5CF7] !text-[#3C5CF7] hover:!bg-[#3C5CF7]/10"
+            class="min-h-[2.75rem] !border-[#10B981] !text-[#10B981] hover:!bg-[#10B981]/10"
             size="sm"
             variant="outline"
             :href="route('doctor.appointments.prescription', $appointment)"
@@ -93,7 +93,7 @@
 
     @if ($statusSlug === 'new' || $statusSlug === 'in_process')
         <flux:button
-            class="mt-4 min-h-[2.875rem] w-full !border-[0] !bg-[#3C5CF7] !text-white hover:!brightness-[0.96]"
+            class="mt-4 min-h-[2.875rem] w-full !border-[0] !bg-[#10B981] !text-white hover:!brightness-[0.96]"
             size="sm"
             variant="primary"
             icon="chat-bubble-left-right"

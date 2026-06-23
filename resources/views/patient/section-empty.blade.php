@@ -4,7 +4,7 @@
             <a
                 href="{{ route('patient.menu') }}"
                 wire:navigate
-                class="inline-flex size-10 shrink-0 items-center justify-center rounded-full border border-zinc-200/90 bg-white text-[#1565c0] shadow-sm transition hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1565c0]/30"
+                class="inline-flex size-10 shrink-0 items-center justify-center rounded-full border border-zinc-200/90 bg-white text-[#10B981] shadow-sm transition hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#10B981]/30"
                 aria-label="{{ __('patient.empty_state.back_aria') }}"
             >
                 <flux:icon name="chevron-left" variant="outline" class="size-6 rtl:rotate-180" />
@@ -14,7 +14,7 @@
                 <flux:breadcrumbs.item
                     href="{{ route('patient.menu') }}"
                     separator="slash"
-                    class="[&_a]:!text-[#1565c0] [&_a]:decoration-[#1565c0]/25 [&_a]:hover:!text-[#1358a8]"
+                    class="[&_a]:!text-[#10B981] [&_a]:decoration-[#10B981]/25 [&_a]:hover:!text-[#059669]"
                     wire:navigate
                 >
                     {{ __('patient.empty_state.menu_crumb') }}

@@ -83,6 +83,7 @@ class DoctorAvailabilityService
         int $durationMinutes,
         ?string $preferredDate = null,
         int $lookaheadDays = 60,
+        ?string $maxDate = null,
     ): ?string {
         $timezone = AppTimezone::name();
         $start = $preferredDate !== null
@@ -93,8 +94,24 @@ class DoctorAvailabilityService
             $start = now($timezone)->startOfDay();
         }
 
+        $maxDay = $maxDate !== null
+            ? Carbon::parse($maxDate, $timezone)->startOfDay()
+            : null;
+
+        if ($maxDay !== null && $start->greaterThan($maxDay)) {
+            return null;
+        }
+
+        if ($maxDay !== null) {
+            $lookaheadDays = min($lookaheadDays, max(1, (int) $start->diffInDays($maxDay) + 1));
+        }
+
         for ($offset = 0; $offset < $lookaheadDays; $offset++) {
             $candidate = $start->copy()->addDays($offset)->format('Y-m-d');
+
+            if ($maxDay !== null && Carbon::parse($candidate, $timezone)->startOfDay()->greaterThan($maxDay)) {
+                break;
+            }
 
             if ($this->availableSlots($doctor, $candidate, $durationMinutes) !== []) {
                 return $candidate;

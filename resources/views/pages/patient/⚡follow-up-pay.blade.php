@@ -243,7 +243,7 @@ new #[Layout('layouts::patient')] #[Title('Pay follow-up')] class extends Compon
     @endif
 
     <div>
-        <flux:heading size="xl" class="font-semibold text-[#1565c0]">{{ __('patient.follow_up.pay_title') }}</flux:heading>
+        <flux:heading size="xl" class="font-semibold text-[#10B981]">{{ __('patient.follow_up.pay_title') }}</flux:heading>
         <flux:text class="mt-2 text-zinc-600">{{ __('patient.follow_up.pay_subtitle') }}</flux:text>
     </div>
 
@@ -296,10 +296,10 @@ new #[Layout('layouts::patient')] #[Title('Pay follow-up')] class extends Compon
 
     <div class="flex flex-col gap-3">
         @if ($this->amountDue() <= 0 && $this->walletApplied() > 0)
-            <p class="rounded-xl border border-emerald-200 bg-blue-50 px-4 py-3 text-sm text-emerald-800">
+            <p class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
                 {{ __('patient_booking.wallet_covers_full') }}
             </p>
-            <flux:button wire:click="payWithWalletOnly" variant="primary" class="w-full !bg-[#1565c0] !text-white" wire:loading.attr="disabled">
+            <flux:button wire:click="payWithWalletOnly" variant="primary" class="w-full !bg-[#10B981] !text-white" wire:loading.attr="disabled">
                 <span wire:loading.remove wire:target="payWithWalletOnly">{{ __('patient_booking.pay_with_wallet_only') }}</span>
                 <span wire:loading wire:target="payWithWalletOnly">{{ __('patient_booking.payment_processing') }}</span>
             </flux:button>
@@ -313,7 +313,7 @@ new #[Layout('layouts::patient')] #[Title('Pay follow-up')] class extends Compon
                     {{ __('patient_booking.wallet_partial_hint') }}
                 </p>
             @endif
-            <flux:button wire:click="startCardPayment" variant="primary" class="w-full !bg-[#1565c0] !text-white" wire:loading.attr="disabled">
+            <flux:button wire:click="startCardPayment" variant="primary" class="w-full !bg-[#10B981] !text-white" wire:loading.attr="disabled">
                 <span wire:loading.remove wire:target="startCardPayment">
                     @if ($this->walletApplied() > 0)
                         {{ __('patient_booking.pay_wallet_and_card', [

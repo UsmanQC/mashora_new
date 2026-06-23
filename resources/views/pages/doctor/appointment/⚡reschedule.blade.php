@@ -307,8 +307,8 @@ new #[Layout('layouts::doctor')] #[Title('Reschedule appointment')] class extend
                                 wire:click="$set('selectedTime', '{{ $slot }}')"
                                 @class([
                                     'rounded-full border px-4 py-2 text-sm font-semibold transition',
-                                    'border-[#132A6E] bg-[#132A6E] text-white' => $selectedTime === $slot,
-                                    'border-zinc-200 bg-white text-zinc-700 hover:border-[#3C5CF7]' => $selectedTime !== $slot,
+                                    'border-[#047857] bg-[#047857] text-white' => $selectedTime === $slot,
+                                    'border-zinc-200 bg-white text-zinc-700 hover:border-[#10B981]' => $selectedTime !== $slot,
                                 ])
                             >
                                 {{ $this->displaySlot($slot) }}
@@ -327,7 +327,7 @@ new #[Layout('layouts::doctor')] #[Title('Reschedule appointment')] class extend
                 <flux:button :href="route('doctor.appointments.prescription', $appointment)" wire:navigate variant="ghost">
                     {{ __('doctor.auth.back') }}
                 </flux:button>
-                <flux:button type="submit" variant="primary" class="!bg-[#132A6E] !text-white hover:!brightness-95">
+                <flux:button type="submit" variant="primary" class="!bg-[#047857] !text-white hover:!brightness-95">
                     {{ __('doctor.reschedule.submit') }}
                 </flux:button>
             </div>

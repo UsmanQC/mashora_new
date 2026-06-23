@@ -210,8 +210,13 @@ final class FollowUpPaymentCompletionService
             'wallet_amount' => 0,
         ])->save();
 
-        $wallet->chargePatientWallet($appointment, $walletAmount);
-        $wallet->creditDoctorEarning($appointment);
+        if ($walletAmount > 0) {
+            $wallet->chargePatientWallet($appointment, $walletAmount);
+        }
+
+        if ((float) $appointment->total > 0) {
+            $wallet->creditDoctorEarning($appointment);
+        }
 
         if ($paymentResponse !== null) {
             $appointment->forceFill([

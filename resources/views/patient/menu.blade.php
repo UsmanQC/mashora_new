@@ -64,7 +64,7 @@
     <div class="mx-auto max-w-5xl space-y-8 px-4 py-8 pb-28 sm:px-6 sm:pb-10 lg:px-8">
         <div class="flex items-start justify-between gap-4">
             <div>
-                <flux:heading size="xl" class="font-semibold text-[#1565c0]">{{ __('patient.nav.menu') }}</flux:heading>
+                <flux:heading size="xl" class="font-semibold text-[#10B981]">{{ __('patient.nav.menu') }}</flux:heading>
                 <flux:text class="mt-1 text-zinc-600">{{ __('patient.menu.page_subtitle') }}</flux:text>
             </div>
             <flux:button
@@ -78,9 +78,9 @@
         </div>
 
         @auth
-            <div class="rounded-2xl border border-[#1565c0]/20 bg-gradient-to-r from-[#1565c0]/8 via-white to-white p-5 shadow-sm sm:p-6">
+            <div class="rounded-2xl border border-[#10B981]/20 bg-gradient-to-r from-[#10B981]/8 via-white to-white p-5 shadow-sm sm:p-6">
                 <div class="flex flex-col gap-4 sm:flex-row sm:items-center">
-                    <flux:avatar :name="auth()->user()->name" circle size="xl" class="shrink-0 ring-2 ring-[#1565c0]/15" />
+                    <flux:avatar :name="auth()->user()->name" circle size="xl" class="shrink-0 ring-2 ring-[#10B981]/15" />
                     <div class="min-w-0 flex-1">
                         <p class="truncate text-lg font-semibold text-zinc-900">{{ auth()->user()->name }}</p>
                         <div class="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-zinc-500">
@@ -98,7 +98,7 @@
                         variant="primary"
                         size="sm"
                         icon="cog-6-tooth"
-                        class="w-full shrink-0 !bg-[#1565c0] !text-white hover:!brightness-95 sm:w-auto"
+                        class="w-full shrink-0 !bg-[#10B981] !text-white hover:!brightness-95 sm:w-auto"
                     >
                         {{ __('patient.menu.account_settings') }}
                     </flux:button>
@@ -122,12 +122,12 @@
                             <a
                                 href="{{ $item['href'] }}"
                                 wire:navigate
-                                class="group flex w-[11.5rem] shrink-0 snap-start flex-col rounded-2xl border border-zinc-200/90 bg-white p-4 shadow-sm transition hover:border-[#1565c0]/35 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1565c0]/30 sm:w-auto sm:min-h-[8.5rem]"
+                                class="group flex w-[11.5rem] shrink-0 snap-start flex-col rounded-2xl border border-zinc-200/90 bg-white p-4 shadow-sm transition hover:border-[#10B981]/35 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#10B981]/30 sm:w-auto sm:min-h-[8.5rem]"
                             >
-                                <span class="inline-flex size-11 items-center justify-center rounded-xl bg-[#1565c0]/10 text-[#1565c0] transition group-hover:bg-[#1565c0]/15">
+                                <span class="inline-flex size-11 items-center justify-center rounded-xl bg-[#10B981]/10 text-[#10B981] transition group-hover:bg-[#10B981]/15">
                                     <flux:icon :name="$item['icon']" variant="outline" class="size-5" />
                                 </span>
-                                <span class="mt-3 block text-sm font-semibold leading-snug text-zinc-900 group-hover:text-[#1565c0]">
+                                <span class="mt-3 block text-sm font-semibold leading-snug text-zinc-900 group-hover:text-[#10B981]">
                                     {{ $item['label'] }}
                                 </span>
                                 <span class="mt-1 line-clamp-2 text-xs leading-relaxed text-zinc-500">

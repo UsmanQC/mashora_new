@@ -8,7 +8,7 @@
                 inputmode="tel"
                 autocomplete="tel-national"
                 placeholder="051 234 5678"
-                class="iti-phone-field w-full rounded-xl border border-[#3c5cf7]/35 bg-white px-3 py-3 text-base text-zinc-900 shadow-sm ring-1 ring-black/[0.04] transition placeholder:text-zinc-400 focus:border-mashora-brand focus:ring-2 focus:ring-mashora-brand/25"
+                class="iti-phone-field w-full rounded-xl border border-[#10B981]/35 bg-white px-3 py-3 text-base text-zinc-900 shadow-sm ring-1 ring-black/[0.04] transition placeholder:text-zinc-400 focus:border-mashora-brand focus:ring-2 focus:ring-mashora-brand/25"
             />
         </div>
     </flux:field>
@@ -33,7 +33,7 @@
             }
             .iti--allow-dropdown .iti__country-container .iti__selected-country:focus-visible {
                 outline: none;
-                box-shadow: inset 0 0 0 2px rgb(60 92 247 / 0.25);
+                box-shadow: inset 0 0 0 2px rgb(16 185 129 / 0.25);
             }
             .iti__arrow {
                 margin-inline-start: 0.35rem;
@@ -71,25 +71,35 @@
                 height: 2.25rem;
                 padding-inline: 0.7rem;
                 font-size: 0.92rem;
+                color: #18181b !important;
+                background: #ffffff !important;
             }
             .iti__search-input:focus {
                 outline: none;
-                border-color: rgb(60 92 247 / 0.7) !important;
-                box-shadow: 0 0 0 3px rgb(60 92 247 / 0.15);
+                border-color: rgb(16 185 129 / 0.7) !important;
+                box-shadow: 0 0 0 3px rgb(16 185 129 / 0.15);
+            }
+            .iti__country-list {
+                background: #ffffff;
+                color: #18181b;
             }
             .iti__country {
+                display: flex;
+                align-items: center;
+                gap: 0.625rem;
                 padding: 0.58rem 0.75rem;
                 font-size: 0.95rem;
+                color: #18181b;
             }
             .iti__country.iti__highlight {
-                background-color: rgb(60 92 247 / 0.08);
+                background-color: rgb(16 185 129 / 0.08);
             }
             .iti__country-name {
-                color: rgb(39 39 42);
+                display: none !important;
             }
             .iti__dial-code {
-                color: rgb(113 113 122);
-                font-weight: 500;
+                color: #18181b !important;
+                font-weight: 600;
             }
             .iti-phone-field {
                 padding-left: 4.25rem !important;

@@ -67,11 +67,11 @@ new #[Layout('layouts::doctor')] #[Title('Menu')] class extends Component
                 <a
                     href="{{ route($item['route']) }}"
                     wire:navigate
-                    class="group rounded-2xl border border-zinc-200/90 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-[#3C5CF7]/35 hover:shadow-md"
+                    class="group rounded-2xl border border-zinc-200/90 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-[#10B981]/35 hover:shadow-md"
                 >
                     <div class="flex items-center justify-between gap-3">
                         <div class="flex items-center gap-3">
-                            <span class="inline-flex h-11 w-11 items-center justify-center rounded-xl {{ $isActive ? 'bg-[#132A6E] text-white' : 'bg-zinc-100 text-zinc-600 group-hover:bg-[#3C5CF7]/10 group-hover:text-[#3C5CF7]' }}">
+                            <span class="inline-flex h-11 w-11 items-center justify-center rounded-xl {{ $isActive ? 'bg-[#047857] text-white' : 'bg-zinc-100 text-zinc-600 group-hover:bg-[#10B981]/10 group-hover:text-[#10B981]' }}">
                                 <flux:icon :name="$item['icon']" variant="outline" class="size-5" />
                             </span>
                             <span class="text-sm font-semibold text-zinc-800">{{ $item['label'] }}</span>

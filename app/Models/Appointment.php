@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Carbon\Carbon;
+use Carbon\CarbonInterface;
 use Database\Factories\AppointmentFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -25,6 +26,7 @@ class Appointment extends Model
             'appointment_date' => 'date',
             'scheduled_at' => 'datetime',
             'prescription_not_needed' => 'boolean',
+            'is_follow_up' => 'boolean',
             'actual_start_at' => 'datetime',
             'actual_end_at' => 'datetime',
             'extend_at' => 'datetime',
@@ -45,6 +47,7 @@ class Appointment extends Model
         'user_id',
         'parent_id',
         'patient_confirmed_at',
+        'is_follow_up',
         'scheduled_at',
         'appointment_date',
         'start_time',
@@ -140,6 +143,19 @@ class Appointment extends Model
         } catch (\Throwable) {
             return null;
         }
+    }
+
+    public function isSessionStartDue(?CarbonInterface $now = null): bool
+    {
+        $startsAt = $this->sessionStartsAt();
+
+        if ($startsAt === null) {
+            return true;
+        }
+
+        $now ??= now()->timezone(config('app.timezone'));
+
+        return $now->greaterThanOrEqualTo($startsAt);
     }
 
     public function sessionEndsAt(): ?Carbon

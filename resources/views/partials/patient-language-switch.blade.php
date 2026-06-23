@@ -4,14 +4,14 @@
 
     $activeClasses = match ($variant) {
         'chrome' => 'bg-white text-slate-900 shadow-sm ring-1 ring-slate-200/80',
-        'header', 'sidebar' => 'bg-[#132A6E] text-white shadow-sm ring-1 ring-white/20',
-        default => 'bg-[#1565c0] text-white shadow-sm',
+        'header', 'sidebar' => 'bg-[#047857] text-white shadow-sm ring-1 ring-white/20',
+        default => 'bg-[#10B981] text-white shadow-sm',
     };
 
     $inactiveClasses = match ($variant) {
         'chrome' => 'text-slate-600 hover:text-slate-900',
         'header', 'sidebar' => 'bg-white/15 text-white hover:bg-white/25',
-        default => 'bg-[#1565c0]/10 text-[#1565c0] hover:bg-[#1565c0]/15',
+        default => 'bg-[#10B981]/10 text-[#10B981] hover:bg-[#10B981]/15',
     };
 
     $pillClass = match ($variant) {

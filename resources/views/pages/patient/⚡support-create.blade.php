@@ -72,7 +72,7 @@ new #[Layout('layouts::patient')] #[Title('New support ticket')] class extends C
 <div class="mx-auto max-w-2xl space-y-6 px-4 py-8">
     <div class="flex items-start justify-between gap-4">
         <div>
-            <flux:heading size="xl" class="font-semibold text-[#1565c0]">{{ __('tickets.new_ticket') }}</flux:heading>
+            <flux:heading size="xl" class="font-semibold text-[#10B981]">{{ __('tickets.new_ticket') }}</flux:heading>
             <flux:text class="mt-1 text-zinc-600">{{ __('tickets.subtitle') }}</flux:text>
         </div>
         <flux:button :href="route('patient.support')" wire:navigate variant="ghost" size="sm" icon="arrow-left">
@@ -86,7 +86,7 @@ new #[Layout('layouts::patient')] #[Title('New support ticket')] class extends C
             <select
                 wire:model="categoryId"
                 required
-                class="h-11 w-full rounded-xl border border-zinc-200 bg-white px-3 text-sm text-zinc-900 focus:border-[#1565c0] focus:outline-none focus:ring-2 focus:ring-[#1565c0]/20"
+                class="h-11 w-full rounded-xl border border-zinc-200 bg-white px-3 text-sm text-zinc-900 focus:border-[#10B981] focus:outline-none focus:ring-2 focus:ring-[#10B981]/20"
             >
                 <option value="0">{{ __('tickets.category_label') }}</option>
                 @foreach ($this->categories as $category)

@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * Doctor earnings wallet (bavix/laravel-wallet): session credits, refund reversals,
- * and zeroing balance when Mashora marks a monthly invoice as paid.
+ * and zeroing balance when Awaan marks a monthly invoice as paid.
  */
 final class DoctorWalletService
 {

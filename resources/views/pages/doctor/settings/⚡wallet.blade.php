@@ -64,9 +64,9 @@ new #[Layout('layouts::doctor')] #[Title('Wallet')] class extends Component
         </flux:button>
     </div>
 
-    <div class="rounded-2xl border border-[#3C5CF7]/25 bg-gradient-to-br from-[#3C5CF7]/10 to-white p-6 shadow-sm">
+    <div class="rounded-2xl border border-[#10B981]/25 bg-gradient-to-br from-[#10B981]/10 to-white p-6 shadow-sm">
         <p class="text-sm font-semibold uppercase tracking-wide text-zinc-500">{{ __('doctor.wallet.available_balance') }}</p>
-        <p class="mt-2 text-4xl font-bold tabular-nums text-[#132A6E]">
+        <p class="mt-2 text-4xl font-bold tabular-nums text-[#047857]">
             {{ number_format($this->balance, 2) }}
             <span class="text-2xl">{{ config('currency.sa_riyal_symbol') }}</span>
         </p>

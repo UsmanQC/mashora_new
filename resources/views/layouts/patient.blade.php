@@ -6,8 +6,8 @@
 >
     <head>
         <meta name="application-name" content="{{ config('app.name') }}" />
-        {{-- Matches legacy patient.mashora.co blue chrome --}}
-        <meta name="theme-color" content="#1565c0" />
+        {{-- Patient portal emerald chrome --}}
+        <meta name="theme-color" content="#10B981" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
@@ -19,7 +19,7 @@
     >
         {{-- Mobile header — same blue chrome as legacy sidebar; guest signup via dock → /patient/phone --}}
         <header
-            class="sticky top-0 z-40 flex shrink-0 items-center justify-between gap-3 border-b border-blue-900/40 bg-[#1565c0] px-4 py-3 text-white backdrop-blur-sm sm:hidden"
+            class="sticky top-0 z-40 flex shrink-0 items-center justify-between gap-3 border-b border-emerald-900/40 bg-[#10B981] px-4 py-3 text-white backdrop-blur-sm sm:hidden"
         >
             <div class="min-w-0 flex-1">
                 @include('partials.patient-brand-strip', ['density' => 'compact'])
@@ -31,7 +31,7 @@
 
         {{-- Desktop / tablet — legacy sidebar: solid blue + white icons + navy active item --}}
         <aside
-            class="sticky top-0 z-40 hidden h-svh w-[17rem] shrink-0 flex-col border-e border-[#1565c0] bg-[#1565c0] text-white shadow-lg shadow-black/10 sm:flex"
+            class="sticky top-0 z-40 hidden h-svh w-[17rem] shrink-0 flex-col border-e border-[#10B981] bg-[#10B981] text-white shadow-lg shadow-black/10 sm:flex"
             aria-label="{{ __('patient.sidebar_label') }}"
         >
             <div class="border-b border-white/15 px-4 pb-4 pt-5">
@@ -53,7 +53,7 @@
 
         {{-- Mobile dock — chromed like legacy sidebar --}}
         <nav
-            class="fixed bottom-0 inset-x-0 z-50 flex border-t border-blue-950/40 bg-[#1565c0] px-1 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-1 shadow-[0_-4px_20px_-4px_rgba(0,0,0,0.2)] sm:hidden"
+            class="fixed bottom-0 inset-x-0 z-50 flex border-t border-emerald-950/40 bg-[#10B981] px-1 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-1 shadow-[0_-4px_20px_-4px_rgba(0,0,0,0.2)] sm:hidden"
             aria-label="{{ __('patient.nav.label') }}"
         >
             @include('partials.patient-dock-buttons', ['theme' => 'legacy'])

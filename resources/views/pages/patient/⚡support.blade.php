@@ -57,7 +57,7 @@ new #[Layout('layouts::patient')] #[Title('Support')] class extends Component
 <div class="mx-auto max-w-2xl space-y-6 px-4 py-8">
     <div class="flex items-start justify-between gap-4">
         <div>
-            <flux:heading size="xl" class="font-semibold text-[#1565c0]">{{ __('tickets.title') }}</flux:heading>
+            <flux:heading size="xl" class="font-semibold text-[#10B981]">{{ __('tickets.title') }}</flux:heading>
             <flux:text class="mt-1 text-zinc-600">{{ __('tickets.subtitle') }}</flux:text>
         </div>
         <flux:button :href="route('patient.menu')" wire:navigate variant="ghost" size="sm" icon="arrow-left">
@@ -79,7 +79,7 @@ new #[Layout('layouts::patient')] #[Title('Support')] class extends Component
                 <a
                     href="{{ route('patient.support.show', $ticket) }}"
                     wire:navigate
-                    class="block rounded-2xl border border-zinc-200/90 bg-white p-4 shadow-sm transition hover:border-[#1565c0]/30 hover:shadow-md"
+                    class="block rounded-2xl border border-zinc-200/90 bg-white p-4 shadow-sm transition hover:border-[#10B981]/30 hover:shadow-md"
                 >
                     <div class="flex items-start justify-between gap-3">
                         <div class="min-w-0">

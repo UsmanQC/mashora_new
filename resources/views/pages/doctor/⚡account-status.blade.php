@@ -30,10 +30,10 @@ new #[Layout('layouts::doctor')] #[Title('Account status')] class extends Compon
     @php($isRejected = $doc && $doc->status === 'rejected')
 
     <div class="w-full overflow-hidden rounded-3xl border border-zinc-200/80 bg-white shadow-sm">
-        <div class="h-1.5 w-full {{ $isRejected ? 'bg-red-500' : 'bg-linear-to-r from-[#1565c0] to-[#42a5f5]' }}"></div>
+        <div class="h-1.5 w-full {{ $isRejected ? 'bg-red-500' : 'bg-linear-to-r from-[#10B981] to-[#34d399]' }}"></div>
 
         <div class="px-6 py-10 text-center sm:px-10">
-            <div class="mx-auto flex size-16 items-center justify-center rounded-full {{ $isRejected ? 'bg-red-50 text-red-500' : 'bg-blue-50 text-[#1565c0]' }}">
+            <div class="mx-auto flex size-16 items-center justify-center rounded-full {{ $isRejected ? 'bg-red-50 text-red-500' : 'bg-emerald-50 text-[#10B981]' }}">
                 <flux:icon
                     name="{{ $isRejected ? 'x-circle' : 'clock' }}"
                     variant="outline"
@@ -66,8 +66,8 @@ new #[Layout('layouts::doctor')] #[Title('Account status')] class extends Compon
             @endif
 
             @unless ($isRejected)
-                <div class="mx-auto mt-6 flex max-w-md items-start gap-3 rounded-2xl border border-blue-100 bg-blue-50/60 px-4 py-3 text-start">
-                    <flux:icon name="envelope" variant="outline" class="mt-0.5 size-5 shrink-0 text-[#1565c0]" />
+                <div class="mx-auto mt-6 flex max-w-md items-start gap-3 rounded-2xl border border-emerald-100 bg-emerald-50/60 px-4 py-3 text-start">
+                    <flux:icon name="envelope" variant="outline" class="mt-0.5 size-5 shrink-0 text-[#10B981]" />
                     <flux:text class="text-sm text-zinc-600">
                         {{ __('doctor.account_status.email_note') }}
                     </flux:text>

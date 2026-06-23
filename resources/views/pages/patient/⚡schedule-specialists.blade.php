@@ -587,7 +587,7 @@ new #[Layout('layouts::patient')] #[Title('Specialists')] class extends Componen
             <flux:button
                 :href="route('patient.schedule.filter')"
                 variant="primary"
-                class="mt-6 border-[#0B163E] !bg-[#0B163E] !text-white hover:!brightness-[0.97]"
+                class="mt-6 border-[#064e3b] !bg-[#064e3b] !text-white hover:!brightness-[0.97]"
                 wire:navigate
             >
                 {{ __('specialist_results.adjust_filters') }}

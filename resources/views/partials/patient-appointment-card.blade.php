@@ -14,7 +14,7 @@
         <div
             x-data="appointmentStartTimer(@js($component->sessionStartsAtIso($appointment)))"
             x-init="start()"
-            class="flex items-center justify-between gap-3 bg-gradient-to-r from-[#1565c0] to-[#132A6E] px-4 py-3 text-white"
+            class="flex items-center justify-between gap-3 bg-gradient-to-r from-[#10B981] to-[#047857] px-4 py-3 text-white"
             :aria-label="ariaLabel"
         >
             <div class="flex min-w-0 items-center gap-2.5">
@@ -39,7 +39,7 @@
                 :name="$doctorName"
                 circle
                 size="lg"
-                class="shrink-0 bg-[#1565c0]/10 text-[#1565c0] [&_[data-slot=avatar]]:size-12 sm:[&_[data-slot=avatar]]:size-14"
+                class="shrink-0 bg-[#10B981]/10 text-[#10B981] [&_[data-slot=avatar]]:size-12 sm:[&_[data-slot=avatar]]:size-14"
             />
 
             <div class="min-w-0 flex-1 pt-0.5">
@@ -67,7 +67,7 @@
         {{-- Schedule --}}
         <div class="mt-4 grid grid-cols-2 gap-2.5">
             <div class="flex items-center gap-2.5 rounded-xl border border-zinc-100 bg-zinc-50/80 px-3 py-2.5">
-                <span class="flex size-8 shrink-0 items-center justify-center rounded-lg bg-white text-[#1565c0] shadow-sm ring-1 ring-zinc-100">
+                <span class="flex size-8 shrink-0 items-center justify-center rounded-lg bg-white text-[#10B981] shadow-sm ring-1 ring-zinc-100">
                     <flux:icon name="calendar-days" variant="micro" class="size-4" />
                 </span>
                 <div class="min-w-0">
@@ -76,7 +76,7 @@
                 </div>
             </div>
             <div class="flex items-center gap-2.5 rounded-xl border border-zinc-100 bg-zinc-50/80 px-3 py-2.5">
-                <span class="flex size-8 shrink-0 items-center justify-center rounded-lg bg-white text-[#1565c0] shadow-sm ring-1 ring-zinc-100">
+                <span class="flex size-8 shrink-0 items-center justify-center rounded-lg bg-white text-[#10B981] shadow-sm ring-1 ring-zinc-100">
                     <flux:icon name="clock" variant="micro" class="size-4" />
                 </span>
                 <div class="min-w-0">
@@ -102,7 +102,7 @@
                     <flux:button
                         :href="route('patient.appointments.conversation', ['appointment' => $appointment->id])"
                         wire:navigate
-                        class="w-full !rounded-xl !bg-[#1565c0] !py-2.5 !text-white shadow-md shadow-[#1565c0]/25 hover:!brightness-95"
+                        class="w-full !rounded-xl !bg-[#10B981] !py-2.5 !text-white shadow-md shadow-[#10B981]/25 hover:!brightness-95"
                         icon="video-camera"
                     >
                         {{ __('patient.appointments.join_session') }}
