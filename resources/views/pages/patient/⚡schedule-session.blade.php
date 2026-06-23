@@ -236,11 +236,22 @@ new #[Layout('layouts::patient')] #[Title('Session filter')] class extends Compo
                     <flux:heading id="sess-spec-kind" level="4" size="sm" class="font-semibold text-zinc-900">
                         {{ __('session_filter.sections.specialist') }}
                     </flux:heading>
-                    <flux:radio.group variant="pills" wire:model.live="degree_id" class="session-filter-pills gap-2 sm:gap-2.5">
+                    <div class="flex flex-wrap gap-2 sm:gap-2.5" role="radiogroup" aria-labelledby="sess-spec-kind">
                         @foreach ($this->specialistKindOptions as $option)
-                            <flux:radio value="{{ $option['value'] }}">{{ $option['label'] }}</flux:radio>
+                            <button
+                                type="button"
+                                wire:key="degree-{{ $option['value'] }}"
+                                wire:click="$set('degree_id', '{{ $option['value'] }}')"
+                                aria-pressed="{{ $degree_id === $option['value'] ? 'true' : 'false' }}"
+                                @class([
+                                    'session-filter-chip',
+                                    'session-filter-chip--active' => $degree_id === $option['value'],
+                                ])
+                            >
+                                {{ $option['label'] }}
+                            </button>
                         @endforeach
-                    </flux:radio.group>
+                    </div>
                     <flux:error name="degree_id" />
                 </div>
             </div>
@@ -255,11 +266,22 @@ new #[Layout('layouts::patient')] #[Title('Session filter')] class extends Compo
                     <flux:heading id="sess-gender" level="4" size="sm" class="font-semibold text-zinc-900">
                         {{ __('session_filter.sections.gender_pref') }}
                     </flux:heading>
-                    <flux:radio.group variant="pills" wire:model.live="genderPreference" class="session-filter-pills gap-2 sm:gap-2.5">
-                        <flux:radio value="male">{{ __('session_filter.sections.gender.male') }}</flux:radio>
-                        <flux:radio value="female">{{ __('session_filter.sections.gender.female') }}</flux:radio>
-                        <flux:radio value="both">{{ __('session_filter.sections.gender.both') }}</flux:radio>
-                    </flux:radio.group>
+                    <div class="flex flex-wrap gap-2 sm:gap-2.5" role="radiogroup" aria-labelledby="sess-gender">
+                        @foreach (['male' => __('session_filter.sections.gender.male'), 'female' => __('session_filter.sections.gender.female'), 'both' => __('session_filter.sections.gender.both')] as $value => $label)
+                            <button
+                                type="button"
+                                wire:key="gender-{{ $value }}"
+                                wire:click="$set('genderPreference', '{{ $value }}')"
+                                aria-pressed="{{ $genderPreference === $value ? 'true' : 'false' }}"
+                                @class([
+                                    'session-filter-chip',
+                                    'session-filter-chip--active' => $genderPreference === $value,
+                                ])
+                            >
+                                {{ $label }}
+                            </button>
+                        @endforeach
+                    </div>
                     <flux:error name="genderPreference" />
                 </div>
             </div>
@@ -274,12 +296,22 @@ new #[Layout('layouts::patient')] #[Title('Session filter')] class extends Compo
                     <flux:heading id="sess-duration" level="4" size="sm" class="font-semibold text-zinc-900">
                         {{ __('session_filter.sections.duration') }}
                     </flux:heading>
-                    <flux:radio.group variant="pills" wire:model.live="durationMinutes" class="session-filter-pills gap-2 sm:gap-2.5">
-                        <flux:radio value="15">{{ __('session_filter.sections.minutes.15') }}</flux:radio>
-                        <flux:radio value="30">{{ __('session_filter.sections.minutes.30') }}</flux:radio>
-                        <flux:radio value="45">{{ __('session_filter.sections.minutes.45') }}</flux:radio>
-                        <flux:radio value="60">{{ __('session_filter.sections.minutes.60') }}</flux:radio>
-                    </flux:radio.group>
+                    <div class="flex flex-wrap gap-2 sm:gap-2.5" role="radiogroup" aria-labelledby="sess-duration">
+                        @foreach (['15', '30', '45', '60'] as $minutes)
+                            <button
+                                type="button"
+                                wire:key="duration-{{ $minutes }}"
+                                wire:click="$set('durationMinutes', '{{ $minutes }}')"
+                                aria-pressed="{{ $durationMinutes === $minutes ? 'true' : 'false' }}"
+                                @class([
+                                    'session-filter-chip',
+                                    'session-filter-chip--active' => $durationMinutes === $minutes,
+                                ])
+                            >
+                                {{ __('session_filter.sections.minutes.'.$minutes) }}
+                            </button>
+                        @endforeach
+                    </div>
                     <flux:error name="durationMinutes" />
                 </div>
             </div>
@@ -294,11 +326,22 @@ new #[Layout('layouts::patient')] #[Title('Session filter')] class extends Compo
                     <flux:heading id="sess-lang" level="4" size="sm" class="font-semibold text-zinc-900">
                         {{ __('session_filter.sections.language') }}
                     </flux:heading>
-                    <flux:radio.group variant="pills" wire:model.live="languagePreference" class="session-filter-pills gap-2 sm:gap-2.5">
-                        <flux:radio value="ar">{{ __('session_filter.sections.lang.ar') }}</flux:radio>
-                        <flux:radio value="en">{{ __('session_filter.sections.lang.en') }}</flux:radio>
-                        <flux:radio value="both">{{ __('session_filter.sections.lang.both') }}</flux:radio>
-                    </flux:radio.group>
+                    <div class="flex flex-wrap gap-2 sm:gap-2.5" role="radiogroup" aria-labelledby="sess-lang">
+                        @foreach (['ar' => __('session_filter.sections.lang.ar'), 'en' => __('session_filter.sections.lang.en'), 'both' => __('session_filter.sections.lang.both')] as $value => $label)
+                            <button
+                                type="button"
+                                wire:key="language-{{ $value }}"
+                                wire:click="$set('languagePreference', '{{ $value }}')"
+                                aria-pressed="{{ $languagePreference === $value ? 'true' : 'false' }}"
+                                @class([
+                                    'session-filter-chip',
+                                    'session-filter-chip--active' => $languagePreference === $value,
+                                ])
+                            >
+                                {{ $label }}
+                            </button>
+                        @endforeach
+                    </div>
                     <flux:error name="languagePreference" />
                 </div>
             </div>

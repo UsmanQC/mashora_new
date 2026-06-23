@@ -126,9 +126,7 @@ select:focus[data-flux-control] {
     }
 
     .session-filter-shell {
-        --color-accent: #193adb;
-        --color-accent-content: #193adb;
-        --color-accent-foreground: #ffffff;
+        color: #18181b;
     }
 
     .session-filter-section {
@@ -163,21 +161,49 @@ select:focus[data-flux-control] {
         @apply bg-sky-100 text-sky-700;
     }
 
-    .session-filter-pills ui-radio[data-flux-radio] {
-        @apply !rounded-full !border !border-zinc-200/90 !bg-white !px-4 !py-2.5 !text-sm !font-medium !text-zinc-700 !shadow-sm transition hover:!border-zinc-300;
-    }
-
-    .session-filter-chip {
-        @apply rounded-full border border-zinc-200/90 bg-white px-3.5 py-2 text-start text-xs font-medium leading-snug text-zinc-800 shadow-sm transition hover:border-zinc-300 sm:text-sm;
-    }
-
-    .session-filter-chip--selected {
-        @apply border-[#193ADB] bg-[#193ADB]/10 text-[#193ADB] shadow-md shadow-[#193ADB]/10;
-    }
-
     .session-filter-actions {
         @apply rounded-2xl border border-zinc-200/90 bg-white/95 p-4 shadow-lg shadow-zinc-900/5 backdrop-blur-sm sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none sm:backdrop-blur-none;
     }
+}
+
+.session-filter-shell .session-filter-chip {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid #d4d4d8;
+    border-radius: 9999px;
+    background-color: #f4f4f5;
+    padding: 0.625rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    line-height: 1.25rem;
+    color: #27272a !important;
+    box-shadow: 0 1px 2px rgb(0 0 0 / 0.04);
+    transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.session-filter-shell .session-filter-chip:hover {
+    border-color: #a1a1aa;
+    background-color: #ececee;
+}
+
+.session-filter-shell .session-filter-chip--active,
+.session-filter-shell .session-filter-chip--selected {
+    border-color: #193adb !important;
+    background-color: #193adb !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 12px rgb(25 58 219 / 0.22);
+}
+
+.session-filter-shell .session-filter-chip--active:hover,
+.session-filter-shell .session-filter-chip--selected:hover {
+    border-color: #1530b8 !important;
+    background-color: #1530b8 !important;
+    color: #ffffff !important;
+}
+
+.session-filter-shell [data-flux-heading],
+.session-filter-shell [data-flux-text] {
+    color: inherit;
 }
 
 /* Patient auth: always use dark text on light panels (Flux dark utilities otherwise render white). */
