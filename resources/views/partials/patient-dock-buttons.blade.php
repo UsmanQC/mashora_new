@@ -1,7 +1,7 @@
 @php
     /** @var 'horizontal'|'vertical' */
     $orientation ??= 'horizontal';
-    /** @var 'default'|'legacy' Matches legacy patient portal (blue bar, navy active pill) */
+    /** @var 'default'|'legacy' Matches legacy patient portal (blue chrome, navy active pill) */
     $theme ??= 'default';
 
     $isVertical = $orientation === 'vertical';
@@ -17,7 +17,7 @@
 
         /**
          * Selected + hover: #132A6E on #1565c0 chrome.
-         * Inactive: transparent; hover is a soft white veil (not the navy pill).
+         * Inactive: transparent; hover is a soft white veil (not the darker pill).
          */
         $dockActiveClass = 'rounded-lg !border-0 !bg-[#132A6E] !text-white shadow-md shadow-black/20 ring-1 ring-white/15 hover:!bg-[#132A6E] hover:!text-white hover:ring-white/25 active:!bg-[#132A6E] dark:!border-0 dark:!bg-[#132A6E] dark:!text-white dark:hover:!bg-[#132A6E] [&_svg]:!text-white';
         $dockInactiveClass = $isVertical

@@ -45,7 +45,7 @@
                         type="button"
                         wire:click="incrementLike('{{ $id }}')"
                         title="{{ __('specialist_results.like_incremented') }}"
-                        class="rounded-lg text-[#1565c0] transition hover:scale-105 hover:bg-blue-500/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0B163E]/30"
+                        class="rounded-lg text-[#1565c0] transition hover:scale-105 hover:bg-emerald-500/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0B163E]/30"
                         aria-label="{{ __('specialist_results.like_incremented') }}"
                     >
                         <flux:icon name="heart" variant="outline" class="size-7" />
@@ -106,7 +106,7 @@
                     <a
                         href="{{ $bookHref }}"
                         wire:navigate
-                        class="inline-flex shrink-0 items-center justify-center rounded-full border border-[#1565c0]/45 bg-white px-3 py-2 text-[0.8rem] font-semibold tabular-nums text-[#0B163E] shadow-sm transition hover:-translate-y-0.5 hover:border-[#0B163E] hover:bg-blue-600/10"
+                        class="inline-flex shrink-0 items-center justify-center rounded-full border border-[#1565c0]/45 bg-white px-3 py-2 text-[0.8rem] font-semibold tabular-nums text-[#0B163E] shadow-sm transition hover:-translate-y-0.5 hover:border-[#0B163E] hover:bg-emerald-600/10"
                     >
                         {{ $slotLabel }}
                     </a>
@@ -116,7 +116,7 @@
                         variant="ghost"
                         size="sm"
                         wire:click="pickSlot('{{ $id }}', '{{ $slot }}')"
-                        class="shrink-0 rounded-full border border-[#1565c0]/45 bg-white px-3 py-2 text-[0.8rem] font-semibold tabular-nums text-[#0B163E] shadow-sm hover:-translate-y-0.5 hover:border-[#0B163E] hover:bg-blue-600/10"
+                        class="shrink-0 rounded-full border border-[#1565c0]/45 bg-white px-3 py-2 text-[0.8rem] font-semibold tabular-nums text-[#0B163E] shadow-sm hover:-translate-y-0.5 hover:border-[#0B163E] hover:bg-emerald-600/10"
                     >
                         {{ $slotLabel }}
                     </flux:button>

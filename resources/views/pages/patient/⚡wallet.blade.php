@@ -56,7 +56,7 @@ new #[Layout('layouts::patient')] #[Title('Wallet')] class extends Component
 <div class="mx-auto max-w-2xl space-y-6 px-4 py-8">
     <div class="flex items-start justify-between gap-4">
         <div>
-            <flux:heading size="xl" class="font-semibold text-[#193ADB]">{{ __('patient.wallet.title') }}</flux:heading>
+            <flux:heading size="xl" class="font-semibold text-[#1565c0]">{{ __('patient.wallet.title') }}</flux:heading>
             <flux:text class="mt-1 text-zinc-600">{{ __('patient.wallet.subtitle') }}</flux:text>
         </div>
         <flux:button :href="route('patient.menu')" wire:navigate variant="ghost" size="sm" icon="arrow-left">
@@ -64,9 +64,9 @@ new #[Layout('layouts::patient')] #[Title('Wallet')] class extends Component
         </flux:button>
     </div>
 
-    <div class="rounded-2xl border border-[#193ADB]/25 bg-gradient-to-br from-[#193ADB]/10 to-white p-6 shadow-sm">
+    <div class="rounded-2xl border border-[#1565c0]/25 bg-gradient-to-br from-[#1565c0]/10 to-white p-6 shadow-sm">
         <p class="text-sm font-semibold uppercase tracking-wide text-zinc-500">{{ __('patient.wallet.available_balance') }}</p>
-        <p class="mt-2 text-4xl font-bold tabular-nums text-[#193ADB]">
+        <p class="mt-2 text-4xl font-bold tabular-nums text-[#1565c0]">
             {{ number_format($this->balance, 2) }}
             <span class="text-2xl">{{ config('currency.sa_riyal_symbol') }}</span>
         </p>

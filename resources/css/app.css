@@ -29,6 +29,9 @@
 
     /** Patient auth / marketing accent (headings, CTAs) */
     --color-mashora-brand: #3c5cf7;
+    --color-patient-brand: #1565c0;
+    --color-patient-brand-dark: #1358a8;
+    --color-patient-brand-darker: #132a6e;
 }
 
 @layer theme {
@@ -142,7 +145,7 @@ select:focus[data-flux-control] {
     }
 
     .session-filter-section-icon--specialist {
-        @apply bg-[#193ADB]/10 text-[#193ADB];
+        @apply bg-[#1565c0]/10 text-[#1565c0];
     }
 
     .session-filter-section-icon--gender {
@@ -188,16 +191,16 @@ select:focus[data-flux-control] {
 
 .session-filter-shell .session-filter-chip--active,
 .session-filter-shell .session-filter-chip--selected {
-    border-color: #193adb !important;
-    background-color: #193adb !important;
+    border-color: #1565c0 !important;
+    background-color: #1565c0 !important;
     color: #ffffff !important;
-    box-shadow: 0 4px 12px rgb(25 58 219 / 0.22);
+    box-shadow: 0 4px 12px rgb(21 101 192 / 0.22);
 }
 
 .session-filter-shell .session-filter-chip--active:hover,
 .session-filter-shell .session-filter-chip--selected:hover {
-    border-color: #1530b8 !important;
-    background-color: #1530b8 !important;
+    border-color: #1358a8 !important;
+    background-color: #1358a8 !important;
     color: #ffffff !important;
 }
 

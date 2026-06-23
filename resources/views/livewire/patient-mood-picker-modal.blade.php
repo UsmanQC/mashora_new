@@ -55,7 +55,7 @@
                             @else
                                 <span
                                     @class([
-                                        'pointer-events-none flex size-14 items-center justify-center rounded-2xl border border-[#1565c0]/15 bg-[#e8eaf6]/90 text-[2rem] selection:bg-transparent sm:size-[4.25rem] sm:text-[2.375rem]',
+                                        'pointer-events-none flex size-14 items-center justify-center rounded-2xl border border-[#1565c0]/15 bg-[#ecfdf5]/90 text-[2rem] selection:bg-transparent sm:size-[4.25rem] sm:text-[2.375rem]',
                                         'border-[#1565c0]/40 bg-[#1565c0]/12 shadow-inner' => $isSel,
                                         'opacity-80 grayscale-[35%]' => !$isSel,
                                     ])
@@ -124,7 +124,7 @@
                                 variant="primary"
                                 wire:click="saveMood"
                                 wire:loading.attr="disabled"
-                                class="min-w-[12rem] rounded-lg! px-14! py-4! font-semibold !bg-[#1565c0] !text-white hover:!bg-[#1257a8] sm:min-w-[16rem]"
+                                class="min-w-[12rem] rounded-lg! px-14! py-4! font-semibold !bg-[#1565c0] !text-white hover:!bg-[#1358a8] sm:min-w-[16rem]"
                             >
                                 <span wire:loading.remove>{{ __('patient.mood_tracker_save') }}</span>
                                 <span wire:loading>{{ __('patient.mood_tracker_saving') }}</span>

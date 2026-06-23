@@ -485,7 +485,7 @@ new #[Layout('layouts::patient')] #[Title('Payment')] class extends Component
             @endif
 
             @if ($this->walletApplied() > 0 && $this->amountDue() <= 0)
-                <p class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+                <p class="rounded-xl border border-emerald-200 bg-blue-50 px-4 py-3 text-sm text-emerald-800">
                     {{ __('patient_booking.wallet_covers_full') }}
                 </p>
                 <flux:button type="button" variant="primary" class="w-full bg-[#3d5afe]! text-white!" wire:click="payWithWalletOnly" wire:loading.attr="disabled">

@@ -197,7 +197,7 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
 
 <div class="pb-28 sm:pb-10">
     <div id="patient-call-join-banner" class="mx-auto hidden max-w-5xl px-4 pt-4 lg:px-8">
-        <div class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+        <div class="rounded-xl border border-emerald-200 bg-blue-50 px-4 py-3">
             <div class="flex flex-wrap items-center justify-between gap-3">
                 <p id="patient-call-join-text" class="text-sm font-medium text-emerald-900"></p>
                 <a
@@ -231,24 +231,28 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
     </div>
 
     <div class="mx-auto max-w-5xl space-y-5 px-4 py-6 lg:space-y-6 lg:px-8 lg:py-8">
-        {{-- Book CTA --}}
+        {{-- Book CTA — soft vertical 50/50 (top + bottom) --}}
         <a
             href="{{ route('patient.schedule.filter') }}"
             wire:navigate
-            class="flex items-center gap-4 rounded-2xl bg-[#1565c0] p-4 text-white shadow-md shadow-[#1565c0]/25 transition hover:brightness-105 sm:p-5 lg:gap-5"
+            class="grid min-h-[11rem] grid-rows-2 overflow-hidden rounded-2xl border border-blue-100/90 bg-white shadow-sm transition hover:border-blue-200 hover:shadow-md sm:min-h-[10.5rem]"
         >
-            <span class="flex size-11 shrink-0 items-center justify-center rounded-xl bg-white/15 lg:size-12">
-                <flux:icon name="calendar-days" variant="mini" class="size-5 lg:size-6" />
+            <span class="flex items-center gap-4 bg-blue-50/70 p-4 sm:p-5 lg:gap-5">
+                <span class="flex size-11 shrink-0 items-center justify-center rounded-xl bg-[#1565c0]/12 text-[#1565c0] lg:size-12">
+                    <flux:icon name="calendar-days" variant="mini" class="size-5 lg:size-6" />
+                </span>
+                <span class="min-w-0 flex-1">
+                    <span class="block text-sm font-semibold text-zinc-900 sm:text-base">{{ __('patient.appointments.book_card_title') }}</span>
+                    <span class="mt-0.5 block text-xs text-zinc-600 sm:text-sm">{{ __('patient.appointments.book_card_sub') }}</span>
+                </span>
             </span>
-            <span class="min-w-0 flex-1">
-                <span class="block text-sm font-semibold sm:text-base">{{ __('patient.appointments.book_card_title') }}</span>
-                <span class="mt-0.5 block text-xs text-white/80 sm:text-sm">{{ __('patient.appointments.book_card_sub') }}</span>
+            <span class="flex items-center justify-between gap-3 border-t border-blue-100/90 bg-white px-4 py-4 sm:px-5 sm:py-5">
+                <span class="inline-flex items-center gap-1.5 rounded-xl bg-blue-50 px-4 py-2 text-sm font-semibold text-[#1565c0] ring-1 ring-blue-100">
+                    <flux:icon name="plus" variant="mini" class="size-4" />
+                    {{ __('patient.appointments.book_new') }}
+                </span>
+                <flux:icon name="chevron-{{ app()->getLocale() === 'ar' ? 'left' : 'right' }}" variant="mini" class="size-5 shrink-0 text-[#1565c0]/70 rtl:rotate-180" />
             </span>
-            <span class="hidden shrink-0 items-center gap-1.5 rounded-xl bg-white/15 px-4 py-2 text-sm font-semibold sm:inline-flex">
-                <flux:icon name="plus" variant="mini" class="size-4" />
-                {{ __('patient.appointments.book_new') }}
-            </span>
-            <flux:icon name="chevron-{{ app()->getLocale() === 'ar' ? 'left' : 'right' }}" variant="mini" class="size-5 shrink-0 opacity-80 sm:hidden rtl:rotate-180" />
         </a>
 
         {{-- Tab filters --}}

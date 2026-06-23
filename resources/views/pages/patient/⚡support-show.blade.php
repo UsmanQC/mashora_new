@@ -40,7 +40,7 @@ new #[Layout('layouts::patient')] #[Title('Support ticket')] class extends Compo
                 {{ __('tickets.title') }}
             </flux:button>
             <p class="text-xs font-semibold uppercase tracking-wide text-zinc-500">{{ $ticket->ticket_number }}</p>
-            <flux:heading size="lg" class="mt-1 font-semibold text-[#193ADB]">{{ $ticket->subject }}</flux:heading>
+            <flux:heading size="lg" class="mt-1 font-semibold text-[#1565c0]">{{ $ticket->subject }}</flux:heading>
             <flux:text class="mt-1 text-sm text-zinc-600">
                 {{ $ticket->category?->displayName() }} · {{ $this->statusLabel((string) $ticket->status) }}
             </flux:text>
@@ -59,7 +59,7 @@ new #[Layout('layouts::patient')] #[Title('Support ticket')] class extends Compo
         @forelse ($ticket->replies as $reply)
             <article @class([
                 'rounded-2xl border p-4 shadow-sm',
-                'border-[#193ADB]/20 bg-blue-50/30' => $reply->isFromAdmin(),
+                'border-[#1565c0]/20 bg-blue-50/30' => $reply->isFromAdmin(),
                 'border-zinc-200/90 bg-white' => ! $reply->isFromAdmin(),
             ])>
                 <p class="text-xs font-semibold text-zinc-600">{{ $reply->authorDisplayName() }}</p>

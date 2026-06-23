@@ -69,7 +69,7 @@ new #[Layout('layouts::patient')] #[Title('Follow-up appointment')] class extend
 
 <div class="mx-auto max-w-xl space-y-6 px-4 py-8">
     <div>
-        <flux:heading size="xl" class="font-semibold text-[#193ADB]">{{ __('patient.follow_up.title') }}</flux:heading>
+        <flux:heading size="xl" class="font-semibold text-[#1565c0]">{{ __('patient.follow_up.title') }}</flux:heading>
         <flux:text class="mt-2 text-zinc-600">{{ __('patient.follow_up.subtitle') }}</flux:text>
     </div>
 
@@ -95,7 +95,7 @@ new #[Layout('layouts::patient')] #[Title('Follow-up appointment')] class extend
             </div>
             <div class="flex justify-between gap-4 border-t border-zinc-100 pt-3">
                 <dt class="text-zinc-500">{{ __('patient.follow_up.amount') }}</dt>
-                <dd class="text-lg font-bold text-[#193ADB]">
+                <dd class="text-lg font-bold text-[#1565c0]">
                     {{ number_format((float) $appointment->total, 2) }} {{ config('currency.sa_riyal_symbol') }}
                 </dd>
             </div>
@@ -107,7 +107,7 @@ new #[Layout('layouts::patient')] #[Title('Follow-up appointment')] class extend
             <flux:button
                 wire:click="confirmAndPay"
                 variant="primary"
-                class="w-full !bg-[#193ADB] !text-white hover:!brightness-95 sm:flex-1"
+                class="w-full !bg-[#1565c0] !text-white hover:!brightness-95 sm:flex-1"
             >
                 {{ __('patient.follow_up.confirm_and_pay') }}
             </flux:button>

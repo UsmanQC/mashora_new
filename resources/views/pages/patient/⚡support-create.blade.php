@@ -72,7 +72,7 @@ new #[Layout('layouts::patient')] #[Title('New support ticket')] class extends C
 <div class="mx-auto max-w-2xl space-y-6 px-4 py-8">
     <div class="flex items-start justify-between gap-4">
         <div>
-            <flux:heading size="xl" class="font-semibold text-[#193ADB]">{{ __('tickets.new_ticket') }}</flux:heading>
+            <flux:heading size="xl" class="font-semibold text-[#1565c0]">{{ __('tickets.new_ticket') }}</flux:heading>
             <flux:text class="mt-1 text-zinc-600">{{ __('tickets.subtitle') }}</flux:text>
         </div>
         <flux:button :href="route('patient.support')" wire:navigate variant="ghost" size="sm" icon="arrow-left">

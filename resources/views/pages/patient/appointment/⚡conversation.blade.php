@@ -120,7 +120,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
 
 <div class="mx-auto w-full max-w-6xl space-y-5 px-4 py-5 pb-24 sm:px-6 sm:pb-10">
     <header class="relative overflow-hidden rounded-2xl border border-zinc-200/80 bg-gradient-to-br from-white via-white to-[#f7f9ff] p-4 shadow-sm shadow-zinc-200/60 ring-1 ring-zinc-100 sm:p-5">
-        <div class="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#2f49ca] via-[#3C5CF7] to-[#6f86ff] opacity-85"></div>
+        <div class="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#1565c0] via-[#42a5f5] to-[#1358a8] opacity-85"></div>
         <div class="flex flex-wrap items-center justify-between gap-3">
         <div class="flex items-center gap-3">
             <a
@@ -222,7 +222,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 <div @class(['flex', 'justify-end' => $msg['send_by'] === 'patient', 'justify-start' => $msg['send_by'] !== 'patient']) wire:key="patient-chat-{{ $msg['id'] }}">
                     <div @class([
                         'max-w-[min(86%,30rem)] rounded-2xl px-3.5 py-2.5 text-sm shadow-sm ring-1',
-                        'bg-gradient-to-br from-[#1565c0] to-[#0f4fa4] text-white shadow-[#1565c0]/30 ring-[#1565c0]/20' => $msg['send_by'] === 'patient',
+                        'bg-gradient-to-br from-[#1565c0] to-[#1358a8] text-white shadow-[#1565c0]/30 ring-[#1565c0]/20' => $msg['send_by'] === 'patient',
                         'border border-zinc-200/90 bg-white text-zinc-800 shadow-zinc-200/30 ring-zinc-100' => $msg['send_by'] !== 'patient',
                     ])>
                         <p class="whitespace-pre-wrap break-words">{{ $msg['body'] }}</p>

@@ -91,7 +91,7 @@ new #[Layout('layouts::patient-auth')] #[Title('Your details')] class extends Co
         <flux:heading size="xl" class="patient-auth-heading text-balance">{{ __('patient_auth.register_title') }}</flux:heading>
         <flux:text class="mt-2 max-w-lg text-balance text-zinc-600">{{ __('patient_auth.register_sub') }}</flux:text>
         <div class="mt-4 flex flex-wrap items-center gap-2 text-sm text-zinc-600">
-            <flux:icon name="device-phone-mobile" variant="mini" class="size-4 shrink-0 text-[#3C5CF7]" />
+            <flux:icon name="device-phone-mobile" variant="mini" class="size-4 shrink-0 text-[#1565c0]" />
             <span class="font-medium text-zinc-800">{{ __('patient_auth.phone_verified_label') }}</span>
             <span class="font-semibold tabular-nums text-zinc-900" dir="ltr">+{{ $phone }}</span>
         </div>

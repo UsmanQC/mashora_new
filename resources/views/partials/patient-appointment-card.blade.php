@@ -14,7 +14,7 @@
         <div
             x-data="appointmentStartTimer(@js($component->sessionStartsAtIso($appointment)))"
             x-init="start()"
-            class="flex items-center justify-between gap-3 bg-gradient-to-r from-[#1565c0] to-[#0d47a1] px-4 py-3 text-white"
+            class="flex items-center justify-between gap-3 bg-gradient-to-r from-[#1565c0] to-[#132A6E] px-4 py-3 text-white"
             :aria-label="ariaLabel"
         >
             <div class="flex min-w-0 items-center gap-2.5">

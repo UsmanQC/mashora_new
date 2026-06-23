@@ -9,7 +9,7 @@ use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
-new #[Layout('layouts::patient')] #[Title('Session filter')] class extends Component
+new #[Layout('layouts::patient')] #[Title('Schedule a session')] class extends Component
 {
     public string $degree_id = '';
 
@@ -190,43 +190,41 @@ new #[Layout('layouts::patient')] #[Title('Session filter')] class extends Compo
     }
 }; ?>
 
-<div class="session-filter-shell mx-auto max-w-3xl px-4 py-6 pb-32 sm:pb-12">
-    <header class="overflow-hidden rounded-3xl border border-[#193ADB]/15 bg-gradient-to-br from-[#193ADB]/12 via-white to-white p-6 shadow-sm sm:p-8">
-        <div class="flex items-start gap-4">
-            <div class="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-[#193ADB] text-white shadow-md shadow-[#193ADB]/25">
-                <flux:icon name="adjustments-horizontal" class="size-6" />
-            </div>
-            <div class="min-w-0 flex-1">
-                <flux:heading level="1" size="xl" class="font-semibold text-[#193ADB]">
-                    {{ __('session_filter.title') }}
-                </flux:heading>
-                <flux:text class="mt-2 text-sm leading-relaxed text-zinc-600">
-                    {{ __('session_filter.subtitle') }}
-                </flux:text>
-            </div>
-        </div>
-
-        <div class="mt-6 rounded-2xl border border-zinc-200/80 bg-white/80 p-4 backdrop-blur-sm">
-            <div class="flex items-center justify-between gap-3 text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                <span>{{ __('session_filter.filter_heading') }}</span>
-                <span class="tabular-nums text-[#193ADB]">
-                    {{ __('session_filter.progress', ['current' => $this->requiredFiltersCompleted, 'total' => 4]) }}
+<div class="pb-28 sm:pb-10">
+    <div class="mx-auto max-w-5xl space-y-5 px-4 py-6 lg:space-y-6 lg:px-8 lg:py-8">
+        {{-- Hero — soft vertical 50/50 (top + bottom) --}}
+        <header class="grid min-h-[11rem] grid-rows-2 overflow-hidden rounded-2xl border border-blue-100/90 bg-white shadow-sm sm:min-h-[10.5rem]">
+            <div class="flex items-center gap-4 bg-blue-50/70 p-4 sm:p-5">
+                <span class="flex size-11 shrink-0 items-center justify-center rounded-xl bg-[#1565c0]/12 text-[#1565c0] lg:size-12">
+                    <flux:icon name="calendar-days" variant="mini" class="size-5 lg:size-6" />
                 </span>
+                <div class="min-w-0 flex-1">
+                    <p class="text-sm font-semibold text-zinc-900 sm:text-base lg:text-lg">{{ __('session_filter.title') }}</p>
+                    <p class="mt-0.5 text-xs text-zinc-600 sm:text-sm">{{ __('session_filter.subtitle') }}</p>
+                </div>
             </div>
-            <div class="mt-3 h-2 overflow-hidden rounded-full bg-zinc-100">
-                <div
-                    class="h-full rounded-full bg-gradient-to-r from-[#193ADB] to-[#4f6cf7] transition-all duration-300 ease-out"
-                    style="width: {{ $this->requiredFilterProgressPercent() }}%"
-                    role="progressbar"
-                    aria-valuenow="{{ $this->requiredFiltersCompleted }}"
-                    aria-valuemin="0"
-                    aria-valuemax="4"
-                ></div>
-            </div>
-        </div>
-    </header>
 
-    <div class="mt-6 overflow-hidden rounded-3xl border border-zinc-200/90 bg-white shadow-sm">
+            <div class="flex flex-col justify-center border-t border-blue-100/90 bg-white p-4 sm:p-5">
+                <div class="flex items-center justify-between gap-3 text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                    <span>{{ __('session_filter.filter_heading') }}</span>
+                    <span class="tabular-nums text-[#1565c0]">
+                        {{ __('session_filter.progress', ['current' => $this->requiredFiltersCompleted, 'total' => 4]) }}
+                    </span>
+                </div>
+                <div class="mt-3 h-2 overflow-hidden rounded-full bg-blue-100/60">
+                    <div
+                        class="h-full rounded-full bg-[#42a5f5] transition-all duration-300 ease-out"
+                        style="width: {{ $this->requiredFilterProgressPercent() }}%"
+                        role="progressbar"
+                        aria-valuenow="{{ $this->requiredFiltersCompleted }}"
+                        aria-valuemin="0"
+                        aria-valuemax="4"
+                    ></div>
+                </div>
+            </div>
+        </header>
+
+        <div class="session-filter-shell w-full overflow-hidden rounded-2xl border border-zinc-200/90 bg-white shadow-sm sm:rounded-3xl">
         <section class="session-filter-section" aria-labelledby="sess-spec-kind">
             <div class="flex items-start gap-4">
                 <div class="session-filter-section-icon session-filter-section-icon--specialist">
@@ -377,7 +375,7 @@ new #[Layout('layouts::patient')] #[Title('Session filter')] class extends Compo
                     </div>
                     @if (count($this->specialityOptions) > (int) config('session_filter.subspecialties_collapsed_count', 7))
                         <div>
-                            <flux:button variant="ghost" size="sm" wire:click="toggleSubspecialtiesExpanded" type="button" class="!px-0 !text-[#193ADB] hover:!text-[#0f2a9e]">
+                            <flux:button variant="ghost" size="sm" wire:click="toggleSubspecialtiesExpanded" type="button" class="!px-0 !text-[#1565c0] hover:!text-[#1358a8]">
                                 {{ $this->subspecialtiesExpanded ? __('session_filter.show_less') : __('session_filter.show_more') }}
                             </flux:button>
                         </div>
@@ -387,7 +385,7 @@ new #[Layout('layouts::patient')] #[Title('Session filter')] class extends Compo
         </section>
     </div>
 
-    <div class="session-filter-actions mt-6 flex w-full flex-col gap-3 sm:flex-row sm:justify-end">
+    <div class="session-filter-actions flex w-full flex-col gap-3 sm:flex-row sm:justify-end">
         <flux:button variant="ghost" wire:click="proceedSkip" type="button" class="min-h-11 w-full sm:w-auto sm:min-w-[9rem]" wire:loading.attr="disabled">
             {{ __('session_filter.skip') }}
         </flux:button>
@@ -395,10 +393,11 @@ new #[Layout('layouts::patient')] #[Title('Session filter')] class extends Compo
             variant="primary"
             wire:click="proceedNext"
             type="button"
-            class="min-h-11 w-full !border-[#193ADB] !bg-[#193ADB] !text-white shadow-md shadow-[#193ADB]/20 hover:!brightness-[0.97] focus-visible:!ring-[#193ADB]/40 sm:w-auto sm:min-w-[9rem]"
+            class="min-h-11 w-full !border-[#1565c0] !bg-[#1565c0] !text-white shadow-md shadow-[#1565c0]/20 hover:!brightness-[0.97] focus-visible:!ring-[#1565c0]/40 sm:w-auto sm:min-w-[9rem]"
             wire:loading.attr="disabled"
         >
             {{ __('session_filter.next') }}
         </flux:button>
+    </div>
     </div>
 </div>

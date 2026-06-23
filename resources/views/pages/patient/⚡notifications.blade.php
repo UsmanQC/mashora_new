@@ -46,7 +46,7 @@ new #[Layout('layouts::patient')] #[Title('Notifications')] class extends Compon
 
 <div class="mx-auto max-w-2xl space-y-6 px-4 py-8">
     <div>
-        <flux:heading size="xl" class="font-semibold text-[#193ADB]">{{ __('patient.menu.notifications') }}</flux:heading>
+        <flux:heading size="xl" class="font-semibold text-[#1565c0]">{{ __('patient.menu.notifications') }}</flux:heading>
         <flux:text class="mt-1 text-zinc-600">{{ __('patient.notifications.subtitle') }}</flux:text>
     </div>
 
@@ -59,7 +59,7 @@ new #[Layout('layouts::patient')] #[Title('Notifications')] class extends Compon
             @foreach ($this->notifications as $notification)
                 <article @class([
                     'rounded-2xl border bg-white p-4 shadow-sm transition',
-                    'border-[#193ADB]/30 bg-blue-50/40' => $notification->read_at === null,
+                    'border-[#1565c0]/30 bg-emerald-50/40' => $notification->read_at === null,
                     'border-zinc-200/90' => $notification->read_at !== null,
                 ])>
                     <div class="flex items-start justify-between gap-3">
@@ -80,7 +80,7 @@ new #[Layout('layouts::patient')] #[Title('Notifications')] class extends Compon
                                 wire:navigate
                                 size="sm"
                                 variant="primary"
-                                class="!bg-[#193ADB] !text-white hover:!brightness-95"
+                                class="!bg-[#1565c0] !text-white hover:!brightness-95"
                                 wire:click="markRead({{ $notification->id }})"
                             >
                                 {{ __('patient.notifications.open') }}
