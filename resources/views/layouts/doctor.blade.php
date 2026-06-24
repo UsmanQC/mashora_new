@@ -6,7 +6,7 @@
 >
     <head>
         <meta name="application-name" content="{{ config('app.name') }} — {{ __('doctor.portal_name') }}" />
-        <meta name="theme-color" content="#F3F5F9" />
+        @include('partials.pwa', ['themeColor' => '#F3F5F9'])
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         @include('partials.head')
     </head>

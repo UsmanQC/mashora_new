@@ -4,7 +4,6 @@
 <title>{{ config('app.name') }}</title>
 
 <link rel="icon" href="{{ asset('images/favicon-awaan.png') }}" type="image/png">
-<link rel="apple-touch-icon" href="{{ asset('images/favicon-awaan.png') }}">
 
 @fonts
 

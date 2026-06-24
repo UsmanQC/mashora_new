@@ -7,11 +7,7 @@
     <head>
         <meta name="application-name" content="{{ config('app.name') }}" />
         <meta name="color-scheme" content="light" />
-        <meta name="theme-color" content="#F6FFFC" />
-        <meta name="mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <link rel="manifest" href="/manifest.webmanifest" />
+        @include('partials.pwa', ['themeColor' => '#F6FFFC'])
         @include('partials.head')
         @include('partials.intl-tel-input-patient-styles')
         @stack('styles')

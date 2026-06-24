@@ -7,11 +7,7 @@
     <head>
         <meta name="application-name" content="{{ config('app.name') }}" />
         {{-- Patient portal emerald chrome --}}
-        <meta name="theme-color" content="#10B981" />
-        <meta name="mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <link rel="manifest" href="/manifest.webmanifest" />
+        @include('partials.pwa', ['themeColor' => '#10B981'])
         @include('partials.head')
     </head>
     <body
