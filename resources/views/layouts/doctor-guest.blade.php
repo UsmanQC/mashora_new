@@ -2,64 +2,74 @@
 <html
     lang="{{ str_replace('_', '-', app()->getLocale()) }}"
     dir="{{ app()->getLocale() === 'ar' ? 'rtl' : 'ltr' }}"
-    class="scheme-light min-h-svh"
+    class="scheme-light h-svh max-h-svh overflow-hidden bg-[#F6FFFC]"
 >
     <head>
         <meta name="application-name" content="{{ config('app.name') }} — {{ __('doctor.portal_name') }}" />
-        <meta name="theme-color" content="#10B981" />
+        <meta name="color-scheme" content="light" />
+        <meta name="theme-color" content="#F6FFFC" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         @include('partials.head')
         @stack('styles')
     </head>
-    <body class="min-h-svh antialiased">
-        <div class="flex min-h-svh flex-col lg:flex-row">
-            <div
-                class="relative flex min-h-[32svh] flex-col justify-start overflow-hidden bg-gradient-to-br from-[#10B981] via-[#3558e6] to-[#2848d4] px-6 pb-8 pt-10 lg:min-h-svh lg:w-1/2 lg:justify-center lg:px-10 lg:pb-0"
-            >
-                <div class="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
-                    <div class="absolute -start-[10%] -top-[20%] h-72 w-72 rounded-full bg-white/10 blur-3xl"></div>
-                    <div class="absolute -bottom-[15%] -end-[5%] h-96 w-96 rounded-full bg-white/10 blur-3xl"></div>
-                    <div class="absolute start-[40%] top-1/3 h-48 w-48 rounded-full bg-[#047857]/20 blur-2xl"></div>
-                </div>
-                <div class="relative z-10 flex h-full w-full max-w-md flex-col text-white lg:mx-auto">
-                    <div class="hidden flex-1 flex-col items-center justify-center gap-4 lg:flex">
-                        <img
-                            src="{{ asset('images/login-illustration.png') }}"
-                            alt=""
-                            class="h-auto w-full max-w-lg object-contain"
-                            loading="eager"
-                            decoding="async"
-                        />
-                        <div class="text-center">
-                            <p class="text-xl font-semibold text-white">
-                                {{ __('doctor.guest.illustration_caption') }}
-                            </p>
+    <body class="h-svh max-h-svh overflow-hidden bg-[#F6FFFC] antialiased">
+        @php
+            $isCompactAuth = request()->routeIs('doctor.register');
+        @endphp
+        <div class="flex h-svh max-h-svh min-h-0 w-full flex-col overflow-hidden bg-[#F6FFFC]">
+            <header class="flex shrink-0 items-center justify-between gap-3 px-4 py-3 sm:px-8 sm:py-4 lg:px-10">
+                <a
+                    href="{{ route('doctor.welcome') }}"
+                    wire:navigate
+                    class="inline-flex min-w-0 items-center"
+                    title="{{ __('patient.brand') }}"
+                >
+                    @include('partials.patient-brand-logo', [
+                        'imgClass' => 'h-9 w-auto max-w-[min(100%,13rem)] object-contain object-start',
+                    ])
+                </a>
+                @include('partials.doctor-language-switch', ['variant' => 'guest'])
+            </header>
+
+            <div class="grid min-h-0 flex-1 w-full grid-cols-1 overflow-hidden lg:grid-cols-2">
+                <aside
+                    class="relative hidden min-h-0 flex-col overflow-hidden bg-[#F6FFFC] px-10 py-10 text-zinc-900 lg:flex"
+                >
+                    <div class="flex min-h-0 flex-1 flex-col overflow-hidden">
+                        @php
+                            $authIllustration = match (true) {
+                                request()->routeIs('doctor.verify-phone') => 'images/sign_up-2.svg',
+                                request()->routeIs('doctor.register') => 'images/sign_up-3.svg',
+                                default => 'images/doctor_signup.svg',
+                            };
+                        @endphp
+                        <div class="mt-8 flex min-h-0 flex-1 flex-col items-center justify-center overflow-hidden py-4">
+                            <div class="relative w-full max-w-lg overflow-visible">
+                                <img
+                                    src="{{ asset($authIllustration) }}"
+                                    alt=""
+                                    width="560"
+                                    height="560"
+                                    class="relative mx-auto h-full max-h-[min(58vh,32rem)] w-full origin-center scale-110 object-contain object-center"
+                                    loading="eager"
+                                    decoding="async"
+                                />
+                            </div>
                         </div>
                     </div>
-                </div>
-            </div>
+                </aside>
 
-            <div class="flex flex-1 flex-col bg-white lg:w-1/2">
-                <div
-                    class="flex items-center justify-between gap-3 border-b border-zinc-100 px-4 py-3 sm:px-6 lg:border-b-0 lg:px-10 lg:pt-8"
-                >
-                    <a
-                        href="{{ route('doctor.welcome') }}"
-                        wire:navigate
-                        class="inline-flex min-w-0 items-center"
-                        title="{{ __('patient.brand') }}"
-                    >
-                        @include('partials.patient-brand-logo', [
-                            'imgClass' => 'h-9 w-auto max-w-[min(100%,13rem)] object-contain object-start',
-                        ])
-                    </a>
-                    @include('partials.doctor-language-switch', ['variant' => 'guest'])
-                </div>
-                <div class="flex flex-1 flex-col px-4 py-8 sm:px-6 lg:justify-center lg:px-10 lg:py-12">
-                    <div class="mx-auto w-full max-w-md flex-1">
+                <main @class([
+                    'flex min-h-0 flex-1 flex-col overflow-hidden bg-[#F6FFFC] px-4 sm:px-8 lg:px-10',
+                    'patient-auth-density-compact' => $isCompactAuth,
+                ])>
+                    <div @class([
+                        'patient-auth-content mx-auto flex min-h-0 w-full max-w-md flex-1 flex-col justify-center py-2 sm:py-4 lg:max-w-lg lg:py-6',
+                        'patient-auth-register' => request()->routeIs('doctor.register'),
+                    ])>
                         {{ $slot }}
                     </div>
-                </div>
+                </main>
             </div>
         </div>
 

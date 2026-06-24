@@ -68,40 +68,66 @@ new #[Layout('layouts::doctor-guest')] #[Title('Doctor registration')] class ext
     }
 }; ?>
 
-<div class="space-y-8">
-    <div class="space-y-2 text-center sm:text-start">
-        <flux:heading size="xl" class="font-semibold text-zinc-900">{{ __('doctor.auth.register_title') }}</flux:heading>
+<div class="flex min-h-0 w-full flex-col text-start">
+    <div class="mb-2 sm:mb-3">
+        <flux:button
+            :href="route('doctor.welcome')"
+            wire:navigate
+            variant="ghost"
+            size="sm"
+            icon="arrow-left"
+            aria-label="{{ __('pagination.previous') }}"
+            title="{{ __('pagination.previous') }}"
+            class="px-0 text-zinc-600 hover:text-zinc-900"
+        />
     </div>
 
-    <form wire:submit="register" class="space-y-4">
+    <flux:heading size="lg" class="patient-auth-heading !text-zinc-900 text-balance sm:!text-2xl">{{ __('doctor.auth.register_title') }}</flux:heading>
+    <flux:text class="mt-1 text-sm leading-snug text-balance text-zinc-600 sm:mt-2 sm:text-base">{{ __('doctor.auth.register_sub') }}</flux:text>
+
+    <div class="mt-2 mb-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-zinc-600 sm:mt-3 sm:mb-4 sm:text-sm">
+        <flux:icon name="device-phone-mobile" variant="mini" class="size-3.5 shrink-0 text-[#10B981] sm:size-4" />
+        <span class="font-medium text-zinc-800">{{ __('doctor.auth.phone_verified_label') }}</span>
+        <span class="font-semibold tabular-nums text-zinc-900" dir="ltr">+{{ $phone }}</span>
+    </div>
+
+    <form wire:submit="register" class="patient-auth-form space-y-2 sm:space-y-3">
         <flux:input wire:model="phone" type="hidden" autocomplete="tel" />
-        <flux:error name="phone" />
-        <flux:text class="text-sm text-zinc-600">
-            {{ __('Creating account for') }} <span class="font-semibold text-zinc-900">{{ $phone }}</span>
-        </flux:text>
 
-        <flux:field>
-            <flux:label>{{ __('doctor.auth.email') }}</flux:label>
-            <flux:input wire:model="email" type="email" autocomplete="email" />
-            <flux:error name="email" />
-        </flux:field>
+        <flux:input
+            wire:model.blur="email"
+            type="email"
+            autocomplete="email"
+            required
+            :label="__('doctor.auth.email')"
+        />
 
-        <flux:field>
-            <flux:label>{{ __('doctor.auth.password') }}</flux:label>
-            <flux:input wire:model="password" type="password" autocomplete="new-password" viewable />
-            <flux:error name="password" />
-        </flux:field>
+        <div class="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-x-3 sm:gap-y-2">
+            <flux:input
+                wire:model="password"
+                type="password"
+                autocomplete="new-password"
+                viewable
+                required
+                :label="__('doctor.auth.password')"
+            />
 
-        <flux:field>
-            <flux:label>{{ __('doctor.auth.password_confirm') }}</flux:label>
-            <flux:input wire:model="password_confirmation" type="password" autocomplete="new-password" viewable />
-            <flux:error name="password_confirmation" />
-        </flux:field>
+            <flux:input
+                wire:model="password_confirmation"
+                type="password"
+                autocomplete="new-password"
+                viewable
+                required
+                :label="__('doctor.auth.password_confirm')"
+            />
+        </div>
 
-        <flux:button class="w-full bg-[#047857]! text-white! hover:brightness-95!" type="submit" variant="primary">
+        @error('phone')
+            <flux:text class="text-sm text-red-600">{{ $message }}</flux:text>
+        @enderror
+
+        <flux:button variant="primary" type="submit" class="patient-auth-primary-btn w-full !mt-1 sm:!mt-2">
             {{ __('doctor.auth.register_submit') }}
         </flux:button>
     </form>
-
-    
 </div>

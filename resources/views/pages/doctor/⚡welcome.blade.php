@@ -64,26 +64,27 @@ new #[Layout('layouts::doctor-guest')] #[Title('Doctor portal')] class extends C
     }
 }; ?>
 
-<div class="flex min-h-full flex-col items-center justify-center gap-8">
-    <div class="space-y-2 text-center">
-        <flux:heading size="xl" class="font-semibold text-[#193ADB]">{{ __('Enter mobile number') }}</flux:heading>
-    </div>
+<div class="flex min-h-0 w-full flex-col text-start">
+    <flux:heading size="lg" class="patient-auth-heading !text-zinc-900 sm:!text-2xl">{{ __('doctor.auth.phone_heading') }}</flux:heading>
 
-    <form wire:submit="proceed" class="w-full max-w-md space-y-4">
+    <form wire:submit="proceed" class="mt-5 space-y-4 sm:mt-8 sm:space-y-6">
         @include('partials.doctor-unified-phone-field')
+
         @error('countryIso')
             <flux:text class="text-sm text-red-600">{{ $message }}</flux:text>
         @enderror
+
         @error('phone')
             <flux:text class="text-sm text-red-600">{{ $message }}</flux:text>
         @enderror
-        <flux:button class="w-full bg-[#047857]! text-white! hover:brightness-95!" type="submit" variant="primary">
-            {{ __('Continue') }}
+
+        <flux:button variant="primary" type="submit" class="patient-auth-primary-btn w-full">
+            {{ __('doctor.auth.next') }}
         </flux:button>
     </form>
 
     @if (config('doctor.registration_invite_only') && app()->environment('local'))
-        <flux:text class="text-center text-xs font-mono text-zinc-500">
+        <flux:text class="mt-4 text-center text-xs font-mono text-zinc-500">
             Dev signed URL: {{ URL::temporarySignedRoute('doctor.verify-phone', now()->addHours(2), ['phone' => '966500000000']) }}
         </flux:text>
     @endif

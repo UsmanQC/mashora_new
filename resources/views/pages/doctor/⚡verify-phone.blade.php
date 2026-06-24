@@ -100,35 +100,58 @@ new #[Layout('layouts::doctor-guest')] #[Title('Verify mobile number')] class ex
     }
 }; ?>
 
-<div class="space-y-8">
-    <div class="space-y-2 text-center sm:text-start">
-        <flux:heading size="xl" class="font-semibold text-zinc-900">{{ __('doctor.auth.otp_heading') }}</flux:heading>
-        <flux:text class="text-sm text-zinc-600">{{ __('doctor.auth.otp_lead') }}</flux:text>
-        <flux:text class="font-medium tabular-nums text-zinc-800" dir="ltr">+{{ $phone }}</flux:text>
+<div class="flex min-h-0 w-full flex-col text-start">
+    <div class="mb-2 sm:mb-3">
+        <flux:button
+            :href="route('doctor.welcome')"
+            wire:navigate
+            variant="ghost"
+            size="sm"
+            icon="arrow-left"
+            aria-label="{{ __('pagination.previous') }}"
+            title="{{ __('pagination.previous') }}"
+            class="px-0 text-zinc-600 hover:text-zinc-900"
+        />
     </div>
 
+    <flux:heading size="lg" class="patient-auth-heading !text-zinc-900 text-balance sm:!text-2xl">{{ __('doctor.auth.otp_heading') }}</flux:heading>
+    <flux:text class="mt-1 max-w-sm text-sm text-balance text-zinc-600 sm:mt-2 sm:text-base">{{ __('doctor.auth.otp_lead') }}</flux:text>
+    <flux:text class="mt-2 text-sm font-medium tabular-nums text-zinc-800 sm:mt-3 sm:text-base" dir="ltr">+{{ $phone }}</flux:text>
+
     @if (filled($devOtpDisplay))
-        <div class="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950" role="status">
+        <div class="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950 sm:mt-4" role="status">
             {{ __('doctor.auth.otp_dev_banner', ['code' => $devOtpDisplay]) }}
         </div>
     @endif
 
-    <form wire:submit="verifyOtp" class="space-y-4">
-        <flux:otp
-            wire:model="code"
-            :length="4"
-            :label="__('doctor.auth.otp_label')"
-            label:sr-only
-            error:class="text-center"
-            class="mx-auto"
-        />
+    <form wire:submit="verifyOtp" class="mt-5 space-y-4 sm:mt-8 sm:space-y-5">
+        <flux:field class="patient-auth-otp">
+            <flux:label class="!text-zinc-900">{{ __('doctor.auth.otp_label') }}</flux:label>
+            <flux:otp
+                wire:model="code"
+                :length="4"
+                label:sr-only
+                error:class="text-center"
+                class="patient-auth-otp-group"
+                input:class="patient-auth-otp-input"
+            />
+            <flux:error name="code" />
+        </flux:field>
 
-        <flux:button class="w-full bg-[#047857]! text-white! hover:brightness-95!" type="submit" variant="primary">
+        <flux:button variant="primary" type="submit" class="patient-auth-primary-btn w-full">
             {{ __('doctor.auth.otp_verify') }}
         </flux:button>
 
-        <flux:button type="button" variant="ghost" class="w-full" wire:click="sendOtp">
-            {{ __('doctor.auth.otp_resend') }}
-        </flux:button>
+        <div class="flex flex-col items-center gap-2 text-center text-sm text-zinc-600">
+            <flux:button
+                type="button"
+                variant="ghost"
+                size="sm"
+                wire:click="sendOtp"
+                class="!text-zinc-600 hover:!text-zinc-900"
+            >
+                {{ __('doctor.auth.otp_resend') }}
+            </flux:button>
+        </div>
     </form>
 </div>

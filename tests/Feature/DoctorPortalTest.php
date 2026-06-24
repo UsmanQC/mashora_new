@@ -254,6 +254,7 @@ test('authenticated doctor account menu shows personal profile link', function (
 test('doctor guest welcome page shows language switch', function () {
     $this->get(route('doctor.welcome'))
         ->assertSuccessful()
+        ->assertSee(__('doctor.auth.phone_heading'), false)
         ->assertSee(route('doctor.locale', ['locale' => 'en']), false)
         ->assertSee(route('doctor.locale', ['locale' => 'ar']), false);
 });

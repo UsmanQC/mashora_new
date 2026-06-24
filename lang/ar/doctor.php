@@ -67,11 +67,17 @@ return [
 
     'auth' => [
         'phone' => 'رقم الجوال',
+        'phone_heading' => 'أدخل رقم جوالك',
+        'next' => 'متابعة',
         'password' => 'كلمة المرور',
         'remember' => 'تذكر هذا الجهاز',
         'sign_in' => 'دخول',
         'sign_out' => 'خروج',
+        'login_password_lead' => 'أدخل كلمة المرور لهذا الرقم.',
+        'not_my_number' => 'استخدام رقم آخر',
         'register_title' => 'إنشاء حساب طبيب',
+        'register_sub' => 'أضف بريدك الإلكتروني وكلمة مرور قوية لإكمال إنشاء حسابك.',
+        'phone_verified_label' => 'رقم مُؤكَّد',
         'name' => 'الاسم الكامل',
         'email' => 'البريد الإلكتروني',
         'password_confirm' => 'تأكيد كلمة المرور',

@@ -79,6 +79,29 @@ select:focus[data-flux-control] {
 }
 
 @layer components {
+    /** Pill-shaped buttons across patient/doctor portals (Flux + native controls). */
+    [data-flux-button] {
+        border-radius: 9999px !important;
+    }
+
+    button:not([data-flux-otp-input]):not(.rounded-none):not(.iti__selected-country):not(.iti__country),
+    input[type='submit']:not(.rounded-none),
+    input[type='button']:not(.rounded-none),
+    input[type='reset']:not(.rounded-none) {
+        border-radius: 9999px !important;
+    }
+
+    /** intl-tel-input country trigger stays flush inside the phone field, not pill-shaped. */
+    .iti__selected-country {
+        border-radius: 0 !important;
+        border-start-start-radius: 0.75rem !important;
+        border-end-start-radius: 0.75rem !important;
+    }
+
+    .iti__country {
+        border-radius: 0 !important;
+    }
+
     .patient-auth-heading {
         @apply font-semibold !text-zinc-900 dark:!text-zinc-900;
     }

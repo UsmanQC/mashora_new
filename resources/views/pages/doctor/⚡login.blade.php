@@ -79,38 +79,64 @@ new #[Layout('layouts::doctor-guest')] #[Title('Doctor sign in')] class extends 
     }
 }; ?>
 
-<div class="flex min-h-full items-center">
-    <div class="w-full py-2">
-        <div class="mb-6 text-center">
-            <div class="mx-auto mb-3 inline-flex h-11 w-11 items-center justify-center rounded-full bg-[#047857]/10 text-[#047857]">
-                <flux:icon name="shield-check" class="size-5" />
-            </div>
-            <flux:heading size="xl" class="font-semibold text-zinc-900">{{ __('doctor.auth.sign_in') }}</flux:heading>
-            <flux:text class="mt-1 text-zinc-600">{{ __('doctor.welcome_subtitle') }}</flux:text>
-        </div>
-
-        <form wire:submit="login" class="space-y-5">
-            <flux:text class="text-center text-sm text-zinc-600">
-                {{ __('Enter your password for') }} <span class="font-semibold text-zinc-900">{{ $phone }}</span>
-            </flux:text>
-            <div class="text-center">
-                <flux:link :href="route('doctor.welcome')" wire:navigate>{{ __('Not my number') }}</flux:link>
-            </div>
-
-            <flux:field>
-                <flux:input wire:model="phone" type="hidden" autocomplete="username" />
-                <flux:error name="phone" />
-                <flux:label>{{ __('doctor.auth.password') }}</flux:label>
-                <flux:input wire:model="password" type="password" autocomplete="current-password" viewable />
-                <flux:error name="password" />
-            </flux:field>
-
-            <flux:checkbox wire:model.live="remember" :label="__('doctor.auth.remember')" />
-
-            <flux:button class="w-full bg-[#047857]! text-white! hover:brightness-95!" type="submit" variant="primary">
-                {{ __('doctor.auth.sign_in') }}
-            </flux:button>
-        </form>
-
+<div class="flex min-h-0 w-full flex-col text-start">
+    <div class="mb-2 sm:mb-3">
+        <flux:button
+            :href="route('doctor.welcome')"
+            wire:navigate
+            variant="ghost"
+            size="sm"
+            icon="arrow-left"
+            aria-label="{{ __('pagination.previous') }}"
+            title="{{ __('pagination.previous') }}"
+            class="px-0 text-zinc-600 hover:text-zinc-900"
+        />
     </div>
+
+    <flux:heading size="lg" class="patient-auth-heading !text-zinc-900 sm:!text-2xl">{{ __('doctor.auth.sign_in') }}</flux:heading>
+    <flux:text class="mt-1 text-sm sm:mt-2 sm:text-base">{{ __('doctor.auth.login_password_lead') }}</flux:text>
+
+    <flux:text class="mt-2 text-sm font-medium tabular-nums text-zinc-800 sm:mt-3 sm:text-base" dir="ltr">
+        +{{ $phone }}
+    </flux:text>
+
+    <form wire:submit="login" class="mt-5 space-y-4 sm:mt-8 sm:space-y-5">
+        <flux:input wire:model="phone" type="hidden" autocomplete="username" />
+
+        <flux:input
+            wire:model="password"
+            type="password"
+            autocomplete="current-password"
+            viewable
+            required
+            :label="__('doctor.auth.password')"
+        />
+
+        @error('phone')
+            <flux:text class="text-sm text-red-600">{{ $message }}</flux:text>
+        @enderror
+
+        @error('password')
+            <flux:text class="text-sm text-red-600">{{ $message }}</flux:text>
+        @enderror
+
+        <flux:checkbox wire:model.live="remember" :label="__('doctor.auth.remember')" />
+
+        <flux:button variant="primary" type="submit" class="patient-auth-primary-btn w-full">
+            {{ __('doctor.auth.sign_in') }}
+        </flux:button>
+
+        <div class="text-center text-sm text-zinc-500">
+            <flux:button
+                type="button"
+                variant="ghost"
+                size="sm"
+                :href="route('doctor.welcome')"
+                wire:navigate
+                class="mx-auto"
+            >
+                {{ __('doctor.auth.not_my_number') }}
+            </flux:button>
+        </div>
+    </form>
 </div>

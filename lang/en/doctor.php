@@ -67,11 +67,17 @@ return [
 
     'auth' => [
         'phone' => 'Mobile number',
+        'phone_heading' => 'Enter your mobile number',
+        'next' => 'Continue',
         'password' => 'Password',
         'remember' => 'Remember this device',
         'sign_in' => 'Sign in',
         'sign_out' => 'Sign out',
+        'login_password_lead' => 'Enter your password for this mobile number.',
+        'not_my_number' => 'Use a different number',
         'register_title' => 'Create your doctor account',
+        'register_sub' => 'Add your email and a strong password to finish creating your account.',
+        'phone_verified_label' => 'Verified number',
         'name' => 'Full name',
         'email' => 'Email',
         'password_confirm' => 'Confirm password',
