@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\AppointmentChatNotifier;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -46,6 +47,10 @@ class ChMessage extends Model
             if ($message->getKey() === null) {
                 $message->setAttribute($message->getKeyName(), (string) Str::uuid());
             }
+        });
+
+        static::created(function (ChMessage $message): void {
+            app(AppointmentChatNotifier::class)->notifyRecipient($message);
         });
     }
 

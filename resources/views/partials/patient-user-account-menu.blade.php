@@ -16,7 +16,7 @@
             type="button"
             :aria-label="__('patient.account_menu_aria')"
             data-test="patient-account-menu-button"
-            class="size-9! rounded-full! border border-slate-200/90! bg-[#064e3b]! p-0! text-xs! font-semibold! text-white! shadow-sm! hover:border-slate-300! hover:bg-[#047857]!"
+            class="size-9! rounded-full! border border-zinc-200/90! bg-[#047857]! p-0! text-xs! font-semibold! text-white! shadow-sm! hover:border-zinc-300! hover:bg-[#10B981]!"
         >
             <span aria-hidden="true">{{ $initials !== '' ? $initials : 'U' }}</span>
         </flux:button>

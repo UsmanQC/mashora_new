@@ -95,7 +95,7 @@ new #[Layout('layouts::patient')] #[Title('Home')] class extends Component
 
 }; ?>
 
-<div class="mx-auto max-w-4xl pb-10">
+<div class="w-full pb-10">
     {{-- Masthead — legacy: blue heading on light gray canvas; brand stays in sidebar only --}}
     <header class="border-b border-slate-200/80 bg-slate-100 px-4 py-6">
         <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">

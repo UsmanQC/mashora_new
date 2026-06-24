@@ -279,7 +279,7 @@ new #[Layout('layouts::patient')] #[Title('Book an appointment')] class extends 
     }
 }; ?>
 
-<div class="mx-auto max-w-5xl px-4 py-6 pb-28 sm:pb-12">
+<div class="w-full pb-28 sm:pb-12">
     <header class="mb-8">
         <nav class="mb-3 text-sm text-zinc-600" aria-label="Breadcrumb">
             <ol class="flex flex-wrap items-center gap-2">

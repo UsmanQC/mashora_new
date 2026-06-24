@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\FollowUpAppointmentService;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use Database\Factories\AppointmentFactory;
@@ -190,6 +191,52 @@ class Appointment extends Model
     public function isPendingFollowUp(): bool
     {
         return $this->status === 'pending_follow_up';
+    }
+
+    public function chatOpenUntil(): CarbonInterface
+    {
+        $reference = $this;
+
+        if ($this->is_follow_up) {
+            $this->loadMissing('parentAppointment');
+
+            if ($this->parentAppointment instanceof self) {
+                $reference = $this->parentAppointment;
+            }
+        }
+
+        return app(FollowUpAppointmentService::class)
+            ->windowEnd($reference)
+            ->copy()
+            ->endOfDay();
+    }
+
+    public function isChatOpen(?CarbonInterface $now = null): bool
+    {
+        $now ??= now(config('app.timezone'));
+
+        if ((string) $this->status === 'in_process') {
+            return true;
+        }
+
+        if ($this->is_follow_up && in_array((string) $this->status, ['new', 'completed'], true)) {
+            if ((string) $this->status === 'new' && $this->patient_confirmed_at === null) {
+                return false;
+            }
+
+            return $now->lessThanOrEqualTo($this->chatOpenUntil());
+        }
+
+        if ((string) $this->status !== 'completed') {
+            return false;
+        }
+
+        return $now->lessThanOrEqualTo($this->chatOpenUntil());
+    }
+
+    public function allowsPatientCalls(): bool
+    {
+        return ! $this->is_follow_up;
     }
 
     /**

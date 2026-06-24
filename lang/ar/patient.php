@@ -11,6 +11,11 @@ return [
 
     'portal_greeting' => 'مرحبًا بعودتك، :name',
     'portal_greeting_label' => 'مرحبًا بعودتك',
+
+    'header' => [
+        'welcome' => 'مرحبًا، :name',
+    ],
+
     'mood_feeling_cta' => 'كيف حالك اليوم؟',
     'mood_check_in_aria' => 'شاركنا كيف تشعر اليوم',
     'portal_toolbar_aria' => 'إجراءات بوابة المريض',
@@ -68,7 +73,7 @@ return [
         'privacy' => 'سياسة الخصوصية',
         'privacy_sub' => 'كيف نحمي بياناتك',
         'locale_en' => 'EN',
-        'locale_ar_short' => 'عربي',
+        'locale_ar_short' => 'AR',
         'sign_out' => 'تسجيل الخروج',
         'no_record_found' => 'لا توجد سجلات',
         'grid_aria' => 'اختصارات قائمة المريض',
@@ -146,13 +151,16 @@ return [
         'empty_cancelled' => 'ستظهر المواعيد الملغاة هنا إن وُجدت.',
         'start_session' => 'بدء الجلسة',
         'join_session' => 'انضم للجلسة',
+        'open_chat' => 'فتح المحادثة',
+        'chat_open_until_card' => 'تبقى المحادثة مفتوحة حتى :date.',
         'waiting_for_doctor' => 'بانتظار بدء الأخصائي',
         'waiting_for_doctor_hint' => 'ستتمكن من الانضمام فور بدء الأخصائي للجلسة.',
         'date_label' => 'التاريخ',
         'time_label' => 'الوقت',
         'chat_locked_until_doctor_starts' => 'سيبدأ الأخصائي الجلسة. يمكنك الانضمام للمحادثة والمكالمة بعد البدء.',
         'session_doctor_must_start' => 'يجب أن يبدأ الأخصائي الجلسة أولاً.',
-        'session_closed' => 'اكتملت هذه الجلسة. المحادثة مغلقة الآن.',
+        'session_closed' => 'اكتملت هذه الجلسة. أُغلقت المحادثة بعد فترة المتابعة البالغة 14 يومًا.',
+        'chat_open_after_completed' => 'اكتملت الجلسة. تبقى المحادثة مفتوحة حتى :date لرسائل المتابعة.',
         'status_new' => 'بانتظار بدء الجلسة',
         'starts_in' => 'يبدأ خلال :time',
         'starts_in_label' => 'يبدأ خلال',
@@ -247,6 +255,9 @@ return [
         'missed_message' => 'لم يحضر د. :doctor جلستك في :date الساعة :time. افتح المواعيد الفائتة لإعادة الجدولة أو طلب استرداد :amount ر.س.',
         'start_reminder_title' => 'جلستك تبدأ قريبًا',
         'start_reminder_message' => 'جلستك مع :doctor تبدأ الساعة :time يوم :date.',
+        'chat_message_title' => 'رسالة جديدة من د. :doctor',
+        'chat_message_body' => ':preview',
+        'chat_message_empty' => 'أرسل لك رسالة.',
     ],
 
     'missed' => [
@@ -275,6 +286,7 @@ return [
         'title' => 'موعد متابعة',
         'subtitle' => 'حدّد أخصائيك موعد متابعة لك.',
         'badge' => 'بانتظار تأكيدك',
+        'confirmed_badge' => 'متابعة',
         'doctor' => 'الأخصائي',
         'date' => 'التاريخ',
         'time' => 'الوقت',

@@ -37,7 +37,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
 
     public function sendMessage(): void
     {
-        if ($this->appointment->status !== 'in_process') {
+        if (! $this->appointment->isChatOpen()) {
             return;
         }
 
@@ -128,7 +128,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
 }; ?>
 
 <div
-    class="mx-auto w-full max-w-6xl space-y-5 px-4 py-5 pb-24 sm:px-6 sm:pb-10"
+    class="space-y-5"
     @if (in_array($appointment->status, ['new', 'rescheduled'], true)) wire:poll.5s="refreshAppointmentSession" @endif
 >
     <header class="relative overflow-hidden rounded-2xl border border-zinc-200/80 bg-gradient-to-br from-white via-white to-[#f7f9ff] p-4 shadow-sm shadow-zinc-200/60 ring-1 ring-zinc-100 sm:p-5">
@@ -149,30 +149,32 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
         </div>
 
         <div class="flex items-center gap-2">
-            <span
-                id="patient-call-started-chip"
-                class="hidden rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700"
-            >
-                {{ __('patient.appointments.call_in_progress') }}
-            </span>
-            <button
-                type="button"
-                id="btn-patient-video"
-                class="inline-flex min-h-10 items-center gap-2 rounded-xl border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-800 shadow-sm transition hover:border-[#10B981]/35 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-45"
-                @disabled($agoraAppId === '' || $appointment->status !== 'in_process')
-            >
-                <flux:icon name="video-camera" variant="mini" class="size-4 text-zinc-600" />
-                {{ __('patient.appointments.video_call') }}
-            </button>
-            <button
-                type="button"
-                id="btn-patient-audio"
-                class="inline-flex min-h-10 items-center gap-2 rounded-xl border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-800 shadow-sm transition hover:border-[#10B981]/35 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-45"
-                @disabled($agoraAppId === '' || $appointment->status !== 'in_process')
-            >
-                <flux:icon name="phone" variant="mini" class="size-4 text-zinc-600" />
-                {{ __('patient.appointments.voice_call') }}
-            </button>
+            @if ($appointment->allowsPatientCalls())
+                <span
+                    id="patient-call-started-chip"
+                    class="hidden rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700"
+                >
+                    {{ __('patient.appointments.call_in_progress') }}
+                </span>
+                <button
+                    type="button"
+                    id="btn-patient-video"
+                    class="inline-flex min-h-10 items-center gap-2 rounded-xl border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-800 shadow-sm transition hover:border-[#10B981]/35 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-45"
+                    @disabled($agoraAppId === '' || $appointment->status !== 'in_process')
+                >
+                    <flux:icon name="video-camera" variant="mini" class="size-4 text-zinc-600" />
+                    {{ __('patient.appointments.video_call') }}
+                </button>
+                <button
+                    type="button"
+                    id="btn-patient-audio"
+                    class="inline-flex min-h-10 items-center gap-2 rounded-xl border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-800 shadow-sm transition hover:border-[#10B981]/35 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-45"
+                    @disabled($agoraAppId === '' || $appointment->status !== 'in_process')
+                >
+                    <flux:icon name="phone" variant="mini" class="size-4 text-zinc-600" />
+                    {{ __('patient.appointments.voice_call') }}
+                </button>
+            @endif
         </div>
         </div>
     </header>
@@ -188,13 +190,19 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
         data-session-started-banner="{{ __('patient.appointments.session_started_join_now') }}"
     ></div>
 
-    @if (in_array($appointment->status, ['new', 'rescheduled'], true))
+    @if (in_array($appointment->status, ['new', 'rescheduled'], true) && ! $appointment->isChatOpen())
         <flux:callout variant="secondary" icon="clock" class="border-zinc-200">
             {{ __('patient.appointments.chat_locked_until_doctor_starts') }}
         </flux:callout>
-    @elseif ($appointment->status === 'completed')
+    @elseif ($appointment->status === 'completed' && ! $appointment->isChatOpen())
         <flux:callout variant="secondary" icon="check-circle" class="border-zinc-200">
             {{ __('patient.appointments.session_closed') }}
+        </flux:callout>
+    @elseif ($appointment->status === 'completed' && $appointment->isChatOpen())
+        <flux:callout variant="success" icon="chat-bubble-left-right" class="border-emerald-200">
+            {{ __('patient.appointments.chat_open_after_completed', [
+                'date' => $appointment->chatOpenUntil()->locale(app()->getLocale())->translatedFormat('d M Y'),
+            ]) }}
         </flux:callout>
     @endif
 
@@ -259,9 +267,9 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                     type="text"
                     :placeholder="__('patient.appointments.type_message')"
                     class="flex-1 !border-0 !bg-transparent !shadow-none"
-                    :disabled="$appointment->status !== 'in_process'"
+                    :disabled="! $appointment->isChatOpen()"
                 />
-                <flux:button type="submit" variant="primary" icon="paper-airplane" class="shadow-md shadow-[#047857]/25" wire:loading.attr="disabled" :disabled="$appointment->status !== 'in_process'">
+                <flux:button type="submit" variant="primary" icon="paper-airplane" class="shadow-md shadow-[#047857]/25" wire:loading.attr="disabled" :disabled="! $appointment->isChatOpen()">
                     {{ __('patient.appointments.send') }}
                 </flux:button>
             </form>

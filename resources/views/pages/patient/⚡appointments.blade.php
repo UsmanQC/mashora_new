@@ -114,6 +114,17 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
         };
     }
 
+    public function statusLabelFor(Appointment $appointment): string
+    {
+        if ($appointment->is_follow_up) {
+            return $appointment->isPendingFollowUp()
+                ? __('patient.follow_up.badge')
+                : __('patient.follow_up.confirmed_badge');
+        }
+
+        return $this->statusLabel((string) $appointment->status);
+    }
+
     public function tabHeading(): string
     {
         return match ($this->tab) {
@@ -152,6 +163,15 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
         };
     }
 
+    public function statusBadgeClassesFor(Appointment $appointment): string
+    {
+        if ($appointment->is_follow_up) {
+            return 'bg-violet-100 text-violet-700';
+        }
+
+        return $this->statusBadgeClasses((string) $appointment->status);
+    }
+
     public function formattedSessionDate(Appointment $appointment): string
     {
         return $appointment->appointment_date?->locale(app()->getLocale())->translatedFormat('d M Y') ?? '--';
@@ -183,6 +203,11 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
     public function sessionStartsAtIso(Appointment $appointment): ?string
     {
         return $appointment->sessionStartsAt()?->toIso8601String();
+    }
+
+    public function canOpenChat(Appointment $appointment): bool
+    {
+        return $appointment->isChatOpen();
     }
 
     /**
@@ -226,8 +251,8 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
     }
 }; ?>
 
-<div class="pb-28 sm:pb-10">
-    <div id="patient-call-join-banner" class="mx-auto hidden max-w-5xl px-4 pt-4 lg:px-8">
+<div class="space-y-5">
+    <div id="patient-call-join-banner" class="hidden">
         <div class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
             <div class="flex flex-wrap items-center justify-between gap-3">
                 <p id="patient-call-join-text" class="text-sm font-medium text-emerald-900"></p>
@@ -244,8 +269,8 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
     </div>
 
     {{-- Page header --}}
-    <div class="border-b border-slate-200/80 bg-white px-4 py-5 sm:px-6 lg:px-8">
-        <div class="mx-auto flex max-w-5xl items-start justify-between gap-4">
+    <div class="border-b border-zinc-200/80 bg-white px-4 py-5 sm:px-6">
+        <div class="flex w-full items-start justify-between gap-4">
             <div class="min-w-0">
                 <flux:heading size="xl" class="font-semibold text-[#10B981]">{{ __('patient.appointments.title') }}</flux:heading>
                 <flux:text class="mt-1 text-sm text-zinc-500">{{ __('patient.appointments.subtitle') }}</flux:text>
@@ -261,7 +286,7 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
         </div>
     </div>
 
-    <div class="mx-auto max-w-5xl space-y-5 px-4 py-6 lg:space-y-6 lg:px-8 lg:py-8">
+    <div class="space-y-5 lg:space-y-6">
         {{-- Book CTA — soft vertical 50/50 (top + bottom) --}}
         <a
             href="{{ route('patient.schedule.filter') }}"

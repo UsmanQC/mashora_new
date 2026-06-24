@@ -21,7 +21,6 @@
             <nav class="flex flex-1 flex-col gap-1 px-2 py-4">
                 @include('partials.doctor-sidebar-nav')
             </nav>
-            <div class="border-t border-white/10 p-3"></div>
         </aside>
 
         <div class="flex min-h-svh min-w-0 flex-col lg:ps-64">

@@ -3,14 +3,14 @@
     $showLabel = $showLabel ?? false;
 
     $activeClasses = match ($variant) {
-        'chrome' => 'bg-white text-slate-900 shadow-sm ring-1 ring-slate-200/80',
+        'chrome' => 'bg-white text-zinc-900 shadow-sm ring-1 ring-zinc-200/80',
         'header', 'sidebar' => 'bg-[#047857] text-white shadow-sm ring-1 ring-white/20',
         'guest' => 'bg-[#10B981]/10 text-[#10B981] ring-1 ring-[#10B981]/20',
         default => 'bg-[#10B981] text-white shadow-sm',
     };
 
     $inactiveClasses = match ($variant) {
-        'chrome' => 'text-slate-600 hover:text-slate-900',
+        'chrome' => 'text-zinc-600 hover:text-zinc-900',
         'header', 'sidebar' => 'bg-white/15 text-white hover:bg-white/25',
         'guest' => 'text-zinc-600 hover:text-zinc-900',
         default => 'bg-[#10B981]/10 text-[#10B981] hover:bg-[#10B981]/15',

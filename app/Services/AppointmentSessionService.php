@@ -24,6 +24,10 @@ final class AppointmentSessionService
 
     public function canPatientJoin(Appointment $appointment): bool
     {
+        if ($appointment->is_follow_up) {
+            return false;
+        }
+
         return (string) $appointment->status === 'in_process';
     }
 

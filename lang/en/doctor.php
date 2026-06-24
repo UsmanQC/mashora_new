@@ -194,20 +194,24 @@ return [
         'status' => 'Status',
         'actions' => 'Actions',
         'cancel_refund' => 'Cancel & refund',
+        'cancel_appointment' => 'Cancel',
         'cancel_confirm' => 'Cancel this appointment and refund the full amount to the patient\'s wallet?',
         'cancel_modal' => [
             'title' => 'Cancel this appointment?',
             'body' => 'The patient will receive a full refund to their wallet. This cannot be undone.',
+            'body_no_refund' => 'The patient will be notified. No refund applies because this session is free. This cannot be undone.',
             'confirm' => 'Yes, cancel & refund',
+            'confirm_no_refund' => 'Yes, cancel appointment',
             'confirming' => 'Cancelling…',
             'dismiss' => 'Keep appointment',
             'refund_note' => 'Refund amount: :amount SAR',
         ],
         'cancel_refunded' => 'Appointment cancelled. The amount was refunded to the patient\'s wallet.',
+        'cancel_success' => 'Appointment cancelled.',
         'cancel_not_allowed' => 'This appointment can no longer be cancelled.',
         'open_session' => 'Open session',
         'view_session' => 'View session',
-        'follow_up_pending' => 'Follow-up pending',
+        'follow_up_pending' => 'Upcoming Follow Ups',
         'starts_in' => 'Starts in :time',
         'starts_in_label' => 'Starts in',
         'ready_to_start' => 'Ready now',
@@ -224,7 +228,8 @@ return [
         'cancelled' => 'Cancelled',
         'rescheduled' => 'Rescheduled',
         'not_attended' => 'Missed',
-        'pending_follow_up' => 'Follow-up pending',
+        'pending_follow_up' => 'Upcoming Follow Ups',
+        'follow_up' => 'Follow Up',
     ],
 
     'card' => [
@@ -271,8 +276,7 @@ return [
         'tab_diagnosis' => 'Diagnosis',
         'tab_prescription' => 'Prescription',
         'tab_conversation' => 'Conversation',
-        'tab_follow_up' => 'Follow-up',
-        'tab_reschedule' => 'Reschedule',
+        'tab_follow_up' => 'Follow Up',
         'conversation_placeholder' => 'In-session messaging with the patient will appear here.',
     ],
 
@@ -293,8 +297,8 @@ return [
     ],
 
     'follow_up' => [
-        'title' => 'Schedule follow-up appointment',
-        'subtitle' => 'Offer a free follow-up within :days days of this session, using your available working hours.',
+        'title' => 'Follow Up',
+        'subtitle' => 'Offer one free follow-up per session within :days days. The patient is not charged.',
         'date_label' => 'Follow-up date',
         'date_window_hint' => 'Choose a date by :max (within :days days of the original session).',
         'time_label' => 'Available time',
@@ -305,6 +309,7 @@ return [
         'success' => 'Free follow-up invitation sent for :date at :time.',
         'slot_unavailable' => 'That time slot is no longer available.',
         'already_pending' => 'A follow-up invitation is already waiting for this patient.',
+        'already_scheduled' => 'This session already has a follow-up appointment. Only one follow-up is allowed per session.',
         'parent_not_eligible' => 'Mark this session as completed before sending a follow-up invitation.',
         'patient_missing' => 'This appointment has no linked patient account.',
         'date_outside_window' => 'Follow-up must be within :days days of the original session.',
@@ -312,8 +317,10 @@ return [
         'free_hint' => 'Follow-up sessions are complimentary for the patient.',
         'complete_session_first' => 'Complete this session first, then you can invite the patient to a follow-up.',
         'pending_title' => 'Follow-up invitation sent',
-        'pending_body' => 'Waiting for the patient to confirm. You can send a new invitation only after this one is resolved.',
+        'pending_body' => 'Waiting for the patient to confirm this one-time follow-up invitation.',
         'pending_status' => 'Awaiting patient confirmation',
+        'scheduled_title' => 'Follow-up already scheduled',
+        'scheduled_body' => 'This session already includes a follow-up appointment. Only one follow-up is allowed per session.',
     ],
 
     'medical_history' => [
@@ -439,5 +446,12 @@ return [
         'session_remaining_label' => 'Time left',
         'session_not_started' => 'Not started',
         'live' => 'Live',
+        'chat_open_after_completed' => 'Session completed. Chat stays open until :date for follow-up messages.',
+        'chat_closed_after_window' => 'Chat closed after the 14-day follow-up period.',
+    ],
+
+    'notifications' => [
+        'chat_message_title' => 'New message from :patient',
+        'chat_message_body' => ':preview',
     ],
 ];

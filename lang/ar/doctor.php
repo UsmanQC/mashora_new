@@ -195,20 +195,24 @@ return [
         'status' => 'الحالة',
         'actions' => 'الإجراءات',
         'cancel_refund' => 'إلغاء واسترداد',
+        'cancel_appointment' => 'إلغاء',
         'cancel_confirm' => 'إلغاء هذا الموعد واسترداد كامل المبلغ إلى محفظة المريض؟',
         'cancel_modal' => [
             'title' => 'إلغاء هذا الموعد؟',
             'body' => 'سيسترد المريض كامل المبلغ إلى محفظته. لا يمكن التراجع عن هذا الإجراء.',
+            'body_no_refund' => 'سيتم إشعار المريض. لا يوجد استرداد لأن هذه الجلسة مجانية. لا يمكن التراجع عن هذا الإجراء.',
             'confirm' => 'نعم، إلغاء واسترداد',
+            'confirm_no_refund' => 'نعم، إلغاء الموعد',
             'confirming' => 'جاري الإلغاء…',
             'dismiss' => 'الإبقاء على الموعد',
             'refund_note' => 'مبلغ الاسترداد: :amount ر.س',
         ],
         'cancel_refunded' => 'تم إلغاء الموعد واسترداد المبلغ إلى محفظة المريض.',
+        'cancel_success' => 'تم إلغاء الموعد.',
         'cancel_not_allowed' => 'لم يعد بالإمكان إلغاء هذا الموعد.',
         'open_session' => 'فتح الجلسة',
         'view_session' => 'عرض الجلسة',
-        'follow_up_pending' => 'متابعة قيد الانتظار',
+        'follow_up_pending' => 'متابعات قادمة',
         'starts_in' => 'يبدأ خلال :time',
         'starts_in_label' => 'يبدأ خلال',
         'ready_to_start' => 'جاهز الآن',
@@ -225,7 +229,8 @@ return [
         'cancelled' => 'ملغاة',
         'rescheduled' => 'معاد جدولتها',
         'not_attended' => 'فائت',
-        'pending_follow_up' => 'متابعة قيد الانتظار',
+        'pending_follow_up' => 'متابعات قادمة',
+        'follow_up' => 'متابعة',
     ],
 
     'card' => [
@@ -272,8 +277,7 @@ return [
         'tab_diagnosis' => 'التشخيص',
         'tab_prescription' => 'الوصفة',
         'tab_conversation' => 'المحادثة',
-        'tab_follow_up' => 'موعد متابعة',
-        'tab_reschedule' => 'إعادة الجدولة',
+        'tab_follow_up' => 'متابعة',
         'conversation_placeholder' => 'ستظهر هنا الرسائل أثناء الجلسة مع المريض.',
     ],
 
@@ -294,8 +298,8 @@ return [
     ],
 
     'follow_up' => [
-        'title' => 'جدولة موعد متابعة',
-        'subtitle' => 'قدّم متابعة مجانية خلال :days يومًا من هذه الجلسة، حسب أوقات عملك المتاحة.',
+        'title' => 'متابعة',
+        'subtitle' => 'قدّم متابعة مجانية واحدة لكل جلسة خلال :days يومًا. لا يُفرض على المريض أي رسوم.',
         'date_label' => 'تاريخ المتابعة',
         'date_window_hint' => 'اختر تاريخًا حتى :max (خلال :days يومًا من الجلسة الأصلية).',
         'time_label' => 'الوقت المتاح',
@@ -306,6 +310,7 @@ return [
         'success' => 'تم إرسال دعوة المتابعة المجانية في :date الساعة :time.',
         'slot_unavailable' => 'هذا الوقت لم يعد متاحًا.',
         'already_pending' => 'توجد دعوة متابعة بانتظار هذا المريض بالفعل.',
+        'already_scheduled' => 'تتضمن هذه الجلسة موعد متابعة بالفعل. يُسمح بمتابعة واحدة فقط لكل جلسة.',
         'parent_not_eligible' => 'أكمل هذه الجلسة أولًا قبل إرسال دعوة متابعة.',
         'patient_missing' => 'لا يوجد حساب مريض مرتبط بهذا الموعد.',
         'date_outside_window' => 'يجب أن تكون المتابعة خلال :days يومًا من الجلسة الأصلية.',
@@ -313,8 +318,10 @@ return [
         'free_hint' => 'جلسات المتابعة مجانية للمريض.',
         'complete_session_first' => 'أكمل الجلسة أولًا، ثم يمكنك دعوة المريض لموعد متابعة.',
         'pending_title' => 'تم إرسال دعوة المتابعة',
-        'pending_body' => 'بانتظار تأكيد المريض. يمكنك إرسال دعوة جديدة بعد إغلاق هذه الدعوة.',
+        'pending_body' => 'بانتظار تأكيد المريض لهذه الدعوة لمرة واحدة.',
         'pending_status' => 'بانتظار تأكيد المريض',
+        'scheduled_title' => 'تم جدولة المتابعة مسبقًا',
+        'scheduled_body' => 'تتضمن هذه الجلسة موعد متابعة بالفعل. يُسمح بمتابعة واحدة فقط لكل جلسة.',
     ],
 
     'medical_history' => [
@@ -440,5 +447,12 @@ return [
         'session_remaining_label' => 'المتبقي',
         'session_not_started' => 'لم تبدأ',
         'live' => 'مباشر',
+        'chat_open_after_completed' => 'اكتملت الجلسة. تبقى المحادثة مفتوحة حتى :date لرسائل المتابعة.',
+        'chat_closed_after_window' => 'أُغلقت المحادثة بعد فترة المتابعة البالغة 14 يومًا.',
+    ],
+
+    'notifications' => [
+        'chat_message_title' => 'رسالة جديدة من :patient',
+        'chat_message_body' => ':preview',
     ],
 ];

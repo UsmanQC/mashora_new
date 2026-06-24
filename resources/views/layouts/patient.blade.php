@@ -2,7 +2,7 @@
 <html
     lang="{{ str_replace('_', '-', app()->getLocale()) }}"
     dir="{{ app()->getLocale() === 'ar' ? 'rtl' : 'ltr' }}"
-    class="scheme-light bg-slate-100"
+    class="scheme-light bg-[#F3F5F9]"
 >
     <head>
         <meta name="application-name" content="{{ config('app.name') }}" />
@@ -15,7 +15,7 @@
         @include('partials.head')
     </head>
     <body
-        class="min-h-svh bg-slate-100 pb-24 antialiased sm:flex sm:min-h-svh sm:pb-0"
+        class="min-h-svh bg-[#F3F5F9] pb-24 antialiased sm:flex sm:min-h-svh sm:pb-0"
     >
         {{-- Mobile header — same blue chrome as legacy sidebar; guest signup via dock → /patient/phone --}}
         <header
@@ -29,26 +29,28 @@
             @endauth
         </header>
 
-        {{-- Desktop / tablet — legacy sidebar: solid blue + white icons + navy active item --}}
+        {{-- Desktop / tablet sidebar — same width as doctor portal --}}
         <aside
-            class="sticky top-0 z-40 hidden h-svh w-[17rem] shrink-0 flex-col border-e border-[#10B981] bg-[#10B981] text-white shadow-lg shadow-black/10 sm:flex"
+            class="sticky top-0 z-40 hidden h-svh w-64 shrink-0 flex-col bg-[#10B981] text-white shadow-lg sm:flex"
             aria-label="{{ __('patient.sidebar_label') }}"
         >
-            <div class="border-b border-white/15 px-4 pb-4 pt-5">
+            <div class="border-b border-white/10 px-4 pb-5 pt-5">
                 @include('partials.patient-brand-strip', ['density' => 'sidebar'])
             </div>
 
-            <nav class="flex-1 overflow-y-auto px-2.5 pb-3 pt-2" aria-label="{{ __('patient.nav.label') }}">
+            <nav class="flex flex-1 flex-col gap-1 overflow-y-auto px-2 py-4" aria-label="{{ __('patient.nav.label') }}">
                 @include('partials.patient-dock-buttons', ['orientation' => 'vertical', 'theme' => 'legacy'])
             </nav>
         </aside>
 
-        <main class="relative min-h-svh min-w-0 flex-1">
+        <main class="relative flex min-h-svh min-w-0 flex-1 flex-col">
             @auth
                 <livewire:patient-portal-chrome-bar />
                 <livewire:patient-mood-picker-modal />
             @endauth
-            {{ $slot }}
+            <div class="mx-auto w-full max-w-6xl flex-1 px-4 py-6 pb-28 sm:px-6 lg:pb-8">
+                {{ $slot }}
+            </div>
         </main>
 
         {{-- Mobile dock — chromed like legacy sidebar --}}

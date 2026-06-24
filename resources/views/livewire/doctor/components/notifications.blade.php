@@ -23,17 +23,35 @@
 
             <div class="max-h-80 overflow-auto p-2">
                 @forelse ($this->notifications as $notification)
-                    <div @class([
-                        'mb-2 rounded-lg border p-2 last:mb-0',
-                        'border-emerald-200 bg-emerald-50/40' => ! $notification->read_at,
-                        'border-zinc-200 bg-white' => $notification->read_at,
-                    ])>
-                        <flux:text class="text-sm font-medium text-zinc-900">{{ $notification->title ?: __('Notification') }}</flux:text>
-                        @if ($notification->message)
-                            <flux:text class="mt-0.5 line-clamp-2 text-xs text-zinc-600">{{ $notification->message }}</flux:text>
-                        @endif
-                        <flux:text class="mt-1 text-[11px] text-zinc-500">{{ $notification->created_at?->diffForHumans() }}</flux:text>
-                    </div>
+                    @if (filled($notification->action))
+                        <a
+                            href="{{ $notification->action }}"
+                            wire:navigate
+                            @class([
+                                'mb-2 block rounded-lg border p-2 last:mb-0 transition hover:border-[#10B981]/40',
+                                'border-emerald-200 bg-emerald-50/40' => ! $notification->read_at,
+                                'border-zinc-200 bg-white' => $notification->read_at,
+                            ])
+                        >
+                            <flux:text class="text-sm font-medium text-zinc-900">{{ $notification->title ?: __('Notification') }}</flux:text>
+                            @if ($notification->message)
+                                <flux:text class="mt-0.5 line-clamp-2 text-xs text-zinc-600">{{ $notification->message }}</flux:text>
+                            @endif
+                            <flux:text class="mt-1 text-[11px] text-zinc-500">{{ $notification->created_at?->diffForHumans() }}</flux:text>
+                        </a>
+                    @else
+                        <div @class([
+                            'mb-2 rounded-lg border p-2 last:mb-0',
+                            'border-emerald-200 bg-emerald-50/40' => ! $notification->read_at,
+                            'border-zinc-200 bg-white' => $notification->read_at,
+                        ])>
+                            <flux:text class="text-sm font-medium text-zinc-900">{{ $notification->title ?: __('Notification') }}</flux:text>
+                            @if ($notification->message)
+                                <flux:text class="mt-0.5 line-clamp-2 text-xs text-zinc-600">{{ $notification->message }}</flux:text>
+                            @endif
+                            <flux:text class="mt-1 text-[11px] text-zinc-500">{{ $notification->created_at?->diffForHumans() }}</flux:text>
+                        </div>
+                    @endif
                 @empty
                     <div class="rounded-lg border border-dashed border-zinc-300 bg-zinc-50 p-4 text-center">
                         <flux:text class="text-sm text-zinc-500">{{ __('No notifications yet.') }}</flux:text>

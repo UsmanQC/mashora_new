@@ -191,7 +191,7 @@ new #[Layout('layouts::patient')] #[Title('Schedule a session')] class extends C
 }; ?>
 
 <div class="pb-28 sm:pb-10">
-    <div class="mx-auto max-w-5xl space-y-5 px-4 py-6 lg:space-y-6 lg:px-8 lg:py-8">
+    <div class="w-full space-y-5 lg:space-y-6">
         {{-- Hero — soft vertical 50/50 (top + bottom) --}}
         <header class="grid min-h-[11rem] grid-rows-2 overflow-hidden rounded-2xl border border-emerald-100/90 bg-white shadow-sm sm:min-h-[10.5rem]">
             <div class="flex items-center gap-4 bg-emerald-50/70 p-4 sm:p-5">

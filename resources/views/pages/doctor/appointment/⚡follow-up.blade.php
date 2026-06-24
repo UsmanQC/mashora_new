@@ -13,7 +13,7 @@ use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
-new #[Layout('layouts::doctor')] #[Title('Follow-up appointment')] class extends Component
+new #[Layout('layouts::doctor')] #[Title('Follow Up')] class extends Component
 {
     public Appointment $appointment;
 
@@ -152,6 +152,24 @@ new #[Layout('layouts::doctor')] #[Title('Follow-up appointment')] class extends
         return app(FollowUpAppointmentService::class)->pendingFollowUpFor($this->appointment);
     }
 
+    public function getExistingFollowUpProperty(): ?Appointment
+    {
+        return app(FollowUpAppointmentService::class)->existingFollowUpFor($this->appointment);
+    }
+
+    public function followUpStatusLabel(Appointment $appointment): string
+    {
+        if ($appointment->isPendingFollowUp()) {
+            return __('doctor.appointment_status.pending_follow_up');
+        }
+
+        if ($appointment->is_follow_up) {
+            return __('doctor.appointment_status.follow_up');
+        }
+
+        return __('doctor.appointment_status.'.$appointment->status);
+    }
+
     public function isSelectedDateToday(): bool
     {
         if ($this->newDate === '') {
@@ -235,6 +253,18 @@ new #[Layout('layouts::doctor')] #[Title('Follow-up appointment')] class extends
                         {{ __('doctor.follow_up.pending_status') }} —
                         {{ $this->pendingFollowUp->appointment_date?->format('d/m/Y') }}
                         {{ $this->displaySlot(substr((string) $this->pendingFollowUp->start_time, 0, 5)) }}
+                    </p>
+                </div>
+            </flux:callout>
+        @elseif ($this->existingFollowUp)
+            <flux:callout variant="warning" icon="information-circle" class="mt-6">
+                <div class="space-y-2">
+                    <p class="font-semibold">{{ __('doctor.follow_up.scheduled_title') }}</p>
+                    <p class="text-sm">{{ __('doctor.follow_up.scheduled_body') }}</p>
+                    <p class="text-sm font-medium">
+                        {{ $this->existingFollowUp->appointment_date?->format('d/m/Y') }}
+                        {{ $this->displaySlot(substr((string) $this->existingFollowUp->start_time, 0, 5)) }}
+                        — {{ $this->followUpStatusLabel($this->existingFollowUp) }}
                     </p>
                 </div>
             </flux:callout>

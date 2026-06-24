@@ -188,6 +188,93 @@ test('patient confirms free follow-up without payment', function () {
         ->exists())->toBeTrue();
 });
 
+test('doctor appointments list shows follow up badge for confirmed follow up sessions', function () {
+    app()->setLocale('en');
+
+    $doctor = seedDoctorWithSlots();
+    $user = User::factory()->create();
+
+    $parent = Appointment::factory()->create([
+        'doctor_id' => $doctor->id,
+        'user_id' => $user->id,
+        'status' => 'completed',
+        'duration' => 30,
+        'patient_name' => $user->name,
+        'appointment_date' => now()->format('Y-m-d'),
+        'start_time' => '10:00:00',
+        'end_time' => '10:30:00',
+    ]);
+
+    $followUp = Appointment::factory()->create([
+        'doctor_id' => $doctor->id,
+        'user_id' => $user->id,
+        'parent_id' => $parent->id,
+        'is_follow_up' => true,
+        'status' => 'new',
+        'duration' => 30,
+        'appointment_date' => now()->addDays(7)->format('Y-m-d'),
+        'start_time' => '10:00:00',
+        'end_time' => '10:30:00',
+        'patient_name' => $user->name,
+        'patient_phone' => $user->phone,
+        'amount' => 0,
+        'total' => 0,
+        'patient_confirmed_at' => now(),
+    ]);
+
+    $this->actingAs($doctor, 'doctor');
+
+    Livewire::test('pages::doctor.appointments')
+        ->assertSee(__('doctor.appointment_status.follow_up'), false);
+});
+
+test('doctor cancelling free follow up shows cancel without refund wording', function () {
+    app()->setLocale('en');
+
+    $doctor = seedDoctorWithSlots();
+    $user = User::factory()->create();
+
+    $parent = Appointment::factory()->create([
+        'doctor_id' => $doctor->id,
+        'user_id' => $user->id,
+        'status' => 'completed',
+        'duration' => 30,
+        'patient_name' => $user->name,
+        'appointment_date' => now()->format('Y-m-d'),
+        'start_time' => '10:00:00',
+        'end_time' => '10:30:00',
+    ]);
+
+    $followUp = Appointment::factory()->create([
+        'doctor_id' => $doctor->id,
+        'user_id' => $user->id,
+        'parent_id' => $parent->id,
+        'is_follow_up' => true,
+        'status' => 'new',
+        'duration' => 30,
+        'appointment_date' => now()->addDays(7)->format('Y-m-d'),
+        'start_time' => '10:00:00',
+        'end_time' => '10:30:00',
+        'patient_name' => $user->name,
+        'patient_phone' => $user->phone,
+        'amount' => 0,
+        'total' => 0,
+        'patient_confirmed_at' => now(),
+    ]);
+
+    $this->actingAs($doctor, 'doctor');
+
+    Livewire::test('pages::doctor.appointments')
+        ->assertSee(__('doctor.appointments.cancel_appointment'), false)
+        ->assertDontSee(__('doctor.appointments.cancel_refund'), false)
+        ->call('promptCancelAppointment', $followUp->id)
+        ->call('confirmCancelAppointment')
+        ->assertHasNoErrors();
+
+    expect($followUp->fresh()->status)->toBe('cancelled')
+        ->and((float) $user->fresh()->balanceFloat)->toBe(0.0);
+});
+
 test('follow up service rejects scheduling before session is completed', function () {
     $doctor = seedDoctorWithSlots();
     $user = User::factory()->create();
@@ -243,6 +330,7 @@ test('follow up service rejects duplicate pending invitation', function () {
         'doctor_id' => $doctor->id,
         'user_id' => $user->id,
         'parent_id' => $parent->id,
+        'is_follow_up' => true,
         'status' => 'pending_follow_up',
         'duration' => 30,
         'appointment_date' => now()->addDays(7)->format('Y-m-d'),
@@ -256,4 +344,84 @@ test('follow up service rejects duplicate pending invitation', function () {
 
     expect(fn () => $service->create($doctor, $parent, now()->addDays(8)->format('Y-m-d'), '10:00'))
         ->toThrow(ValidationException::class);
+});
+
+test('follow up service rejects second follow up after first is booked', function () {
+    $doctor = seedDoctorWithSlots();
+    $user = User::factory()->create();
+
+    $parent = Appointment::factory()->create([
+        'doctor_id' => $doctor->id,
+        'user_id' => $user->id,
+        'status' => 'completed',
+        'duration' => 30,
+        'appointment_date' => now()->format('Y-m-d'),
+        'start_time' => '10:00:00',
+        'end_time' => '10:30:00',
+    ]);
+
+    Appointment::factory()->create([
+        'doctor_id' => $doctor->id,
+        'user_id' => $user->id,
+        'parent_id' => $parent->id,
+        'is_follow_up' => true,
+        'status' => 'new',
+        'duration' => 30,
+        'appointment_date' => now()->addDays(7)->format('Y-m-d'),
+        'start_time' => '11:00:00',
+        'end_time' => '11:30:00',
+        'amount' => 0,
+        'total' => 0,
+        'patient_confirmed_at' => now(),
+    ]);
+
+    $service = app(FollowUpAppointmentService::class);
+
+    expect($service->parentCanScheduleFollowUp($parent))->toBeFalse();
+
+    expect(fn () => $service->create($doctor, $parent, now()->addDays(8)->format('Y-m-d'), '10:00'))
+        ->toThrow(ValidationException::class);
+});
+
+test('legacy doctor reschedule url redirects to follow up page', function () {
+    $doctor = seedDoctorWithSlots();
+    $user = User::factory()->create();
+
+    $appointment = Appointment::factory()->create([
+        'doctor_id' => $doctor->id,
+        'user_id' => $user->id,
+        'status' => 'completed',
+        'duration' => 30,
+        'appointment_date' => now()->format('Y-m-d'),
+        'start_time' => '10:00:00',
+        'end_time' => '10:30:00',
+    ]);
+
+    $this->actingAs($doctor, 'doctor')
+        ->get(route('doctor.appointments.reschedule', $appointment))
+        ->assertRedirect(route('doctor.appointments.follow-up', $appointment));
+});
+
+test('completed appointment workspace shows follow up tab not reschedule', function () {
+    app()->setLocale('en');
+
+    $doctor = seedDoctorWithSlots();
+    $user = User::factory()->create();
+
+    $appointment = Appointment::factory()->create([
+        'doctor_id' => $doctor->id,
+        'user_id' => $user->id,
+        'status' => 'completed',
+        'duration' => 30,
+        'appointment_date' => now()->format('Y-m-d'),
+        'start_time' => '10:00:00',
+        'end_time' => '10:30:00',
+    ]);
+
+    $this->actingAs($doctor, 'doctor')
+        ->get(route('doctor.appointments.follow-up', $appointment))
+        ->assertSuccessful()
+        ->assertSee(__('doctor.workspace.tab_follow_up'), false)
+        ->assertSee(__('doctor.follow_up.free_hint'), false)
+        ->assertDontSee(__('doctor.reschedule.title'), false);
 });

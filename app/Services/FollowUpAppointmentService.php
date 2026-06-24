@@ -31,10 +31,16 @@ final class FollowUpAppointmentService
     public function windowEnd(Appointment $parent): CarbonInterface
     {
         $timezone = config('app.timezone');
-        $sessionDay = $parent->sessionStartsAt()?->copy()->timezone($timezone)->startOfDay()
-            ?? ($parent->appointment_date !== null
-                ? Carbon::parse($parent->appointment_date, $timezone)->startOfDay()
-                : now($timezone)->startOfDay());
+
+        if ($parent->appointment_date !== null) {
+            $sessionDay = $parent->appointment_date instanceof Carbon
+                ? $parent->appointment_date->copy()->timezone($timezone)->startOfDay()
+                : Carbon::parse($parent->appointment_date, $timezone)->startOfDay();
+        } elseif ($parent->sessionStartsAt() !== null) {
+            $sessionDay = $parent->sessionStartsAt()->copy()->timezone($timezone)->startOfDay();
+        } else {
+            $sessionDay = now($timezone)->startOfDay();
+        }
 
         return $sessionDay->copy()->addDays(self::windowDays());
     }
@@ -85,14 +91,9 @@ final class FollowUpAppointmentService
             ]);
         }
 
-        $existingPending = Appointment::query()
-            ->where('parent_id', $parent->id)
-            ->where('status', 'pending_follow_up')
-            ->exists();
-
-        if ($existingPending) {
+        if ($this->existingFollowUpFor($parent) !== null) {
             throw ValidationException::withMessages([
-                'selectedTime' => __('doctor.follow_up.already_pending'),
+                'selectedTime' => __('doctor.follow_up.already_scheduled'),
             ]);
         }
 
@@ -139,9 +140,17 @@ final class FollowUpAppointmentService
 
     public function pendingFollowUpFor(Appointment $parent): ?Appointment
     {
+        $followUp = $this->existingFollowUpFor($parent);
+
+        return $followUp?->isPendingFollowUp() ? $followUp : null;
+    }
+
+    public function existingFollowUpFor(Appointment $parent): ?Appointment
+    {
         return Appointment::query()
             ->where('parent_id', $parent->id)
-            ->where('status', 'pending_follow_up')
+            ->where('is_follow_up', true)
+            ->where('status', '!=', 'cancelled')
             ->latest('id')
             ->first();
     }
@@ -180,6 +189,10 @@ final class FollowUpAppointmentService
         }
 
         if ($parent->parent_id !== null) {
+            return false;
+        }
+
+        if ($this->existingFollowUpFor($parent) !== null) {
             return false;
         }
 

@@ -405,7 +405,7 @@ new #[Layout('layouts::patient')] #[Title('Payment')] class extends Component
 }; ?>
 
 <div class="pb-28 sm:pb-10">
-    <div class="mx-auto max-w-5xl space-y-5 px-4 py-6 lg:space-y-6 lg:px-8 lg:py-8">
+    <div class="w-full space-y-5 lg:space-y-6">
         @if (session('flash_payment'))
             <p class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">{{ session('flash_payment') }}</p>
         @endif

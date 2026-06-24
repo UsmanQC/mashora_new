@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Doctor\DoctorAppointmentRealtimeController;
 use App\Http\Controllers\Doctor\DoctorSessionController;
+use App\Models\Appointment;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Route;
 
@@ -72,10 +73,9 @@ Route::middleware('auth:doctor')->group(function (): void {
                 'appointments/{appointment}/follow-up',
                 'pages::doctor.appointment.follow-up',
             )->name('appointments.follow-up');
-            Route::livewire(
-                'appointments/{appointment}/reschedule',
-                'pages::doctor.appointment.reschedule',
-            )->name('appointments.reschedule');
+            Route::get('appointments/{appointment}/reschedule', function (Appointment $appointment) {
+                return redirect()->route('doctor.appointments.follow-up', $appointment);
+            })->name('appointments.reschedule');
             Route::post(
                 'appointments/{appointment}/realtime/notify-call',
                 [DoctorAppointmentRealtimeController::class, 'notifyCall'],

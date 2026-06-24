@@ -11,6 +11,11 @@ return [
 
     'portal_greeting' => 'Welcome back, :name',
     'portal_greeting_label' => 'Welcome back',
+
+    'header' => [
+        'welcome' => 'Welcome, :name',
+    ],
+
     'mood_feeling_cta' => 'How are you today?',
     'mood_check_in_aria' => 'Share how you are feeling today',
     'portal_toolbar_aria' => 'Patient portal actions',
@@ -68,7 +73,7 @@ return [
         'privacy' => 'Privacy policy',
         'privacy_sub' => 'How we protect your data',
         'locale_en' => 'EN',
-        'locale_ar_short' => 'عربي',
+        'locale_ar_short' => 'AR',
         'sign_out' => 'Sign out',
         'no_record_found' => 'No record found',
         'grid_aria' => 'Patient menu shortcuts',
@@ -143,13 +148,16 @@ return [
         'empty_cancelled' => 'Cancelled appointments will appear here if any.',
         'start_session' => 'Start session',
         'join_session' => 'Join session',
+        'open_chat' => 'Open chat',
+        'chat_open_until_card' => 'Chat stays open until :date.',
         'waiting_for_doctor' => 'Waiting for doctor to start',
         'waiting_for_doctor_hint' => 'You will be able to join as soon as your specialist opens the session.',
         'date_label' => 'Date',
         'time_label' => 'Time',
         'chat_locked_until_doctor_starts' => 'Your specialist will start the session. You can join the chat and call once it begins.',
         'session_doctor_must_start' => 'The specialist must start the session first.',
-        'session_closed' => 'This session is completed. The chat is now closed.',
+        'session_closed' => 'This session is completed. The chat closed after the 14-day follow-up period.',
+        'chat_open_after_completed' => 'Session completed. Chat stays open until :date for follow-up messages.',
         'status_new' => 'Waiting to start',
         'starts_in' => 'Starts in :time',
         'starts_in_label' => 'Starts in',
@@ -247,6 +255,9 @@ return [
         'missed_message' => 'Dr. :doctor did not attend your session on :date at :time. Open your missed appointments to reschedule or request a :amount SAR refund.',
         'start_reminder_title' => 'Session starting soon',
         'start_reminder_message' => 'Your session with :doctor starts at :time on :date.',
+        'chat_message_title' => 'New message from Dr. :doctor',
+        'chat_message_body' => ':preview',
+        'chat_message_empty' => 'Sent you a message.',
     ],
 
     'missed' => [
@@ -275,6 +286,7 @@ return [
         'title' => 'Follow-up appointment',
         'subtitle' => 'Your specialist scheduled a follow-up session for you.',
         'badge' => 'Awaiting your confirmation',
+        'confirmed_badge' => 'Follow Up',
         'doctor' => 'Specialist',
         'date' => 'Date',
         'time' => 'Time',

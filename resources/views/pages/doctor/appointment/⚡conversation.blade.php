@@ -49,7 +49,7 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
 
     public function sendMessage(): void
     {
-        if ($this->appointment->status !== 'in_process') {
+        if (! $this->appointment->isChatOpen()) {
             return;
         }
 
@@ -308,14 +308,14 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                 <div class="shrink-0 border-t border-zinc-200/90 bg-white px-4 py-3 pb-[max(0.85rem,env(safe-area-inset-bottom))] sm:px-5 lg:pb-3">
                     <form
                         wire:submit="sendMessage"
-                        class="mx-auto flex max-w-4xl items-end gap-2 rounded-2xl border border-zinc-200/90 bg-gradient-to-r from-zinc-50/80 to-zinc-100/70 p-1.5 shadow-inner shadow-zinc-200/20 ring-1 ring-zinc-100/80 @if ($appointment->status !== 'in_process') pointer-events-none opacity-55 @endif"
+                        class="mx-auto flex max-w-4xl items-end gap-2 rounded-2xl border border-zinc-200/90 bg-gradient-to-r from-zinc-50/80 to-zinc-100/70 p-1.5 shadow-inner shadow-zinc-200/20 ring-1 ring-zinc-100/80 @if (! $appointment->isChatOpen()) pointer-events-none opacity-55 @endif"
                     >
                         <div class="min-w-0 flex-1">
                             <flux:input
                                 wire:model="draft"
                                 type="text"
                                 :placeholder="__('doctor.conversation.type_message')"
-                                :disabled="$appointment->status !== 'in_process'"
+                                :disabled="! $appointment->isChatOpen()"
                                 class="!rounded-xl !border-0 !bg-transparent !shadow-none"
                             />
                         </div>
@@ -325,13 +325,21 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                             icon="paper-airplane"
                             class="shrink-0 !rounded-xl shadow-md shadow-[#047857]/25"
                             wire:loading.attr="disabled"
-                            :disabled="$appointment->status !== 'in_process'"
+                            :disabled="! $appointment->isChatOpen()"
                         >
                             <span class="hidden sm:inline">{{ __('doctor.conversation.send') }}</span>
                         </flux:button>
                     </form>
                     @if (in_array($appointment->status, ['new', 'rescheduled'], true))
                         <p class="mt-2.5 text-center text-xs text-zinc-500">{{ __('doctor.conversation.chat_locked_until_started') }}</p>
+                    @elseif ($appointment->status === 'completed' && $appointment->isChatOpen())
+                        <p class="mt-2.5 text-center text-xs text-emerald-700">
+                            {{ __('doctor.conversation.chat_open_after_completed', [
+                                'date' => $appointment->chatOpenUntil()->locale(app()->getLocale())->translatedFormat('d M Y'),
+                            ]) }}
+                        </p>
+                    @elseif ($appointment->status === 'completed')
+                        <p class="mt-2.5 text-center text-xs text-zinc-500">{{ __('doctor.conversation.chat_closed_after_window') }}</p>
                     @endif
                 </div>
             </div>

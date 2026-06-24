@@ -29,8 +29,7 @@ test('authenticated patient sees mood chrome on home', function () {
         ->get(route('patient.home'))
         ->assertSuccessful()
         ->assertSee(__('patient.mood_feeling_cta'))
-        ->assertSee(__('patient.portal_greeting_label'), false)
-        ->assertSee('Jane', false);
+        ->assertSee(__('patient.header.welcome', ['name' => 'Jane Smith']), false);
 });
 
 test('patient can save mood with note and share preference', function () {

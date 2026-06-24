@@ -119,6 +119,52 @@ new #[Layout('layouts::doctor')] #[Title('Appointments')] class extends Componen
         return app(AppointmentSessionService::class)->canDoctorStart($appointment);
     }
 
+    public function statusLabelFor(Appointment $appointment): string
+    {
+        if ($appointment->is_follow_up && $appointment->status !== 'pending_follow_up') {
+            return __('doctor.appointment_status.follow_up');
+        }
+
+        return __('doctor.appointment_status.'.$appointment->status);
+    }
+
+    public function statusBadgeClassesFor(Appointment $appointment): string
+    {
+        if ($appointment->is_follow_up && $appointment->status !== 'pending_follow_up') {
+            return 'bg-violet-100 text-violet-700';
+        }
+
+        return match ($appointment->status) {
+            'completed' => 'bg-emerald-100 text-emerald-700',
+            'in_process' => 'bg-amber-100 text-amber-700',
+            'new' => 'bg-sky-100 text-sky-700',
+            'pending_follow_up' => 'bg-violet-100 text-violet-700',
+            'cancelled' => 'bg-rose-100 text-rose-700',
+            'rescheduled' => 'bg-indigo-100 text-indigo-700',
+            'not_attended' => 'bg-orange-100 text-orange-800',
+            default => 'bg-zinc-100 text-zinc-700',
+        };
+    }
+
+    public function cancelRequiresRefund(Appointment $appointment): bool
+    {
+        return (float) $appointment->total > 0;
+    }
+
+    public function cancelActionLabel(Appointment $appointment): string
+    {
+        return $this->cancelRequiresRefund($appointment)
+            ? __('doctor.appointments.cancel_refund')
+            : __('doctor.appointments.cancel_appointment');
+    }
+
+    public function cancelSuccessMessage(Appointment $appointment): string
+    {
+        return $this->cancelRequiresRefund($appointment)
+            ? __('doctor.appointments.cancel_refunded')
+            : __('doctor.appointments.cancel_success');
+    }
+
     /**
      * @return Collection<string, int>
      */
@@ -299,7 +345,7 @@ new #[Layout('layouts::doctor')] #[Title('Appointments')] class extends Componen
         $appointment->refresh()->loadMissing('doctor');
         app(PatientAppointmentNotifier::class)->notifyCancelled($appointment, $doctor);
 
-        Flux::toast(variant: 'success', text: __('doctor.appointments.cancel_refunded'));
+        Flux::toast(variant: 'success', text: $this->cancelSuccessMessage($appointment));
     }
 }; ?>
 
@@ -400,17 +446,8 @@ new #[Layout('layouts::doctor')] #[Title('Appointments')] class extends Componen
                 <tbody class="divide-y divide-zinc-100">
                     @foreach ($this->appointments as $row)
                         @php
-                            $statusClasses = match ($row->status) {
-                                'completed' => 'bg-emerald-100 text-emerald-700',
-                                'in_process' => 'bg-amber-100 text-amber-700',
-                                'new' => 'bg-sky-100 text-sky-700',
-                                'pending_follow_up' => 'bg-violet-100 text-violet-700',
-                                'cancelled' => 'bg-rose-100 text-rose-700',
-                                'rescheduled' => 'bg-indigo-100 text-indigo-700',
-                                'not_attended' => 'bg-orange-100 text-orange-800',
-                                default => 'bg-zinc-100 text-zinc-700',
-                            };
-                            $statusLabel = __('doctor.appointment_status.'.$row->status);
+                            $statusClasses = $this->statusBadgeClassesFor($row);
+                            $statusLabel = $this->statusLabelFor($row);
                             $pendingFollowUp = $this->canScheduleFollowUp($row)
                                 ? $this->pendingFollowUpFor($row)
                                 : null;
@@ -464,21 +501,13 @@ new #[Layout('layouts::doctor')] #[Title('Appointments')] class extends Componen
                                                 {{ __('doctor.appointments.open_session') }}
                                             </span>
                                         </template>
-                                        <a
-                                            href="{{ route('doctor.appointments.reschedule', $row) }}"
-                                            wire:navigate
-                                            class="inline-flex shrink-0 items-center justify-center gap-1 rounded-lg border border-[#047857]/30 bg-white px-2 py-1.5 text-[0.6875rem] font-semibold whitespace-nowrap text-[#047857] transition hover:bg-[#047857]/5"
-                                        >
-                                            <flux:icon name="arrow-path" variant="mini" class="size-3.5 shrink-0" />
-                                            {{ __('doctor.workspace.tab_reschedule') }}
-                                        </a>
                                         <button
                                             type="button"
                                             wire:click="promptCancelAppointment({{ $row->id }})"
                                             class="inline-flex shrink-0 items-center justify-center gap-1 rounded-lg border border-rose-200 bg-rose-50 px-2 py-1.5 text-[0.6875rem] font-semibold whitespace-nowrap text-rose-700 transition hover:bg-rose-100"
                                         >
                                             <flux:icon name="x-circle" variant="mini" class="size-3.5 shrink-0" />
-                                            {{ __('doctor.appointments.cancel_refund') }}
+                                            {{ $this->cancelActionLabel($row) }}
                                         </button>
                                     </div>
                                 @elseif ($this->canScheduleFollowUp($row))
@@ -561,7 +590,11 @@ new #[Layout('layouts::doctor')] #[Title('Appointments')] class extends Componen
             </flux:heading>
 
             <flux:text class="mt-2 text-center text-sm leading-relaxed text-zinc-600">
-                {{ __('doctor.appointments.cancel_modal.body') }}
+                @if ($this->pendingCancelAppointment instanceof \App\Models\Appointment && $this->cancelRequiresRefund($this->pendingCancelAppointment))
+                    {{ __('doctor.appointments.cancel_modal.body') }}
+                @else
+                    {{ __('doctor.appointments.cancel_modal.body_no_refund') }}
+                @endif
             </flux:text>
 
             @if ($this->pendingCancelAppointment instanceof \App\Models\Appointment)
@@ -598,7 +631,11 @@ new #[Layout('layouts::doctor')] #[Title('Appointments')] class extends Componen
                     wire:target="confirmCancelAppointment"
                 >
                     <span wire:loading.remove wire:target="confirmCancelAppointment">
-                        {{ __('doctor.appointments.cancel_modal.confirm') }}
+                        @if ($this->pendingCancelAppointment instanceof \App\Models\Appointment && $this->cancelRequiresRefund($this->pendingCancelAppointment))
+                            {{ __('doctor.appointments.cancel_modal.confirm') }}
+                        @else
+                            {{ __('doctor.appointments.cancel_modal.confirm_no_refund') }}
+                        @endif
                     </span>
                     <span wire:loading wire:target="confirmCancelAppointment">
                         {{ __('doctor.appointments.cancel_modal.confirming') }}

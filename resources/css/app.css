@@ -84,10 +84,10 @@ select:focus[data-flux-control] {
         border-radius: 9999px !important;
     }
 
-    button:not([data-flux-otp-input]):not(.rounded-none):not(.iti__selected-country):not(.iti__country),
-    input[type='submit']:not(.rounded-none),
-    input[type='button']:not(.rounded-none),
-    input[type='reset']:not(.rounded-none) {
+    button:not([data-flux-otp-input]):not(.rounded-none):not(.iti__selected-country):not(.iti__country):not([class*='rounded-']),
+    input[type='submit']:not(.rounded-none):not([class*='rounded-']),
+    input[type='button']:not(.rounded-none):not([class*='rounded-']),
+    input[type='reset']:not(.rounded-none):not([class*='rounded-']) {
         border-radius: 9999px !important;
     }
 

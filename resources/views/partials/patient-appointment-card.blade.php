@@ -3,11 +3,12 @@
     /** @var \Livewire\Component $component */
     $status = (string) $appointment->status;
     $showTimer = $component->shouldShowStartTimer($appointment);
-    $canJoinSession = $status === 'in_process';
-    $awaitingDoctor = in_array($status, ['new', 'rescheduled'], true);
+    $canJoinSession = $status === 'in_process' && ! $appointment->is_follow_up;
+    $canOpenChat = $component->canOpenChat($appointment);
+    $awaitingDoctor = in_array($status, ['new', 'rescheduled'], true) && ! $appointment->is_follow_up;
     $canResolveMissed = $component->canResolveMissed($appointment);
     $hasMissedRefund = $component->hasMissedRefund($appointment);
-    $hasAction = $appointment->status === 'pending_follow_up' || $canJoinSession || $awaitingDoctor || $canResolveMissed || ($appointment->isDoctorMissed() && $hasMissedRefund);
+    $hasAction = $appointment->status === 'pending_follow_up' || $canJoinSession || $canOpenChat || $awaitingDoctor || $canResolveMissed || ($appointment->isDoctorMissed() && $hasMissedRefund);
     $doctorName = $appointment->doctor?->displayName() ?: __('patient.appointments.title');
 @endphp
 
@@ -24,7 +25,7 @@
                     <span class="absolute inline-flex size-full animate-ping rounded-full bg-white/50 opacity-75"></span>
                     <span class="relative inline-flex size-2.5 rounded-full bg-white"></span>
                 </span>
-                <span class="text-sm font-semibold tracking-tight">{{ $component->statusLabel($status) }}</span>
+                <span class="text-sm font-semibold tracking-tight">{{ $component->statusLabelFor($appointment) }}</span>
             </div>
             <div class="flex shrink-0 items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-1 text-xs font-bold tabular-nums backdrop-blur-sm">
                 <flux:icon name="clock" variant="micro" class="size-3.5 opacity-90" />
@@ -57,9 +58,9 @@
                     @unless ($showTimer)
                         <span @class([
                             'inline-flex shrink-0 items-center rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide',
-                            $component->statusBadgeClasses($status),
+                            $component->statusBadgeClassesFor($appointment),
                         ])>
-                            {{ $component->statusLabel($status) }}
+                            {{ $component->statusLabelFor($appointment) }}
                         </span>
                     @endunless
                 </div>
@@ -109,6 +110,22 @@
                     >
                         {{ __('patient.appointments.join_session') }}
                     </flux:button>
+                @elseif ($canOpenChat)
+                    <flux:button
+                        :href="route('patient.appointments.conversation', ['appointment' => $appointment->id])"
+                        wire:navigate
+                        class="w-full !rounded-xl !border-emerald-200 !bg-emerald-50 !py-2.5 !text-emerald-900 hover:!bg-emerald-100"
+                        icon="chat-bubble-left-right"
+                    >
+                        {{ __('patient.appointments.open_chat') }}
+                    </flux:button>
+                    @if (! $appointment->is_follow_up)
+                        <p class="mt-2 text-center text-xs text-emerald-800/80">
+                            {{ __('patient.appointments.chat_open_until_card', [
+                                'date' => $appointment->chatOpenUntil()->locale(app()->getLocale())->translatedFormat('d M Y'),
+                            ]) }}
+                        </p>
+                    @endif
                 @elseif ($awaitingDoctor)
                     <div class="flex items-start gap-3 rounded-xl border border-amber-200/80 bg-gradient-to-r from-amber-50 to-orange-50/80 px-3.5 py-3">
                         <span class="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-700">
