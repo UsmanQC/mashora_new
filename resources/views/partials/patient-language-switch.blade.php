@@ -18,14 +18,15 @@
 
     $pillClass = match ($variant) {
         'sidebar' => 'rounded-full px-3 py-1 text-xs font-semibold transition hover:opacity-90',
-        'chrome', 'guest' => 'rounded-md px-2.5 py-1.5 text-[0.6875rem] font-semibold uppercase tracking-[0.08em] transition',
+        'chrome', 'guest' => 'rounded-full px-2.5 py-1.5 text-[0.6875rem] font-semibold uppercase tracking-[0.08em] transition',
         default => 'rounded-full px-2.5 py-1 text-xs font-semibold transition hover:opacity-90',
     };
 
     $wrapperClass = match ($variant) {
         'sidebar' => 'flex flex-wrap gap-2',
-        'chrome', 'guest' => 'inline-flex shrink-0 items-center gap-0.5 rounded-lg border border-zinc-200/90 bg-zinc-100/90 p-0.5',
-        default => 'flex shrink-0 items-center gap-1',
+        'chrome', 'guest' => 'inline-flex shrink-0 items-center gap-0.5 rounded-full border border-zinc-200/90 bg-zinc-100/90 p-0.5',
+        'header' => 'inline-flex shrink-0 items-center gap-0.5 rounded-full border border-white/20 bg-white/10 p-0.5',
+        default => 'inline-flex shrink-0 items-center gap-0.5 rounded-full border border-zinc-200/90 bg-zinc-100/90 p-0.5',
     };
 @endphp
 
