@@ -47,6 +47,10 @@
         display: none !important;
     }
 
+    .scheme-light {
+        color-scheme: light;
+    }
+
     *,
     ::after,
     ::before,
@@ -133,6 +137,52 @@ select:focus[data-flux-control] {
 
     .patient-auth-content [data-flux-control] {
         @apply !shadow-none;
+        color: #18181b !important;
+        background-color: #ffffff !important;
+        border: 1px solid #d4d4d8 !important;
+        -webkit-text-fill-color: #18181b !important;
+        caret-color: #18181b !important;
+    }
+
+    .patient-auth-content [data-flux-control]:focus {
+        border-color: #10b981 !important;
+        box-shadow: 0 0 0 2px rgb(16 185 129 / 0.2) !important;
+    }
+
+    .patient-auth-content [data-flux-control]::placeholder {
+        color: #a1a1aa !important;
+        opacity: 1;
+    }
+
+    .scheme-light [data-flux-label],
+    .scheme-light ui-label[data-flux-label] {
+        color: #18181b !important;
+    }
+
+    .scheme-light [data-flux-control],
+    .scheme-light input[data-flux-control],
+    .scheme-light textarea[data-flux-control],
+    .scheme-light select[data-flux-control] {
+        color: #18181b !important;
+        background-color: #ffffff !important;
+        border: 1px solid #d4d4d8 !important;
+        -webkit-text-fill-color: #18181b !important;
+        caret-color: #18181b !important;
+    }
+
+    .scheme-light [data-flux-control]:focus,
+    .scheme-light input[data-flux-control]:focus,
+    .scheme-light textarea[data-flux-control]:focus,
+    .scheme-light select[data-flux-control]:focus {
+        border-color: #10b981 !important;
+        box-shadow: 0 0 0 2px rgb(16 185 129 / 0.2) !important;
+    }
+
+    .scheme-light [data-flux-control]::placeholder,
+    .scheme-light input[data-flux-control]::placeholder,
+    .scheme-light textarea[data-flux-control]::placeholder {
+        color: #a1a1aa !important;
+        opacity: 1;
     }
 
     .patient-auth-density-compact .patient-auth-content [data-flux-field] {

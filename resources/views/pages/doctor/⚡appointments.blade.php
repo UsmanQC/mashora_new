@@ -80,7 +80,15 @@ new #[Layout('layouts::doctor')] #[Title('Appointments')] class extends Componen
                     ->latest('id'),
                 'parentAppointment',
             ])
-            ->when($this->status !== 'all', fn (Builder $query) => $query->where('status', $this->status))
+            ->when($this->status !== 'all', function (Builder $query): void {
+                if ($this->status === 'pending_follow_up') {
+                    $query->upcomingFollowUp();
+                } elseif ($this->status === 'new') {
+                    $query->where('status', 'new')->where('is_follow_up', false);
+                } else {
+                    $query->where('status', $this->status);
+                }
+            })
             ->orderByDesc('appointment_date')
             ->orderByDesc('start_time')
             ->paginate(12);
@@ -178,7 +186,21 @@ new #[Layout('layouts::doctor')] #[Title('Appointments')] class extends Componen
 
         return collect($this->statusOptions())
             ->except('all')
-            ->mapWithKeys(fn ($_label, $status): array => [$status => (int) ($counts[$status] ?? 0)]);
+            ->mapWithKeys(fn ($_label, $status): array => [$status => (int) ($counts[$status] ?? 0)])
+            ->map(function (int $count, string $status): int {
+                if ($status === 'pending_follow_up') {
+                    return $this->baseAppointmentsQuery()->upcomingFollowUp()->count();
+                }
+
+                if ($status === 'new') {
+                    return $this->baseAppointmentsQuery()
+                        ->where('status', 'new')
+                        ->where('is_follow_up', false)
+                        ->count();
+                }
+
+                return $count;
+            });
     }
 
     public function filterCount(string $key): int

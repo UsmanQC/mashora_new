@@ -21,6 +21,16 @@ class Appointment extends Model
 
     use SoftDeletes;
 
+    /**
+     * @var list<string>
+     */
+    public const UPCOMING_FOLLOW_UP_STATUSES = [
+        'pending_follow_up',
+        'new',
+        'rescheduled',
+        'in_process',
+    ];
+
     protected function casts(): array
     {
         return [
@@ -191,6 +201,23 @@ class Appointment extends Model
     public function isPendingFollowUp(): bool
     {
         return $this->status === 'pending_follow_up';
+    }
+
+    public function isUpcomingFollowUp(): bool
+    {
+        return $this->is_follow_up
+            && in_array((string) $this->status, self::UPCOMING_FOLLOW_UP_STATUSES, true);
+    }
+
+    /**
+     * @param  Builder<Appointment>  $query
+     * @return Builder<Appointment>
+     */
+    public function scopeUpcomingFollowUp(Builder $query): Builder
+    {
+        return $query
+            ->where('is_follow_up', true)
+            ->whereIn('status', self::UPCOMING_FOLLOW_UP_STATUSES);
     }
 
     public function chatOpenUntil(): CarbonInterface

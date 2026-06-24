@@ -53,6 +53,46 @@ function seedDoctorWithSlots(int $slotDayOffset = 7): Doctor
     return $doctor;
 }
 
+test('doctor appointments upcoming follow ups tab counts confirmed follow ups', function () {
+    app()->setLocale('en');
+
+    $doctor = seedDoctorWithSlots();
+    $user = User::factory()->create();
+
+    Appointment::factory()->create([
+        'doctor_id' => $doctor->id,
+        'user_id' => $user->id,
+        'parent_id' => Appointment::factory()->create([
+            'doctor_id' => $doctor->id,
+            'user_id' => $user->id,
+            'status' => 'completed',
+            'duration' => 30,
+            'appointment_date' => now()->subDay()->format('Y-m-d'),
+            'start_time' => '10:00:00',
+            'end_time' => '10:30:00',
+        ])->id,
+        'is_follow_up' => true,
+        'status' => 'new',
+        'patient_confirmed_at' => now(),
+        'duration' => 30,
+        'patient_name' => $user->name,
+        'appointment_date' => now()->addDay()->format('Y-m-d'),
+        'start_time' => '12:00:00',
+        'end_time' => '12:30:00',
+        'amount' => 0,
+        'total' => 0,
+    ]);
+
+    $this->actingAs($doctor, 'doctor');
+
+    Livewire::test('pages::doctor.appointments')
+        ->assertSet('statusCounts.pending_follow_up', 1)
+        ->assertSet('statusCounts.new', 0)
+        ->set('status', 'pending_follow_up')
+        ->assertSee(__('doctor.appointment_status.follow_up'), false)
+        ->assertSee($user->name, false);
+});
+
 test('doctor appointments list shows follow-up action for completed sessions', function () {
     app()->setLocale('en');
 
