@@ -95,8 +95,8 @@ new #[Layout('layouts::patient-auth')] #[Title('Verify mobile number')] class ex
     }
 }; ?>
 
-<div>
-    <div class="mb-4 text-start sm:mb-6">
+<div class="flex min-h-0 w-full flex-col">
+    <div class="mb-2 text-start sm:mb-4">
         <flux:button
             :href="route('patient.phone', ['phone' => $phone])"
             wire:navigate
@@ -109,9 +109,9 @@ new #[Layout('layouts::patient-auth')] #[Title('Verify mobile number')] class ex
         />
     </div>
 
-    <flux:heading size="xl" class="patient-auth-heading !text-zinc-900 text-balance">{{ __('patient_auth.otp_heading') }}</flux:heading>
-    <flux:text class="mx-auto mt-2 max-w-sm text-balance text-zinc-600">{{ __('patient_auth.otp_lead') }}</flux:text>
-    <flux:text class="mt-3 font-medium tabular-nums text-zinc-800" dir="ltr">+{{ $phone }}</flux:text>
+    <flux:heading size="lg" class="patient-auth-heading !text-zinc-900 text-balance sm:!text-2xl">{{ __('patient_auth.otp_heading') }}</flux:heading>
+    <flux:text class="mx-auto mt-1 max-w-sm text-sm text-balance text-zinc-600 sm:mt-2 sm:text-base">{{ __('patient_auth.otp_lead') }}</flux:text>
+    <flux:text class="mt-2 text-sm font-medium tabular-nums text-zinc-800 sm:mt-3 sm:text-base" dir="ltr">+{{ $phone }}</flux:text>
 
     @if (filled($devOtpDisplay))
         <div class="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950" role="status">
@@ -119,7 +119,7 @@ new #[Layout('layouts::patient-auth')] #[Title('Verify mobile number')] class ex
         </div>
     @endif
 
-    <form wire:submit="verifyOtp" class="mt-8 space-y-5">
+    <form wire:submit="verifyOtp" class="mt-5 space-y-4 sm:mt-8 sm:space-y-5">
         <flux:field class="patient-auth-otp">
             <flux:label class="!text-zinc-900">{{ __('patient_auth.otp_label') }}</flux:label>
             <flux:otp

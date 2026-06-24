@@ -1,4 +1,4 @@
-{{-- Doctor portal: Mashora logo on blue chrome — same asset/filter pattern as patient-brand-strip. --}}
+{{-- Doctor portal: Awaan logo on green chrome — same asset pattern as patient-brand-strip. --}}
 @php
     /** @var 'compact'|'sidebar' */
     $density ??= 'sidebar';
@@ -7,17 +7,25 @@
     $href ??= route('doctor.dashboard');
 
     $logoImgClass = match ($density) {
-        'compact' => 'h-8 w-auto max-w-[min(100%,11rem)] object-contain object-start',
-        default => 'h-11 w-auto max-w-[min(100%,12.5rem)] object-contain object-start',
+        'compact' => 'h-9 w-auto max-w-[min(100%,10rem)] object-contain object-center',
+        default => 'h-12 w-auto max-w-[min(100%,11rem)] object-contain object-center',
+    };
+
+    $linkClass = match ($density) {
+        'compact' => 'flex w-full min-w-0 justify-start px-1 text-white no-underline',
+        default => 'flex w-full min-w-0 justify-center px-1 text-white no-underline',
     };
 @endphp
 
 <a
     href="{{ $href }}"
     wire:navigate
-    class="flex w-full min-w-0 justify-start px-1 text-white no-underline"
+    class="{{ $linkClass }}"
     title="{{ __('patient.brand') }}"
     aria-label="{{ __('patient.brand') }}"
 >
-    @include('partials.patient-brand-logo', ['imgClass' => $logoImgClass])
+    @include('partials.patient-brand-logo', [
+        'svgClass' => $logoImgClass,
+        'onGreenChrome' => true,
+    ])
 </a>

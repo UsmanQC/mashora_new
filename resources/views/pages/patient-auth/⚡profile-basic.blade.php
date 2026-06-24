@@ -65,18 +65,18 @@ new #[Layout('layouts::patient-auth')] #[Title('A few more details')] class exte
     }
 }; ?>
 
-<div>
-    <flux:heading size="xl" class="patient-auth-heading">{{ __('patient_auth.profile_basic_title') }}</flux:heading>
-    <flux:text class="mt-2">{{ __('patient_auth.profile_basic_sub') }}</flux:text>
+<div class="flex min-h-0 w-full flex-col">
+    <flux:heading size="lg" class="patient-auth-heading sm:!text-2xl">{{ __('patient_auth.profile_basic_title') }}</flux:heading>
+    <flux:text class="mt-1 text-sm sm:mt-2 sm:text-base">{{ __('patient_auth.profile_basic_sub') }}</flux:text>
 
-    <form wire:submit="saveBasics" class="mt-8 space-y-6">
+    <form wire:submit="saveBasics" class="patient-auth-form mt-5 space-y-3 sm:mt-8 sm:space-y-4">
         <flux:input wire:model.blur="email" type="email" autocomplete="email"
             :label="__('patient_auth.email_optional')" />
 
         <flux:field>
             <flux:label>{{ __('patient_auth.gender') }}</flux:label>
-            <div class="patient-gender-fields">
-                <flux:radio.group wire:model="gender" class="flex flex-wrap items-center gap-x-8 gap-y-3">
+            <div class="patient-gender-segmented">
+                <flux:radio.group variant="segmented" wire:model.live="gender" class="w-full">
                     <flux:radio value="male" :label="__('patient_auth.gender_male')" />
                     <flux:radio value="female" :label="__('patient_auth.gender_female')" />
                 </flux:radio.group>

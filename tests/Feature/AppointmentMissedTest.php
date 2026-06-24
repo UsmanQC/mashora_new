@@ -5,12 +5,13 @@ use App\Models\Doctor;
 use App\Models\Notification;
 use App\Models\User;
 use App\Services\AppointmentMissedService;
+use App\Services\PatientMissedAppointmentService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 
 uses(RefreshDatabase::class);
 
-test('overdue appointment where doctor never started is marked missed and refunded', function () {
+test('overdue appointment where doctor never started is marked missed and awaits patient action', function () {
     Carbon::setTestNow('2026-06-23 14:00:00');
 
     $doctor = Doctor::factory()->create(['status' => 'approved']);
@@ -39,8 +40,8 @@ test('overdue appointment where doctor never started is marked missed and refund
 
     expect($appointment->status)->toBe('not_attended')
         ->and($appointment->cancel_status)->toBe('doctor_missed')
-        ->and((float) $user->fresh()->balanceFloat)->toBe(200.0)
-        ->and((float) $doctor->fresh()->balanceFloat)->toBe(-60.0);
+        ->and((float) $user->fresh()->balanceFloat)->toBe(0.0)
+        ->and((float) $doctor->fresh()->balanceFloat)->toBe(140.0);
 
     $notification = Notification::query()
         ->where('userable_id', $user->id)
@@ -141,6 +142,14 @@ test('missed appointment processing is idempotent for refunds', function () {
 
     app(AppointmentMissedService::class)->processDueMissedAppointments();
     app(AppointmentMissedService::class)->processDueMissedAppointments();
+
+    expect((float) $user->fresh()->balanceFloat)->toBe(0.0);
+
+    app(PatientMissedAppointmentService::class)->refund($user, $appointment->fresh());
+
+    expect((float) $user->fresh()->balanceFloat)->toBe(100.0);
+
+    app(PatientMissedAppointmentService::class)->refund($user, $appointment->fresh());
 
     expect((float) $user->fresh()->balanceFloat)->toBe(100.0);
 });

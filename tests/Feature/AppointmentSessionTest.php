@@ -50,6 +50,34 @@ test('patient cannot start session through realtime notify endpoint', function (
     expect($appointment->fresh()->status)->toBe('new');
 });
 
+test('patient conversation refresh picks up doctor started session', function () {
+    $user = User::factory()->create(['profile_completed' => true]);
+    $doctor = Doctor::factory()->create();
+
+    $appointment = Appointment::factory()->create([
+        'user_id' => $user->id,
+        'doctor_id' => $doctor->id,
+        'status' => 'new',
+    ]);
+
+    Livewire::actingAs($user)
+        ->test('pages::patient.appointment.conversation', ['appointment' => $appointment])
+        ->assertSet('appointment.status', 'new')
+        ->call('refreshAppointmentSession')
+        ->assertSet('appointment.status', 'new');
+
+    $appointment->update([
+        'status' => 'in_process',
+        'actual_start_at' => now(),
+        'extend_at' => now()->addMinutes(30),
+    ]);
+
+    Livewire::actingAs($user)
+        ->test('pages::patient.appointment.conversation', ['appointment' => $appointment])
+        ->call('refreshAppointmentSession')
+        ->assertSet('appointment.status', 'in_process');
+});
+
 test('patient cannot fetch agora token before doctor starts session', function () {
     config([
         'agora.AGORA_APP_ID' => 'test-app-id',
@@ -68,6 +96,28 @@ test('patient cannot fetch agora token before doctor starts session', function (
     $this->actingAs($user)
         ->postJson(route('patient.appointments.realtime.agora-token', $appointment))
         ->assertForbidden();
+});
+
+test('patient can fetch agora token after doctor starts session', function () {
+    config([
+        'agora.AGORA_APP_ID' => 'test-app-id',
+        'agora.AGORA_APP_CERTIFICATE' => str_repeat('a', 32),
+    ]);
+
+    $user = User::factory()->create(['profile_completed' => true]);
+    $doctor = Doctor::factory()->create();
+
+    $appointment = Appointment::factory()->create([
+        'doctor_id' => $doctor->id,
+        'user_id' => $user->id,
+        'status' => 'in_process',
+        'actual_start_at' => now(),
+    ]);
+
+    $this->actingAs($user)
+        ->postJson(route('patient.appointments.realtime.agora-token', $appointment))
+        ->assertSuccessful()
+        ->assertJsonStructure(['agora_app_id', 'agora_token', 'agora_channel']);
 });
 
 test('patient appointments show waiting state before doctor starts session', function () {

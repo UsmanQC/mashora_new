@@ -1,8 +1,12 @@
 <?php
 
 use App\Models\Appointment;
+use App\Models\User;
 use App\Services\AppointmentMissedService;
+use App\Services\AppointmentWalletService;
+use App\Services\PatientMissedAppointmentService;
 use Carbon\Carbon;
+use Flux\Flux;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
@@ -192,6 +196,33 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
             ->map(static fn (mixed $id): int => (int) $id)
             ->values()
             ->all();
+    }
+
+    public function canResolveMissed(Appointment $appointment): bool
+    {
+        return app(PatientMissedAppointmentService::class)->canResolve($appointment);
+    }
+
+    public function hasMissedRefund(Appointment $appointment): bool
+    {
+        return app(AppointmentWalletService::class)->hasRefunded($appointment);
+    }
+
+    public function refundMissed(int $appointmentId): void
+    {
+        $user = Auth::user();
+        abort_unless($user instanceof User, 403);
+
+        $appointment = $this->baseQuery()->findOrFail($appointmentId);
+
+        app(PatientMissedAppointmentService::class)->refund($user, $appointment);
+
+        Flux::toast(
+            variant: 'success',
+            text: __('patient.missed.refund_success', [
+                'amount' => number_format((float) $appointment->total, 2),
+            ]),
+        );
     }
 }; ?>
 

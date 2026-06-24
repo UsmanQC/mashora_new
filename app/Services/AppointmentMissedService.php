@@ -68,8 +68,6 @@ final class AppointmentMissedService
                 'status' => 'not_attended',
                 'cancel_status' => 'doctor_missed',
             ])->save();
-
-            app(AppointmentWalletService::class)->refundToPatient($appointment->fresh());
         });
 
         $appointment->refresh()->loadMissing('doctor');

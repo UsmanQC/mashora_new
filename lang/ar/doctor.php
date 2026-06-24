@@ -24,6 +24,13 @@ return [
         'today_placeholder' => 'اليوم',
     ],
 
+    'language' => [
+        'label' => 'اللغة',
+        'aria' => 'اختر لغة الواجهة',
+        'locale_en' => 'EN',
+        'locale_ar_short' => 'AR',
+    ],
+
     'guest' => [
         'kicker' => 'للممارسين الصحيين',
         'headline' => 'عيادتك على أوان',
@@ -40,8 +47,11 @@ return [
     'settings' => [
         'title' => 'القائمة',
         'subtitle' => 'الحساب والتفضيلات',
+        'personal_profile' => 'الملف الشخصي',
         'placeholder' => 'ستُضاف المزيد من الإعدادات مع تطوير المنتج.',
     ],
+
+    'account_menu_aria' => 'قائمة الحساب',
 
     'account_status' => [
         'pending_badge' => 'قيد المراجعة',

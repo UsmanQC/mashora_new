@@ -37,14 +37,11 @@
                     >
                         @include('partials.patient-brand-logo', [
                             'imgClass' => 'h-9 w-auto max-w-[min(100%,11rem)] object-contain object-start',
-                            'whiteOnBlue' => false,
                         ])
                     </a>
                 </div>
-                <form method="POST" action="{{ route('doctor.logout') }}" class="shrink-0">
-                    @csrf
-                    <flux:button type="submit" variant="ghost" size="sm">{{ __('doctor.auth.sign_out') }}</flux:button>
-                </form>
+                @include('partials.doctor-language-switch', ['variant' => 'chrome'])
+                @include('partials.doctor-user-account-menu', ['density' => 'chrome'])
             </header>
 
             <header
@@ -60,33 +57,9 @@
                         </time>
                     </div>
                     <div class="flex items-center gap-2">
+                        @include('partials.doctor-language-switch', ['variant' => 'chrome'])
                         <livewire:doctor.components.notifications />
-                        <details class="relative">
-                            <summary
-                                class="inline-flex h-9 min-w-[2.25rem] cursor-pointer list-none items-center justify-center rounded-full border border-zinc-200/90 bg-zinc-50 px-2 text-xs font-semibold text-zinc-700 hover:bg-zinc-100"
-                                title="{{ auth('doctor')->user()?->displayName() }}"
-                            >
-                                <flux:icon name="user" variant="outline" class="size-4" />
-                            </summary>
-
-                            <div class="absolute end-0 z-50 mt-2 w-56 overflow-hidden rounded-xl border border-zinc-200 bg-white p-2 shadow-xl">
-                                <div class="px-2 pb-2 text-xs text-zinc-500">
-                                    {{ auth('doctor')->user()?->displayName() }}
-                                </div>
-                                <form method="POST" action="{{ route('doctor.logout') }}">
-                                    @csrf
-                                    <flux:button
-                                        class="w-full justify-start"
-                                        type="submit"
-                                        variant="ghost"
-                                        size="sm"
-                                        icon="arrow-right-start-on-rectangle"
-                                    >
-                                        {{ __('doctor.auth.sign_out') }}
-                                    </flux:button>
-                                </form>
-                            </div>
-                        </details>
+                        @include('partials.doctor-user-account-menu', ['density' => 'chrome'])
                     </div>
                 </div>
             </header>

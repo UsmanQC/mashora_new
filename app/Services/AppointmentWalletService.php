@@ -82,7 +82,7 @@ final class AppointmentWalletService
     {
         $appointment->loadMissing(['doctor', 'user']);
 
-        if ($this->hasExistingRefund($appointment) || ! $this->appointmentWasPaid($appointment)) {
+        if ($this->hasRefunded($appointment) || ! $this->appointmentWasPaid($appointment)) {
             return;
         }
 
@@ -125,6 +125,11 @@ final class AppointmentWalletService
         return (float) $appointment->doctor_share > 0
             || filled($appointment->payment_invoice_id)
             || (float) $appointment->wallet_amount > 0;
+    }
+
+    public function hasRefunded(Appointment $appointment): bool
+    {
+        return $this->hasExistingRefund($appointment);
     }
 
     private function hasExistingRefund(Appointment $appointment): bool

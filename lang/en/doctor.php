@@ -24,6 +24,13 @@ return [
         'today_placeholder' => 'Today',
     ],
 
+    'language' => [
+        'label' => 'Language',
+        'aria' => 'Choose interface language',
+        'locale_en' => 'EN',
+        'locale_ar_short' => 'AR',
+    ],
+
     'guest' => [
         'kicker' => 'For healthcare professionals',
         'headline' => 'Your practice on Awaan',
@@ -40,8 +47,11 @@ return [
     'settings' => [
         'title' => 'Menu',
         'subtitle' => 'Account and preferences',
+        'personal_profile' => 'Personal profile',
         'placeholder' => 'More settings from production will be wired here as the product grows.',
     ],
+
+    'account_menu_aria' => 'Account menu',
 
     'account_status' => [
         'pending_badge' => 'Pending review',

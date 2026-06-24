@@ -1,20 +1,36 @@
-{{-- Text brand mark used across patient and doctor chrome. --}}
+{{-- Awaan logo used across patient and doctor chrome. --}}
 @php
     /** @var string Tailwind classes for sizing (legacy imgClass callers). */
-    $imgClass ??= 'h-10 w-auto max-w-[min(100%,13rem)] object-contain object-start';
+    $svgClass ??= $imgClass ?? 'h-10 w-auto max-w-[min(100%,13rem)]';
 
-    /** If true, use white text on blue chrome backgrounds. */
-    $whiteOnBlue ??= true;
+    /** On emerald sidebar/header chrome, use white wordmark while keeping gold clock hands. */
+    $onGreenChrome ??= false;
 
-    $textSizeClass = match (true) {
-        str_contains($imgClass, 'h-11') => 'text-xl',
-        str_contains($imgClass, 'h-8') => 'text-base',
-        str_contains($imgClass, 'h-9') => 'text-lg',
-        default => 'text-lg',
-    };
-
-    $colorClass = $whiteOnBlue ? 'text-white' : 'text-zinc-900';
+    $brandColor = $onGreenChrome ? '#FFFFFF' : '#10B981';
+    $accentColor = '#E3AE54';
+    $clipId = 'awan-logo-clip-'.uniqid();
 @endphp
-<span class="{{ trim($colorClass.' '.$textSizeClass.' font-bold tracking-tight') }}">
-    {{ __('patient.brand') }}
-</span>
+
+<svg
+    class="{{ $svgClass }}"
+    viewBox="0 0 198 102"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    role="img"
+    aria-label="{{ __('patient.brand') }}"
+>
+    <g clip-path="url(#{{ $clipId }})">
+        <path d="M179.496 26.496H191.656V101.632H179.496V26.496ZM173.864 21.76V16.384H179.368C177.661 14.5066 176.808 12.416 176.808 10.112C176.808 7.21067 177.832 4.82134 179.88 2.944C181.928 0.981334 184.445 0 187.432 0C190.76 0 193.619 1.32267 196.008 3.96801L192.296 7.424C191.101 6.05867 189.523 5.376 187.56 5.376C186.024 5.376 184.701 5.888 183.592 6.91201C182.568 7.85067 182.056 9.088 182.056 10.624C182.056 12.16 182.611 13.5253 183.72 14.72C184.829 15.8293 186.109 16.384 187.56 16.384H197.16V21.76H173.864Z" fill="{{ $brandColor }}"/>
+        <path d="M113.869 17.592C120.098 11.3626 127.65 8.24792 136.525 8.24792C145.997 8.24792 153.72 11.4906 159.693 17.976C165.752 24.376 168.781 32.6533 168.781 42.808V69.176C168.781 78.4773 165.922 86.2426 160.205 92.472C154.488 98.7013 146.808 101.816 137.165 101.816C131.789 101.816 126.626 100.664 121.677 98.36C116.813 96.1413 112.888 93.0693 109.901 89.144L118.477 81.08C120.525 83.7253 123.213 85.7733 126.541 87.224C129.869 88.76 133.325 89.528 136.909 89.528C142.541 89.528 147.064 87.9066 150.477 84.664C153.976 81.4213 155.938 77.4106 156.365 72.632H138.189C128.461 72.632 120.397 69.56 113.997 63.416C107.597 57.272 104.397 49.5493 104.397 40.248C104.397 31.3733 107.554 23.8213 113.869 17.592ZM122.701 54.712C126.626 58.4666 131.789 60.344 138.189 60.344H156.493V41.912C156.493 35.5973 154.658 30.4346 150.989 26.424C147.32 22.4133 142.498 20.408 136.525 20.408C131.064 20.408 126.37 22.328 122.445 26.168C118.605 30.008 116.685 34.7013 116.685 40.248C116.685 46.2213 118.69 51.0426 122.701 54.712Z" fill="{{ $brandColor }}"/>
+        <path d="M96 102H83V8H96V102Z" fill="{{ $brandColor }}"/>
+        <path d="M68.5 53.132V64.132C68.5 81.5289 54.397 95.632 37 95.632C19.603 95.632 5.5 81.5289 5.5 64.132V53.132" stroke="{{ $brandColor }}" stroke-width="11"/>
+        <path d="M37 53.132V35.132" stroke="{{ $accentColor }}" stroke-width="3" stroke-linecap="round"/>
+        <path d="M36.6213 53.632L55.5 72.5106" stroke="{{ $accentColor }}" stroke-width="3" stroke-linecap="round"/>
+        <path d="M37 59C39.7614 59 42 56.7614 42 54C42 51.2386 39.7614 49 37 49C34.2386 49 32 51.2386 32 54C32 56.7614 34.2386 59 37 59Z" fill="{{ $brandColor }}"/>
+    </g>
+    <defs>
+        <clipPath id="{{ $clipId }}">
+            <rect width="198" height="102" fill="white"/>
+        </clipPath>
+    </defs>
+</svg>

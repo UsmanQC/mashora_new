@@ -51,17 +51,9 @@
                     >
                         @include('partials.patient-brand-logo', [
                             'imgClass' => 'h-9 w-auto max-w-[min(100%,13rem)] object-contain object-start',
-                            'whiteOnBlue' => false,
                         ])
                     </a>
-                    @php($switchLocale = app()->getLocale() === 'ar' ? 'en' : 'ar')
-                    <a
-                        href="{{ route('doctor.locale', ['locale' => $switchLocale]) }}"
-                        class="inline-flex items-center gap-1 text-sm font-medium text-zinc-600 hover:text-zinc-900"
-                    >
-                        <img src="{{ $switchLocale === 'ar' ? 'https://flagcdn.com/w20/sa.png' : 'https://flagcdn.com/w20/us.png' }}" alt="{{ $switchLocale === 'ar' ? 'Arabic' : 'English' }}" class="h-3.5 w-5 rounded-sm object-cover" />
-                        <span>{{ strtoupper($switchLocale) }}</span>
-                    </a>
+                    @include('partials.doctor-language-switch', ['variant' => 'guest'])
                 </div>
                 <div class="flex flex-1 flex-col px-4 py-8 sm:px-6 lg:justify-center lg:px-10 lg:py-12">
                     <div class="mx-auto w-full max-w-md flex-1">

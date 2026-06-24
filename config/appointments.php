@@ -8,7 +8,7 @@ return [
     |--------------------------------------------------------------------------
     |
     | Minutes after the scheduled session end time before an unpaid start
-    | (status new/rescheduled) is marked as missed and refunded.
+    | (status new/rescheduled) is marked as missed for patient resolution.
     |
     */
 

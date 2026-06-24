@@ -83,18 +83,18 @@ new #[Layout('layouts::patient-auth')] #[Title('Phone')] class extends Component
     }
 }; ?>
 
-<div>
+<div class="flex min-h-0 w-full flex-col">
     @if ($loginPhoneE164)
-        <flux:heading size="xl" class="patient-auth-heading !text-zinc-900">{{ __('patient_auth.login_title') }}</flux:heading>
-        <flux:text class="mt-2">{{ __('patient_auth.login_password_lead') }}</flux:text>
+        <flux:heading size="lg" class="patient-auth-heading !text-zinc-900 sm:!text-2xl">{{ __('patient_auth.login_title') }}</flux:heading>
+        <flux:text class="mt-1 text-sm sm:mt-2 sm:text-base">{{ __('patient_auth.login_password_lead') }}</flux:text>
 
-        <flux:text class="mt-3 font-medium tabular-nums text-zinc-700" dir="ltr">
+        <flux:text class="mt-2 text-sm font-medium tabular-nums text-zinc-700 sm:mt-3 sm:text-base" dir="ltr">
             +{{ $loginPhoneE164 }}
         </flux:text>
 
-        <x-auth-session-status class="my-6 text-center" :status="session('status')" />
+        <x-auth-session-status class="my-4 text-center sm:my-6" :status="session('status')" />
 
-        <form method="POST" action="{{ route('login.store') }}" class="mt-8 space-y-6">
+        <form method="POST" action="{{ route('login.store') }}" class="space-y-4 sm:space-y-6">
             @csrf
             <input type="hidden" name="patient_flow" value="1" />
             <input type="hidden" name="email" value="{{ $loginPhoneE164 }}" />
@@ -133,9 +133,9 @@ new #[Layout('layouts::patient-auth')] #[Title('Phone')] class extends Component
             </div>
         </form>
     @else
-        <flux:heading size="xl" class="patient-auth-heading !text-zinc-900">{{ __('patient_auth.phone_heading') }}</flux:heading>
+        <flux:heading size="lg" class="patient-auth-heading !text-zinc-900 sm:!text-2xl">{{ __('patient_auth.phone_heading') }}</flux:heading>
 
-        <form wire:submit="continueGuest" class="mt-8 space-y-6">
+        <form wire:submit="continueGuest" class="mt-5 space-y-4 sm:mt-8 sm:space-y-6">
             @include('partials.patient-unified-phone-field')
 
             @error('countryIso')

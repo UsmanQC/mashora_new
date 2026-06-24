@@ -52,6 +52,10 @@ Route::livewire('patient/appointments/{appointment}/conversation', 'pages::patie
     ->middleware(['patient.profile'])
     ->name('patient.appointments.conversation');
 
+Route::livewire('patient/appointments/{appointment}/missed-reschedule', 'pages::patient.appointment.missed-reschedule')
+    ->middleware(['patient.profile'])
+    ->name('patient.appointments.missed-reschedule');
+
 Route::middleware(['patient.profile'])
     ->get('patient/locale/{locale}', function (string $locale) {
         if (! in_array($locale, ['en', 'ar'], true)) {

@@ -89,7 +89,66 @@ select:focus[data-flux-control] {
     }
 
     .patient-auth-primary-btn {
-        @apply !border-mashora-brand !bg-mashora-brand !text-white shadow-sm hover:!brightness-[0.97] focus-visible:!outline-none focus-visible:!ring-2 focus-visible:!ring-mashora-brand/35 focus-visible:!ring-offset-2;
+        @apply min-h-[3.25rem] !rounded-full !border-mashora-brand !bg-mashora-brand !px-8 !text-white !shadow-none hover:!brightness-[0.97] focus-visible:!outline-none focus-visible:!ring-2 focus-visible:!ring-mashora-brand/35 focus-visible:!ring-offset-2;
+    }
+
+    .patient-auth-content [data-flux-button].patient-auth-primary-btn {
+        border-radius: 9999px !important;
+    }
+
+    .patient-gender-segmented ui-radio-group[data-flux-radio-group-segmented] {
+        @apply !flex !h-auto w-full flex-row !rounded-full !border !border-zinc-200/80 !bg-white !p-1 !shadow-none;
+    }
+
+    .patient-gender-segmented ui-radio-group[data-flux-radio-group-segmented] ui-radio[data-flux-radio-segmented] {
+        @apply flex min-h-11 min-w-0 flex-1 flex-row items-center justify-center !rounded-full !border-0 !bg-transparent !px-4 !py-2 text-sm font-semibold !text-[#10B981] !shadow-none hover:!text-[#059669];
+    }
+
+    .patient-gender-segmented ui-radio-group[data-flux-radio-group-segmented] ui-radio[data-flux-radio-segmented][data-checked] {
+        @apply !bg-mashora-brand !text-white !shadow-none hover:!bg-mashora-brand hover:!text-white;
+    }
+
+    .patient-auth-content [data-flux-control] {
+        @apply !shadow-none;
+    }
+
+    .patient-auth-density-compact .patient-auth-content [data-flux-field] {
+        @apply !gap-1;
+    }
+
+    .patient-auth-density-compact .patient-auth-content [data-flux-label],
+    .patient-auth-density-compact .patient-auth-content ui-label[data-flux-label] {
+        @apply !text-sm;
+    }
+
+    .patient-auth-density-compact .patient-auth-content [data-flux-control] {
+        @apply !min-h-10 !py-2 !text-sm sm:!min-h-11 sm:!text-base;
+    }
+
+    .patient-auth-density-compact .patient-auth-primary-btn {
+        @apply !min-h-10 !text-sm sm:!min-h-[3.25rem] sm:!text-base;
+    }
+
+    .patient-auth-density-compact .patient-gender-segmented ui-radio-group[data-flux-radio-group-segmented] ui-radio[data-flux-radio-segmented] {
+        @apply !min-h-9 !py-1.5 !text-sm sm:!min-h-10 sm:!py-2;
+    }
+
+    @media (max-height: 720px) {
+        .patient-auth-density-compact .patient-auth-heading {
+            @apply !text-xl sm:!text-2xl;
+        }
+
+        .patient-auth-density-compact .patient-auth-content [data-flux-control] {
+            @apply !min-h-9 !py-1.5;
+        }
+
+        .patient-auth-density-compact .patient-auth-primary-btn {
+            @apply !min-h-9;
+        }
+
+        .patient-auth-density-compact .patient-gender-segmented ui-radio-group[data-flux-radio-group-segmented] ui-radio[data-flux-radio-segmented] {
+            @apply !min-h-8 !py-1;
+        }
     }
 
     /** Patient profile gender radios: fix label vs control vertical alignment (especially when selected). */

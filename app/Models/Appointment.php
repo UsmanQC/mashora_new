@@ -249,4 +249,10 @@ class Appointment extends Model
     {
         return $this->hasMany(ChMessage::class, 'appointment_id');
     }
+
+    public function isDoctorMissed(): bool
+    {
+        return $this->status === 'not_attended'
+            && $this->cancel_status === 'doctor_missed';
+    }
 }

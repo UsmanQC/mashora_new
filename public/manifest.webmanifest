@@ -1,6 +1,6 @@
 {
-    "name": "Mashora Patient",
-    "short_name": "Mashora",
+    "name": "Awaan",
+    "short_name": "Awaan",
     "lang": "ar",
     "start_url": "/patient",
     "scope": "/",
@@ -10,10 +10,16 @@
     "theme_color": "#10B981",
     "icons": [
         {
-            "src": "/favicon.svg",
+            "src": "/images/awan_logo.svg",
             "sizes": "any",
             "type": "image/svg+xml",
             "purpose": "any maskable"
+        },
+        {
+            "src": "/favicon.svg",
+            "sizes": "any",
+            "type": "image/svg+xml",
+            "purpose": "any"
         }
     ]
 }

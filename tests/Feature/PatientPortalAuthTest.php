@@ -19,6 +19,9 @@ test('guest can open patient phone entry screen', function () {
         ->assertDontSee('images/logo.png', false)
         ->assertSee(__('patient_auth.phone_heading'), false)
         ->assertSee(__('patient_auth.phone_label'), false)
+        ->assertSee('data-test="patient-navbar-language-switch"', false)
+        ->assertSee(route('patient.locale', ['locale' => 'en']), false)
+        ->assertSee(route('patient.locale', ['locale' => 'ar']), false)
         ->assertSee('patient-auth-content', false)
         ->assertSee('intlTelInput.css', false)
         ->assertSee('intlTelInput.min.js', false)
@@ -56,7 +59,11 @@ test('signed patient sign up url responds', function () {
     $this->withSession(['patient_otp_verified_phone' => $phone])
         ->get($url)
         ->assertSuccessful()
+        ->assertSee(__('patient_auth.register_title'), false)
+        ->assertSee(__('patient_auth.register_sub'), false)
         ->assertSee(__('patient_auth.cta_register'), false)
+        ->assertSee(__('patient_auth.email'), false)
+        ->assertSee(__('patient_auth.gender'), false)
         ->assertSee(route('patient.phone', ['phone' => $phone]), false);
 });
 
@@ -123,6 +130,33 @@ test('patient can verify otp and reach sign up', function () {
         ));
 
     expect(session('patient_otp_verified_phone'))->toBe($phone);
+});
+
+test('patient can complete sign up with profile details and reach dashboard', function () {
+    $phone = '966512400003';
+
+    session(['patient_otp_verified_phone' => $phone]);
+
+    Livewire::withQueryParams(['phone' => $phone])
+        ->test('pages::patient-auth.sign-up')
+        ->set('name', 'Test Patient')
+        ->set('email', 'patient@example.com')
+        ->set('gender', 'male')
+        ->set('password', 'Password123!')
+        ->set('password_confirmation', 'Password123!')
+        ->call('registerPatient')
+        ->assertHasNoErrors()
+        ->assertRedirect(route('patient.home'));
+
+    $user = User::query()->where('phone', $phone)->first();
+
+    expect($user)->not->toBeNull()
+        ->and($user->name)->toBe('Test Patient')
+        ->and($user->email)->toBe('patient@example.com')
+        ->and($user->gender)->toBe('male')
+        ->and($user->profile_completed)->toBeTrue();
+
+    $this->assertAuthenticatedAs($user);
 });
 
 test('incomplete profile cannot browse patient appointments shell', function () {

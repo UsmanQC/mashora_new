@@ -99,6 +99,15 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
         $this->agoraToken = DoctorAgoraChannel::buildRtcToken($this->agoraChannel);
     }
 
+    public function refreshAppointmentSession(): void
+    {
+        if (! in_array((string) $this->appointment->status, ['new', 'rescheduled'], true)) {
+            return;
+        }
+
+        $this->appointment->refresh();
+    }
+
     public function formattedAppointmentTime(): string
     {
         $raw = (string) $this->appointment->start_time;
@@ -118,7 +127,10 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
     }
 }; ?>
 
-<div class="mx-auto w-full max-w-6xl space-y-5 px-4 py-5 pb-24 sm:px-6 sm:pb-10">
+<div
+    class="mx-auto w-full max-w-6xl space-y-5 px-4 py-5 pb-24 sm:px-6 sm:pb-10"
+    @if (in_array($appointment->status, ['new', 'rescheduled'], true)) wire:poll.5s="refreshAppointmentSession" @endif
+>
     <header class="relative overflow-hidden rounded-2xl border border-zinc-200/80 bg-gradient-to-br from-white via-white to-[#f7f9ff] p-4 shadow-sm shadow-zinc-200/60 ring-1 ring-zinc-100 sm:p-5">
         <div class="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#10B981] via-[#34d399] to-[#059669] opacity-85"></div>
         <div class="flex flex-wrap items-center justify-between gap-3">
@@ -330,10 +342,18 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
     <script src="https://js.pusher.com/8.2.0/pusher.min.js"></script>
     <script src="https://download.agora.io/sdk/release/AgoraRTC_N-4.23.0.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
+        function initPatientConversationRealtime() {
             const boot = document.getElementById('patient-conversation-bootstrap');
             const panel = document.getElementById('patient-chat-panel');
-            if (!boot || !panel) return;
+            if (!boot || !panel) {
+                return;
+            }
+
+            if (boot.dataset.initialized === '1') {
+                return;
+            }
+
+            boot.dataset.initialized = '1';
 
             const appointmentId = Number(boot.dataset.appointmentId || 0);
             const patientId = Number(boot.dataset.patientId || 0);
@@ -414,11 +434,37 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
             }
 
             function refreshCallButtonsState() {
+                syncPatientSessionFromDom(boot);
                 const enabled = callEnabled && appointmentStatus === 'in_process';
-                if (videoBtn && !activeMode) videoBtn.disabled = !enabled;
-                if (audioBtn && !activeMode) audioBtn.disabled = !enabled;
+                if (videoBtn && !activeMode) {
+                    videoBtn.disabled = !enabled;
+                }
+                if (audioBtn && !activeMode) {
+                    audioBtn.disabled = !enabled;
+                }
                 if (chip) {
                     chip.classList.toggle('hidden', !activeMode);
+                }
+            }
+
+            function syncPatientSessionFromDom(bootEl) {
+                const metricsEl = document.getElementById('patient-conversation-metrics');
+                const nextStatus = bootEl?.dataset.appointmentStatus || metricsEl?.dataset.status || appointmentStatus;
+                const wasWaiting = appointmentStatus !== 'in_process' && nextStatus === 'in_process';
+
+                appointmentStatus = nextStatus;
+                if (bootEl) {
+                    bootEl.dataset.appointmentStatus = appointmentStatus;
+                }
+
+                if (metricsEl && nextStatus === 'in_process') {
+                    metricsEl.dataset.status = nextStatus;
+                }
+
+                if (wasWaiting && incomingLabel && incomingBanner) {
+                    incomingLabel.textContent = metricsEl?.dataset.sessionStartedBanner || 'Session started. Join now.';
+                    incomingBanner.classList.remove('hidden');
+                    startSessionTimers();
                 }
             }
 
@@ -639,6 +685,23 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
 
             startSessionTimers();
             refreshCallButtonsState();
-        });
+
+            if (boot.dataset.sessionObserved !== '1') {
+                boot.dataset.sessionObserved = '1';
+                const sessionObserver = new MutationObserver(() => {
+                    syncPatientSessionFromDom(boot);
+                    refreshCallButtonsState();
+                    startSessionTimers();
+                });
+                sessionObserver.observe(boot, { attributes: true, attributeFilter: ['data-appointment-status'] });
+
+                if (metrics) {
+                    sessionObserver.observe(metrics, { attributes: true, attributeFilter: ['data-status', 'data-session-start', 'data-session-end'] });
+                }
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', initPatientConversationRealtime);
+        document.addEventListener('livewire:navigated', initPatientConversationRealtime);
     </script>
 @endpush

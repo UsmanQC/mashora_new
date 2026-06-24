@@ -3,7 +3,6 @@
 use App\Concerns\PasswordValidationRules;
 use App\Models\User;
 use App\Support\PatientPhone;
-use App\Support\PatientPlaceholderEmail;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
@@ -21,6 +20,10 @@ new #[Layout('layouts::patient-auth')] #[Title('Your details')] class extends Co
     public string $phone = '';
 
     public string $name = '';
+
+    public string $email = '';
+
+    public ?string $gender = null;
 
     public string $password = '';
 
@@ -47,6 +50,8 @@ new #[Layout('layouts::patient-auth')] #[Title('Your details')] class extends Co
 
         $this->validate([
             'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'string', 'email', 'max:255', Rule::unique(User::class, 'email')->whereNull('deleted_at')],
+            'gender' => ['required', Rule::in(['male', 'female'])],
             'password' => $this->passwordRules(),
             'phone' => [
                 'required',
@@ -58,9 +63,10 @@ new #[Layout('layouts::patient-auth')] #[Title('Your details')] class extends Co
         $user = User::create([
             'name' => $this->name,
             'phone' => $normalized,
-            'email' => PatientPlaceholderEmail::make($normalized),
+            'email' => $this->email,
+            'gender' => $this->gender,
             'password' => $this->password,
-            'profile_completed' => false,
+            'profile_completed' => true,
         ]);
 
         event(new Registered($user));
@@ -69,12 +75,12 @@ new #[Layout('layouts::patient-auth')] #[Title('Your details')] class extends Co
 
         session()->forget('patient_otp_verified_phone');
 
-        $this->redirect(route('patient.profile.basic'));
+        $this->redirect(route('patient.home'), navigate: true);
     }
 }; ?>
 
-<div class="w-full text-start">
-    <div class="mb-5 sm:mb-6">
+<div class="flex min-h-0 w-full flex-col text-start">
+    <div class="mb-2 sm:mb-3">
         <flux:button
             :href="route('patient.phone', ['phone' => $phone])"
             wire:navigate
@@ -87,40 +93,62 @@ new #[Layout('layouts::patient-auth')] #[Title('Your details')] class extends Co
         />
     </div>
 
-    <header class="border-b border-zinc-200/80 pb-5 sm:pb-6">
-        <flux:heading size="xl" class="patient-auth-heading text-balance">{{ __('patient_auth.register_title') }}</flux:heading>
-        <flux:text class="mt-2 max-w-lg text-balance text-zinc-600">{{ __('patient_auth.register_sub') }}</flux:text>
-        <div class="mt-4 flex flex-wrap items-center gap-2 text-sm text-zinc-600">
-            <flux:icon name="device-phone-mobile" variant="mini" class="size-4 shrink-0 text-[#10B981]" />
-            <span class="font-medium text-zinc-800">{{ __('patient_auth.phone_verified_label') }}</span>
-            <span class="font-semibold tabular-nums text-zinc-900" dir="ltr">+{{ $phone }}</span>
+    <flux:heading size="lg" class="patient-auth-heading !text-zinc-900 text-balance sm:!text-2xl">{{ __('patient_auth.register_title') }}</flux:heading>
+    <flux:text class="mt-1 text-sm leading-snug text-balance text-zinc-600 sm:mt-2 sm:text-base">{{ __('patient_auth.register_sub') }}</flux:text>
+
+    <div class="mt-2 mb-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-zinc-600 sm:mt-3 sm:mb-4 sm:text-sm">
+        <flux:icon name="device-phone-mobile" variant="mini" class="size-3.5 shrink-0 text-[#10B981] sm:size-4" />
+        <span class="font-medium text-zinc-800">{{ __('patient_auth.phone_verified_label') }}</span>
+        <span class="font-semibold tabular-nums text-zinc-900" dir="ltr">+{{ $phone }}</span>
+    </div>
+
+    <form wire:submit="registerPatient" class="patient-auth-form space-y-2 sm:space-y-3">
+        <div class="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-x-3 sm:gap-y-2">
+            <flux:input
+                wire:model.blur="name"
+                type="text"
+                autocomplete="name"
+                required
+                :label="__('patient_auth.full_name')"
+            />
+
+            <flux:input
+                wire:model.blur="email"
+                type="email"
+                autocomplete="email"
+                required
+                :label="__('patient_auth.email')"
+            />
         </div>
-    </header>
 
-    <form wire:submit="registerPatient" class="mt-6 space-y-5 sm:mt-8">
-        <flux:input
-            wire:model.blur="name"
-            type="text"
-            autocomplete="name"
-            required
-            :label="__('patient_auth.full_name')"
-        />
+        <flux:field>
+            <flux:label>{{ __('patient_auth.gender') }}</flux:label>
+            <div class="patient-gender-segmented">
+                <flux:radio.group variant="segmented" wire:model.live="gender" class="w-full">
+                    <flux:radio value="male" :label="__('patient_auth.gender_male')" />
+                    <flux:radio value="female" :label="__('patient_auth.gender_female')" />
+                </flux:radio.group>
+            </div>
+            <flux:error name="gender" />
+        </flux:field>
 
-        <flux:input wire:model="password" viewable required type="password" :label="__('patient_auth.password')" />
+        <div class="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-x-3 sm:gap-y-2">
+            <flux:input wire:model="password" viewable required type="password" :label="__('patient_auth.password')" />
 
-        <flux:input
-            wire:model="password_confirmation"
-            viewable
-            required
-            type="password"
-            :label="__('patient_auth.password_confirm')"
-        />
+            <flux:input
+                wire:model="password_confirmation"
+                viewable
+                required
+                type="password"
+                :label="__('patient_auth.password_confirm')"
+            />
+        </div>
 
         @error('phone')
             <flux:text class="text-sm text-red-600">{{ $message }}</flux:text>
         @enderror
 
-        <flux:button variant="primary" type="submit" class="patient-auth-primary-btn w-full" wire:loading.attr="disabled">
+        <flux:button variant="primary" type="submit" class="patient-auth-primary-btn w-full !mt-1 sm:!mt-2" wire:loading.attr="disabled">
             {{ __('patient_auth.cta_register') }}
         </flux:button>
     </form>

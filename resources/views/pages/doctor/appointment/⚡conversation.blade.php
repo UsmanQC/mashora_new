@@ -436,9 +436,17 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
     <script src="https://js.pusher.com/8.2.0/pusher.min.js"></script>
     <script src="https://download.agora.io/sdk/release/AgoraRTC_N-4.23.0.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
+        function initDoctorConversationRealtime() {
             const boot = document.getElementById('doctor-conversation-bootstrap');
-            if (!boot) return;
+            if (!boot) {
+                return;
+            }
+
+            if (boot.dataset.initialized === '1') {
+                return;
+            }
+
+            boot.dataset.initialized = '1';
 
             const appointmentId = Number(boot.dataset.appointmentId);
             const pusherKey = boot.dataset.pusherKey || '';
@@ -448,15 +456,21 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
             const doctorId = Number(boot.dataset.doctorId || 0);
 
             const metricsEl = document.getElementById('conversation-page-metrics');
-            const bootAgoraReady = document.getElementById('doctor-conversation-bootstrap')?.dataset.agoraReady === '1';
+            const bootAgoraReady = boot.dataset.agoraReady === '1';
 
-            const btnVideo = document.getElementById('btn-agora-video');
-            const btnAudio = document.getElementById('btn-agora-audio');
             const callChip = document.getElementById('call-status-chip');
             const callTypeLabel = document.getElementById('call-type-label');
             const callDurationDisplay = document.getElementById('call-duration-display');
             const overlayCallDuration = document.getElementById('overlay-call-duration');
             const agoraTitle = document.getElementById('agora-call-title');
+
+            function btnVideo() {
+                return document.getElementById('btn-agora-video');
+            }
+
+            function btnAudio() {
+                return document.getElementById('btn-agora-audio');
+            }
 
             const btnIdleClass =
                 'inline-flex min-h-10 items-center gap-2 rounded-xl border border-zinc-200 bg-white px-4 py-2 text-sm font-semibold text-zinc-800 shadow-sm transition hover:border-[#047857]/30 hover:bg-zinc-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#10B981] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-45';
@@ -553,15 +567,21 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
             }
 
             function setCallButtonsIdle() {
-                if (btnVideo) {
-                    btnVideo.className = btnIdleClass;
-                    const l = btnVideo.querySelector('.btn-label');
-                    if (l) l.textContent = btnVideo.dataset.labelVideo || 'Video';
+                const videoBtn = btnVideo();
+                const audioBtn = btnAudio();
+                if (videoBtn) {
+                    videoBtn.className = btnIdleClass;
+                    const l = videoBtn.querySelector('.btn-label');
+                    if (l) {
+                        l.textContent = videoBtn.dataset.labelVideo || 'Video';
+                    }
                 }
-                if (btnAudio) {
-                    btnAudio.className = btnIdleClass;
-                    const l = btnAudio.querySelector('.btn-label');
-                    if (l) l.textContent = btnAudio.dataset.labelVoice || 'Voice';
+                if (audioBtn) {
+                    audioBtn.className = btnIdleClass;
+                    const l = audioBtn.querySelector('.btn-label');
+                    if (l) {
+                        l.textContent = audioBtn.dataset.labelVoice || 'Voice';
+                    }
                 }
             }
 
@@ -574,13 +594,25 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
             }
 
             function restoreCallButtonsAfterError() {
-                if (btnVideo) btnVideo.disabled = !bootAgoraReady;
-                if (btnAudio) btnAudio.disabled = !bootAgoraReady;
+                const videoBtn = btnVideo();
+                const audioBtn = btnAudio();
+                if (videoBtn) {
+                    videoBtn.disabled = !bootAgoraReady;
+                }
+                if (audioBtn) {
+                    audioBtn.disabled = !bootAgoraReady;
+                }
                 setCallButtonsIdle();
             }
 
-            if (btnVideo) btnVideo.dataset.labelVideo = btnVideo.querySelector('.btn-label')?.textContent || 'Video';
-            if (btnAudio) btnAudio.dataset.labelVoice = btnAudio.querySelector('.btn-label')?.textContent || 'Voice';
+            const initialVideoBtn = btnVideo();
+            const initialAudioBtn = btnAudio();
+            if (initialVideoBtn) {
+                initialVideoBtn.dataset.labelVideo = initialVideoBtn.querySelector('.btn-label')?.textContent || 'Video';
+            }
+            if (initialAudioBtn) {
+                initialAudioBtn.dataset.labelVoice = initialAudioBtn.querySelector('.btn-label')?.textContent || 'Voice';
+            }
 
             startSessionTimers();
 
@@ -671,8 +703,14 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
             async function leaveCall() {
                 stopCallTimer();
                 setCallButtonsIdle();
-                if (btnVideo) btnVideo.disabled = !bootAgoraReady;
-                if (btnAudio) btnAudio.disabled = !bootAgoraReady;
+                const videoBtn = btnVideo();
+                const audioBtn = btnAudio();
+                if (videoBtn) {
+                    videoBtn.disabled = !bootAgoraReady;
+                }
+                if (audioBtn) {
+                    audioBtn.disabled = !bootAgoraReady;
+                }
                 if (localVideo) {
                     localVideo.stop();
                     localVideo.close();
@@ -722,8 +760,10 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
             const labelVoice = metricsEl?.dataset.labelVoice || 'Voice call';
 
             async function joinVideoCall() {
-                if (currentMode) return;
-                setCallButtonConnecting(btnVideo);
+                if (currentMode) {
+                    return;
+                }
+                setCallButtonConnecting(btnVideo());
                 try {
                     const cfg = await refreshAgoraConfig();
                     if (!cfg || !window.AgoraRTC) {
@@ -758,11 +798,15 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                     videoTrack.play('agora-local-player');
                     await agoraClient.publish([audioTrack, videoTrack]);
                     currentMode = 'video';
-                    if (btnVideo) {
-                        btnVideo.className = btnActiveClass;
-                        btnVideo.disabled = true;
+                    const videoBtn = btnVideo();
+                    const audioBtn = btnAudio();
+                    if (videoBtn) {
+                        videoBtn.className = btnActiveClass;
+                        videoBtn.disabled = true;
                     }
-                    if (btnAudio) btnAudio.disabled = true;
+                    if (audioBtn) {
+                        audioBtn.disabled = true;
+                    }
                     document.getElementById('agora-toggle-video')?.classList.remove('hidden');
                     startCallTimer('video', labelVideo, labelVoice);
                     showOverlay(true);
@@ -773,8 +817,10 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
             }
 
             async function joinAudioCall() {
-                if (currentMode) return;
-                setCallButtonConnecting(btnAudio);
+                if (currentMode) {
+                    return;
+                }
+                setCallButtonConnecting(btnAudio());
                 try {
                     const cfg = await refreshAgoraConfig();
                     if (!cfg || !window.AgoraRTC) {
@@ -803,11 +849,15 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                     localAudio = audioTrack;
                     await agoraClient.publish([audioTrack]);
                     currentMode = 'audio';
-                    if (btnAudio) {
-                        btnAudio.className = btnActiveClass;
-                        btnAudio.disabled = true;
+                    const videoBtn = btnVideo();
+                    const audioBtn = btnAudio();
+                    if (audioBtn) {
+                        audioBtn.className = btnActiveClass;
+                        audioBtn.disabled = true;
                     }
-                    if (btnVideo) btnVideo.disabled = true;
+                    if (videoBtn) {
+                        videoBtn.disabled = true;
+                    }
                     document.getElementById('agora-toggle-video')?.classList.add('hidden');
                     startCallTimer('audio', labelVideo, labelVoice);
                     showOverlay(true);
@@ -817,28 +867,70 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                 }
             }
 
-            btnVideo?.addEventListener('click', () => joinVideoCall());
-            btnAudio?.addEventListener('click', () => joinAudioCall());
-            document.getElementById('agora-leave-btn')?.addEventListener('click', () => {
-                leaveCall().catch((e) => console.error(e));
-            });
-            document.getElementById('agora-toggle-mic')?.addEventListener('click', () => {
+            boot.__joinVideoCall = () => joinVideoCall();
+            boot.__joinAudioCall = () => joinAudioCall();
+            boot.__leaveCall = () => leaveCall();
+            boot.__toggleMic = () => {
                 if (localAudio) {
                     localAudio.setEnabled(!localAudio.enabled);
                 }
-            });
-            document.getElementById('agora-toggle-video')?.addEventListener('click', () => {
+            };
+            boot.__toggleVideo = () => {
                 if (localVideo) {
                     localVideo.setEnabled(!localVideo.enabled);
                 }
-            });
+            };
 
-            document.addEventListener('livewire:navigated', () => {
-                leaveCall().catch(() => {});
-                if (sessionTimerId) clearInterval(sessionTimerId);
-                sessionTimerId = null;
-                startSessionTimers();
-            });
+            if (!window.__doctorConversationClickBound) {
+                window.__doctorConversationClickBound = true;
+
+                document.addEventListener('click', (event) => {
+                    const bootEl = document.getElementById('doctor-conversation-bootstrap');
+                    if (!bootEl) {
+                        return;
+                    }
+
+                    if (event.target.closest('#btn-agora-video')) {
+                        bootEl.__joinVideoCall?.().catch((error) => console.error(error));
+                    }
+
+                    if (event.target.closest('#btn-agora-audio')) {
+                        bootEl.__joinAudioCall?.().catch((error) => console.error(error));
+                    }
+
+                    if (event.target.closest('#agora-leave-btn')) {
+                        bootEl.__leaveCall?.().catch((error) => console.error(error));
+                    }
+
+                    if (event.target.closest('#agora-toggle-mic')) {
+                        bootEl.__toggleMic?.();
+                    }
+
+                    if (event.target.closest('#agora-toggle-video')) {
+                        bootEl.__toggleVideo?.();
+                    }
+                });
+
+                document.addEventListener('livewire:navigating', () => {
+                    const bootEl = document.getElementById('doctor-conversation-bootstrap');
+                    bootEl?.__leaveCall?.().catch(() => {});
+                });
+            }
+
+            if (boot.dataset.sessionObserved !== '1' && metricsEl) {
+                boot.dataset.sessionObserved = '1';
+                new MutationObserver(() => {
+                    startSessionTimers();
+                }).observe(metricsEl, {
+                    attributes: true,
+                    attributeFilter: ['data-status', 'data-session-start', 'data-session-end'],
+                });
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', initDoctorConversationRealtime);
+        document.addEventListener('livewire:navigated', () => {
+            initDoctorConversationRealtime();
         });
     </script>
 @endpush

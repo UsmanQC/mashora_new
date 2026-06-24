@@ -52,9 +52,10 @@ return [
     'forgot_password' => 'Forgot password?',
 
     'register_title' => 'Your details',
-    'register_sub' => 'Choose a strong password to protect your account.',
+    'register_sub' => 'Add your name, email, gender, and a strong password to finish creating your account.',
     'back_to_phone' => 'Back to phone entry',
     'full_name' => 'Full name',
+    'email' => 'Email',
     'password' => 'Password',
     'password_confirm' => 'Confirm password',
 

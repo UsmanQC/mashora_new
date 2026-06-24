@@ -5,7 +5,9 @@
     $showTimer = $component->shouldShowStartTimer($appointment);
     $canJoinSession = $status === 'in_process';
     $awaitingDoctor = in_array($status, ['new', 'rescheduled'], true);
-    $hasAction = $appointment->status === 'pending_follow_up' || $canJoinSession || $awaitingDoctor;
+    $canResolveMissed = $component->canResolveMissed($appointment);
+    $hasMissedRefund = $component->hasMissedRefund($appointment);
+    $hasAction = $appointment->status === 'pending_follow_up' || $canJoinSession || $awaitingDoctor || $canResolveMissed || ($appointment->isDoctorMissed() && $hasMissedRefund);
     $doctorName = $appointment->doctor?->displayName() ?: __('patient.appointments.title');
 @endphp
 
@@ -116,6 +118,34 @@
                             <p class="text-sm font-semibold text-amber-950">{{ __('patient.appointments.waiting_for_doctor') }}</p>
                             <p class="mt-0.5 text-xs leading-relaxed text-amber-800/80">{{ __('patient.appointments.waiting_for_doctor_hint') }}</p>
                         </div>
+                    </div>
+                @elseif ($canResolveMissed)
+                    <div class="rounded-xl border border-orange-200/90 bg-gradient-to-r from-orange-50 to-amber-50/80 px-3.5 py-3">
+                        <p class="text-sm font-semibold text-orange-950">{{ __('patient.missed.prompt') }}</p>
+                        <div class="mt-3 flex flex-col gap-2 sm:flex-row">
+                            <flux:button
+                                :href="route('patient.appointments.missed-reschedule', $appointment)"
+                                wire:navigate
+                                class="flex-1 !rounded-xl !border-[#10B981]/30 !bg-white !py-2.5 !text-[#047857] hover:!bg-[#10B981]/5"
+                                icon="calendar-days"
+                            >
+                                {{ __('patient.missed.reschedule') }}
+                            </flux:button>
+                            <flux:button
+                                type="button"
+                                wire:click="refundMissed({{ $appointment->id }})"
+                                wire:confirm="{{ __('patient.missed.refund_confirm', ['amount' => number_format((float) $appointment->total, 2)]) }}"
+                                class="flex-1 !rounded-xl !bg-[#10B981] !py-2.5 !text-white hover:!brightness-95"
+                                icon="banknotes"
+                            >
+                                {{ __('patient.missed.refund') }}
+                            </flux:button>
+                        </div>
+                    </div>
+                @elseif ($appointment->isDoctorMissed() && $hasMissedRefund)
+                    <div class="flex items-center gap-2 rounded-xl border border-emerald-200/90 bg-emerald-50 px-3.5 py-3 text-sm font-semibold text-emerald-900">
+                        <flux:icon name="check-circle" variant="mini" class="size-5 shrink-0 text-emerald-600" />
+                        {{ __('patient.missed.refunded_label') }}
                     </div>
                 @endif
             </div>

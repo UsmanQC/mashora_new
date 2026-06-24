@@ -1,19 +1,27 @@
-{{-- Text brand link for blue chrome (see patient-brand-logo.blade.php). --}}
+{{-- Awaan logo link for blue/green chrome (see patient-brand-logo.blade.php). --}}
 @php
     /** @var 'compact'|'sidebar' */
     $density ??= 'sidebar';
 
     $logoImgClass = match ($density) {
-        'compact' => 'h-8 w-auto max-w-[min(100%,11rem)] object-contain object-start',
-        default => 'h-11 w-auto max-w-[min(100%,12.5rem)] object-contain object-start',
+        'compact' => 'h-9 w-auto max-w-[min(100%,10rem)] object-contain object-center',
+        default => 'h-12 w-auto max-w-[min(100%,11rem)] object-contain object-center',
+    };
+
+    $linkClass = match ($density) {
+        'compact' => 'flex w-full min-w-0 justify-center px-1 text-white no-underline',
+        default => 'flex w-full min-w-0 justify-center px-1 text-white no-underline',
     };
 @endphp
 
 <a
     href="{{ route('patient.home') }}"
     wire:navigate
-    class="flex w-full min-w-0 justify-start px-1 text-white no-underline"
+    class="{{ $linkClass }}"
     title="{{ __('patient.brand') }}"
 >
-    @include('partials.patient-brand-logo', ['imgClass' => $logoImgClass])
+    @include('partials.patient-brand-logo', [
+        'svgClass' => $logoImgClass,
+        'onGreenChrome' => true,
+    ])
 </a>

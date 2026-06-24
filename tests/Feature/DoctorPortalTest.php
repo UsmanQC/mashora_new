@@ -226,6 +226,38 @@ test('doctor locale route updates session and redirects back', function () {
     expect(session('patient_locale'))->toBe('ar');
 });
 
+test('authenticated doctor navbar shows language switch', function () {
+    $doctor = Doctor::factory()->create(['profile_completed' => true]);
+
+    $this->actingAs($doctor, 'doctor')
+        ->get(route('doctor.dashboard'))
+        ->assertSuccessful()
+        ->assertSee('data-test="doctor-navbar-language-switch"', false)
+        ->assertSee(route('doctor.locale', ['locale' => 'en']), false)
+        ->assertSee(route('doctor.locale', ['locale' => 'ar']), false)
+        ->assertSee(__('doctor.language.locale_en'), false)
+        ->assertSee(__('doctor.language.locale_ar_short'), false);
+});
+
+test('authenticated doctor account menu shows personal profile link', function () {
+    $doctor = Doctor::factory()->create(['profile_completed' => true]);
+
+    $this->actingAs($doctor, 'doctor')
+        ->get(route('doctor.dashboard'))
+        ->assertSuccessful()
+        ->assertSee('data-test="doctor-account-menu-button"', false)
+        ->assertSee('data-test="doctor-personal-profile-link"', false)
+        ->assertSee(route('doctor.settings.profile'), false)
+        ->assertSee(__('doctor.settings.personal_profile'), false);
+});
+
+test('doctor guest welcome page shows language switch', function () {
+    $this->get(route('doctor.welcome'))
+        ->assertSuccessful()
+        ->assertSee(route('doctor.locale', ['locale' => 'en']), false)
+        ->assertSee(route('doctor.locale', ['locale' => 'ar']), false);
+});
+
 test('doctor with incomplete profile is redirected to basic info from dashboard', function () {
     $doctor = Doctor::factory()->pendingOnboarding()->create([
         'phone' => '966511122244',
