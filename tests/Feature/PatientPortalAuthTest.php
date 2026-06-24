@@ -28,6 +28,19 @@ test('guest can open patient phone entry screen', function () {
         ->assertSee('patientPhoneField', false);
 });
 
+test('guest can switch patient locale from auth pages', function () {
+    $response = $this->from(route('patient.phone'))
+        ->get(route('patient.locale', ['locale' => 'ar']));
+
+    $response
+        ->assertRedirect(route('patient.phone'))
+        ->assertSessionHas('patient_locale', 'ar');
+
+    $this->get(route('patient.phone'))
+        ->assertSuccessful()
+        ->assertSee('dir="rtl"', false);
+});
+
 test('existing mobile number opens password step on phone page', function () {
     User::factory()->create([
         'phone' => '966512345678',

@@ -40,6 +40,16 @@ Route::livewire('patient/register/done', 'pages::patient-auth.congrats')
     ->middleware('auth')
     ->name('patient.register.done');
 
+Route::get('patient/locale/{locale}', function (string $locale) {
+    if (! in_array($locale, ['en', 'ar'], true)) {
+        abort(404);
+    }
+
+    session(['patient_locale' => $locale]);
+
+    return redirect()->back();
+})->name('patient.locale');
+
 Route::livewire('patient', 'pages::patient.home')
     ->middleware(['patient.public'])
     ->name('patient.home');
@@ -55,18 +65,6 @@ Route::livewire('patient/appointments/{appointment}/conversation', 'pages::patie
 Route::livewire('patient/appointments/{appointment}/missed-reschedule', 'pages::patient.appointment.missed-reschedule')
     ->middleware(['patient.profile'])
     ->name('patient.appointments.missed-reschedule');
-
-Route::middleware(['patient.profile'])
-    ->get('patient/locale/{locale}', function (string $locale) {
-        if (! in_array($locale, ['en', 'ar'], true)) {
-            abort(404);
-        }
-
-        session(['patient_locale' => $locale]);
-
-        return redirect()->back();
-    })
-    ->name('patient.locale');
 
 Route::view('patient/menu', 'patient.menu')
     ->middleware(['auth', 'patient.profile'])
