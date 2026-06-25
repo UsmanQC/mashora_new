@@ -162,3 +162,61 @@ test('mood modal opens when bar dispatches open event', function () {
         ->dispatch('open-patient-mood-picker')
         ->assertSet('showMoodModal', true);
 });
+
+test('future mood day shows come tomorrow dialog instead of picker', function () {
+    app()->setLocale('en');
+
+    $user = User::factory()->create(['profile_completed' => true]);
+    $tomorrow = now()->addDay()->toDateString();
+
+    Livewire::actingAs($user)
+        ->test(PatientMoodPickerModal::class)
+        ->dispatch('open-patient-mood-picker', dateIso: $tomorrow)
+        ->assertSet('showMoodModal', false)
+        ->assertSet('showFutureMoodDialog', true)
+        ->assertSee(__('patient.mood_future_dialog_body'), false);
+});
+
+test('patient cannot log mood twice on the same day', function () {
+    app()->setLocale('en');
+
+    $user = User::factory()->create(['profile_completed' => true]);
+
+    PatientMood::query()->create([
+        'user_id' => $user->getKey(),
+        'mood' => 'happy',
+        'date' => now()->toDateString(),
+        'is_shared' => false,
+    ]);
+
+    Livewire::actingAs($user)
+        ->test(PatientMoodPickerModal::class)
+        ->dispatch('open-patient-mood-picker')
+        ->assertSet('showMoodModal', false)
+        ->assertSet('showAlreadyLoggedMoodDialog', true);
+
+    Livewire::actingAs($user)
+        ->test(PatientMoodPickerModal::class)
+        ->set('showMoodModal', true)
+        ->call('setMood', 'sad')
+        ->call('saveMood');
+
+    expect(PatientMood::query()->where('user_id', $user->getKey())->count())->toBe(1);
+});
+
+test('chrome bar shows today mood label after patient logs mood', function () {
+    app()->setLocale('en');
+
+    $user = User::factory()->create(['profile_completed' => true]);
+
+    PatientMood::query()->create([
+        'user_id' => $user->getKey(),
+        'mood' => 'happy',
+        'date' => now()->toDateString(),
+        'is_shared' => false,
+    ]);
+
+    Livewire::actingAs($user)
+        ->test(PatientPortalChromeBar::class)
+        ->assertSee(__('patient.mood_selector_options.happy'), false);
+});

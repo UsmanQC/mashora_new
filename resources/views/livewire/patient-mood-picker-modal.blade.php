@@ -139,4 +139,46 @@
             @endif
         </div>
     </flux:modal>
+
+    <flux:modal wire:model.self="showFutureMoodDialog" class="max-w-md rounded-2xl shadow-xl" :closable="true">
+        <div class="flex flex-col items-center px-6 py-8 text-center sm:px-10 sm:py-10">
+            <flux:heading size="lg" class="font-bold text-zinc-800">
+                {{ __('patient.mood_future_dialog_title') }}
+            </flux:heading>
+            <flux:text class="mt-3 max-w-sm leading-relaxed text-zinc-600">
+                {{ __('patient.mood_future_dialog_body') }}
+            </flux:text>
+            <flux:button type="button" variant="primary" class="mt-8 !bg-[#10B981] !text-white" wire:click="$set('showFutureMoodDialog', false)">
+                {{ __('patient.mood_dialog_ok') }}
+            </flux:button>
+        </div>
+    </flux:modal>
+
+    <flux:modal wire:model.self="showAlreadyLoggedMoodDialog" class="max-w-md rounded-2xl shadow-xl" :closable="true">
+        <div class="flex flex-col items-center px-6 py-8 text-center sm:px-10 sm:py-10">
+            <flux:heading size="lg" class="font-bold text-zinc-800">
+                {{ __('patient.mood_already_logged_dialog_title') }}
+            </flux:heading>
+            <flux:text class="mt-3 max-w-sm leading-relaxed text-zinc-600">
+                {{ __('patient.mood_already_logged_dialog_body') }}
+            </flux:text>
+            <flux:button type="button" variant="primary" class="mt-8 !bg-[#10B981] !text-white" wire:click="$set('showAlreadyLoggedMoodDialog', false)">
+                {{ __('patient.mood_dialog_ok') }}
+            </flux:button>
+        </div>
+    </flux:modal>
+
+    <flux:modal wire:model.self="showOnlyTodayMoodDialog" class="max-w-md rounded-2xl shadow-xl" :closable="true">
+        <div class="flex flex-col items-center px-6 py-8 text-center sm:px-10 sm:py-10">
+            <flux:heading size="lg" class="font-bold text-zinc-800">
+                {{ __('patient.mood_only_today_dialog_title') }}
+            </flux:heading>
+            <flux:text class="mt-3 max-w-sm leading-relaxed text-zinc-600">
+                {{ __('patient.mood_only_today_dialog_body') }}
+            </flux:text>
+            <flux:button type="button" variant="primary" class="mt-8 !bg-[#10B981] !text-white" wire:click="$set('showOnlyTodayMoodDialog', false)">
+                {{ __('patient.mood_dialog_ok') }}
+            </flux:button>
+        </div>
+    </flux:modal>
 </div>

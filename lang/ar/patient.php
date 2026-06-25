@@ -220,6 +220,13 @@ return [
     'metrics_sign_in_prompt' => 'أنشئ حسابًا أو سجّل الدخول لعرض ومقاييس الصحة النفسية.',
 
     'mood_calendar_coming' => 'أرشيف المزاج ليوم :date سيتاح قريبًا.',
+    'mood_future_dialog_title' => 'ليس بعد',
+    'mood_future_dialog_body' => 'يُرجى العودة غدًا لتسجيل شعورك في ذلك اليوم.',
+    'mood_already_logged_dialog_title' => 'تم الحفظ مسبقًا',
+    'mood_already_logged_dialog_body' => 'لقد سجّلت مزاجك اليوم. يمكنك إضافة إدخال جديد غدًا.',
+    'mood_only_today_dialog_title' => 'اليوم فقط',
+    'mood_only_today_dialog_body' => 'يمكنك تسجيل مزاجك لليوم فقط.',
+    'mood_dialog_ok' => 'حسنًا',
 
     'wallet' => [
         'title' => 'محفظتي',

@@ -220,6 +220,13 @@ return [
     'metrics_sign_in_prompt' => 'Sign in or create an account to take mental health measures.',
 
     'mood_calendar_coming' => 'Mood history for :date will be available soon.',
+    'mood_future_dialog_title' => 'Not yet',
+    'mood_future_dialog_body' => 'Please come back tomorrow to log how you feel on that day.',
+    'mood_already_logged_dialog_title' => 'Already saved',
+    'mood_already_logged_dialog_body' => 'You already logged your mood today. You can add a new entry tomorrow.',
+    'mood_only_today_dialog_title' => 'Today only',
+    'mood_only_today_dialog_body' => 'You can only log your mood for today.',
+    'mood_dialog_ok' => 'OK',
 
     'wallet' => [
         'title' => 'My wallet',

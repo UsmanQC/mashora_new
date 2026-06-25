@@ -29,7 +29,7 @@ test('authenticated patient home shows mood strip above spotlight cards', functi
 
 test('guest mood day click redirects to patient phone entry', function () {
     Livewire::test('pages::patient.home')
-        ->call('selectMoodDay')
+        ->call('selectMoodDay', now()->toDateString())
         ->assertRedirect(route('patient.phone'));
 });
 
@@ -85,7 +85,7 @@ test('mood week strip opens mood picker for authenticated patients', function ()
     $this->actingAs($user)
         ->get(route('patient.home'))
         ->assertSuccessful()
-        ->assertSee('wire:click="selectMoodDay"', false);
+        ->assertSee('wire:click="selectMoodDay', false);
 });
 
 test('clicking mood day on home dispatches open patient mood picker event for authenticated patients', function () {
@@ -93,7 +93,7 @@ test('clicking mood day on home dispatches open patient mood picker event for au
 
     Livewire::actingAs($user)
         ->test('pages::patient.home')
-        ->call('selectMoodDay')
+        ->call('selectMoodDay', now()->toDateString())
         ->assertDispatched('open-patient-mood-picker');
 });
 
