@@ -1,8 +1,8 @@
 @php
+    use App\Support\DoctorMenu;
+
     $activeDash = request()->routeIs('doctor.dashboard');
-    $activeAppt = request()->routeIs('doctor.appointments');
-    $activeRatings = request()->routeIs('doctor.ratings');
-    $activeSettings = request()->routeIs('doctor.settings');
+    $sections = DoctorMenu::sections();
 @endphp
 
 <flux:button
@@ -14,30 +14,27 @@
 >
     {{ __('doctor.nav.dashboard') }}
 </flux:button>
-<flux:button
-    :href="route('doctor.appointments')"
-    wire:navigate
-    variant="ghost"
-    class="w-full justify-start !text-white hover:!bg-white/10 {{ $activeAppt ? '!bg-[#047857] !text-white [&_svg]:!text-white' : '' }}"
-    icon="calendar-days"
->
-    {{ __('doctor.nav.appointments') }}
-</flux:button>
-<flux:button
-    :href="route('doctor.ratings')"
-    wire:navigate
-    variant="ghost"
-    class="w-full justify-start !text-white hover:!bg-white/10 {{ $activeRatings ? '!bg-[#047857] !text-white [&_svg]:!text-white' : '' }}"
-    icon="star"
->
-    {{ __('doctor.nav.ratings') }}
-</flux:button>
-<flux:button
-    :href="route('doctor.settings')"
-    wire:navigate
-    variant="ghost"
-    class="w-full justify-start !text-white hover:!bg-white/10 {{ $activeSettings ? '!bg-[#047857] !text-white [&_svg]:!text-white' : '' }}"
-    icon="cog-6-tooth"
->
-    {{ __('doctor.nav.menu') }}
-</flux:button>
+
+@foreach ($sections as $section)
+    <div class="mt-4 first:mt-2">
+        <p class="mb-1.5 px-3 text-[0.65rem] font-semibold uppercase tracking-wider text-white/55">
+            {{ $section['heading'] }}
+        </p>
+        <div class="flex flex-col gap-0.5">
+            @foreach ($section['items'] as $item)
+                @if ($item['available'])
+                    @php($isActive = DoctorMenu::isRouteActive($item['route']))
+                    <flux:button
+                        :href="route($item['route'])"
+                        wire:navigate
+                        variant="ghost"
+                        class="w-full justify-start !text-white hover:!bg-white/10 {{ $isActive ? '!bg-[#047857] !text-white [&_svg]:!text-white' : '' }}"
+                        :icon="$item['icon']"
+                    >
+                        {{ $item['label'] }}
+                    </flux:button>
+                @endif
+            @endforeach
+        </div>
+    </div>
+@endforeach

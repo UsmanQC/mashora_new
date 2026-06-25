@@ -3,10 +3,10 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Database\Eloquent\Model;
 
 class Invoice extends Model
 {
@@ -29,9 +29,32 @@ class Invoice extends Model
         'paid_at',
         'payment_status',
         'link_pdf',
+        'wallet_settled_at',
         'created_at',
-        'updated_at'
+        'updated_at',
     ];
+
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'issue_date' => 'date',
+            'from_date' => 'date',
+            'to_date' => 'date',
+            'paid_at' => 'datetime',
+            'wallet_settled_at' => 'datetime',
+            'total_amount' => 'decimal:2',
+            'doctor_share' => 'decimal:2',
+            'mashora_share' => 'decimal:2',
+        ];
+    }
+
+    public function isPaid(): bool
+    {
+        return $this->payment_status === 'paid';
+    }
 
     /**
      * Get the doctor that owns the invoice.

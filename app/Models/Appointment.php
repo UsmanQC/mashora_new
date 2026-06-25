@@ -90,6 +90,7 @@ class Appointment extends Model
         'actual_end_at',
         'extend_at',
         'extend_duration',
+        'invoice_id',
     ];
 
     /**
@@ -304,6 +305,14 @@ class Appointment extends Model
     public function doctor(): BelongsTo
     {
         return $this->belongsTo(Doctor::class);
+    }
+
+    /**
+     * @return BelongsTo<Invoice, $this>
+     */
+    public function invoice(): BelongsTo
+    {
+        return $this->belongsTo(Invoice::class);
     }
 
     /**

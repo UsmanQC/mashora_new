@@ -137,7 +137,7 @@ final class FollowUpPaymentCompletionService
         $entityId = $request->string('entityId')->toString();
 
         if ($entityId === '') {
-            $entityId = (string) config('hyperpay.entity_id_b2c');
+            $entityId = HyperpayCheckoutService::configuredEntityId();
         }
 
         /** @var HyperpayCheckoutService $hyperpay */

@@ -2,6 +2,8 @@
 
 namespace App\Support;
 
+use App\Services\HyperpayCheckoutService;
+
 final class PaymentGateway
 {
     public const DRIVER_STRIPE = 'stripe';
@@ -43,7 +45,7 @@ final class PaymentGateway
         }
 
         if (self::isHyperPay()) {
-            return filled(config('hyperpay.token')) && filled(config('hyperpay.entity_id_b2c'));
+            return filled(config('hyperpay.token')) && filled(HyperpayCheckoutService::configuredEntityId());
         }
 
         return filled(config('myfatoorah.api_key'));

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Doctor\DoctorAppointmentRealtimeController;
+use App\Http\Controllers\Doctor\DoctorInvoiceController;
 use App\Http\Controllers\Doctor\DoctorSessionController;
 use App\Models\Appointment;
 use Illuminate\Http\RedirectResponse;
@@ -87,7 +88,9 @@ Route::middleware('auth:doctor')->group(function (): void {
         });
 
         Route::livewire('ratings', 'pages::doctor.ratings')->name('ratings');
-        Route::livewire('settings', 'pages::doctor.settings')->name('settings');
+        Route::get('settings', function (): RedirectResponse {
+            return redirect()->route('doctor.dashboard');
+        })->name('settings');
         Route::livewire('settings/profile', 'pages::doctor.settings.profile')->name('settings.profile');
         Route::livewire('settings/notifications', 'pages::doctor.settings.notifications')->name('settings.notifications');
         Route::livewire('settings/bank-account', 'pages::doctor.settings.bank-account')->name('settings.bank-account');
@@ -96,6 +99,9 @@ Route::middleware('auth:doctor')->group(function (): void {
         Route::livewire('settings/support/{ticket}', 'pages::doctor.settings.support-show')->name('settings.support.show');
         Route::livewire('settings/privacy-policy', 'pages::doctor.settings.privacy-policy')->name('settings.privacy-policy');
         Route::livewire('settings/invoices', 'pages::doctor.settings.invoices')->name('settings.invoices');
+        Route::livewire('settings/invoices/{invoice}', 'pages::doctor.settings.invoice-show')->name('settings.invoices.show');
+        Route::get('settings/invoices/{invoice}/pdf', [DoctorInvoiceController::class, 'download'])
+            ->name('settings.invoices.pdf');
         Route::livewire('settings/wallet', 'pages::doctor.settings.wallet')->name('settings.wallet');
         Route::livewire('settings/working-hours', 'pages::doctor.settings.working-hours')->name('settings.working-hours');
         Route::livewire('settings/duration', 'pages::doctor.settings.duration')->name('settings.duration');

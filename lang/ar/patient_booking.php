@@ -69,7 +69,7 @@ return [
     'payment_local_ssl_fallback' => 'تم اكتشاف مشكلة شهادات SSL محليًا. تمّت محاكاة تأكيد الدفع لأغراض الاختبار المحلي.',
     'payment_stripe_missing' => 'لم يُضبط Stripe بعد. اضبط `PAYMENT_GATEWAY=stripe` و`STRIPE_KEY` و`STRIPE_SECRET` في ملف `.env`.',
     'payment_stripe_note' => 'ستُعاد توجيهك إلى Stripe Checkout للدفع ببطاقة اختبار.',
-    'payment_hyperpay_missing' => 'لم يُضبط HyperPay بعد. اضبط `PAYMENT_GATEWAY=hyperpay` و`HYPERPAY_TOKEN` و`HYPERPAY_ENTITY_ID_B2C` في ملف `.env`.',
+    'payment_hyperpay_missing' => 'لم يُضبط HyperPay بعد. اضبط `PAYMENT_GATEWAY=hyperpay` و`HYPERPAY_TOKEN` و`HYPERPAY_ENTITY_MODE=b2b` و`HYPERPAY_ENTITY_ID_B2B` في ملف `.env`.',
     'payment_hyperpay_note' => 'ادفع بأمان عبر مدى أو فيزا أو ماستركارد أو Apple Pay.',
     'payment_retry' => 'إعادة تحميل نموذج الدفع',
     'pay_now_stripe' => 'الدفع عبر Stripe',

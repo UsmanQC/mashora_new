@@ -67,7 +67,7 @@ test('rejected doctor is blocked from the portal and sees the rejected message',
     ]);
 
     $this->actingAs($doctor, 'doctor')
-        ->get(route('doctor.settings'))
+        ->get(route('doctor.settings.wallet'))
         ->assertRedirect(route('doctor.account-status'));
 
     $this->actingAs($doctor, 'doctor')
@@ -112,13 +112,13 @@ test('approved doctor dashboard includes formatted revenue total for revenue-eli
         ->assertSee('2,500');
 });
 
-test('authenticated doctor can view appointments ratings and settings', function () {
+test('authenticated doctor can view appointments ratings and settings pages', function () {
     $doctor = Doctor::factory()->create(['profile_completed' => true]);
 
     $this->actingAs($doctor, 'doctor')->get(route('doctor.appointments'))->assertOk();
     $this->actingAs($doctor, 'doctor')->get(route('doctor.appointments', ['status' => 'completed']))->assertOk();
     $this->actingAs($doctor, 'doctor')->get(route('doctor.ratings'))->assertOk();
-    $this->actingAs($doctor, 'doctor')->get(route('doctor.settings'))->assertOk();
+    $this->actingAs($doctor, 'doctor')->get(route('doctor.settings'))->assertRedirect(route('doctor.dashboard'));
     $this->actingAs($doctor, 'doctor')->get(route('doctor.settings.profile'))->assertOk();
     $this->actingAs($doctor, 'doctor')->get(route('doctor.settings.notifications'))->assertOk();
     $this->actingAs($doctor, 'doctor')->get(route('doctor.settings.bank-account'))->assertOk();

@@ -18,7 +18,7 @@
             <div class="border-b border-white/10 px-4 pb-5 pt-5">
                 @include('partials.doctor-brand-strip', ['density' => 'sidebar'])
             </div>
-            <nav class="flex flex-1 flex-col gap-1 px-2 py-4">
+            <nav class="flex flex-1 flex-col gap-1 overflow-y-auto px-2 py-4">
                 @include('partials.doctor-sidebar-nav')
             </nav>
         </aside>
@@ -71,7 +71,7 @@
                 class="fixed inset-x-0 bottom-0 z-40 flex border-t border-zinc-200 bg-white px-1 py-1.5 pb-[max(0.5rem,env(safe-area-inset-bottom))] lg:hidden"
                 aria-label="{{ __('doctor.mobile_nav_label') }}"
             >
-                <div class="grid w-full grid-cols-4 gap-0.5">
+                <div class="grid w-full grid-cols-3 gap-0.5">
                     <flux:button
                         :href="route('doctor.dashboard')"
                         wire:navigate
@@ -87,7 +87,7 @@
                         wire:navigate
                         variant="ghost"
                         size="sm"
-                        class="min-h-11 px-1 py-1.5 text-[0.65rem] leading-tight sm:text-xs {{ request()->routeIs('doctor.appointments') ? '!bg-[#047857] !text-white' : 'text-zinc-600' }}"
+                        class="min-h-11 px-1 py-1.5 text-[0.65rem] leading-tight sm:text-xs {{ request()->routeIs('doctor.appointments', 'doctor.appointments.*') ? '!bg-[#047857] !text-white' : 'text-zinc-600' }}"
                         icon="calendar-days"
                     >
                         {{ __('doctor.nav.appointments') }}
@@ -101,16 +101,6 @@
                         icon="star"
                     >
                         {{ __('doctor.nav.ratings') }}
-                    </flux:button>
-                    <flux:button
-                        :href="route('doctor.settings')"
-                        wire:navigate
-                        variant="ghost"
-                        size="sm"
-                        class="min-h-11 px-1 py-1.5 text-[0.65rem] leading-tight sm:text-xs {{ request()->routeIs('doctor.settings') ? '!bg-[#047857] !text-white' : 'text-zinc-600' }}"
-                        icon="cog-6-tooth"
-                    >
-                        {{ __('doctor.nav.menu') }}
                     </flux:button>
                 </div>
             </nav>

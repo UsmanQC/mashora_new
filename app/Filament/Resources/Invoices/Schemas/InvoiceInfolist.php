@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Invoices\Schemas;
 
 use App\Models\Invoice;
 use Filament\Infolists\Components\TextEntry;
+use Filament\Infolists\Components\ViewEntry;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Illuminate\Support\Number;
@@ -40,10 +41,21 @@ class InvoiceInfolist
                         TextEntry::make('mashora_share')
                             ->formatStateUsing(fn ($state): string => Number::format((float) $state, 2).' <img src="'.asset('images/saudi_riyal.svg').'" alt="Saudi Riyal" style="height:14px;display:inline-block;vertical-align:middle;">')
                             ->html(),
-                        TextEntry::make('payment_status')->badge(),
+                        TextEntry::make('payment_status')
+                            ->badge()
+                            ->color(fn (string $state): string => $state === 'paid' ? 'success' : 'warning')
+                            ->formatStateUsing(fn (string $state): string => ucfirst($state)),
                         TextEntry::make('paid_at')->dateTime()->placeholder('—'),
+                        TextEntry::make('wallet_settled_at')->dateTime()->placeholder('—'),
                     ])
                     ->columns(2),
+                Section::make('Sessions')
+                    ->components([
+                        ViewEntry::make('appointments_table')
+                            ->label('')
+                            ->view('filament.invoices.appointments-table')
+                            ->columnSpanFull(),
+                    ]),
                 Section::make('PDF')
                     ->components([
                         TextEntry::make('link_pdf')

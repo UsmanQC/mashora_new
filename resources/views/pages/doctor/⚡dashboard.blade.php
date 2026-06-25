@@ -371,6 +371,13 @@ new #[Layout('layouts::doctor')] #[Title('Dashboard')] class extends Component
                 </div>
             </div>
 
+            <div class="space-y-2">
+                <flux:heading size="lg" class="font-semibold text-zinc-900">{{ __('doctor.dashboard.quick_links_title') }}</flux:heading>
+                <flux:text class="text-sm text-zinc-600">{{ __('doctor.dashboard.quick_links_subtitle') }}</flux:text>
+            </div>
+
+            @include('partials.doctor-menu-sections', ['ariaLabel' => __('doctor.dashboard.quick_links_title')])
+
             @if ($this->upcomingAppointments->isEmpty())
                 <div class="rounded-2xl border border-zinc-200/90 bg-white px-4 py-10 text-center shadow-sm">
                     @include('partials.patient-empty-record-illustration')

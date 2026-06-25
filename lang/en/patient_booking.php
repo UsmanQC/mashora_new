@@ -69,7 +69,7 @@ return [
     'payment_local_ssl_fallback' => 'Local SSL trust issue detected. Payment confirmation was simulated for local testing.',
     'payment_stripe_missing' => 'Stripe is not configured yet. Set `PAYMENT_GATEWAY=stripe`, `STRIPE_KEY`, and `STRIPE_SECRET` in your `.env` file.',
     'payment_stripe_note' => 'You will be redirected to Stripe Checkout to pay with a test card.',
-    'payment_hyperpay_missing' => 'HyperPay is not configured yet. Set `PAYMENT_GATEWAY=hyperpay`, `HYPERPAY_TOKEN`, and `HYPERPAY_ENTITY_ID_B2C` in your `.env` file.',
+    'payment_hyperpay_missing' => 'HyperPay is not configured yet. Set `PAYMENT_GATEWAY=hyperpay`, `HYPERPAY_TOKEN`, `HYPERPAY_ENTITY_MODE=b2b`, and `HYPERPAY_ENTITY_ID_B2B` in your `.env` file.',
     'payment_hyperpay_note' => 'Pay securely with Mada, Visa, Mastercard, or Apple Pay.',
     'payment_retry' => 'Reload payment form',
     'pay_now_stripe' => 'Pay with Stripe',

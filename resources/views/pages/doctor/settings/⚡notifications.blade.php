@@ -57,7 +57,7 @@ new #[Layout('layouts::doctor')] #[Title('Notifications')] class extends Compone
 <div class="space-y-6">
     <div class="flex items-center justify-between gap-3">
         <flux:heading size="xl" class="font-semibold text-zinc-900">{{ __('Notifications') }}</flux:heading>
-        <flux:button :href="route('doctor.settings')" wire:navigate variant="ghost" size="sm" icon="arrow-left">{{ __('Back') }}</flux:button>
+        <flux:button :href="route('doctor.dashboard')" wire:navigate variant="ghost" size="sm" icon="arrow-left">{{ __('Back') }}</flux:button>
     </div>
 
     <div class="rounded-2xl border border-zinc-200/90 bg-white p-5 shadow-sm">

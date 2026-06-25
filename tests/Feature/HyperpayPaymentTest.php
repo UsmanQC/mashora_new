@@ -15,6 +15,7 @@ test('hyperpay payment success without checkout id fails', function () {
     config([
         'payment.driver' => 'hyperpay',
         'hyperpay.token' => 'test-token',
+        'hyperpay.entity_mode' => 'b2c',
         'hyperpay.entity_id_b2c' => 'entity-test',
     ]);
 
@@ -62,6 +63,7 @@ test('hyperpay payment success confirms booking when payment is successful', fun
     config([
         'payment.driver' => 'hyperpay',
         'hyperpay.token' => 'test-token',
+        'hyperpay.entity_mode' => 'b2c',
         'hyperpay.entity_id_b2c' => 'entity-test',
     ]);
 
@@ -158,6 +160,7 @@ test('hyperpay pending payment returns pending state', function () {
     config([
         'payment.driver' => 'hyperpay',
         'hyperpay.token' => 'test-token',
+        'hyperpay.entity_mode' => 'b2c',
         'hyperpay.entity_id_b2c' => 'entity-test',
     ]);
 

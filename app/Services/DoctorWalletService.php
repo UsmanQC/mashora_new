@@ -108,9 +108,10 @@ final class DoctorWalletService
 
             $doctor->refresh();
             $balance = $this->balance($doctor);
+            $payoutAmount = min($balance, round((float) $invoice->doctor_share, 2));
 
-            if ($balance > 0) {
-                $doctor->withdrawFloat($balance, [
+            if ($payoutAmount > 0) {
+                $doctor->withdrawFloat($payoutAmount, [
                     'type' => 'invoice_payout',
                     'invoice_id' => $invoice->id,
                     'invoice_reference' => $invoice->reference,

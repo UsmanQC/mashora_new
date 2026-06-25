@@ -7,6 +7,7 @@ return [
     'name' => env('HYPERPAY_NAME', 'hyperpay'),
     'env' => env('HYPERPAY_ENV', 'test'),
     'token' => env('HYPERPAY_TOKEN'),
+    'entity_mode' => env('HYPERPAY_ENTITY_MODE', 'b2b'),
     'entity_id_b2c' => env('HYPERPAY_ENTITY_ID_B2C'),
     'entity_id_b2b' => env('HYPERPAY_ENTITY_ID_B2B'),
 

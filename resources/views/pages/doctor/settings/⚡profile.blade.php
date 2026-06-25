@@ -130,7 +130,7 @@ new #[Layout('layouts::doctor')] #[Title('Personal account')] class extends Comp
             <flux:heading size="xl" class="font-semibold tracking-tight text-zinc-900">{{ __('Personal account') }}</flux:heading>
             <flux:text class="mt-1 text-zinc-600">{{ __('Manage profile details, photo, phone, and password.') }}</flux:text>
         </div>
-        <flux:button :href="route('doctor.settings')" wire:navigate variant="ghost" size="sm" icon="arrow-left">
+        <flux:button :href="route('doctor.dashboard')" wire:navigate variant="ghost" size="sm" icon="arrow-left">
             {{ __('Back') }}
         </flux:button>
     </div>

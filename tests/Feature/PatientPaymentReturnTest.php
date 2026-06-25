@@ -13,6 +13,8 @@ test('payment success redirects to checkout when hyperpay is not configured', fu
     config([
         'payment.driver' => 'hyperpay',
         'hyperpay.token' => '',
+        'hyperpay.entity_mode' => 'b2b',
+        'hyperpay.entity_id_b2b' => '',
         'hyperpay.entity_id_b2c' => '',
         'stripe.key' => '',
         'stripe.secret' => '',

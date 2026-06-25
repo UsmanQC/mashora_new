@@ -29,7 +29,7 @@ class HyperpayCheckoutService
         $this->env = (string) config('hyperpay.env', 'test');
         $envKey = in_array($this->env, ['test', 'dev'], true) ? 'test' : 'live';
 
-        $this->entityId = (string) config('hyperpay.entity_id_b2c', '');
+        $this->entityId = self::configuredEntityId();
         $this->authorization = 'Bearer '.((string) config('hyperpay.token', ''));
         $this->checkoutUrl = (string) config("hyperpay.{$envKey}.checkout_url", '');
         $this->widgetHost = (string) config("hyperpay.{$envKey}.widget_host", 'oppwa.com');
@@ -37,7 +37,18 @@ class HyperpayCheckoutService
 
     public function isConfigured(): bool
     {
-        return filled(config('hyperpay.token')) && filled(config('hyperpay.entity_id_b2c'));
+        return filled(config('hyperpay.token')) && filled(self::configuredEntityId());
+    }
+
+    public static function configuredEntityId(): string
+    {
+        $mode = strtolower((string) config('hyperpay.entity_mode', 'b2b'));
+
+        if ($mode === 'b2b') {
+            return (string) config('hyperpay.entity_id_b2b', '');
+        }
+
+        return (string) config('hyperpay.entity_id_b2c', '');
     }
 
     public function getEnvironment(): string

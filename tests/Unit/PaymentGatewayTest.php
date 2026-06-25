@@ -24,7 +24,8 @@ test('payment gateway resolves hyperpay driver', function () {
     config([
         'payment.driver' => 'hyperpay',
         'hyperpay.token' => 'test-token',
-        'hyperpay.entity_id_b2c' => 'entity-test',
+        'hyperpay.entity_mode' => 'b2b',
+        'hyperpay.entity_id_b2b' => 'entity-b2b-test',
     ]);
 
     expect(PaymentGateway::driver())->toBe('hyperpay')
@@ -34,11 +35,32 @@ test('payment gateway resolves hyperpay driver', function () {
         ->and(PaymentGateway::isConfigured())->toBeTrue();
 });
 
+test('hyperpay resolves b2b entity id by default', function () {
+    config([
+        'hyperpay.entity_mode' => 'b2b',
+        'hyperpay.entity_id_b2b' => 'b2b-entity-id',
+        'hyperpay.entity_id_b2c' => 'b2c-entity-id',
+    ]);
+
+    expect(HyperpayCheckoutService::configuredEntityId())->toBe('b2b-entity-id');
+});
+
+test('hyperpay resolves b2c entity id when mode is b2c', function () {
+    config([
+        'hyperpay.entity_mode' => 'b2c',
+        'hyperpay.entity_id_b2b' => 'b2b-entity-id',
+        'hyperpay.entity_id_b2c' => 'b2c-entity-id',
+    ]);
+
+    expect(HyperpayCheckoutService::configuredEntityId())->toBe('b2c-entity-id');
+});
+
 test('payment gateway falls back to hyperpay for unknown driver', function () {
     config([
         'payment.driver' => 'unknown',
         'hyperpay.token' => 'test-token',
-        'hyperpay.entity_id_b2c' => 'entity-test',
+        'hyperpay.entity_mode' => 'b2b',
+        'hyperpay.entity_id_b2b' => 'entity-b2b-test',
     ]);
 
     expect(PaymentGateway::driver())->toBe('hyperpay')
