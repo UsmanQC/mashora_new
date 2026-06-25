@@ -94,6 +94,10 @@ final class PatientPaymentCompletionService
             return $this->confirmStripeIfPaid($temporaryAppointment, $request);
         }
 
+        if (PaymentGateway::isHyperPay()) {
+            return $this->confirmHyperpayIfPaid($temporaryAppointment, $request);
+        }
+
         try {
             $mf = new MyFatoorahPaymentStatus(self::mfConfig());
             $keyData = self::resolveStatusKey($temporaryAppointment, $request);
@@ -136,6 +140,103 @@ final class PatientPaymentCompletionService
                 $temporaryAppointment->payment_status = 'paid';
                 $temporaryAppointment->payment_response = json_encode($data);
                 $temporaryAppointment->save();
+
+                return $appointment;
+            });
+        } catch (Throwable $e) {
+            report($e);
+
+            return ['appointment' => null, 'state' => 'failed'];
+        }
+
+        return ['appointment' => $appointment, 'state' => 'paid'];
+    }
+
+    /**
+     * @return array{appointment: ?Appointment, state: 'paid'|'needs_config'|'pending'|'failed'}
+     */
+    private function confirmHyperpayIfPaid(TemporaryAppointment $temporaryAppointment, Request $request): array
+    {
+        $checkoutId = $request->string('checkoutId')->toString();
+
+        if ($checkoutId === '') {
+            $checkoutId = (string) ($temporaryAppointment->payment_session_id ?? '');
+        }
+
+        if ($checkoutId === '') {
+            return ['appointment' => null, 'state' => 'failed'];
+        }
+
+        $entityId = $request->string('entityId')->toString();
+
+        if ($entityId === '') {
+            $entityId = (string) config('hyperpay.entity_id_b2c');
+        }
+
+        /** @var HyperpayCheckoutService $hyperpay */
+        $hyperpay = App::make(HyperpayCheckoutService::class);
+
+        try {
+            $responseData = $hyperpay->fetchPaymentResult($checkoutId, $entityId);
+        } catch (Throwable $e) {
+            report($e);
+
+            return ['appointment' => null, 'state' => 'failed'];
+        }
+
+        if (! $hyperpay->responseBelongsToBooking($responseData, $temporaryAppointment)) {
+            return ['appointment' => null, 'state' => 'failed'];
+        }
+
+        $status = $hyperpay->getPaymentStatus((string) data_get($responseData, 'result.code'));
+
+        if (in_array($status, ['processing', 'pending'], true)) {
+            return ['appointment' => null, 'state' => 'pending'];
+        }
+
+        if ($status !== 'success') {
+            return ['appointment' => null, 'state' => 'failed'];
+        }
+
+        try {
+            $paymentReferenceId = $hyperpay->paymentReferenceId($responseData);
+
+            $appointment = DB::transaction(function () use ($temporaryAppointment, $responseData, $paymentReferenceId): Appointment {
+                $temporaryAppointment->refresh();
+
+                if ($temporaryAppointment->appointment_id !== null) {
+                    $found = Appointment::query()->find($temporaryAppointment->appointment_id);
+                    if ($found !== null) {
+                        return $found;
+                    }
+                }
+
+                $appointment = self::createAppointmentRecord($temporaryAppointment);
+                self::syncCommunications($appointment, $temporaryAppointment);
+                self::finalizeWallet($appointment, $temporaryAppointment);
+
+                $temporaryAppointment->appointment_id = $appointment->id;
+                $temporaryAppointment->payment_status = 'paid';
+                $temporaryAppointment->payment_session_id = (string) data_get($responseData, 'ndc', $temporaryAppointment->payment_session_id);
+                $temporaryAppointment->payment_invoice_id = $paymentReferenceId !== ''
+                    ? $paymentReferenceId
+                    : $temporaryAppointment->payment_invoice_id;
+                $temporaryAppointment->payment_response = json_encode([
+                    'provider' => PaymentGateway::DRIVER_HYPERPAY,
+                    'checkout_id' => data_get($responseData, 'ndc'),
+                    'payment_id' => data_get($responseData, 'id'),
+                    'merchant_transaction_id' => data_get($responseData, 'merchantTransactionId'),
+                    'result_code' => data_get($responseData, 'result.code'),
+                    'result_description' => data_get($responseData, 'result.description'),
+                    'payment_brand' => data_get($responseData, 'paymentBrand'),
+                    'amount' => data_get($responseData, 'amount'),
+                    'currency' => data_get($responseData, 'currency'),
+                ]);
+                $temporaryAppointment->save();
+
+                if ($paymentReferenceId !== '') {
+                    $appointment->forceFill(['payment_invoice_id' => $paymentReferenceId])->save();
+                }
 
                 return $appointment;
             });

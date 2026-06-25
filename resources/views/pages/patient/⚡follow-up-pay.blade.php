@@ -3,6 +3,7 @@
 use App\Livewire\Concerns\InteractsWithPatientWalletPayment;
 use App\Models\Appointment;
 use App\Services\FollowUpPaymentCompletionService;
+use App\Services\HyperpayCheckoutService;
 use App\Services\StripeCheckoutService;
 use App\Support\PaymentGateway;
 use Illuminate\Support\Carbon;
@@ -18,6 +19,12 @@ new #[Layout('layouts::patient')] #[Title('Pay follow-up')] class extends Compon
     public Appointment $appointment;
 
     public string $paymentError = '';
+    public bool $embeddedReady = false;
+    public string $hyperpayCheckoutId = '';
+    public string $hyperpayIntegrity = '';
+    public string $hyperpayEntityId = '';
+    public string $hyperpayEnv = '';
+    public string $hyperpayCallbackUrl = '';
 
     public function mount(Appointment $appointment): void
     {
@@ -38,6 +45,10 @@ new #[Layout('layouts::patient')] #[Title('Pay follow-up')] class extends Compon
         $this->appointment = $appointment->load('doctor');
         $this->bootPatientWalletPayment((float) $this->appointment->wallet_amount);
         $this->persistWalletAmountOnFollowUp();
+
+        if ($this->usesHyperPay() && $this->amountDue() > 0) {
+            $this->initHyperpayCheckout();
+        }
     }
 
     public function walletBalance(): float
@@ -58,6 +69,62 @@ new #[Layout('layouts::patient')] #[Title('Pay follow-up')] class extends Compon
     public function updatedUseWallet(): void
     {
         $this->persistWalletAmountOnFollowUp();
+
+        if ($this->usesHyperPay() && $this->amountDue() > 0) {
+            $this->initHyperpayCheckout();
+        }
+    }
+
+    public function usesHyperPay(): bool
+    {
+        return PaymentGateway::isHyperPay();
+    }
+
+    public function usesMyFatoorah(): bool
+    {
+        return PaymentGateway::isMyFatoorah();
+    }
+
+    public function initHyperpayCheckout(): void
+    {
+        if (! $this->usesHyperPay() || $this->amountDue() <= 0) {
+            $this->embeddedReady = false;
+
+            return;
+        }
+
+        if (! PaymentGateway::isConfigured()) {
+            $this->paymentError = __('patient_booking.payment_hyperpay_missing');
+            $this->embeddedReady = false;
+
+            return;
+        }
+
+        try {
+            /** @var HyperpayCheckoutService $hyperpay */
+            $hyperpay = app(HyperpayCheckoutService::class);
+            $appointment = $this->appointment->fresh();
+
+            if ($appointment === null) {
+                return;
+            }
+
+            $result = $hyperpay->initFollowUpCheckout($appointment, FollowUpPaymentCompletionService::amountDue($appointment));
+
+            $this->hyperpayCheckoutId = (string) ($result['checkout_id'] ?? '');
+            $this->hyperpayIntegrity = (string) ($result['integrity'] ?? '');
+            $this->hyperpayEntityId = (string) ($result['entity_id'] ?? '');
+            $this->hyperpayEnv = (string) ($result['env'] ?? '');
+            $this->hyperpayCallbackUrl = (string) ($result['callback_url'] ?? '');
+            $this->embeddedReady = $this->hyperpayCheckoutId !== '';
+            $this->paymentError = '';
+        } catch (\Throwable $e) {
+            report($e);
+            $this->embeddedReady = false;
+            $this->paymentError = app()->isLocal()
+                ? __('patient_booking.payment_start_failed')." ({$e->getMessage()})"
+                : __('patient_booking.payment_start_failed');
+        }
     }
 
     private function persistWalletAmountOnFollowUp(): void
@@ -102,6 +169,12 @@ new #[Layout('layouts::patient')] #[Title('Pay follow-up')] class extends Compon
     {
         if ($this->usesStripe()) {
             $this->startStripePayment();
+
+            return;
+        }
+
+        if ($this->usesHyperPay()) {
+            $this->initHyperpayCheckout();
 
             return;
         }
@@ -305,8 +378,34 @@ new #[Layout('layouts::patient')] #[Title('Pay follow-up')] class extends Compon
             </flux:button>
         @elseif (! $this->paymentGatewayConfigured())
             <p class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-                {{ $this->usesStripe() ? __('patient_booking.payment_stripe_missing') : __('patient_booking.payment_api_missing') }}
+                @if ($this->usesStripe())
+                    {{ __('patient_booking.payment_stripe_missing') }}
+                @elseif ($this->usesHyperPay())
+                    {{ __('patient_booking.payment_hyperpay_missing') }}
+                @else
+                    {{ __('patient_booking.payment_api_missing') }}
+                @endif
             </p>
+        @elseif ($this->usesHyperPay() && $embeddedReady)
+            @if ($this->walletApplied() > 0 && $this->amountDue() > 0)
+                <p class="rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900">
+                    {{ __('patient_booking.wallet_partial_hint') }}
+                </p>
+            @endif
+
+            @include('partials.hyperpay-widget', [
+                'callbackUrl' => $hyperpayCallbackUrl,
+                'checkoutId' => $hyperpayCheckoutId,
+                'integrity' => $hyperpayIntegrity,
+                'env' => $hyperpayEnv,
+            ])
+
+            <flux:button wire:click="initHyperpayCheckout" variant="ghost" class="w-full" wire:loading.attr="disabled">
+                <span wire:loading.remove wire:target="initHyperpayCheckout">{{ __('patient_booking.payment_retry') }}</span>
+                <span wire:loading wire:target="initHyperpayCheckout">{{ __('patient_booking.payment_processing') }}</span>
+            </flux:button>
+
+            <flux:text class="text-center text-xs text-zinc-500">{{ __('patient_booking.payment_hyperpay_note') }}</flux:text>
         @else
             @if ($this->walletApplied() > 0 && $this->amountDue() > 0)
                 <p class="rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900">

@@ -4,19 +4,18 @@ use App\Models\Doctor;
 use App\Models\Duration;
 use App\Models\TemporaryAppointment;
 use App\Models\User;
+use App\Services\HyperpayCheckoutService;
 use App\Services\PatientPaymentCompletionService;
-use App\Services\StripeCheckoutService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
-use Stripe\Checkout\Session as StripeSession;
 
 uses(RefreshDatabase::class);
 
-test('stripe payment success without session id fails', function () {
+test('hyperpay payment success without checkout id fails', function () {
     config([
-        'payment.driver' => 'stripe',
-        'stripe.key' => 'pk_test_example',
-        'stripe.secret' => 'sk_test_example',
+        'payment.driver' => 'hyperpay',
+        'hyperpay.token' => 'test-token',
+        'hyperpay.entity_id_b2c' => 'entity-test',
     ]);
 
     $user = User::factory()->create(['profile_completed' => true]);
@@ -59,11 +58,11 @@ test('stripe payment success without session id fails', function () {
         ->and($result['appointment'])->toBeNull();
 });
 
-test('stripe payment success confirms booking when session is paid', function () {
+test('hyperpay payment success confirms booking when payment is successful', function () {
     config([
-        'payment.driver' => 'stripe',
-        'stripe.key' => 'pk_test_example',
-        'stripe.secret' => 'sk_test_example',
+        'payment.driver' => 'hyperpay',
+        'hyperpay.token' => 'test-token',
+        'hyperpay.entity_id_b2c' => 'entity-test',
     ]);
 
     $user = User::factory()->create(['profile_completed' => true]);
@@ -78,6 +77,8 @@ test('stripe payment success confirms booking when session is paid', function ()
     ]);
 
     $doctor->durations()->attach(15, ['price' => 100.0]);
+
+    $merchantTransactionId = 'MSH_BOOK_1_202601011200001234';
 
     $temp = TemporaryAppointment::create([
         'user_id' => $user->id,
@@ -98,44 +99,50 @@ test('stripe payment success confirms booking when session is paid', function ()
         'total' => 100,
         'appointment_type' => 'regular',
         'payment_status' => 'unpaid',
-        'payment_session_id' => 'cs_test_123',
+        'payment_session_id' => 'checkout-test-123',
+        'payment_invoice_id' => $merchantTransactionId,
     ]);
 
-    $session = StripeSession::constructFrom([
-        'id' => 'cs_test_123',
-        'payment_status' => 'paid',
-        'payment_intent' => 'pi_test_123',
-        'amount_total' => 10000,
-        'currency' => 'sar',
-        'metadata' => [
-            'type' => 'booking',
-            'temporary_appointment_id' => (string) $temp->id,
-            'user_id' => (string) $user->id,
+    $responseData = [
+        'id' => 'payment-abc',
+        'ndc' => 'checkout-test-123',
+        'merchantTransactionId' => $merchantTransactionId,
+        'result' => [
+            'code' => '000.000.000',
+            'description' => 'Transaction succeeded',
         ],
-    ]);
+        'amount' => '100.00',
+        'currency' => 'SAR',
+        'paymentBrand' => 'VISA',
+    ];
 
-    $this->mock(StripeCheckoutService::class, function ($mock) use ($session): void {
-        $mock->shouldReceive('retrieveSession')
+    $this->mock(HyperpayCheckoutService::class, function ($mock) use ($responseData): void {
+        $mock->shouldReceive('fetchPaymentResult')
             ->once()
-            ->with('cs_test_123')
-            ->andReturn($session);
+            ->with('checkout-test-123', 'entity-test')
+            ->andReturn($responseData);
 
-        $mock->shouldReceive('sessionBelongsToBooking')
+        $mock->shouldReceive('responseBelongsToBooking')
             ->once()
             ->andReturn(true);
 
-        $mock->shouldReceive('isSessionPaid')
+        $mock->shouldReceive('getPaymentStatus')
             ->once()
-            ->andReturn(true);
+            ->with('000.000.000')
+            ->andReturn('success');
 
         $mock->shouldReceive('paymentReferenceId')
             ->once()
-            ->andReturn('pi_test_123');
+            ->with($responseData)
+            ->andReturn('payment-abc');
     });
 
     $result = app(PatientPaymentCompletionService::class)->confirmIfPaid(
         $temp,
-        Request::create('/', 'GET', ['session_id' => 'cs_test_123'])
+        Request::create('/', 'GET', [
+            'checkoutId' => 'checkout-test-123',
+            'entityId' => 'entity-test',
+        ])
     );
 
     expect($result['state'])->toBe('paid')
@@ -147,11 +154,11 @@ test('stripe payment success confirms booking when session is paid', function ()
         ->and($temp->appointment_id)->not->toBeNull();
 });
 
-test('payment failed route shows success when booking already completed', function () {
+test('hyperpay pending payment returns pending state', function () {
     config([
-        'payment.driver' => 'stripe',
-        'stripe.key' => 'pk_test_example',
-        'stripe.secret' => 'sk_test_example',
+        'payment.driver' => 'hyperpay',
+        'hyperpay.token' => 'test-token',
+        'hyperpay.entity_id_b2c' => 'entity-test',
     ]);
 
     $user = User::factory()->create(['profile_completed' => true]);
@@ -166,6 +173,8 @@ test('payment failed route shows success when booking already completed', functi
     ]);
 
     $doctor->durations()->attach(15, ['price' => 100.0]);
+
+    $merchantTransactionId = 'MSH_BOOK_2_202601011200005678';
 
     $temp = TemporaryAppointment::create([
         'user_id' => $user->id,
@@ -185,17 +194,27 @@ test('payment failed route shows success when booking already completed', functi
         'tax' => 0,
         'total' => 100,
         'appointment_type' => 'regular',
-        'payment_status' => 'paid',
-        'payment_session_id' => 'cs_test_paid',
-        'appointment_id' => null,
+        'payment_status' => 'unpaid',
+        'payment_session_id' => 'checkout-pending',
+        'payment_invoice_id' => $merchantTransactionId,
     ]);
 
-    $appointment = app(PatientPaymentCompletionService::class)->forceCompleteForTesting($temp->fresh());
+    $this->mock(HyperpayCheckoutService::class, function ($mock) use ($merchantTransactionId): void {
+        $mock->shouldReceive('fetchPaymentResult')
+            ->once()
+            ->andReturn([
+                'merchantTransactionId' => $merchantTransactionId,
+                'result' => ['code' => '000.200.000'],
+            ]);
 
-    expect($appointment)->not->toBeNull();
+        $mock->shouldReceive('responseBelongsToBooking')->once()->andReturn(true);
+        $mock->shouldReceive('getPaymentStatus')->once()->with('000.200.000')->andReturn('processing');
+    });
 
-    $this->actingAs($user)
-        ->get(route('patient.payment.failed', $temp))
-        ->assertSuccessful()
-        ->assertSee(__('patient_booking.payment_success_title'), false);
+    $result = app(PatientPaymentCompletionService::class)->confirmIfPaid(
+        $temp,
+        Request::create('/', 'GET', ['checkoutId' => 'checkout-pending'])
+    );
+
+    expect($result['state'])->toBe('pending');
 });

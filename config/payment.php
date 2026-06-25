@@ -7,10 +7,11 @@ return [
     | Payment gateway driver
     |--------------------------------------------------------------------------
     |
-    | Supported: "stripe" (test locally), "myfatoorah" (production Saudi gateway).
+    | Supported: "hyperpay" (production Saudi gateway), "stripe" (test locally),
+    | "myfatoorah" (legacy).
     |
     */
 
-    'driver' => env('PAYMENT_GATEWAY', 'myfatoorah'),
+    'driver' => env('PAYMENT_GATEWAY', 'hyperpay'),
 
 ];

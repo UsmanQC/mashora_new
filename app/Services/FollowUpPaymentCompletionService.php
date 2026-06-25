@@ -39,6 +39,10 @@ final class FollowUpPaymentCompletionService
             return $this->confirmStripeIfPaid($appointment, $request);
         }
 
+        if (PaymentGateway::isHyperPay()) {
+            return $this->confirmHyperpayIfPaid($appointment, $request);
+        }
+
         try {
             $mf = new MyFatoorahPaymentStatus($this->mfConfig());
             $keyData = $this->resolveStatusKey($appointment, $request);
@@ -113,6 +117,94 @@ final class FollowUpPaymentCompletionService
     public static function amountDue(Appointment $appointment): float
     {
         return max(0.0, round((float) $appointment->total - (float) $appointment->wallet_amount, 2));
+    }
+
+    /**
+     * @return array{appointment: ?Appointment, state: 'paid'|'needs_config'|'pending'|'failed'}
+     */
+    private function confirmHyperpayIfPaid(Appointment $appointment, Request $request): array
+    {
+        $checkoutId = $request->string('checkoutId')->toString();
+
+        if ($checkoutId === '') {
+            $checkoutId = (string) ($appointment->payment_session_id ?? '');
+        }
+
+        if ($checkoutId === '') {
+            return ['appointment' => null, 'state' => 'failed'];
+        }
+
+        $entityId = $request->string('entityId')->toString();
+
+        if ($entityId === '') {
+            $entityId = (string) config('hyperpay.entity_id_b2c');
+        }
+
+        /** @var HyperpayCheckoutService $hyperpay */
+        $hyperpay = App::make(HyperpayCheckoutService::class);
+
+        try {
+            $responseData = $hyperpay->fetchPaymentResult($checkoutId, $entityId);
+        } catch (Throwable $e) {
+            report($e);
+
+            return ['appointment' => null, 'state' => 'failed'];
+        }
+
+        if (! $hyperpay->responseBelongsToFollowUp($responseData, $appointment)) {
+            return ['appointment' => null, 'state' => 'failed'];
+        }
+
+        $status = $hyperpay->getPaymentStatus((string) data_get($responseData, 'result.code'));
+
+        if (in_array($status, ['processing', 'pending'], true)) {
+            return ['appointment' => null, 'state' => 'pending'];
+        }
+
+        if ($status !== 'success') {
+            return ['appointment' => null, 'state' => 'failed'];
+        }
+
+        try {
+            $paymentReferenceId = $hyperpay->paymentReferenceId($responseData);
+
+            $booked = DB::transaction(function () use ($appointment, $responseData, $paymentReferenceId): Appointment {
+                $appointment->refresh();
+
+                if (! $appointment->isPendingFollowUp()) {
+                    return $appointment;
+                }
+
+                $activated = $this->activate($appointment, (float) $appointment->wallet_amount, [
+                    'provider' => PaymentGateway::DRIVER_HYPERPAY,
+                    'checkout_id' => data_get($responseData, 'ndc'),
+                    'payment_id' => data_get($responseData, 'id'),
+                    'merchant_transaction_id' => data_get($responseData, 'merchantTransactionId'),
+                    'result_code' => data_get($responseData, 'result.code'),
+                    'InvoiceId' => $paymentReferenceId,
+                ]);
+
+                $activated->forceFill([
+                    'payment_session_id' => (string) data_get($responseData, 'ndc', $appointment->payment_session_id),
+                    'payment_response' => json_encode([
+                        'provider' => PaymentGateway::DRIVER_HYPERPAY,
+                        'checkout_id' => data_get($responseData, 'ndc'),
+                        'payment_id' => data_get($responseData, 'id'),
+                        'merchant_transaction_id' => data_get($responseData, 'merchantTransactionId'),
+                        'result_code' => data_get($responseData, 'result.code'),
+                        'result_description' => data_get($responseData, 'result.description'),
+                    ]),
+                ])->save();
+
+                return $activated;
+            });
+        } catch (Throwable $e) {
+            report($e);
+
+            return ['appointment' => null, 'state' => 'failed'];
+        }
+
+        return ['appointment' => $booked, 'state' => 'paid'];
     }
 
     /**
