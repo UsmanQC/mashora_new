@@ -67,6 +67,20 @@ test('payment gateway falls back to hyperpay for unknown driver', function () {
         ->and(PaymentGateway::isHyperPay())->toBeTrue();
 });
 
+test('hyperpay merchant transaction id strips non alphanumeric characters from reference', function () {
+    $service = app(HyperpayCheckoutService::class);
+
+    $reflection = new ReflectionClass($service);
+    $method = $reflection->getMethod('generateMerchantTransactionId');
+    $method->setAccessible(true);
+
+    $transactionId = $method->invoke($service, 'BOOK', '7c3ce1a6-f3b0-439e-983b-39923272ea28');
+
+    expect($transactionId)
+        ->toStartWith('MSH_BOOK_7c3ce1a6f3b0439')
+        ->and($transactionId)->not->toContain('-');
+});
+
 test('hyperpay payment status parser recognizes success and failure codes', function () {
     $service = app(HyperpayCheckoutService::class);
 

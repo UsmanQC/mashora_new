@@ -351,7 +351,13 @@ class HyperpayCheckoutService
 
     private function generateMerchantTransactionId(string $prefix, string $referenceId): string
     {
-        return 'MSH_'.$prefix.'_'.$referenceId.'_'.now()->format('YmdHis').rand(1000, 9999);
+        $sanitizedReference = substr(preg_replace('/[^a-zA-Z0-9]/', '', $referenceId) ?? '', 0, 16);
+
+        if ($sanitizedReference === '') {
+            $sanitizedReference = (string) random_int(100000, 999999);
+        }
+
+        return 'MSH_'.$prefix.'_'.$sanitizedReference.'_'.now()->format('YmdHis').random_int(1000, 9999);
     }
 
     private function fallbackEmail(?int $userId): string
