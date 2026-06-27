@@ -193,7 +193,9 @@ new #[Layout('layouts::doctor')] #[Title('Prescription')] class extends Componen
                     </flux:text>
                 @endif
             </div>
-            <flux:switch wire:model.live="prescriptionNotNeeded" />
+            <div class="shrink-0 [--color-accent:#10B981] [--color-accent-foreground:#ffffff]">
+                <flux:switch wire:model.live="prescriptionNotNeeded" />
+            </div>
         </div>
     </div>
 

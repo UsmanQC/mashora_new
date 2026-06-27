@@ -166,7 +166,7 @@ select:focus[data-flux-control] {
         color: #18181b !important;
     }
 
-    .scheme-light [data-flux-control]:not([data-flux-otp-input]):not([data-flux-otp]),
+    .scheme-light [data-flux-control]:not([data-flux-otp-input]):not([data-flux-otp]):not([data-flux-switch]):not([data-flux-checkbox]),
     .scheme-light input[data-flux-control]:not([data-flux-otp-input]),
     .scheme-light textarea[data-flux-control],
     .scheme-light select[data-flux-control] {
@@ -177,7 +177,7 @@ select:focus[data-flux-control] {
         caret-color: #18181b !important;
     }
 
-    .scheme-light [data-flux-control]:not([data-flux-otp-input]):not([data-flux-otp]):focus,
+    .scheme-light [data-flux-control]:not([data-flux-otp-input]):not([data-flux-otp]):not([data-flux-switch]):not([data-flux-checkbox]):focus,
     .scheme-light input[data-flux-control]:not([data-flux-otp-input]):focus,
     .scheme-light textarea[data-flux-control]:focus,
     .scheme-light select[data-flux-control]:focus {
@@ -185,7 +185,7 @@ select:focus[data-flux-control] {
         box-shadow: 0 0 0 2px rgb(16 185 129 / 0.2) !important;
     }
 
-    .scheme-light [data-flux-control]:not([data-flux-otp-input]):not([data-flux-otp])::placeholder,
+    .scheme-light [data-flux-control]:not([data-flux-otp-input]):not([data-flux-otp]):not([data-flux-switch]):not([data-flux-checkbox])::placeholder,
     .scheme-light input[data-flux-control]:not([data-flux-otp-input])::placeholder,
     .scheme-light textarea[data-flux-control]::placeholder {
         color: #a1a1aa !important;
