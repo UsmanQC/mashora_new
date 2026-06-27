@@ -58,6 +58,42 @@ test('doctor wallet page shows balance and earning transaction', function (): vo
         ->assertSee(__('doctor.wallet.type_earning'), false);
 });
 
+test('doctor wallet page shows completed appointments count for current month', function (): void {
+    app()->setLocale('en');
+
+    $doctor = Doctor::factory()->create(['status' => 'approved']);
+    $patient = User::factory()->create();
+    $thisMonth = now(config('app.timezone'));
+
+    Appointment::factory()->count(2)->create([
+        'doctor_id' => $doctor->id,
+        'user_id' => $patient->id,
+        'status' => 'completed',
+        'appointment_date' => $thisMonth->copy()->startOfMonth()->addDays(3)->toDateString(),
+    ]);
+
+    Appointment::factory()->create([
+        'doctor_id' => $doctor->id,
+        'user_id' => $patient->id,
+        'status' => 'completed',
+        'appointment_date' => $thisMonth->copy()->subMonth()->endOfMonth()->toDateString(),
+    ]);
+
+    Appointment::factory()->create([
+        'doctor_id' => $doctor->id,
+        'user_id' => $patient->id,
+        'status' => 'new',
+        'appointment_date' => $thisMonth->toDateString(),
+    ]);
+
+    $this->actingAs($doctor, 'doctor')
+        ->get(route('doctor.settings.wallet'))
+        ->assertSuccessful()
+        ->assertSee(__('doctor.wallet.month_completed'), false)
+        ->assertSee('2', false)
+        ->assertSee(__('doctor.wallet.completed_suffix'), false);
+});
+
 test('patient wallet page tolerates transactions linked to soft deleted wallets', function (): void {
     app()->setLocale('en');
 

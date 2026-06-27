@@ -434,6 +434,8 @@ return [
         'balance_hint' => 'يُصرف هذا الرصيد عندما تعتمد أوان فاتورتك الشهرية كمدفوعة.',
         'month_earned' => 'أُضيف هذا الشهر',
         'month_paid_out' => 'صُرف هذا الشهر',
+        'month_completed' => 'مكتملة هذا الشهر',
+        'completed_suffix' => 'جلسات',
         'invoices_link' => 'الفواتير الشهرية',
         'view_invoices' => 'عرض الفواتير',
         'transactions_title' => 'آخر المعاملات',
