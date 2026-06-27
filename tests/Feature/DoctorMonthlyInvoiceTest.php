@@ -13,26 +13,25 @@ use Illuminate\Support\Carbon;
 uses(RefreshDatabase::class);
 
 test('monthly invoice command generates invoice for previous month completed appointments', function () {
-    // TEMP: service bills previous calendar day (restore test dates when monthly logic returns).
     Carbon::setTestNow('2026-07-01 01:00:00');
 
     $doctor = Doctor::factory()->create(['commission' => 25]);
     $patient = User::factory()->create();
 
-    $billableAppointment = Appointment::factory()->create([
+    $juneAppointment = Appointment::factory()->create([
         'doctor_id' => $doctor->id,
         'user_id' => $patient->id,
-        'appointment_date' => '2026-06-30',
+        'appointment_date' => '2026-06-15',
         'status' => 'completed',
         'total' => 200.00,
         'doctor_share' => 150.00,
         'mashora_share' => 50.00,
     ]);
 
-    $otherDayAppointment = Appointment::factory()->create([
+    $julyAppointment = Appointment::factory()->create([
         'doctor_id' => $doctor->id,
         'user_id' => $patient->id,
-        'appointment_date' => '2026-06-29',
+        'appointment_date' => '2026-07-02',
         'status' => 'completed',
         'total' => 100.00,
         'doctor_share' => 75.00,
@@ -46,20 +45,20 @@ test('monthly invoice command generates invoice for previous month completed app
     $invoice = Invoice::query()->where('doctor_id', $doctor->id)->first();
 
     expect($invoice)->not->toBeNull()
-        ->and($invoice->reference)->toBe('MSH-'.$doctor->id.'-2026/06/30')
+        ->and($invoice->reference)->toBe('MSH-'.$doctor->id.'-2026/06')
         ->and($invoice->issue_date?->toDateString())->toBe('2026-07-01')
-        ->and($invoice->from_date?->toDateString())->toBe('2026-06-30')
+        ->and($invoice->from_date?->toDateString())->toBe('2026-06-01')
         ->and($invoice->to_date?->toDateString())->toBe('2026-06-30')
         ->and((float) $invoice->total_amount)->toBe(200.0)
         ->and((float) $invoice->doctor_share)->toBe(150.0)
         ->and((float) $invoice->mashora_share)->toBe(50.0)
         ->and($invoice->payment_status)->toBe('unpaid');
 
-    $billableAppointment->refresh();
-    $otherDayAppointment->refresh();
+    $juneAppointment->refresh();
+    $julyAppointment->refresh();
 
-    expect($billableAppointment->invoice_id)->toBe($invoice->id)
-        ->and($otherDayAppointment->invoice_id)->toBeNull();
+    expect($juneAppointment->invoice_id)->toBe($invoice->id)
+        ->and($julyAppointment->invoice_id)->toBeNull();
 
     Carbon::setTestNow();
 });
@@ -73,7 +72,7 @@ test('monthly invoice generation is idempotent for the same period', function ()
     Appointment::factory()->create([
         'doctor_id' => $doctor->id,
         'user_id' => $patient->id,
-        'appointment_date' => '2026-06-30',
+        'appointment_date' => '2026-06-10',
         'status' => 'completed',
         'total' => 120.00,
         'doctor_share' => 90.00,
@@ -138,7 +137,7 @@ test('artisan command generates monthly invoices', function () {
     Appointment::factory()->create([
         'doctor_id' => $doctor->id,
         'user_id' => $patient->id,
-        'appointment_date' => '2026-06-30',
+        'appointment_date' => '2026-06-10',
         'status' => 'completed',
         'total' => 80.00,
         'doctor_share' => 60.00,

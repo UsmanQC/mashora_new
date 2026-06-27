@@ -21,16 +21,8 @@ final class DoctorMonthlyInvoiceService
     public function generateForIssueDate(?CarbonInterface $issueDate = null): array
     {
         $issueDate = Carbon::parse($issueDate ?? now(config('app.timezone')))->startOfDay();
-
-        // TEMP — daily test mode: bill completed sessions from the previous calendar day.
-        // Run: php artisan invoices:generate-monthly
-        // Or:  php artisan invoices:generate-monthly --date=2026-06-22  (bills 2026-06-21)
-        $periodStart = $issueDate->copy()->subDay()->startOfDay();
-        $periodEnd = $issueDate->copy()->subDay()->endOfDay();
-
-        // Monthly production logic (restore when finished testing):
-        // $periodStart = $issueDate->copy()->subMonth()->startOfMonth();
-        // $periodEnd = $issueDate->copy()->subMonth()->endOfMonth();
+        $periodStart = $issueDate->copy()->subMonth()->startOfMonth();
+        $periodEnd = $issueDate->copy()->subMonth()->endOfMonth();
 
         $doctorIds = $this->billableDoctorIds($periodStart, $periodEnd);
 
@@ -170,14 +162,10 @@ final class DoctorMonthlyInvoiceService
 
     private function referenceFor(int $doctorId, CarbonInterface $periodStart): string
     {
-        // TEMP — daily reference while testing (restore Y/m when switching back to monthly).
         return sprintf(
             'MSH-%d-%s',
             $doctorId,
-            $periodStart->format('Y/m/d'),
+            $periodStart->format('Y/m'),
         );
-
-        // Monthly production reference:
-        // return sprintf('MSH-%d-%s', $doctorId, $periodStart->format('Y/m'));
     }
 }

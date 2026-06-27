@@ -62,12 +62,7 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withSchedule(function (Schedule $schedule): void {
         $schedule->command('appointments:mark-missed')->everyFiveMinutes();
-
-        // TEMP daily test: bill yesterday's completed sessions every day at 01:00.
-        $schedule->command('invoices:generate-monthly')->dailyAt('01:00');
-
-        // Monthly production (restore when finished testing):
-        // $schedule->command('invoices:generate-monthly')->monthlyOn(1, '01:00');
+        $schedule->command('invoices:generate-monthly')->monthlyOn(1, '01:00');
     })
     ->withBroadcasting(
         channels: __DIR__.'/../routes/channels.php',
