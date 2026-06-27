@@ -1,9 +1,8 @@
 <?php
 
+use App\Livewire\Concerns\CompletesDoctorAppointment;
 use App\Models\Appointment;
 use App\Models\Doctor;
-use Carbon\Carbon;
-use Flux\Flux;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Facades\Auth;
@@ -15,6 +14,8 @@ use Livewire\Component;
 
 new #[Layout('layouts::doctor')] #[Title('Dashboard')] class extends Component
 {
+    use CompletesDoctorAppointment;
+
     /** @var list<string> */
     private const PERIODS = ['today', 'week', 'month', 'year', 'all'];
 
@@ -26,14 +27,6 @@ new #[Layout('layouts::doctor')] #[Title('Dashboard')] class extends Component
 
     #[Url]
     public string $period = 'today';
-
-    public bool $showCompleteAppointmentModal = false;
-
-    public bool $showDiagnosisRequiredModal = false;
-
-    public bool $showPrescriptionRequiredModal = false;
-
-    public ?int $appointmentPendingCompleteId = null;
 
     public function mount(): void
     {
@@ -64,7 +57,7 @@ new #[Layout('layouts::doctor')] #[Title('Dashboard')] class extends Component
             return;
         }
 
-        $now = Carbon::now();
+        $now = \Illuminate\Support\Carbon::now();
 
         match ($this->period) {
             'today' => $query->whereDate('appointment_date', $now->toDateString()),
@@ -88,7 +81,7 @@ new #[Layout('layouts::doctor')] #[Title('Dashboard')] class extends Component
             return;
         }
 
-        $now = Carbon::now();
+        $now = \Illuminate\Support\Carbon::now();
 
         match ($this->period) {
             'today' => $query->whereDate('created_at', $now->toDateString()),
@@ -150,100 +143,6 @@ new #[Layout('layouts::doctor')] #[Title('Dashboard')] class extends Component
             ->orderBy('start_time')
             ->limit(10)
             ->get();
-    }
-
-    public function requestCompleteAppointment(int $appointmentId): void
-    {
-        $doctor = $this->doctor();
-        if ($doctor === null) {
-            abort(403);
-        }
-
-        $appointment = Appointment::query()
-            ->where('doctor_id', $doctor->id)
-            ->whereKey($appointmentId)
-            ->first();
-
-        if ($appointment === null || $appointment->status !== 'in_process') {
-            return;
-        }
-
-        $this->appointmentPendingCompleteId = $appointmentId;
-        $this->showCompleteAppointmentModal = true;
-    }
-
-    public function dismissCompleteAppointmentModal(): void
-    {
-        $this->showCompleteAppointmentModal = false;
-        $this->appointmentPendingCompleteId = null;
-    }
-
-    public function updatedShowCompleteAppointmentModal(bool $value): void
-    {
-        if (! $value) {
-            $this->appointmentPendingCompleteId = null;
-        }
-    }
-
-    public function confirmCompleteAppointment(): void
-    {
-        $id = $this->appointmentPendingCompleteId;
-        $this->dismissCompleteAppointmentModal();
-
-        if ($id === null) {
-            return;
-        }
-
-        $doctor = $this->doctor();
-        if ($doctor === null) {
-            abort(403);
-        }
-
-        $appointment = Appointment::query()
-            ->where('doctor_id', $doctor->id)
-            ->whereKey($id)
-            ->with(['diagnosis', 'medications'])
-            ->first();
-
-        if ($appointment === null || $appointment->status !== 'in_process') {
-            return;
-        }
-
-        if ($appointment->diagnosis === null) {
-            $this->showDiagnosisRequiredModal = true;
-
-            return;
-        }
-
-        if (! $appointment->prescription_not_needed && $appointment->medications->isEmpty()) {
-            $this->showPrescriptionRequiredModal = true;
-
-            return;
-        }
-
-        $this->finalizeInProcessAppointmentCompletion($appointment);
-    }
-
-    public function dismissDiagnosisRequiredModal(): void
-    {
-        $this->showDiagnosisRequiredModal = false;
-    }
-
-    public function dismissPrescriptionRequiredModal(): void
-    {
-        $this->showPrescriptionRequiredModal = false;
-    }
-
-    private function finalizeInProcessAppointmentCompletion(Appointment $appointment): void
-    {
-        $appointment->forceFill([
-            'status' => 'completed',
-            'actual_end_at' => Carbon::now()->format('Y-m-d H:i:s'),
-        ])->save();
-
-        Flux::toast(variant: 'success', text: __('doctor.complete_flow.success'));
-
-        $this->redirect(route('doctor.appointments.follow-up', $appointment), navigate: true);
     }
 }; ?>
 
@@ -402,101 +301,5 @@ new #[Layout('layouts::doctor')] #[Title('Dashboard')] class extends Component
         </div>
     @endif
 
-    <flux:modal wire:model.self="showCompleteAppointmentModal" class="max-w-md rounded-2xl shadow-xl" :closable="true">
-        <div class="flex flex-col items-center px-6 py-8 text-center sm:px-10 sm:py-10">
-            <div
-                class="mb-6 flex size-24 shrink-0 items-center justify-center rounded-full border-[3px] border-[#f8bb86] bg-amber-50/60"
-                aria-hidden="true"
-            >
-                <span class="text-5xl font-bold leading-none text-[#f8bb86]">!</span>
-            </div>
-
-            <flux:heading size="xl" class="font-bold text-[#545454]">
-                {{ __('doctor.complete_modal.title') }}
-            </flux:heading>
-
-            <flux:text class="mt-3 max-w-[20rem] leading-relaxed text-[#595959]">
-                {{ __('doctor.complete_modal.body') }}
-            </flux:text>
-
-            <div class="mt-8 flex w-full max-w-sm flex-row gap-3 sm:justify-center">
-                <flux:button
-                    type="button"
-                    class="flex-1 !border-0 bg-[#7066e0] text-white shadow-sm hover:brightness-105 sm:min-h-11"
-                    variant="primary"
-                    wire:click="confirmCompleteAppointment"
-                >
-                    {{ __('doctor.complete_modal.confirm') }}
-                </flux:button>
-                <flux:button
-                    type="button"
-                    class="flex-1 !border-0 bg-[#6e7881] text-white shadow-sm hover:bg-[#5d656c] sm:min-h-11"
-                    variant="ghost"
-                    wire:click="dismissCompleteAppointmentModal"
-                >
-                    {{ __('doctor.complete_modal.cancel') }}
-                </flux:button>
-            </div>
-        </div>
-    </flux:modal>
-
-    <flux:modal wire:model.self="showDiagnosisRequiredModal" class="max-w-md rounded-2xl shadow-xl" :closable="true">
-        <div class="flex flex-col items-center px-6 py-8 text-center sm:px-10 sm:py-10">
-            <div
-                class="mb-6 flex size-24 shrink-0 items-center justify-center rounded-full border-[3px] border-[#f8bb86] bg-amber-50/60"
-                aria-hidden="true"
-            >
-                <span class="text-5xl font-bold leading-none text-[#f8bb86]">!</span>
-            </div>
-
-            <flux:heading size="xl" class="font-bold text-[#545454]">
-                {{ __('doctor.complete_flow.diagnosis_title') }}
-            </flux:heading>
-
-            <flux:text class="mt-3 max-w-[20rem] leading-relaxed text-[#595959]">
-                {{ __('doctor.complete_flow.diagnosis_body') }}
-            </flux:text>
-
-            <div class="mt-8 flex w-full max-w-sm justify-center">
-                <flux:button
-                    type="button"
-                    class="w-full !border-0 bg-[#7066e0] text-white shadow-sm hover:brightness-105 sm:max-w-xs sm:min-h-11"
-                    variant="primary"
-                    wire:click="dismissDiagnosisRequiredModal"
-                >
-                    {{ __('doctor.complete_flow.ok') }}
-                </flux:button>
-            </div>
-        </div>
-    </flux:modal>
-
-    <flux:modal wire:model.self="showPrescriptionRequiredModal" class="max-w-md rounded-2xl shadow-xl" :closable="true">
-        <div class="flex flex-col items-center px-6 py-8 text-center sm:px-10 sm:py-10">
-            <div
-                class="mb-6 flex size-24 shrink-0 items-center justify-center rounded-full border-[3px] border-[#f8bb86] bg-amber-50/60"
-                aria-hidden="true"
-            >
-                <span class="text-5xl font-bold leading-none text-[#f8bb86]">!</span>
-            </div>
-
-            <flux:heading size="xl" class="font-bold text-[#545454]">
-                {{ __('doctor.complete_flow.prescription_title') }}
-            </flux:heading>
-
-            <flux:text class="mt-3 max-w-[20rem] leading-relaxed text-[#595959]">
-                {{ __('doctor.complete_flow.prescription_body') }}
-            </flux:text>
-
-            <div class="mt-8 flex w-full max-w-sm justify-center">
-                <flux:button
-                    type="button"
-                    class="w-full !border-0 bg-[#7066e0] text-white shadow-sm hover:brightness-105 sm:max-w-xs sm:min-h-11"
-                    variant="primary"
-                    wire:click="dismissPrescriptionRequiredModal"
-                >
-                    {{ __('doctor.complete_flow.ok') }}
-                </flux:button>
-            </div>
-        </div>
-    </flux:modal>
+    @include('partials.doctor-complete-appointment-modals')
 </div>

@@ -1,6 +1,7 @@
 <?php
 
 use App\Events\AppointmentChatMessageSent;
+use App\Livewire\Concerns\CompletesDoctorAppointment;
 use App\Models\Appointment;
 use App\Models\ChMessage;
 use App\Services\AppointmentSessionService;
@@ -11,6 +12,8 @@ use Livewire\Component;
 
 new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Component
 {
+    use CompletesDoctorAppointment;
+
     public Appointment $appointment;
 
     /**
@@ -241,6 +244,15 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                                     <flux:icon name="phone" variant="mini" class="size-5 text-zinc-600" />
                                     <span class="btn-label">{{ __('doctor.conversation.voice') }}</span>
                                 </button>
+                                <flux:button
+                                    type="button"
+                                    size="sm"
+                                    class="min-h-10 !border-0 bg-red-600 text-white hover:bg-red-700"
+                                    wire:click="requestCompleteAppointment"
+                                    wire:loading.attr="disabled"
+                                >
+                                    {{ __('doctor.card.mark_complete') }}
+                                </flux:button>
                             @endif
                         </div>
                     </div>
@@ -438,6 +450,8 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
         data-agora-channel="{{ $agoraChannel }}"
         data-agora-ready="{{ $agoraAppId !== '' ? '1' : '0' }}"
     ></div>
+
+    @include('partials.doctor-complete-appointment-modals')
 </div>
 
 @push('scripts')

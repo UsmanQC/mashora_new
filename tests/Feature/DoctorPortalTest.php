@@ -490,7 +490,7 @@ test('dashboard can mark in process appointment completed when diagnosis and pre
         ->assertSet('showCompleteAppointmentModal', true)
         ->assertSet('appointmentPendingCompleteId', $appointment->id)
         ->call('confirmCompleteAppointment')
-        ->assertRedirect(route('doctor.dashboard'));
+        ->assertRedirect(route('doctor.appointments.follow-up', $appointment));
 
     $fresh = $appointment->fresh();
     expect($fresh->status)->toBe('completed')
@@ -575,7 +575,7 @@ test('dashboard can complete without medications when prescription is marked not
         ->test('pages::doctor.dashboard')
         ->call('requestCompleteAppointment', $appointment->id)
         ->call('confirmCompleteAppointment')
-        ->assertRedirect(route('doctor.dashboard'));
+        ->assertRedirect(route('doctor.appointments.follow-up', $appointment));
 
     expect($appointment->fresh()->status)->toBe('completed');
 });
