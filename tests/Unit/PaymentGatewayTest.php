@@ -67,7 +67,22 @@ test('payment gateway falls back to hyperpay for unknown driver', function () {
         ->and(PaymentGateway::isHyperPay())->toBeTrue();
 });
 
-test('hyperpay merchant transaction id strips non alphanumeric characters from reference', function () {
+test('hyperpay payment status url uses checkout endpoint like zaaerlite', function () {
+    config([
+        'hyperpay.env' => 'test',
+    ]);
+
+    $service = app(HyperpayCheckoutService::class);
+
+    $url = $service->paymentStatusUrl(
+        checkoutId: 'checkout-abc',
+        entityId: 'entity-test',
+    );
+
+    expect($url)->toBe('https://eu-test.oppwa.com/v1/checkouts/checkout-abc/payment?entityId=entity-test');
+});
+
+test('hyperpay merchant transaction id uses short zaaerlite-style reference', function () {
     $service = app(HyperpayCheckoutService::class);
 
     $reflection = new ReflectionClass($service);
@@ -77,8 +92,9 @@ test('hyperpay merchant transaction id strips non alphanumeric characters from r
     $transactionId = $method->invoke($service, 'BOOK', '7c3ce1a6-f3b0-439e-983b-39923272ea28');
 
     expect($transactionId)
-        ->toStartWith('MSH_BOOK_7c3ce1a6f3b0439')
-        ->and($transactionId)->not->toContain('-');
+        ->toStartWith('MSH_BOOK_')
+        ->and($transactionId)->not->toContain('-')
+        ->and(strlen($transactionId))->toBeLessThanOrEqual(64);
 });
 
 test('hyperpay payment status parser recognizes success and failure codes', function () {

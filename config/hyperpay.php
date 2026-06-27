@@ -4,7 +4,7 @@
  * HyperPay (OPPWA) COPYandPAY credentials and environment URLs.
  */
 return [
-    'name' => env('HYPERPAY_NAME', 'hyperpay'),
+    'name' => env('PAYMENT_GATEWAY', 'hyperpay'),
     'env' => env('HYPERPAY_ENV', 'test'),
     'token' => env('HYPERPAY_TOKEN'),
     'entity_mode' => env('HYPERPAY_ENTITY_MODE', 'b2b'),
