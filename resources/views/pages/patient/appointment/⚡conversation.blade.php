@@ -781,6 +781,23 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 console.warn('Pusher is not configured: set PUSHER_APP_KEY and BROADCAST_CONNECTION=pusher');
             }
 
+            boot.__syncCallOverlay = () => {
+                if (activeMode) {
+                    showOverlay(true);
+                }
+            };
+
+            if (!window.__patientConversationMorphHook) {
+                window.__patientConversationMorphHook = true;
+                document.addEventListener('livewire:init', () => {
+                    Livewire.hook('commit', ({ succeed }) => {
+                        succeed(() => {
+                            document.getElementById('patient-conversation-bootstrap')?.__syncCallOverlay?.();
+                        });
+                    });
+                });
+            }
+
             startSessionTimers();
             refreshCallButtonsState();
 
