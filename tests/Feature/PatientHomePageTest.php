@@ -55,7 +55,7 @@ test('authenticated patient navbar shows language switch', function () {
         ->assertSee(__('patient.menu.locale_ar_short'), false);
 });
 
-test('authenticated patient sidebar shows dock navigation links', function () {
+test('authenticated patient sidebar shows grouped navigation links', function () {
     $user = User::factory()->create(['profile_completed' => true]);
 
     $response = $this->actingAs($user)->get(route('patient.home'));
@@ -63,7 +63,8 @@ test('authenticated patient sidebar shows dock navigation links', function () {
     $response->assertSuccessful()
         ->assertSee(__('patient.nav.home'), false)
         ->assertSee(__('patient.nav.appointments'), false)
-        ->assertSee(route('patient.menu'), false);
+        ->assertSee(__('patient.sidebar.group_account'), false)
+        ->assertSee(route('patient.wallet'), false);
 });
 
 test('authenticated patient home renders arabic strings when locale is ar', function () {

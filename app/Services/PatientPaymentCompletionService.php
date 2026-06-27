@@ -157,13 +157,14 @@ final class PatientPaymentCompletionService
      */
     private function confirmHyperpayIfPaid(TemporaryAppointment $temporaryAppointment, Request $request): array
     {
+        $resourcePath = $request->string('resourcePath')->toString();
         $checkoutId = $request->string('checkoutId')->toString();
 
-        if ($checkoutId === '') {
+        if ($checkoutId === '' && $resourcePath === '') {
             $checkoutId = (string) ($temporaryAppointment->payment_session_id ?? '');
         }
 
-        if ($checkoutId === '') {
+        if ($checkoutId === '' && $resourcePath === '') {
             return ['appointment' => null, 'state' => 'failed'];
         }
 
@@ -177,7 +178,11 @@ final class PatientPaymentCompletionService
         $hyperpay = App::make(HyperpayCheckoutService::class);
 
         try {
-            $responseData = $hyperpay->fetchPaymentResult($checkoutId, $entityId);
+            $responseData = $hyperpay->fetchPaymentResult(
+                checkoutId: filled($resourcePath) ? null : $checkoutId,
+                entityId: $entityId,
+                resourcePath: filled($resourcePath) ? $resourcePath : null,
+            );
         } catch (Throwable $e) {
             report($e);
 

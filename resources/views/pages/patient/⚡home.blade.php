@@ -117,17 +117,7 @@ new #[Layout('layouts::patient')] #[Title('Home')] class extends Component
     <div class="space-y-6 px-4 pt-6">
         {{-- Mood week strip: first after sign-in so daily check-in stays visible --}}
         <div class="space-y-4">
-            <div class="flex items-center justify-between gap-4">
-                <flux:heading size="lg">{{ __('patient.mood_section') }}</flux:heading>
-                <a
-                    href="{{ route('patient.phone') }}"
-                    wire:navigate
-                    class="inline-flex shrink-0 items-center gap-1 text-sm font-medium text-[#10B981] underline-offset-4 transition hover:text-[#059669] hover:underline focus:outline-none focus-visible:underline"
-                >
-                    {{ __('patient.view_all') }}
-                    <flux:icon name="chevron-{{ app()->getLocale() === 'ar' ? 'left' : 'right' }}" variant="mini" class="size-4 rtl:rotate-180" />
-                </a>
-            </div>
+            <flux:heading size="lg">{{ __('patient.mood_section') }}</flux:heading>
             <div
                 class="flex snap-x snap-mandatory gap-4 overflow-x-auto py-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
                 x-data

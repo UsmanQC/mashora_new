@@ -20,6 +20,8 @@ class HyperpayCheckoutService
 
     protected string $authorization;
 
+    protected string $apiBaseUrl;
+
     protected string $checkoutUrl;
 
     protected string $widgetHost;
@@ -31,6 +33,7 @@ class HyperpayCheckoutService
 
         $this->entityId = self::configuredEntityId();
         $this->authorization = 'Bearer '.((string) config('hyperpay.token', ''));
+        $this->apiBaseUrl = (string) config("hyperpay.{$envKey}.api_base_url", 'https://eu-test.oppwa.com/');
         $this->checkoutUrl = (string) config("hyperpay.{$envKey}.checkout_url", '');
         $this->widgetHost = (string) config("hyperpay.{$envKey}.widget_host", 'oppwa.com');
     }
@@ -80,6 +83,7 @@ class HyperpayCheckoutService
             merchantTransactionId: $merchantTransactionId,
             customerName: (string) ($temporaryAppointment->patient_name ?: 'Patient'),
             customerEmail: (string) ($temporaryAppointment->patient_email ?: $this->fallbackEmail($temporaryAppointment->user_id)),
+            shopperResultUrl: $callbackUrl,
         );
 
         $temporaryAppointment->forceFill([
@@ -111,6 +115,7 @@ class HyperpayCheckoutService
             merchantTransactionId: $merchantTransactionId,
             customerName: (string) ($appointment->patient_name ?: 'Patient'),
             customerEmail: (string) ($appointment->patient_email ?: $this->fallbackEmail($appointment->user_id)),
+            shopperResultUrl: $callbackUrl,
         );
 
         $appointment->forceFill([
@@ -133,10 +138,12 @@ class HyperpayCheckoutService
     /**
      * @return array<string, mixed>
      */
-    public function fetchPaymentResult(string $checkoutId, ?string $entityId = null): array
+    public function fetchPaymentResult(?string $checkoutId = null, ?string $entityId = null, ?string $resourcePath = null): array
     {
         $entityId = $entityId ?? $this->entityId;
-        $url = "{$this->checkoutUrl}/{$checkoutId}/payment?entityId={$entityId}";
+        $url = $this->paymentStatusUrl($checkoutId, $entityId, $resourcePath);
+
+        $this->logApiRequest('payment_status', 'GET', $url);
 
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $url);
@@ -149,6 +156,7 @@ class HyperpayCheckoutService
 
         $response = curl_exec($ch);
         $curlError = curl_errno($ch);
+        $httpStatus = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
 
         if ($curlError) {
@@ -158,16 +166,29 @@ class HyperpayCheckoutService
         $responseData = json_decode((string) $response, true);
 
         if (! is_array($responseData)) {
+            $this->logApiResponse('payment_status', 'GET', $url, null, $httpStatus, (string) $response);
+
             throw new RuntimeException('Invalid response from HyperPay');
         }
 
-        Log::info('HyperPay payment result', [
-            'checkout_id' => $checkoutId,
-            'entity_id' => $entityId,
-            'result_code' => data_get($responseData, 'result.code'),
-        ]);
+        $this->logApiResponse('payment_status', 'GET', $url, $responseData, $httpStatus);
 
         return $responseData;
+    }
+
+    public function paymentStatusUrl(?string $checkoutId, string $entityId, ?string $resourcePath = null): string
+    {
+        if (filled($resourcePath)) {
+            $path = str_starts_with($resourcePath, '/') ? $resourcePath : '/'.$resourcePath;
+
+            return rtrim($this->apiBaseUrl, '/').$path.'?entityId='.urlencode($entityId);
+        }
+
+        if (! filled($checkoutId)) {
+            throw new RuntimeException('HyperPay checkout id or resource path is required.');
+        }
+
+        return rtrim($this->apiBaseUrl, '/').'/v1/checkouts/'.urlencode($checkoutId).'/payment?entityId='.urlencode($entityId);
     }
 
     public function isPaymentSuccessful(?string $statusCode): bool
@@ -251,6 +272,7 @@ class HyperpayCheckoutService
         string $merchantTransactionId,
         string $customerName,
         string $customerEmail,
+        string $shopperResultUrl,
     ): array {
         $nameParts = explode(' ', trim($customerName), 2);
         $firstName = $nameParts[0] !== '' ? $nameParts[0] : 'Patient';
@@ -262,6 +284,7 @@ class HyperpayCheckoutService
             'currency' => 'SAR',
             'amount' => number_format($amount, 2, '.', ''),
             'merchantTransactionId' => $merchantTransactionId,
+            'shopperResultUrl' => $shopperResultUrl,
             'customer.email' => $customerEmail,
             'customer.givenName' => $firstName,
             'customer.surname' => $lastName,
@@ -278,17 +301,20 @@ class HyperpayCheckoutService
             $payload['customParameters[3DS2_enrolled]'] = 'true';
         }
 
-        $url = $this->checkoutUrl.'?'.http_build_query($payload);
+        $this->logApiRequest('create_checkout', 'POST', $this->checkoutUrl, $payload);
 
         try {
             $response = Http::withHeaders([
                 'Authorization' => $this->authorization,
-                'Content-Type' => 'application/json',
             ])
+                ->asForm()
                 ->timeout(30)
-                ->post($url);
+                ->post($this->checkoutUrl, $payload);
         } catch (Throwable $e) {
-            Log::error('HyperPay init request failed', ['message' => $e->getMessage()]);
+            Log::error('HyperPay create checkout transport failed', [
+                'message' => $e->getMessage(),
+                'url' => $this->checkoutUrl,
+            ]);
 
             throw new RuntimeException(__('patient_booking.payment_start_failed'), 0, $e);
         }
@@ -296,18 +322,17 @@ class HyperpayCheckoutService
         $responseData = $response->json();
 
         if (! is_array($responseData)) {
+            $this->logApiResponse('create_checkout', 'POST', $this->checkoutUrl, null, $response->status(), $response->body());
+
             throw new RuntimeException(__('patient_booking.payment_start_failed'));
         }
+
+        $this->logApiResponse('create_checkout', 'POST', $this->checkoutUrl, $responseData, $response->status());
 
         $resultCode = (string) data_get($responseData, 'result.code', '');
 
         if ($response->failed() || ! in_array($resultCode, ['000.200.000', '000.200.100'], true)) {
             $message = (string) (data_get($responseData, 'result.description') ?: __('patient_booking.payment_start_failed'));
-
-            Log::error('HyperPay init failed', [
-                'message' => $message,
-                'response' => $responseData,
-            ]);
 
             throw new RuntimeException($message);
         }
@@ -336,5 +361,49 @@ class HyperpayCheckoutService
         $domain = parse_url((string) config('app.url'), PHP_URL_HOST) ?: 'mashora.test';
 
         return 'patient-'.($userId ?? 0).'-'.random_int(100, 99999).'@'.$domain;
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    private function logApiRequest(string $operation, string $method, string $url, array $payload = []): void
+    {
+        Log::info('HyperPay API request', [
+            'operation' => $operation,
+            'method' => $method,
+            'url' => $url,
+            'env' => $this->env,
+            'entity_id' => $this->entityId,
+            'entity_mode' => config('hyperpay.entity_mode'),
+            'payload' => $payload,
+        ]);
+    }
+
+    /**
+     * @param  array<string, mixed>|null  $body
+     */
+    private function logApiResponse(
+        string $operation,
+        string $method,
+        string $url,
+        ?array $body,
+        ?int $httpStatus = null,
+        ?string $rawBody = null,
+    ): void {
+        Log::info('HyperPay API response', [
+            'operation' => $operation,
+            'method' => $method,
+            'url' => $url,
+            'http_status' => $httpStatus,
+            'result_code' => data_get($body, 'result.code'),
+            'result_description' => data_get($body, 'result.description'),
+            'parameter_errors' => data_get($body, 'result.parameterErrors'),
+            'checkout_id' => data_get($body, 'id') ?? data_get($body, 'ndc'),
+            'merchant_transaction_id' => data_get($body, 'merchantTransactionId'),
+            'payment_brand' => data_get($body, 'paymentBrand'),
+            'amount' => data_get($body, 'amount'),
+            'currency' => data_get($body, 'currency'),
+            'body' => $body ?? $rawBody,
+        ]);
     }
 }

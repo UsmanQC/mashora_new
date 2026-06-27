@@ -9,9 +9,9 @@
     @include('partials.hyperpay-ltr')
 
     <form
-        action="{{ $callbackUrl }}&checkoutId={{ $checkoutId }}"
+        action="{{ $callbackUrl }}"
         class="paymentWidgets min-h-[10rem] w-full rounded-xl border border-zinc-200 bg-white p-2"
-        data-brands="APPLEPAY VISA MASTER MADA"
+        data-brands="MADA VISA MASTER APPLEPAY"
     ></form>
 
     <script>

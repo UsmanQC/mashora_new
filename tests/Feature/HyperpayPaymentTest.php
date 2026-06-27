@@ -15,8 +15,8 @@ test('hyperpay payment success without checkout id fails', function () {
     config([
         'payment.driver' => 'hyperpay',
         'hyperpay.token' => 'test-token',
-        'hyperpay.entity_mode' => 'b2c',
-        'hyperpay.entity_id_b2c' => 'entity-test',
+        'hyperpay.entity_mode' => 'b2b',
+        'hyperpay.entity_id_b2b' => 'entity-test',
     ]);
 
     $user = User::factory()->create(['profile_completed' => true]);
@@ -59,12 +59,28 @@ test('hyperpay payment success without checkout id fails', function () {
         ->and($result['appointment'])->toBeNull();
 });
 
+test('hyperpay payment status url uses resource path from redirect', function () {
+    config([
+        'hyperpay.env' => 'test',
+    ]);
+
+    $service = app(HyperpayCheckoutService::class);
+
+    $url = $service->paymentStatusUrl(
+        checkoutId: null,
+        entityId: 'entity-test',
+        resourcePath: '/v1/checkouts/checkout-abc/payment',
+    );
+
+    expect($url)->toBe('https://eu-test.oppwa.com/v1/checkouts/checkout-abc/payment?entityId=entity-test');
+});
+
 test('hyperpay payment success confirms booking when payment is successful', function () {
     config([
         'payment.driver' => 'hyperpay',
         'hyperpay.token' => 'test-token',
-        'hyperpay.entity_mode' => 'b2c',
-        'hyperpay.entity_id_b2c' => 'entity-test',
+        'hyperpay.entity_mode' => 'b2b',
+        'hyperpay.entity_id_b2b' => 'entity-test',
     ]);
 
     $user = User::factory()->create(['profile_completed' => true]);
@@ -121,7 +137,7 @@ test('hyperpay payment success confirms booking when payment is successful', fun
     $this->mock(HyperpayCheckoutService::class, function ($mock) use ($responseData): void {
         $mock->shouldReceive('fetchPaymentResult')
             ->once()
-            ->with('checkout-test-123', 'entity-test')
+            ->with('checkout-test-123', 'entity-test', null)
             ->andReturn($responseData);
 
         $mock->shouldReceive('responseBelongsToBooking')
@@ -156,12 +172,90 @@ test('hyperpay payment success confirms booking when payment is successful', fun
         ->and($temp->appointment_id)->not->toBeNull();
 });
 
+test('hyperpay payment success uses resource path from hyperpay redirect', function () {
+    config([
+        'payment.driver' => 'hyperpay',
+        'hyperpay.token' => 'test-token',
+        'hyperpay.entity_mode' => 'b2b',
+        'hyperpay.entity_id_b2b' => 'entity-test',
+    ]);
+
+    $user = User::factory()->create(['profile_completed' => true]);
+    Duration::query()->create(['duration' => 15, 'title' => '15 min']);
+
+    $doctor = Doctor::query()->create([
+        'name' => 'Dr Test',
+        'name_ar' => 'د',
+        'status' => 'approved',
+        'spoken_languages' => 'ar',
+        'gender' => 'male',
+    ]);
+
+    $doctor->durations()->attach(15, ['price' => 100.0]);
+
+    $merchantTransactionId = 'MSH_BOOK_3_202601011200009999';
+
+    $temp = TemporaryAppointment::create([
+        'user_id' => $user->id,
+        'doctor_id' => $doctor->id,
+        'scheduled_at' => now()->addDay()->format('Y-m-d H:i:s'),
+        'appointment_date' => now()->addDay()->toDateString(),
+        'start_time' => '12:15:00',
+        'end_time' => '12:30:00',
+        'duration' => 15,
+        'extend_at' => now()->addDay()->addMinutes(15)->format('Y-m-d H:i:s'),
+        'appointment_for' => 'self',
+        'patient_name' => 'Patient',
+        'patient_phone' => '966500000000',
+        'communications' => ['chat'],
+        'amount' => 100,
+        'discount' => 0,
+        'tax' => 0,
+        'total' => 100,
+        'appointment_type' => 'regular',
+        'payment_status' => 'unpaid',
+        'payment_session_id' => 'checkout-resource-path',
+        'payment_invoice_id' => $merchantTransactionId,
+    ]);
+
+    $responseData = [
+        'id' => 'payment-resource',
+        'ndc' => 'checkout-resource-path',
+        'merchantTransactionId' => $merchantTransactionId,
+        'result' => [
+            'code' => '000.000.000',
+            'description' => 'Transaction succeeded',
+        ],
+    ];
+
+    $this->mock(HyperpayCheckoutService::class, function ($mock) use ($responseData): void {
+        $mock->shouldReceive('fetchPaymentResult')
+            ->once()
+            ->with(null, 'entity-test', '/v1/checkouts/checkout-resource-path/payment')
+            ->andReturn($responseData);
+
+        $mock->shouldReceive('responseBelongsToBooking')->once()->andReturn(true);
+        $mock->shouldReceive('getPaymentStatus')->once()->with('000.000.000')->andReturn('success');
+        $mock->shouldReceive('paymentReferenceId')->once()->with($responseData)->andReturn('payment-resource');
+    });
+
+    $result = app(PatientPaymentCompletionService::class)->confirmIfPaid(
+        $temp,
+        Request::create('/', 'GET', [
+            'resourcePath' => '/v1/checkouts/checkout-resource-path/payment',
+            'entityId' => 'entity-test',
+        ])
+    );
+
+    expect($result['state'])->toBe('paid');
+});
+
 test('hyperpay pending payment returns pending state', function () {
     config([
         'payment.driver' => 'hyperpay',
         'hyperpay.token' => 'test-token',
-        'hyperpay.entity_mode' => 'b2c',
-        'hyperpay.entity_id_b2c' => 'entity-test',
+        'hyperpay.entity_mode' => 'b2b',
+        'hyperpay.entity_id_b2b' => 'entity-test',
     ]);
 
     $user = User::factory()->create(['profile_completed' => true]);
