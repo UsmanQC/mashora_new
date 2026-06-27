@@ -25,30 +25,13 @@
                         variant="ghost"
                         size="sm"
                         wire:click="openMoodPicker"
-                        :aria-label="__('patient.mood_check_in_aria')"
-                        class="hidden rounded-full! border border-zinc-200/90! bg-zinc-50! px-3! py-2! text-zinc-700! shadow-none! hover:bg-zinc-100! md:inline-flex"
-                    >
-                        @if ($this->todayMoodImageUrl)
-                            <img
-                                src="{{ $this->todayMoodImageUrl }}"
-                                alt=""
-                                class="size-6 shrink-0 object-contain"
-                                decoding="async"
-                            />
-                            <span class="hidden lg:inline">{{ __('patient.mood_selector_options.'.$this->todayMoodKey) }}</span>
-                        @else
-                            <flux:icon name="face-smile" variant="mini" class="size-5 shrink-0 text-[#10B981]" />
-                            <span class="hidden lg:inline">{{ __('patient.mood_feeling_cta') }}</span>
-                        @endif
-                    </flux:button>
-
-                    <flux:button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        wire:click="openMoodPicker"
-                        :aria-label="__('patient.mood_check_in_aria')"
-                        class="inline-flex size-9! rounded-full! border border-zinc-200/90! bg-zinc-50! p-0! text-zinc-700! shadow-none! hover:bg-zinc-100! md:hidden"
+                        :aria-label="$this->todayMoodKey
+                            ? __('patient.mood_selector_options.'.$this->todayMoodKey)
+                            : __('patient.mood_check_in_aria')"
+                        :title="$this->todayMoodKey
+                            ? __('patient.mood_selector_options.'.$this->todayMoodKey)
+                            : __('patient.mood_check_in_aria')"
+                        class="inline-flex size-9! shrink-0 rounded-full! border border-zinc-200/90! bg-zinc-50! p-0! text-zinc-700! shadow-none! hover:bg-zinc-100!"
                     >
                         @if ($this->todayMoodImageUrl)
                             <img

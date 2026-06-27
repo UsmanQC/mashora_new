@@ -28,7 +28,8 @@ test('authenticated patient sees mood chrome on home', function () {
     $this->actingAs($user)
         ->get(route('patient.home'))
         ->assertSuccessful()
-        ->assertSee(__('patient.mood_feeling_cta'))
+        ->assertSee(__('patient.mood_check_in_aria'), false)
+        ->assertDontSee(__('patient.mood_feeling_cta'), false)
         ->assertSee(__('patient.header.welcome', ['name' => 'Jane Smith']), false);
 });
 
@@ -204,7 +205,7 @@ test('patient cannot log mood twice on the same day', function () {
     expect(PatientMood::query()->where('user_id', $user->getKey())->count())->toBe(1);
 });
 
-test('chrome bar shows today mood label after patient logs mood', function () {
+test('chrome bar shows today mood icon after patient logs mood', function () {
     app()->setLocale('en');
 
     $user = User::factory()->create(['profile_completed' => true]);
@@ -218,5 +219,6 @@ test('chrome bar shows today mood label after patient logs mood', function () {
 
     Livewire::actingAs($user)
         ->test(PatientPortalChromeBar::class)
-        ->assertSee(__('patient.mood_selector_options.happy'), false);
+        ->assertSee(__('patient.mood_selector_options.happy'), false)
+        ->assertDontSee(__('patient.mood_feeling_cta'), false);
 });
