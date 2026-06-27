@@ -267,6 +267,17 @@ select:focus[data-flux-control] {
         animation: patient-mood-detail-open 0.28s ease-out forwards;
     }
 
+    /** Mood week strip: equal columns, rounded cards (not global pill buttons). */
+    .patient-mood-week-grid button {
+        border-radius: 0.75rem !important;
+    }
+
+    @media (min-width: 640px) {
+        .patient-mood-week-grid button {
+            border-radius: 1rem !important;
+        }
+    }
+
     .session-filter-shell {
         color: #18181b;
     }
