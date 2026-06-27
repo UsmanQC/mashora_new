@@ -52,7 +52,10 @@ test('existing mobile number opens password step on phone page', function () {
         ->set('countryIso', 'SA')
         ->set('phone', '512345678')
         ->call('continueGuest')
-        ->assertSet('loginPhoneE164', '966512345678')
+        ->assertRedirect(route('patient.phone', ['phone' => '966512345678']));
+
+    $this->get(route('patient.phone', ['phone' => '966512345678']))
+        ->assertSuccessful()
         ->assertSee(__('patient_auth.cta_login'), false);
 });
 
@@ -212,4 +215,47 @@ test('patient flow login always redirects to patient home for completed profiles
         'email' => $user->phone,
         'password' => 'password',
     ])->assertRedirect(route('patient.home'));
+});
+
+test('failed patient login keeps password step and shows error', function () {
+    $user = User::factory()->create([
+        'phone' => '966500333444',
+        'password' => 'password',
+        'profile_completed' => true,
+    ]);
+
+    $response = $this->from(route('patient.phone', ['phone' => $user->phone]))
+        ->post(route('login.store'), [
+            'patient_flow' => 1,
+            'email' => $user->phone,
+            'password' => 'wrong-password',
+        ]);
+
+    $response
+        ->assertRedirect(route('patient.phone', ['phone' => $user->phone]))
+        ->assertSessionHasErrors('email');
+
+    $this->get(route('patient.phone', ['phone' => $user->phone]))
+        ->assertSuccessful()
+        ->assertSee(__('patient_auth.cta_login'), false);
+});
+
+test('patient login from protected intended url redirects to home not phone page', function () {
+    $user = User::factory()->create([
+        'phone' => '966500555666',
+        'password' => 'password',
+        'profile_completed' => true,
+    ]);
+
+    $this->get(route('patient.appointments'))
+        ->assertRedirect(route('patient.phone'));
+
+    $this->post(route('login.store'), [
+        'patient_flow' => 1,
+        'email' => $user->phone,
+        'password' => 'password',
+    ])
+        ->assertRedirect(route('patient.home'));
+
+    $this->assertAuthenticatedAs($user);
 });
