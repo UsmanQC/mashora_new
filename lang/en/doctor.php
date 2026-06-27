@@ -294,6 +294,21 @@ return [
         'follow_up_next' => 'You can now invite the patient to a follow-up session.',
     ],
 
+    'workflow' => [
+        'title' => 'Complete session documentation',
+        'subtitle' => 'Follow these steps after your call with the patient.',
+        'continue' => 'Continue next step',
+        'mark_complete' => 'Mark session complete',
+        'schedule_follow_up' => 'Schedule follow-up',
+        'back_to_history' => 'Back to medical history',
+        'save_and_prescription' => 'Save & continue to prescription',
+        'step_medical_history' => 'Medical history',
+        'step_diagnosis' => 'Diagnosis',
+        'step_prescription' => 'Prescription',
+        'step_complete' => 'Mark complete',
+        'step_follow_up' => 'Follow-up',
+    ],
+
     'workspace' => [
         'title' => 'Session workspace',
         'medical_history' => 'Medical history',
@@ -498,7 +513,9 @@ return [
         'end_call' => 'End call',
         'you' => 'You',
         'mic' => 'Microphone',
+        'mic_muted' => 'Muted',
         'camera' => 'Camera',
+        'camera_off' => 'Camera off',
         'message_field' => 'message',
         'status_new' => 'Scheduled — start the session when you are ready.',
         'status_in_process' => 'Session in progress',

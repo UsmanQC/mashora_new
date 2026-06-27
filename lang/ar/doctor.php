@@ -295,6 +295,21 @@ return [
         'follow_up_next' => 'يمكنك الآن دعوة المريض لجلسة متابعة.',
     ],
 
+    'workflow' => [
+        'title' => 'إكمال توثيق الجلسة',
+        'subtitle' => 'اتبع هذه الخطوات بعد مكالمتك مع المريض.',
+        'continue' => 'الخطوة التالية',
+        'mark_complete' => 'إتمام الجلسة',
+        'schedule_follow_up' => 'جدولة متابعة',
+        'back_to_history' => 'العودة إلى السجل الطبي',
+        'save_and_prescription' => 'حفظ والمتابعة إلى الوصفة',
+        'step_medical_history' => 'السجل الطبي',
+        'step_diagnosis' => 'التشخيص',
+        'step_prescription' => 'الوصفة',
+        'step_complete' => 'إتمام الجلسة',
+        'step_follow_up' => 'متابعة',
+    ],
+
     'workspace' => [
         'title' => 'مساحة الجلسة',
         'medical_history' => 'السجل الطبي',
@@ -499,7 +514,9 @@ return [
         'end_call' => 'إنهاء المكالمة',
         'you' => 'أنت',
         'mic' => 'الميكروفون',
+        'mic_muted' => 'الصوت مكتوم',
         'camera' => 'الكاميرا',
+        'camera_off' => 'الكاميرا مغلقة',
         'message_field' => 'الرسالة',
         'status_new' => 'مجدولة — ابدأ الجلسة عندما تكون جاهزًا.',
         'status_in_process' => 'الجلسة قيد التنفيذ',

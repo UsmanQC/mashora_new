@@ -6,6 +6,11 @@
     $followUpService = app(\App\Services\FollowUpAppointmentService::class);
 
     $tabs = [
+        'conversation' => [
+            'label' => __('doctor.workspace.tab_conversation'),
+            'route' => route('doctor.appointments.conversation', $appointment),
+            'icon' => 'chat-bubble-left-right',
+        ],
         'medical_history' => [
             'label' => __('doctor.workspace.tab_medical_history'),
             'route' => route('doctor.appointments.medical-history', $appointment),
@@ -20,11 +25,6 @@
             'label' => __('doctor.workspace.tab_prescription'),
             'route' => route('doctor.appointments.prescription', $appointment),
             'icon' => 'beaker',
-        ],
-        'conversation' => [
-            'label' => __('doctor.workspace.tab_conversation'),
-            'route' => route('doctor.appointments.conversation', $appointment),
-            'icon' => 'chat-bubble-left-right',
         ],
     ];
 
@@ -91,5 +91,7 @@
                 @endforeach
             </ul>
         </nav>
+
+        @include('partials.doctor-appointment-workflow-stepper', ['appointment' => $appointment, 'active' => $active])
     </div>
 </div>

@@ -1,5 +1,6 @@
 <?php
 
+use App\Livewire\Concerns\CompletesDoctorAppointment;
 use App\Models\Appointment;
 use App\Models\Diagnosis;
 use Flux\Flux;
@@ -10,6 +11,8 @@ use Livewire\Component;
 
 new #[Layout('layouts::doctor')] #[Title('Diagnosis')] class extends Component
 {
+    use CompletesDoctorAppointment;
+
     public Appointment $appointment;
 
     public ?string $marital_status = 'unmarried';
@@ -110,18 +113,20 @@ new #[Layout('layouts::doctor')] #[Title('Diagnosis')] class extends Component
             <flux:button
                 type="button"
                 variant="ghost"
-                :href="route('doctor.dashboard')"
+                :href="route('doctor.appointments.medical-history', $appointment)"
                 wire:navigate
             >
-                {{ __('doctor.diagnosis_form.cancel') }}
+                {{ __('doctor.workflow.back_to_history') }}
             </flux:button>
             <flux:button
                 type="submit"
                 variant="primary"
                 class="!bg-[#10B981] hover:!brightness-95"
             >
-                {{ __('doctor.diagnosis_form.save') }}
+                {{ __('doctor.workflow.save_and_prescription') }}
             </flux:button>
         </div>
     </form>
+
+    @include('partials.doctor-complete-appointment-modals')
 </div>

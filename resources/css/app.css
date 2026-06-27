@@ -420,6 +420,30 @@ select:focus[data-flux-control] {
     color: #18181b !important;
 }
 
+/* Video call overlay — Agora tracks fill the stage */
+.video-call-overlay .video-call-stage > div[id] video,
+.video-call-overlay .video-call-stage > div[id] > div {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover;
+}
+
+.video-call-overlay .video-call-stage > div[id] {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.video-call-control--off [data-control-ring] {
+    border-color: rgb(244 63 94 / 0.65) !important;
+    background-color: rgb(127 29 29 / 0.75) !important;
+    color: rgb(254 205 211) !important;
+}
+
+.video-call-control--off [data-control-label] {
+    color: rgb(251 113 133) !important;
+}
+
 /* \[:where(&)\]:size-4 {
     @apply size-4;
 } */

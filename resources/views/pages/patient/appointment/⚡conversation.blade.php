@@ -315,31 +315,24 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
         </div>
     </div>
 
-    <div id="patient-agora-overlay" wire:ignore class="fixed bottom-4 end-4 z-[200] hidden w-[min(94vw,28rem)] overflow-hidden rounded-2xl border border-zinc-700/80 bg-zinc-950 text-white shadow-2xl shadow-black/45 ring-1 ring-white/10">
-        <div class="flex items-center justify-between gap-3 border-b border-white/10 bg-zinc-900/90 px-3 py-2.5">
-            <p id="patient-agora-title" class="text-sm font-semibold">{{ __('patient.appointments.call_in_progress') }}</p>
-            <button type="button" id="patient-agora-leave" class="rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-rose-500">{{ __('patient.appointments.end_call') }}</button>
-        </div>
-        <div class="relative p-2.5">
-            <div class="relative h-56 overflow-hidden rounded-xl bg-black ring-1 ring-white/10 sm:h-64">
-                <div id="patient-agora-remote" class="h-full w-full"></div>
-                <div class="absolute bottom-2 inset-e-2 w-28 overflow-hidden rounded-lg bg-zinc-900/80 ring-1 ring-white/20 sm:w-32">
-                    <div id="patient-agora-local" class="aspect-video w-full bg-zinc-800"></div>
-                    <p class="px-2 py-1 text-center text-[10px] font-medium text-zinc-300">You</p>
-                </div>
-            </div>
-        </div>
-        <div class="flex justify-center gap-2 border-t border-white/10 bg-zinc-900/60 px-3 py-2.5">
-            <button type="button" id="patient-agora-toggle-mic" class="inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-2 text-xs font-medium hover:bg-white/15">
-                <flux:icon name="microphone" variant="mini" class="size-4" />
-                {{ __('patient.appointments.mic') }}
-            </button>
-            <button type="button" id="patient-agora-toggle-video" class="inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-2 text-xs font-medium hover:bg-white/15">
-                <flux:icon name="video-camera" variant="mini" class="size-4" />
-                {{ __('patient.appointments.camera') }}
-            </button>
-        </div>
-    </div>
+    @include('partials.video-call-overlay', [
+        'overlayId' => 'patient-agora-overlay',
+        'titleId' => 'patient-agora-title',
+        'durationId' => 'patient-overlay-call-duration',
+        'durationLabel' => __('patient.appointments.call_duration_label'),
+        'leaveBtnId' => 'patient-agora-leave',
+        'remoteId' => 'patient-agora-remote',
+        'localId' => 'patient-agora-local',
+        'toggleMicId' => 'patient-agora-toggle-mic',
+        'toggleVideoId' => 'patient-agora-toggle-video',
+        'title' => __('patient.appointments.call_in_progress'),
+        'youLabel' => __('patient.appointments.you'),
+        'endCallLabel' => __('patient.appointments.end_call'),
+        'micLabel' => __('patient.appointments.mic'),
+        'cameraLabel' => __('patient.appointments.camera'),
+        'micMutedLabel' => __('patient.appointments.mic_muted'),
+        'cameraOffLabel' => __('patient.appointments.camera_off'),
+    ])
 
     <div
         id="patient-conversation-bootstrap"
@@ -433,12 +426,22 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
             const overlay = document.getElementById('patient-agora-overlay');
             const remoteWrap = document.getElementById('patient-agora-remote');
             const localWrap = document.getElementById('patient-agora-local');
-            const leaveBtn = document.getElementById('patient-agora-leave');
-            const videoBtn = document.getElementById('btn-patient-video');
-            const audioBtn = document.getElementById('btn-patient-audio');
+            const overlayTitle = document.getElementById('patient-agora-title');
+            const overlayCallDuration = document.getElementById('patient-overlay-call-duration');
             const chip = document.getElementById('patient-call-started-chip');
-            const toggleMicBtn = document.getElementById('patient-agora-toggle-mic');
-            const toggleVideoBtn = document.getElementById('patient-agora-toggle-video');
+            const labelVideo = @js(__('patient.appointments.video_call'));
+            const labelVoice = @js(__('patient.appointments.voice_call'));
+
+            function btnPatientVideo() {
+                return document.getElementById('btn-patient-video');
+            }
+
+            function btnPatientAudio() {
+                return document.getElementById('btn-patient-audio');
+            }
+
+            let callTimerId = null;
+            let callStartedAt = null;
 
             function formatDuration(totalSeconds) {
                 const s = Math.max(0, Math.floor(totalSeconds));
@@ -454,6 +457,8 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
             function refreshCallButtonsState() {
                 syncPatientSessionFromDom(boot);
                 const enabled = callEnabled && appointmentStatus === 'in_process';
+                const videoBtn = btnPatientVideo();
+                const audioBtn = btnPatientAudio();
                 if (videoBtn && !activeMode) {
                     videoBtn.disabled = !enabled;
                 }
@@ -462,6 +467,42 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 }
                 if (chip) {
                     chip.classList.toggle('hidden', !activeMode);
+                }
+            }
+
+            function tickCallTimer() {
+                if (!callStartedAt || !overlayCallDuration) {
+                    return;
+                }
+
+                const sec = (Date.now() - callStartedAt) / 1000;
+                overlayCallDuration.textContent = formatDuration(sec);
+            }
+
+            function startCallTimer(mode) {
+                if (callTimerId) {
+                    clearInterval(callTimerId);
+                }
+
+                callStartedAt = Date.now();
+                tickCallTimer();
+                callTimerId = setInterval(tickCallTimer, 1000);
+
+                if (overlayTitle) {
+                    overlayTitle.textContent = mode === 'video' ? labelVideo : labelVoice;
+                }
+            }
+
+            function stopCallTimer() {
+                if (callTimerId) {
+                    clearInterval(callTimerId);
+                }
+
+                callTimerId = null;
+                callStartedAt = null;
+
+                if (overlayCallDuration) {
+                    overlayCallDuration.textContent = '00:00';
                 }
             }
 
@@ -524,11 +565,47 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
             }
 
             function showOverlay(show) {
-                if (!overlay) return;
+                if (!overlay) {
+                    return;
+                }
+
                 overlay.classList.toggle('hidden', !show);
+                overlay.setAttribute('aria-hidden', show ? 'false' : 'true');
+            }
+
+            function syncMediaControlUi() {
+                const micBtn = document.getElementById('patient-agora-toggle-mic');
+                const videoBtn = document.getElementById('patient-agora-toggle-video');
+
+                if (micBtn) {
+                    const muted = Boolean(localAudio) && !localAudio.enabled;
+                    micBtn.classList.toggle('video-call-control--off', muted);
+                    micBtn.setAttribute('aria-pressed', muted ? 'true' : 'false');
+                    micBtn.title = muted ? (micBtn.dataset.labelOff || 'Muted') : (micBtn.dataset.labelOn || '');
+                    const label = micBtn.querySelector('[data-control-label]');
+                    if (label) {
+                        label.textContent = muted
+                            ? (micBtn.dataset.labelOff || 'Muted')
+                            : (micBtn.dataset.labelOn || '');
+                    }
+                }
+
+                if (videoBtn && !videoBtn.classList.contains('hidden')) {
+                    const cameraOff = Boolean(localVideo) && !localVideo.enabled;
+                    videoBtn.classList.toggle('video-call-control--off', cameraOff);
+                    videoBtn.setAttribute('aria-pressed', cameraOff ? 'true' : 'false');
+                    videoBtn.title = cameraOff ? (videoBtn.dataset.labelOff || 'Camera off') : (videoBtn.dataset.labelOn || '');
+                    const label = videoBtn.querySelector('[data-control-label]');
+                    if (label) {
+                        label.textContent = cameraOff
+                            ? (videoBtn.dataset.labelOff || 'Camera off')
+                            : (videoBtn.dataset.labelOn || '');
+                    }
+                }
             }
 
             async function leaveCall() {
+                stopCallTimer();
                 if (localVideo) {
                     localVideo.stop();
                     localVideo.close();
@@ -547,6 +624,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 if (remoteWrap) remoteWrap.innerHTML = '';
                 if (localWrap) localWrap.innerHTML = '';
                 showOverlay(false);
+                syncMediaControlUi();
                 refreshCallButtonsState();
             }
 
@@ -674,30 +752,44 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 }
 
                 activeMode = mode;
-                if (videoBtn) videoBtn.disabled = true;
-                if (audioBtn) audioBtn.disabled = true;
+                const videoBtn = btnPatientVideo();
+                const audioBtn = btnPatientAudio();
+                if (videoBtn) {
+                    videoBtn.disabled = true;
+                }
+                if (audioBtn) {
+                    audioBtn.disabled = true;
+                }
+                startCallTimer(mode);
                 showOverlay(true);
+                document.getElementById('patient-agora-toggle-video')?.classList.toggle('hidden', mode !== 'video');
+                syncMediaControlUi();
             }
 
-            videoBtn?.addEventListener('click', () => joinCall('video', null, false));
-            audioBtn?.addEventListener('click', () => joinCall('audio', null, false));
-            leaveBtn?.addEventListener('click', () => leaveCall().catch(() => {}));
-            toggleMicBtn?.addEventListener('click', () => {
-                if (localAudio) {
-                    localAudio.setEnabled(!localAudio.enabled);
+            boot.__joinCall = (mode, payload = null, shouldNotify = false) => joinCall(mode, payload, shouldNotify);
+            boot.__leaveCall = () => leaveCall();
+            boot.__toggleMic = () => {
+                if (!localAudio) {
+                    return;
                 }
-            });
-            toggleVideoBtn?.addEventListener('click', () => {
-                if (localVideo) {
-                    localVideo.setEnabled(!localVideo.enabled);
-                }
-            });
 
-            incomingAccept?.addEventListener('click', () => {
+                localAudio.setEnabled(!localAudio.enabled);
+                syncMediaControlUi();
+            };
+            boot.__toggleVideo = () => {
+                if (!localVideo) {
+                    return;
+                }
+
+                localVideo.setEnabled(!localVideo.enabled);
+                syncMediaControlUi();
+            };
+            boot.__acceptIncoming = () => {
                 dismissIncomingAlert();
                 if (!incomingPayload) {
                     incomingBanner?.classList.add('hidden');
                     refreshCallButtonsState();
+
                     return;
                 }
 
@@ -705,13 +797,56 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 incomingBanner?.classList.add('hidden');
                 joinCall(mode, incomingPayload, false);
                 incomingPayload = null;
-            });
-
-            incomingDismiss?.addEventListener('click', () => {
+            };
+            boot.__dismissIncoming = () => {
                 dismissIncomingAlert();
                 incomingPayload = null;
                 incomingBanner?.classList.add('hidden');
-            });
+            };
+
+            if (!window.__patientConversationClickBound) {
+                window.__patientConversationClickBound = true;
+
+                document.addEventListener('click', (event) => {
+                    const bootEl = document.getElementById('patient-conversation-bootstrap');
+                    if (!bootEl) {
+                        return;
+                    }
+
+                    if (event.target.closest('#btn-patient-video')) {
+                        bootEl.__joinCall?.('video', null, false).catch((error) => console.error(error));
+                    }
+
+                    if (event.target.closest('#btn-patient-audio')) {
+                        bootEl.__joinCall?.('audio', null, false).catch((error) => console.error(error));
+                    }
+
+                    if (event.target.closest('#patient-agora-leave')) {
+                        bootEl.__leaveCall?.().catch(() => {});
+                    }
+
+                    if (event.target.closest('#patient-agora-toggle-mic')) {
+                        bootEl.__toggleMic?.();
+                    }
+
+                    if (event.target.closest('#patient-agora-toggle-video')) {
+                        bootEl.__toggleVideo?.();
+                    }
+
+                    if (event.target.closest('#incoming-call-accept')) {
+                        bootEl.__acceptIncoming?.();
+                    }
+
+                    if (event.target.closest('#incoming-call-dismiss')) {
+                        bootEl.__dismissIncoming?.();
+                    }
+                });
+
+                document.addEventListener('livewire:navigating', () => {
+                    const bootEl = document.getElementById('patient-conversation-bootstrap');
+                    bootEl?.__leaveCall?.().catch(() => {});
+                });
+            }
 
             if (pusherKey) {
                 const pusher = new Pusher(pusherKey, {

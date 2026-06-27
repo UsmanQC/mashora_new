@@ -674,12 +674,12 @@ test('doctor can add and remove a medication via the prescription page', functio
         ->test('pages::doctor.appointment.prescription', ['appointment' => $appointment])
         ->call('openCreateMedication')
         ->assertSet('showMedicationModal', true)
+        ->assertSet('duration_measurement', 'days')
         ->set('name', 'Amoxicillin')
         ->set('dosage', '500mg')
         ->set('usage', 'Oral')
         ->set('frequency', 'Twice daily')
         ->set('duration', '7')
-        ->set('duration_measurement', 'days')
         ->call('saveMedication')
         ->assertSet('showMedicationModal', false);
 

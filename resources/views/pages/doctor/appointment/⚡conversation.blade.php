@@ -396,50 +396,22 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
         </div>
     </div>
 
-    {{-- Agora floating modal (wire:ignore so chat Livewire updates do not reset visibility/DOM) --}}
-    <div
-        id="agora-call-overlay"
-        wire:ignore
-        class="fixed bottom-4 end-4 z-[200] hidden w-[min(94vw,28rem)] overflow-hidden rounded-2xl border border-zinc-700/80 bg-zinc-950 text-white shadow-2xl shadow-black/45 ring-1 ring-white/10"
-        aria-hidden="true"
-    >
-        <div class="flex items-center justify-between gap-3 border-b border-white/10 bg-zinc-900/90 px-3 py-2.5">
-            <div class="min-w-0">
-                <p id="agora-call-title" class="truncate text-sm font-semibold">{{ __('doctor.conversation.call_in_progress') }}</p>
-                <p class="mt-0.5 font-mono text-xs tabular-nums text-zinc-400">
-                    {{ __('doctor.conversation.call_duration_label') }}:
-                    <span id="overlay-call-duration">00:00</span>
-                </p>
-            </div>
-            <button
-                type="button"
-                id="agora-leave-btn"
-                class="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-semibold shadow-lg shadow-rose-900/30 transition hover:bg-rose-500"
-            >
-                <flux:icon name="x-mark" variant="mini" class="size-4" />
-                {{ __('doctor.conversation.end_call') }}
-            </button>
-        </div>
-        <div class="relative p-2.5">
-            <div class="relative h-56 overflow-hidden rounded-xl bg-black ring-1 ring-white/10 sm:h-64">
-                <div id="agora-remote-player" class="h-full w-full"></div>
-                <div class="absolute bottom-2 end-2 w-28 overflow-hidden rounded-lg bg-zinc-900/80 ring-1 ring-white/20 sm:w-32">
-                    <div id="agora-local-player" class="aspect-video w-full bg-zinc-800"></div>
-                    <p class="px-2 py-1 text-center text-[10px] font-medium text-zinc-300">{{ __('doctor.conversation.you') }}</p>
-                </div>
-            </div>
-        </div>
-        <div class="flex flex-wrap justify-center gap-2 border-t border-white/10 bg-zinc-900/60 px-3 py-2.5">
-            <button type="button" id="agora-toggle-mic" class="inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-2 text-xs font-medium hover:bg-white/15">
-                <flux:icon name="microphone" variant="mini" class="size-4" />
-                {{ __('doctor.conversation.mic') }}
-            </button>
-            <button type="button" id="agora-toggle-video" class="inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-2 text-xs font-medium hover:bg-white/15">
-                <flux:icon name="video-camera" variant="mini" class="size-4" />
-                {{ __('doctor.conversation.camera') }}
-            </button>
-        </div>
-    </div>
+    @include('partials.video-call-overlay', [
+        'overlayId' => 'agora-call-overlay',
+        'titleId' => 'agora-call-title',
+        'durationId' => 'overlay-call-duration',
+        'durationLabel' => __('doctor.conversation.call_duration_label'),
+        'leaveBtnId' => 'agora-leave-btn',
+        'remoteId' => 'agora-remote-player',
+        'localId' => 'agora-local-player',
+        'toggleMicId' => 'agora-toggle-mic',
+        'toggleVideoId' => 'agora-toggle-video',
+        'title' => __('doctor.conversation.call_in_progress'),
+        'youLabel' => __('doctor.conversation.you'),
+        'endCallLabel' => __('doctor.conversation.end_call'),
+        'micLabel' => __('doctor.conversation.mic'),
+        'cameraLabel' => __('doctor.conversation.camera'),
+    ])
 
     <div
         id="doctor-conversation-bootstrap"
@@ -758,6 +730,37 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                 el.setAttribute('aria-hidden', show ? 'false' : 'true');
             }
 
+            function syncMediaControlUi() {
+                const micBtn = document.getElementById('agora-toggle-mic');
+                const videoBtn = document.getElementById('agora-toggle-video');
+
+                if (micBtn) {
+                    const muted = Boolean(localAudio) && !localAudio.enabled;
+                    micBtn.classList.toggle('video-call-control--off', muted);
+                    micBtn.setAttribute('aria-pressed', muted ? 'true' : 'false');
+                    micBtn.title = muted ? (micBtn.dataset.labelOff || 'Muted') : (micBtn.dataset.labelOn || '');
+                    const label = micBtn.querySelector('[data-control-label]');
+                    if (label) {
+                        label.textContent = muted
+                            ? (micBtn.dataset.labelOff || 'Muted')
+                            : (micBtn.dataset.labelOn || '');
+                    }
+                }
+
+                if (videoBtn && !videoBtn.classList.contains('hidden')) {
+                    const cameraOff = Boolean(localVideo) && !localVideo.enabled;
+                    videoBtn.classList.toggle('video-call-control--off', cameraOff);
+                    videoBtn.setAttribute('aria-pressed', cameraOff ? 'true' : 'false');
+                    videoBtn.title = cameraOff ? (videoBtn.dataset.labelOff || 'Camera off') : (videoBtn.dataset.labelOn || '');
+                    const label = videoBtn.querySelector('[data-control-label]');
+                    if (label) {
+                        label.textContent = cameraOff
+                            ? (videoBtn.dataset.labelOff || 'Camera off')
+                            : (videoBtn.dataset.labelOn || '');
+                    }
+                }
+            }
+
             async function leaveCall() {
                 stopCallTimer();
                 setCallButtonsIdle();
@@ -789,6 +792,7 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                 if (rp) rp.innerHTML = '';
                 if (lp) lp.innerHTML = '';
                 showOverlay(false);
+                syncMediaControlUi();
                 const tv = document.getElementById('agora-toggle-video');
                 if (tv) tv.classList.remove('hidden');
             }
@@ -866,6 +870,7 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                     document.getElementById('agora-toggle-video')?.classList.remove('hidden');
                     startCallTimer('video', labelVideo, labelVoice);
                     showOverlay(true);
+                    syncMediaControlUi();
                 } catch (e) {
                     console.error(e);
                     restoreCallButtonsAfterError();
@@ -914,6 +919,7 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                     document.getElementById('agora-toggle-video')?.classList.add('hidden');
                     startCallTimer('audio', labelVideo, labelVoice);
                     showOverlay(true);
+                    syncMediaControlUi();
                 } catch (e) {
                     console.error(e);
                     restoreCallButtonsAfterError();
@@ -941,14 +947,20 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
             boot.__joinAudioCall = () => joinAudioCall();
             boot.__leaveCall = () => leaveCall();
             boot.__toggleMic = () => {
-                if (localAudio) {
-                    localAudio.setEnabled(!localAudio.enabled);
+                if (!localAudio) {
+                    return;
                 }
+
+                localAudio.setEnabled(!localAudio.enabled);
+                syncMediaControlUi();
             };
             boot.__toggleVideo = () => {
-                if (localVideo) {
-                    localVideo.setEnabled(!localVideo.enabled);
+                if (!localVideo) {
+                    return;
                 }
+
+                localVideo.setEnabled(!localVideo.enabled);
+                syncMediaControlUi();
             };
 
             if (!window.__doctorConversationClickBound) {

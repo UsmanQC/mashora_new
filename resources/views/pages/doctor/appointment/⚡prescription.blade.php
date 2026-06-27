@@ -1,5 +1,6 @@
 <?php
 
+use App\Livewire\Concerns\CompletesDoctorAppointment;
 use App\Models\Appointment;
 use App\Models\Medication;
 use Flux\Flux;
@@ -12,6 +13,8 @@ use Livewire\Component;
 
 new #[Layout('layouts::doctor')] #[Title('Prescription')] class extends Component
 {
+    use CompletesDoctorAppointment;
+
     public Appointment $appointment;
 
     public bool $prescriptionNotNeeded = false;
@@ -63,6 +66,7 @@ new #[Layout('layouts::doctor')] #[Title('Prescription')] class extends Componen
     public function openCreateMedication(): void
     {
         $this->resetMedicationForm();
+        $this->duration_measurement = 'days';
         $this->showMedicationModal = true;
     }
 
@@ -101,6 +105,10 @@ new #[Layout('layouts::doctor')] #[Title('Prescription')] class extends Componen
 
     public function saveMedication(): void
     {
+        if ($this->duration_measurement === '') {
+            $this->duration_measurement = null;
+        }
+
         $validated = $this->validate([
             'name' => ['required', 'string', 'max:250'],
             'dosage' => ['required', 'string', 'max:100'],
@@ -281,11 +289,15 @@ new #[Layout('layouts::doctor')] #[Title('Prescription')] class extends Componen
                 <flux:input wire:model="dosage" :label="__('doctor.prescription_form.dosage')" required />
                 <flux:input wire:model="usage" :label="__('doctor.prescription_form.usage')" required />
                 <flux:input wire:model="frequency" :label="__('doctor.prescription_form.frequency')" required />
-                <flux:select wire:model="duration_measurement" :label="__('doctor.prescription_form.duration_measurement')" :placeholder="__('doctor.prescription_form.choose')" required>
-                    <flux:select.option value="days">{{ __('doctor.prescription_form.unit_days') }}</flux:select.option>
-                    <flux:select.option value="week">{{ __('doctor.prescription_form.unit_week') }}</flux:select.option>
-                    <flux:select.option value="month">{{ __('doctor.prescription_form.unit_month') }}</flux:select.option>
-                </flux:select>
+                <flux:field>
+                    <flux:label>{{ __('doctor.prescription_form.duration_measurement') }}</flux:label>
+                    <flux:select wire:model.live="duration_measurement" :placeholder="__('doctor.prescription_form.choose')">
+                        <flux:select.option value="days">{{ __('doctor.prescription_form.unit_days') }}</flux:select.option>
+                        <flux:select.option value="week">{{ __('doctor.prescription_form.unit_week') }}</flux:select.option>
+                        <flux:select.option value="month">{{ __('doctor.prescription_form.unit_month') }}</flux:select.option>
+                    </flux:select>
+                    <flux:error name="duration_measurement" />
+                </flux:field>
                 <flux:input wire:model="duration" :label="__('doctor.prescription_form.duration')" type="number" min="1" required />
             </div>
 
@@ -308,4 +320,6 @@ new #[Layout('layouts::doctor')] #[Title('Prescription')] class extends Componen
             </div>
         </form>
     </flux:modal>
+
+    @include('partials.doctor-complete-appointment-modals')
 </div>
