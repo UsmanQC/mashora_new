@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Patient;
 use App\Http\Controllers\Controller;
 use App\Models\Appointment;
 use App\Services\FollowUpPaymentCompletionService;
+use App\Services\HyperpayCheckoutService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Redirect;
@@ -53,15 +54,17 @@ class FollowUpPaymentController extends Controller
             ]);
         }
 
-        /** @var FollowUpPaymentCompletionService $completion */
-        $completion = app(FollowUpPaymentCompletionService::class);
-        $result = $completion->confirmIfPaid($appointment->fresh(), $request);
+        if (HyperpayCheckoutService::requestHasReturnParameters($request)) {
+            /** @var FollowUpPaymentCompletionService $completion */
+            $completion = app(FollowUpPaymentCompletionService::class);
+            $result = $completion->confirmIfPaid($appointment->fresh(), $request);
 
-        if ($result['state'] === 'paid' && $result['appointment'] !== null) {
-            return view('patient.payment-success', [
-                'temporaryAppointment' => null,
-                'appointment' => $result['appointment'],
-            ]);
+            if ($result['state'] === 'paid' && $result['appointment'] !== null) {
+                return view('patient.payment-success', [
+                    'temporaryAppointment' => null,
+                    'appointment' => $result['appointment'],
+                ]);
+            }
         }
 
         return view('patient.payment-failed', [

@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Appointment;
 use App\Models\TemporaryAppointment;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
@@ -64,6 +65,13 @@ class HyperpayCheckoutService
         return $this->entityId;
     }
 
+    public static function requestHasReturnParameters(Request $request): bool
+    {
+        return $request->filled('resourcePath')
+            || $request->filled('checkoutId')
+            || $request->filled('id');
+    }
+
     /**
      * @return array{checkout_id: string, integrity: ?string, entity_id: string, env: string, merchant_transaction_id: string, callback_url: string}
      */
@@ -73,9 +81,6 @@ class HyperpayCheckoutService
 
         $callbackUrl = route('patient.payment.success', [
             'temporaryAppointment' => $temporaryAppointment->id,
-        ]).'?'.http_build_query([
-            'env' => $this->env,
-            'entityId' => $this->entityId,
         ]);
 
         $checkout = $this->createCheckout(
@@ -83,7 +88,6 @@ class HyperpayCheckoutService
             merchantTransactionId: $merchantTransactionId,
             customerName: (string) ($temporaryAppointment->patient_name ?: 'Patient'),
             customerEmail: (string) ($temporaryAppointment->patient_email ?: $this->fallbackEmail($temporaryAppointment->user_id)),
-            shopperResultUrl: $callbackUrl,
         );
 
         $temporaryAppointment->forceFill([
@@ -105,17 +109,13 @@ class HyperpayCheckoutService
     {
         $merchantTransactionId = $this->generateMerchantTransactionId('FOLLOWUP', (string) $appointment->id);
 
-        $callbackUrl = route('patient.follow-up.payment.success', $appointment).'?'.http_build_query([
-            'env' => $this->env,
-            'entityId' => $this->entityId,
-        ]);
+        $callbackUrl = route('patient.follow-up.payment.success', $appointment);
 
         $checkout = $this->createCheckout(
             amount: $amountDue,
             merchantTransactionId: $merchantTransactionId,
             customerName: (string) ($appointment->patient_name ?: 'Patient'),
             customerEmail: (string) ($appointment->patient_email ?: $this->fallbackEmail($appointment->user_id)),
-            shopperResultUrl: $callbackUrl,
         );
 
         $appointment->forceFill([
@@ -272,7 +272,6 @@ class HyperpayCheckoutService
         string $merchantTransactionId,
         string $customerName,
         string $customerEmail,
-        string $shopperResultUrl,
     ): array {
         $nameParts = explode(' ', trim($customerName), 2);
         $firstName = $nameParts[0] !== '' ? $nameParts[0] : 'Patient';
@@ -284,7 +283,6 @@ class HyperpayCheckoutService
             'currency' => 'SAR',
             'amount' => number_format($amount, 2, '.', ''),
             'merchantTransactionId' => $merchantTransactionId,
-            'shopperResultUrl' => $shopperResultUrl,
             'customer.email' => $customerEmail,
             'customer.givenName' => $firstName,
             'customer.surname' => $lastName,
