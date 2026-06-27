@@ -186,6 +186,7 @@ return [
         'session_remaining_label' => 'Time left',
         'session_not_started' => 'Not started',
         'session_started_join_now' => 'Session started. Join now.',
+        'session_time_ended' => 'Session time has ended. The call was disconnected.',
         'status' => 'Status',
         'session_label' => 'Session',
         'patient_details_title' => 'Patient details',

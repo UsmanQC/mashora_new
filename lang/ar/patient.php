@@ -189,6 +189,7 @@ return [
         'session_remaining_label' => 'الوقت المتبقي',
         'session_not_started' => 'لم تبدأ',
         'session_started_join_now' => 'بدأت الجلسة. انضم الآن.',
+        'session_time_ended' => 'انتهى وقت الجلسة. تم قطع المكالمة.',
         'status' => 'الحالة',
         'session_label' => 'الجلسة',
         'patient_details_title' => 'بيانات المريض',

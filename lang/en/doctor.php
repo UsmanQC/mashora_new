@@ -514,6 +514,7 @@ return [
         'session_remaining_label' => 'Time left',
         'session_not_started' => 'Not started',
         'live' => 'Live',
+        'session_time_ended' => 'Session time has ended. The call was disconnected.',
         'chat_open_after_completed' => 'Session completed. Chat stays open until :date for follow-up messages.',
         'chat_closed_after_window' => 'Chat closed after the 14-day follow-up period.',
     ],

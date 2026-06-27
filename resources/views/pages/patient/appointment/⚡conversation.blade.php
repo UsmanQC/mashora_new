@@ -188,6 +188,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
         data-session-scheduled-time="{{ filled($appointment->start_time) ? \Illuminate\Support\Carbon::createFromFormat('H:i:s', (string) $appointment->start_time)->format('h:i A') : '--:--' }}"
         data-session-not-started="{{ __('patient.appointments.session_not_started') }}"
         data-session-started-banner="{{ __('patient.appointments.session_started_join_now') }}"
+        data-session-ended="{{ __('patient.appointments.session_time_ended') }}"
     ></div>
 
     @if (in_array($appointment->status, ['new', 'rescheduled'], true) && ! $appointment->isChatOpen())
@@ -314,7 +315,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
         </div>
     </div>
 
-    <div id="patient-agora-overlay" class="fixed bottom-4 inset-e-4 z-200 hidden w-[min(94vw,28rem)] overflow-hidden rounded-2xl border border-zinc-700/80 bg-zinc-950 text-white shadow-2xl shadow-black/45 ring-1 ring-white/10">
+    <div id="patient-agora-overlay" wire:ignore class="fixed bottom-4 end-4 z-[200] hidden w-[min(94vw,28rem)] overflow-hidden rounded-2xl border border-zinc-700/80 bg-zinc-950 text-white shadow-2xl shadow-black/45 ring-1 ring-white/10">
         <div class="flex items-center justify-between gap-3 border-b border-white/10 bg-zinc-900/90 px-3 py-2.5">
             <p id="patient-agora-title" class="text-sm font-semibold">{{ __('patient.appointments.call_in_progress') }}</p>
             <button type="button" id="patient-agora-leave" class="rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-rose-500">{{ __('patient.appointments.end_call') }}</button>
@@ -342,6 +343,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
 
     <div
         id="patient-conversation-bootstrap"
+        wire:ignore
         class="hidden"
         data-pusher-key="{{ config('broadcasting.connections.pusher.key') }}"
         data-pusher-cluster="{{ config('broadcasting.connections.pusher.options.cluster') }}"
@@ -383,6 +385,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
             const seen = new Set();
             const metrics = document.getElementById('patient-conversation-metrics');
             let sessionTimerId = null;
+            let sessionEndedDisconnectHandled = false;
 
             document.querySelectorAll('#patient-chat-messages [wire\\:key^="patient-chat-"]').forEach((el) => {
                 const key = el.getAttribute('wire:key') || '';
@@ -510,6 +513,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                     remainingEl.classList.toggle('text-amber-700', left > 0 && left <= 300);
                     remainingEl.classList.toggle('text-rose-600', left <= 0);
                     remainingEl.classList.toggle('text-[#047857]', left > 300);
+                    maybeEndCallWhenSessionExpired(left);
                 }
             }
 
@@ -544,6 +548,29 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 if (localWrap) localWrap.innerHTML = '';
                 showOverlay(false);
                 refreshCallButtonsState();
+            }
+
+            function maybeEndCallWhenSessionExpired(leftSeconds) {
+                if (leftSeconds > 0) {
+                    sessionEndedDisconnectHandled = false;
+
+                    return;
+                }
+
+                if (!activeMode || sessionEndedDisconnectHandled) {
+                    return;
+                }
+
+                sessionEndedDisconnectHandled = true;
+                const endedMessage = metrics?.dataset.sessionEnded || 'Session time has ended.';
+
+                leaveCall()
+                    .then(() => {
+                        if (window.Flux?.toast) {
+                            window.Flux.toast({ text: endedMessage, variant: 'warning' });
+                        }
+                    })
+                    .catch(() => {});
             }
 
             async function refreshConfig() {

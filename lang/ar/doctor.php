@@ -515,6 +515,7 @@ return [
         'session_remaining_label' => 'المتبقي',
         'session_not_started' => 'لم تبدأ',
         'live' => 'مباشر',
+        'session_time_ended' => 'انتهى وقت الجلسة. تم قطع المكالمة.',
         'chat_open_after_completed' => 'اكتملت الجلسة. تبقى المحادثة مفتوحة حتى :date لرسائل المتابعة.',
         'chat_closed_after_window' => 'أُغلقت المحادثة بعد فترة المتابعة البالغة 14 يومًا.',
     ],

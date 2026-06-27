@@ -128,6 +128,8 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
         data-label-voice="{{ __('doctor.conversation.voice_call') }}"
         data-label-live="{{ __('doctor.conversation.live') }}"
         data-label-connecting="{{ __('doctor.conversation.connecting') }}"
+        data-label-live="{{ __('doctor.conversation.live') }}"
+        data-session-ended="{{ __('doctor.conversation.session_time_ended') }}"
     ></div>
 
     <div class="relative overflow-hidden rounded-3xl border border-zinc-200/90 bg-white shadow-[0_20px_55px_-32px_rgba(15,23,42,0.35)] ring-1 ring-zinc-100">
@@ -394,9 +396,10 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
         </div>
     </div>
 
-    {{-- Agora floating modal (keeps details/chat visible) --}}
+    {{-- Agora floating modal (wire:ignore so chat Livewire updates do not reset visibility/DOM) --}}
     <div
         id="agora-call-overlay"
+        wire:ignore
         class="fixed bottom-4 end-4 z-[200] hidden w-[min(94vw,28rem)] overflow-hidden rounded-2xl border border-zinc-700/80 bg-zinc-950 text-white shadow-2xl shadow-black/45 ring-1 ring-white/10"
         aria-hidden="true"
     >
@@ -440,6 +443,7 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
 
     <div
         id="doctor-conversation-bootstrap"
+        wire:ignore
         class="hidden"
         data-pusher-key="{{ config('broadcasting.connections.pusher.key') }}"
         data-pusher-cluster="{{ config('broadcasting.connections.pusher.options.cluster') }}"
@@ -519,6 +523,34 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
             let sessionTimerId = null;
             let callTimerId = null;
             let callStartedAt = null;
+            let sessionEndedDisconnectHandled = false;
+            let agoraClient = null;
+            let localAudio = null;
+            let localVideo = null;
+            let currentMode = null;
+
+            function maybeEndCallWhenSessionExpired(leftSeconds) {
+                if (leftSeconds > 0) {
+                    sessionEndedDisconnectHandled = false;
+
+                    return;
+                }
+
+                if (!currentMode || sessionEndedDisconnectHandled) {
+                    return;
+                }
+
+                sessionEndedDisconnectHandled = true;
+                const endedMessage = metricsEl?.dataset.sessionEnded || 'Session time has ended.';
+
+                leaveCall()
+                    .then(() => {
+                        if (window.Flux?.toast) {
+                            window.Flux.toast({ text: endedMessage, variant: 'warning' });
+                        }
+                    })
+                    .catch(() => {});
+            }
 
             function tickSessionTimers() {
                 const metrics = document.getElementById('conversation-page-metrics');
@@ -548,6 +580,7 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                     remainingEl.classList.toggle('text-amber-700', left > 0 && left <= 300);
                     remainingEl.classList.toggle('text-rose-600', left <= 0);
                     remainingEl.classList.toggle('text-[#047857]', left > 300);
+                    maybeEndCallWhenSessionExpired(left);
                 }
             }
 
@@ -613,6 +646,14 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                 const connecting = document.getElementById('conversation-page-metrics')?.dataset.labelConnecting || '…';
                 if (label) label.textContent = connecting;
                 btn.disabled = true;
+            }
+
+            function setCallButtonActive(btn, labelText) {
+                if (!btn) return;
+                btn.className = btnActiveClass;
+                btn.disabled = true;
+                const label = btn.querySelector('.btn-label');
+                if (label) label.textContent = labelText;
             }
 
             function restoreCallButtonsAfterError() {
@@ -697,11 +738,6 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
             const notifyUrl = panel?.dataset.notifyUrl || '';
             const tokenUrl = panel?.dataset.tokenUrl || '';
 
-            let agoraClient = null;
-            let localAudio = null;
-            let localVideo = null;
-            let currentMode = null;
-
             async function refreshAgoraConfig() {
                 if (!tokenUrl) return null;
                 const res = await fetch(tokenUrl, {
@@ -780,6 +816,7 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
 
             const labelVideo = metricsEl?.dataset.labelVideo || 'Video call';
             const labelVoice = metricsEl?.dataset.labelVoice || 'Voice call';
+            const labelLive = metricsEl?.dataset.labelLive || 'Live';
 
             async function joinVideoCall() {
                 if (currentMode) {
@@ -822,10 +859,7 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                     currentMode = 'video';
                     const videoBtn = btnVideo();
                     const audioBtn = btnAudio();
-                    if (videoBtn) {
-                        videoBtn.className = btnActiveClass;
-                        videoBtn.disabled = true;
-                    }
+                    setCallButtonActive(videoBtn, labelLive + ' · ' + labelVideo);
                     if (audioBtn) {
                         audioBtn.disabled = true;
                     }
@@ -873,10 +907,7 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                     currentMode = 'audio';
                     const videoBtn = btnVideo();
                     const audioBtn = btnAudio();
-                    if (audioBtn) {
-                        audioBtn.className = btnActiveClass;
-                        audioBtn.disabled = true;
-                    }
+                    setCallButtonActive(audioBtn, labelLive + ' · ' + labelVoice);
                     if (videoBtn) {
                         videoBtn.disabled = true;
                     }
@@ -887,6 +918,23 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                     console.error(e);
                     restoreCallButtonsAfterError();
                 }
+            }
+
+            boot.__syncCallOverlay = () => {
+                if (currentMode) {
+                    showOverlay(true);
+                }
+            };
+
+            if (!window.__doctorConversationMorphHook) {
+                window.__doctorConversationMorphHook = true;
+                document.addEventListener('livewire:init', () => {
+                    Livewire.hook('commit', ({ succeed }) => {
+                        succeed(() => {
+                            document.getElementById('doctor-conversation-bootstrap')?.__syncCallOverlay?.();
+                        });
+                    });
+                });
             }
 
             boot.__joinVideoCall = () => joinVideoCall();
