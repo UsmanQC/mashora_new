@@ -175,6 +175,8 @@ return [
         'dismiss_call' => 'تجاهل',
         'incoming_video' => 'مكالمة فيديو واردة من الأخصائي',
         'incoming_voice' => 'مكالمة صوتية واردة من الأخصائي',
+        'incoming_call_title' => 'مكالمة جلسة واردة',
+        'realtime_misconfigured' => 'تنبيهات الوقت الفعلي غير مضبوطة. عيّن BROADCAST_CONNECTION=pusher في .env (وليس log) ثم نفّذ php artisan config:clear.',
         'call_in_progress' => 'المكالمة قيد التنفيذ',
         'end_call' => 'إنهاء المكالمة',
         'mic' => 'الميكروفون',

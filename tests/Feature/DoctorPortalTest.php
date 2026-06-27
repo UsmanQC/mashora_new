@@ -1,5 +1,7 @@
 <?php
 
+use App\Events\AppointmentIncomingCallAnnounced;
+use App\Events\PatientSessionJoinRequested;
 use App\Livewire\Doctor\Components\Notifications;
 use App\Models\Appointment;
 use App\Models\BankAccount;
@@ -17,6 +19,7 @@ use App\Models\WorkingDay;
 use App\Models\WorkingHour;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 
@@ -777,6 +780,53 @@ test('doctor can send a session chat message after starting session', function (
     expect($message)->not->toBeNull()
         ->and($message->body)->toBe('Hello from the doctor')
         ->and($message->send_by)->toBe('doctor');
+});
+
+test('doctor notify call broadcasts incoming call events to patient', function () {
+    config([
+        'broadcasting.default' => 'pusher',
+        'agora.AGORA_APP_ID' => 'test-app-id',
+        'agora.AGORA_APP_CERTIFICATE' => str_repeat('a', 32),
+    ]);
+
+    Event::fake([
+        AppointmentIncomingCallAnnounced::class,
+        PatientSessionJoinRequested::class,
+    ]);
+
+    $user = User::factory()->create();
+    $doctor = Doctor::factory()->create(['profile_completed' => true]);
+    $appointment = Appointment::factory()->create([
+        'doctor_id' => $doctor->id,
+        'user_id' => $user->id,
+        'status' => 'in_process',
+        'actual_start_at' => now(),
+        'extend_at' => now()->addMinutes(30),
+    ]);
+
+    $this->actingAs($doctor, 'doctor')
+        ->postJson(route('doctor.appointments.realtime.notify-call', $appointment), [
+            'agora_app_id' => 'test-app-id',
+            'agora_token' => 'test-token',
+            'agora_channel' => 'video_call_'.$appointment->id,
+            'call_type' => 'video',
+        ])
+        ->assertOk()
+        ->assertJsonPath('ok', true);
+
+    Event::assertDispatched(
+        AppointmentIncomingCallAnnounced::class,
+        fn (AppointmentIncomingCallAnnounced $event): bool => $event->appointmentId === $appointment->id
+            && $event->callType === 'video',
+    );
+
+    Event::assertDispatched(
+        PatientSessionJoinRequested::class,
+        fn (PatientSessionJoinRequested $event): bool => $event->userId === $user->id
+            && $event->appointmentId === $appointment->id
+            && $event->callType === 'video'
+            && $event->agoraAppId === 'test-app-id',
+    );
 });
 
 test('doctor can refresh agora token for an appointment', function () {

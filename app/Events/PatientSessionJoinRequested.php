@@ -16,6 +16,9 @@ class PatientSessionJoinRequested implements ShouldBroadcastNow
         public int $userId,
         public int $appointmentId,
         public string $callType,
+        public string $agoraAppId = '',
+        public string $agoraToken = '',
+        public string $agoraChannel = '',
     ) {}
 
     /**
@@ -41,6 +44,9 @@ class PatientSessionJoinRequested implements ShouldBroadcastNow
         return [
             'appointment_id' => $this->appointmentId,
             'call_type' => $this->callType,
+            'agora_app_id' => $this->agoraAppId,
+            'agora_token' => $this->agoraToken,
+            'agora_channel' => $this->agoraChannel,
         ];
     }
 }

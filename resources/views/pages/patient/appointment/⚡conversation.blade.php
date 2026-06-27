@@ -217,7 +217,13 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
         </div>
     </div>
 
-    <div id="incoming-call-banner" class="hidden rounded-xl border border-emerald-200 bg-emerald-50 p-3">
+    @if (filled(config('broadcasting.connections.pusher.key')) && config('broadcasting.default') !== 'pusher')
+        <flux:callout variant="warning" icon="exclamation-triangle" class="border-amber-200">
+            {{ __('patient.appointments.realtime_misconfigured') }}
+        </flux:callout>
+    @endif
+
+    <div id="incoming-call-banner" class="hidden rounded-xl border border-emerald-200 bg-emerald-50 p-3 ring-2 ring-emerald-300/60">
         <div class="flex flex-wrap items-center justify-between gap-2">
             <p id="incoming-call-label" class="text-sm font-medium text-emerald-900"></p>
             <div class="flex items-center gap-2">
@@ -347,6 +353,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
 </div>
 
 @push('scripts')
+    @include('partials.realtime-call-alerts')
     <script src="https://js.pusher.com/8.2.0/pusher.min.js"></script>
     <script src="https://download.agora.io/sdk/release/AgoraRTC_N-4.23.0.js"></script>
     <script>
@@ -571,10 +578,30 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 return res.json();
             }
 
+            function alertIncomingCall(label) {
+                window.MashoraRealtimeAlerts?.playIncomingRing();
+                window.MashoraRealtimeAlerts?.showDesktopNotification(
+                    @js(__('patient.appointments.incoming_call_title')),
+                    label,
+                );
+            }
+
+            function dismissIncomingAlert() {
+                window.MashoraRealtimeAlerts?.stopIncomingRing();
+            }
+
+            function resolveAgoraConfig(payload) {
+                if (payload && payload.agora_app_id && payload.agora_channel) {
+                    return payload;
+                }
+
+                return null;
+            }
+
             async function joinCall(mode, payload = null, shouldNotify = false) {
                 if (!callEnabled || activeMode || !window.AgoraRTC) return;
 
-                const cfg = payload ?? await refreshConfig();
+                const cfg = resolveAgoraConfig(payload) ?? await refreshConfig();
                 if (!cfg) return;
 
                 if (shouldNotify) {
@@ -640,13 +667,21 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
             });
 
             incomingAccept?.addEventListener('click', () => {
-                if (!incomingPayload) return;
+                dismissIncomingAlert();
+                if (!incomingPayload) {
+                    incomingBanner?.classList.add('hidden');
+                    refreshCallButtonsState();
+                    return;
+                }
+
+                const mode = incomingPayload.call_type === 'video' ? 'video' : 'audio';
                 incomingBanner?.classList.add('hidden');
-                joinCall(incomingPayload.call_type === 'video' ? 'video' : 'audio', incomingPayload, false);
+                joinCall(mode, incomingPayload, false);
                 incomingPayload = null;
             });
 
             incomingDismiss?.addEventListener('click', () => {
+                dismissIncomingAlert();
                 incomingPayload = null;
                 incomingBanner?.classList.add('hidden');
             });
@@ -663,7 +698,14 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                     },
                 });
 
+                pusher.connection.bind('error', (error) => {
+                    console.error('Pusher connection error', error);
+                });
+
                 const channel = pusher.subscribe('private-appointment.' + appointmentId);
+                channel.bind('pusher:subscription_error', (error) => {
+                    console.error('Pusher appointment channel error', error);
+                });
                 channel.bind('message.created', (data) => appendMessageRow(data));
                 channel.bind('session.started', (data) => {
                     appointmentStatus = data.status || 'in_process';
@@ -676,6 +718,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                     if (incomingLabel) {
                         incomingLabel.textContent = metrics?.dataset.sessionStartedBanner || 'Session started. Join now.';
                     }
+                    alertIncomingCall(incomingLabel?.textContent || @js(__('patient.appointments.session_started_join_now')));
                     incomingBanner?.classList.remove('hidden');
                     startSessionTimers();
                     refreshCallButtonsState();
@@ -687,8 +730,28 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                             ? @js(__('patient.appointments.incoming_video'))
                             : @js(__('patient.appointments.incoming_voice'));
                     }
+                    alertIncomingCall(incomingLabel?.textContent || @js(__('patient.appointments.incoming_call_title')));
                     incomingBanner?.classList.remove('hidden');
                 });
+
+                if (patientId > 0) {
+                    const patientChannel = pusher.subscribe('private-patient.' + patientId);
+                    patientChannel.bind('pusher:subscription_error', (error) => {
+                        console.error('Pusher patient channel error', error);
+                    });
+                    patientChannel.bind('session.join-requested', (data) => {
+                        incomingPayload = data;
+                        if (incomingLabel) {
+                            incomingLabel.textContent = data.call_type === 'video'
+                                ? @js(__('patient.appointments.incoming_video'))
+                                : @js(__('patient.appointments.incoming_voice'));
+                        }
+                        alertIncomingCall(incomingLabel?.textContent || @js(__('patient.appointments.incoming_call_title')));
+                        incomingBanner?.classList.remove('hidden');
+                    });
+                }
+            } else {
+                console.warn('Pusher is not configured: set PUSHER_APP_KEY and BROADCAST_CONNECTION=pusher');
             }
 
             startSessionTimers();

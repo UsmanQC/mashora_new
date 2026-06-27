@@ -172,6 +172,8 @@ return [
         'dismiss_call' => 'Dismiss',
         'incoming_video' => 'Incoming video call from specialist',
         'incoming_voice' => 'Incoming voice call from specialist',
+        'incoming_call_title' => 'Incoming session call',
+        'realtime_misconfigured' => 'Real-time alerts are misconfigured. Set BROADCAST_CONNECTION=pusher in .env (not log) and run php artisan config:clear.',
         'call_in_progress' => 'Call in progress',
         'end_call' => 'End call',
         'mic' => 'Microphone',

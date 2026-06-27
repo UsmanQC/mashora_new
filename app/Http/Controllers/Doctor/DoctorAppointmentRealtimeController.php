@@ -46,6 +46,9 @@ class DoctorAppointmentRealtimeController
             (int) $appointment->user_id,
             (int) $appointment->id,
             (string) $validated['call_type'],
+            (string) $validated['agora_app_id'],
+            (string) $validated['agora_token'],
+            (string) $validated['agora_channel'],
         ));
 
         return response()->json([

@@ -252,6 +252,12 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
 }; ?>
 
 <div class="space-y-5">
+    @if (filled(config('broadcasting.connections.pusher.key')) && config('broadcasting.default') !== 'pusher')
+        <flux:callout variant="warning" icon="exclamation-triangle" class="border-amber-200">
+            {{ __('patient.appointments.realtime_misconfigured') }}
+        </flux:callout>
+    @endif
+
     <div id="patient-call-join-banner" class="hidden">
         <div class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
             <div class="flex flex-wrap items-center justify-between gap-3">
@@ -458,6 +464,7 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
 </div>
 
 @push('scripts')
+    @include('partials.realtime-call-alerts')
     <script data-navigate-once>
         function appointmentStartTimer(isoStart) {
             return {
@@ -575,23 +582,23 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
                 },
             });
 
-            const showJoin = (appointmentId) => {
+            pusher.connection.bind('error', (error) => {
+                console.error('Pusher connection error', error);
+            });
+
+            const incomingCallTitle = @js(__('patient.appointments.incoming_call_title'));
+            const incomingVideoLabel = @js(__('patient.appointments.incoming_video'));
+            const incomingVoiceLabel = @js(__('patient.appointments.incoming_voice'));
+
+            const showJoin = (appointmentId, options = {}) => {
                 if (!banner || !text) return;
-                text.textContent = labelCall;
+                const label = options.label || labelCall;
+                text.textContent = label;
                 banner.classList.remove('hidden');
                 currentAppointmentId = Number(appointmentId) || 0;
 
-                if ('Notification' in window) {
-                    if (Notification.permission === 'granted') {
-                        new Notification(labelCall);
-                    } else if (Notification.permission === 'default') {
-                        Notification.requestPermission().then((permission) => {
-                            if (permission === 'granted') {
-                                new Notification(labelCall);
-                            }
-                        });
-                    }
-                }
+                window.MashoraRealtimeAlerts?.playIncomingRing();
+                window.MashoraRealtimeAlerts?.showDesktopNotification(incomingCallTitle, label);
             };
 
             async function leaveInlineCall() {
@@ -651,11 +658,13 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
 
             async function joinInlineCall(appointmentId, payload = null, shouldNotify = false, callType = 'video') {
                 if (!window.AgoraRTC || !appointmentId) return;
-                const cfg = payload || await fetchAgoraConfig(appointmentId);
+                const cfg = (payload && payload.agora_app_id) ? payload : await fetchAgoraConfig(appointmentId);
                 if (!cfg) {
                     window.location.href = joinBase.replace('__ID__', String(appointmentId));
                     return;
                 }
+
+                window.MashoraRealtimeAlerts?.stopIncomingRing();
 
                 if (shouldNotify) {
                     await notifyDoctor(appointmentId, callType, cfg);
@@ -701,9 +710,22 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
                 banner?.classList.add('hidden');
             }
 
-            joinNowBtn?.addEventListener('click', () => {
+            joinNowBtn?.addEventListener('click', async (event) => {
                 const appointmentId = currentAppointmentId;
                 if (!appointmentId) return;
+
+                const payload = payloadByAppointment.get(appointmentId);
+                if (payload && payload.agora_app_id) {
+                    event.preventDefault();
+                    await joinInlineCall(
+                        appointmentId,
+                        payload,
+                        false,
+                        payload.call_type === 'audio' ? 'audio' : 'video',
+                    );
+                    return;
+                }
+
                 joinNowBtn.href = joinBase.replace('__ID__', String(appointmentId));
             });
 
@@ -715,21 +737,29 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
                 const appointmentId = Number(id);
                 if (!appointmentId) return;
                 const channel = pusher.subscribe('private-appointment.' + appointmentId);
+                channel.bind('pusher:subscription_error', (error) => {
+                    console.error('Pusher appointment channel error', error);
+                });
                 channel.bind('session.started', (payload) => showJoin(payload?.appointment_id || appointmentId));
                 channel.bind('call.incoming', (payload) => {
                     const incomingAppointmentId = Number(payload?.appointment_id || appointmentId);
                     payloadByAppointment.set(incomingAppointmentId, payload || null);
-                    showJoin(incomingAppointmentId);
+                    const label = payload?.call_type === 'video' ? incomingVideoLabel : incomingVoiceLabel;
+                    showJoin(incomingAppointmentId, { label });
                 });
             });
 
             if (patientId > 0) {
                 const patientChannel = pusher.subscribe('private-patient.' + patientId);
+                patientChannel.bind('pusher:subscription_error', (error) => {
+                    console.error('Pusher patient channel error', error);
+                });
                 patientChannel.bind('session.join-requested', (payload) => {
                     const appointmentId = Number(payload?.appointment_id || 0);
                     if (!appointmentId) return;
                     payloadByAppointment.set(appointmentId, payload || null);
-                    showJoin(appointmentId);
+                    const label = payload?.call_type === 'video' ? incomingVideoLabel : incomingVoiceLabel;
+                    showJoin(appointmentId, { label });
                 });
             }
         }
