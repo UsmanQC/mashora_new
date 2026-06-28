@@ -143,12 +143,61 @@ select:focus[data-flux-control] {
         --color-accent-foreground: #ffffff;
     }
 
+    .doctor-emerald-accent ui-checkbox {
+        --color-accent: #10b981;
+        --color-accent-foreground: #ffffff;
+    }
+
     .doctor-emerald-accent ui-checkbox[data-checked] [data-flux-checkbox-indicator] {
         @apply !border-mashora-brand !bg-mashora-brand !shadow-none;
     }
 
     .doctor-emerald-accent ui-checkbox[data-checked] [data-flux-checkbox-indicator] svg {
         @apply !text-white;
+    }
+
+    .doctor-emerald-accent label:has(ui-checkbox[data-checked]) .doctor-working-day-label {
+        @apply text-mashora-brand;
+    }
+
+    /** Patient booking: Myself / Another pills — equal columns on mobile. */
+    .patient-booking-pill-radios {
+        --color-accent: #10b981;
+        --color-accent-foreground: #ffffff;
+    }
+
+    .patient-booking-pill-radios ui-radio-group[data-flux-radio-group-pills] {
+        @apply grid w-full grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:gap-3;
+    }
+
+    .patient-booking-pill-radios ui-radio[data-flux-radio-pills] {
+        @apply min-w-0 justify-center border border-zinc-200/90 bg-white text-zinc-900 shadow-none;
+        -webkit-text-fill-color: #18181b !important;
+    }
+
+    .patient-booking-pill-radios ui-radio[data-flux-radio-pills][data-checked] {
+        @apply border-mashora-brand bg-mashora-brand text-white;
+        -webkit-text-fill-color: #ffffff !important;
+    }
+
+    /** Patient portal: keep Flux menus and modals light on mobile. */
+    .scheme-light ui-modal dialog {
+        background-color: #ffffff !important;
+        color: #18181b !important;
+    }
+
+    .scheme-light ui-menu[data-flux-menu] {
+        background-color: #ffffff !important;
+        border-color: #e5e5e5 !important;
+        color: #18181b !important;
+    }
+
+    .scheme-light ui-menu[data-flux-menu] [data-flux-menu-item] {
+        color: #18181b !important;
+    }
+
+    .scheme-light ui-menu[data-flux-menu] [data-flux-menu-item][data-active] {
+        background-color: #f4f4f5 !important;
     }
 
     .doctor-emerald-pill-radios ui-radio[data-flux-radio-pills] {

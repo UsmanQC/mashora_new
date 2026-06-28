@@ -596,8 +596,8 @@ new #[Layout('layouts::patient')] #[Title('Payment')] class extends Component
             </div>
 
             {{-- Payment --}}
-            <div class="flex h-full flex-col lg:col-span-2">
-                <div class="flex h-full flex-col rounded-2xl border border-zinc-200/90 bg-white p-5 shadow-sm">
+            <div class="flex h-full flex-col overflow-visible lg:col-span-2">
+                <div class="flex h-full flex-col overflow-visible rounded-2xl border border-zinc-200/90 bg-white p-5 shadow-sm">
                 <div class="flex items-center gap-2 border-b border-zinc-100 pb-4">
                     <span class="flex size-9 items-center justify-center rounded-lg bg-[#10B981]/10 text-[#10B981]">
                         <flux:icon name="lock-closed" variant="mini" class="size-4" />
@@ -666,7 +666,9 @@ new #[Layout('layouts::patient')] #[Title('Payment')] class extends Component
                                 <span wire:loading wire:target="initHyperpayCheckout">{{ __('patient_booking.payment_processing') }}</span>
                             </flux:button>
                         @elseif ($this->usesMyFatoorah() && $embeddedReady)
-                            <div id="mf-form-element" class="min-h-[155px] w-full rounded-xl border border-zinc-200 bg-white p-2"></div>
+                            @include('partials.payment-card-field-guide')
+
+                            <div id="mf-form-element" class="min-h-[11rem] w-full overflow-visible rounded-xl border border-zinc-200 bg-white p-3 sm:min-h-[13rem]"></div>
                             <p id="mf-card-error" class="hidden rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
                                 {{ __('patient_booking.payment_embedded_unavailable') }}
                             </p>
@@ -756,7 +758,7 @@ new #[Layout('layouts::patient')] #[Title('Payment')] class extends Component
                         cardViewId: "mf-form-element",
                         style: {
                             direction: @js(App::isLocale('ar') ? 'rtl' : 'ltr'),
-                            cardHeight: 130,
+                            cardHeight: 160,
                             input: {
                                 color: "#111827",
                                 fontSize: "14px",
@@ -765,14 +767,18 @@ new #[Layout('layouts::patient')] #[Title('Payment')] class extends Component
                                 borderWidth: "1px",
                                 borderRadius: "8px",
                                 placeHolder: {
-                                    holderName: "Name On Card",
-                                    cardNumber: "Card Number",
-                                    expiryDate: "MM / YY",
-                                    securityCode: "CVV"
-                                }
+                                    holderName: @js(__('patient_booking.payment_placeholder_card_holder')),
+                                    cardNumber: @js(__('patient_booking.payment_placeholder_card_number')),
+                                    expiryDate: @js(__('patient_booking.payment_placeholder_expiry')),
+                                    securityCode: @js(__('patient_booking.payment_placeholder_cvv')),
+                                },
                             },
-                            label: { display: false }
-                        }
+                            label: {
+                                display: true,
+                                color: "#525252",
+                                fontSize: "12px",
+                            },
+                        },
                     };
 
                     window.myFatoorah.init(mfConfig);

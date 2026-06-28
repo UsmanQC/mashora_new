@@ -128,10 +128,9 @@ test('signed-in patient navbar exposes account menu with logout', function () {
     $this->actingAs($user)->get(route('patient.home'))
         ->assertSuccessful()
         ->assertSee('data-test="patient-account-menu-button"', false)
-        ->assertSee('data-test="patient-account-menu-language-switch"', false)
         ->assertSee('data-test="patient-logout-button"', false)
         ->assertSee(route('logout'), false)
-        ->assertSee(route('profile.edit'), false);
+        ->assertDontSee('data-test="patient-account-menu-language-switch"', false);
 });
 
 test('patient ongoing appointment shows countdown timer next to waiting status', function () {

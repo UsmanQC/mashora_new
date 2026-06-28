@@ -83,5 +83,8 @@ test('authenticated patient can load book appointments page with valid query', f
     $this->actingAs($user)
         ->get(route('patient.book-appointments', ['doctor' => $doctor->id]).'?'.$query)
         ->assertSuccessful()
-        ->assertSee(__('patient_booking.title'), false);
+        ->assertSee(__('patient_booking.title'), false)
+        ->assertSee(__('patient_booking.for_self'), false)
+        ->assertSee(__('patient_booking.for_other'), false)
+        ->assertSee(__('patient_booking.cancel'), false);
 });

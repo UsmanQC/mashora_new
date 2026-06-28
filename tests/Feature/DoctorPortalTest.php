@@ -241,17 +241,16 @@ test('authenticated doctor navbar shows language switch', function () {
         ->assertDontSee(route('doctor.locale', ['locale' => 'en']), false);
 });
 
-test('authenticated doctor account menu shows personal profile link', function () {
+test('authenticated doctor account menu shows sign out only', function () {
     $doctor = Doctor::factory()->create(['profile_completed' => true]);
 
     $this->actingAs($doctor, 'doctor')
         ->get(route('doctor.dashboard'))
         ->assertSuccessful()
         ->assertSee('data-test="doctor-account-menu-button"', false)
-        ->assertSee('data-test="doctor-account-menu-language-switch"', false)
-        ->assertSee('data-test="doctor-personal-profile-link"', false)
-        ->assertSee(route('doctor.settings.profile'), false)
-        ->assertSee(__('doctor.settings.personal_profile'), false);
+        ->assertSee('data-test="doctor-logout-button"', false)
+        ->assertDontSee('data-test="doctor-personal-profile-link"', false)
+        ->assertDontSee('data-test="doctor-account-menu-language-switch"', false);
 });
 
 test('doctor guest welcome page shows language switch', function () {

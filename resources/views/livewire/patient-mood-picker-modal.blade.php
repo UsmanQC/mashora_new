@@ -1,5 +1,5 @@
 <div>
-    <flux:modal wire:model.self="showMoodModal" class="w-full max-w-full sm:!max-w-4xl" :closable="true">
+    <flux:modal wire:model.self="showMoodModal" class="w-full max-w-full !bg-white sm:!max-w-4xl" :closable="true">
         <div class="relative px-4 pt-10 pb-8 sm:px-8 md:pb-12">
             <div class="mx-auto mb-8 max-w-2xl space-y-2 text-center lg:mb-10">
                 <flux:heading level="3" size="xl" class="font-semibold text-[#10B981]">
@@ -86,7 +86,7 @@
                 {{-- Opens after tapping a mood: note, share, Save --}}
                 <div class="patient-mood-detail-panel">
                     <div
-                        class="mx-auto rounded-2xl border border-[#10B981]/15 bg-zinc-50/90 p-6 shadow-sm ring-1 ring-[#10B981]/5 dark:border-zinc-600 dark:bg-zinc-900/50 sm:p-8"
+                        class="mx-auto rounded-2xl border border-[#10B981]/15 bg-zinc-50/90 p-6 shadow-sm ring-1 ring-[#10B981]/5 sm:p-8"
                         role="region"
                         aria-labelledby="patient-mood-detail-label"
                         id="patient-mood-detail-region"
@@ -133,14 +133,14 @@
                     </div>
                 </div>
             @else
-                <flux:text class="mt-8 text-center font-medium text-zinc-500 dark:text-zinc-400">
+                <flux:text class="mt-8 text-center font-medium text-zinc-500">
                     {{ __('patient.mood_tracker_pick_hint') }}
                 </flux:text>
             @endif
         </div>
     </flux:modal>
 
-    <flux:modal wire:model.self="showFutureMoodDialog" class="max-w-md rounded-2xl shadow-xl" :closable="true">
+    <flux:modal wire:model.self="showFutureMoodDialog" class="max-w-md !bg-white rounded-2xl shadow-xl" :closable="true">
         <div class="flex flex-col items-center px-6 py-8 text-center sm:px-10 sm:py-10">
             <flux:heading size="lg" class="font-bold text-zinc-800">
                 {{ __('patient.mood_future_dialog_title') }}
@@ -154,7 +154,7 @@
         </div>
     </flux:modal>
 
-    <flux:modal wire:model.self="showAlreadyLoggedMoodDialog" class="max-w-md rounded-2xl shadow-xl" :closable="true">
+    <flux:modal wire:model.self="showAlreadyLoggedMoodDialog" class="max-w-md !bg-white rounded-2xl shadow-xl" :closable="true">
         <div class="flex flex-col items-center px-6 py-8 text-center sm:px-10 sm:py-10">
             <flux:heading size="lg" class="font-bold text-zinc-800">
                 {{ __('patient.mood_already_logged_dialog_title') }}
@@ -168,7 +168,7 @@
         </div>
     </flux:modal>
 
-    <flux:modal wire:model.self="showOnlyTodayMoodDialog" class="max-w-md rounded-2xl shadow-xl" :closable="true">
+    <flux:modal wire:model.self="showOnlyTodayMoodDialog" class="max-w-md !bg-white rounded-2xl shadow-xl" :closable="true">
         <div class="flex flex-col items-center px-6 py-8 text-center sm:px-10 sm:py-10">
             <flux:heading size="lg" class="font-bold text-zinc-800">
                 {{ __('patient.mood_only_today_dialog_title') }}

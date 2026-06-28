@@ -176,18 +176,16 @@ new #[Layout('layouts::doctor')] #[Title('Working hours')] class extends Compone
     <div class="rounded-2xl border border-zinc-200/90 bg-white p-5 shadow-sm">
         <flux:text class="mb-4 text-zinc-600">{{ __('Select available days, then add one or more working slots per day.') }}</flux:text>
 
-        <form wire:submit="save" class="space-y-4">
+        <form wire:submit="save" class="doctor-emerald-accent space-y-4">
+            <flux:checkbox.group wire:model.live="availabilities" class="space-y-4">
             @foreach ($daysOfWeek as $dayOfWeek)
                 <div class="rounded-xl border border-zinc-200/80 p-3">
                     <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                        <label class="inline-flex items-center gap-3">
-                            <input
-                                type="checkbox"
-                                value="{{ $dayOfWeek }}"
-                                wire:model.live="availabilities"
-                                class="h-4 w-4 rounded border-zinc-300 text-[#047857] focus:ring-[#047857]"
-                            />
-                            <span class="text-sm font-semibold capitalize text-zinc-800">{{ __($dayOfWeek) }}</span>
+                        <label class="group inline-flex items-center gap-3">
+                            <flux:checkbox value="{{ $dayOfWeek }}" class="shrink-0" />
+                            <span class="doctor-working-day-label text-sm font-semibold capitalize text-zinc-800 group-has-[[data-checked]]:text-mashora-brand">
+                                {{ __($dayOfWeek) }}
+                            </span>
                         </label>
 
                         <div class="flex w-full flex-col gap-2 lg:max-w-2xl">
@@ -224,6 +222,7 @@ new #[Layout('layouts::doctor')] #[Title('Working hours')] class extends Compone
                     </div>
                 </div>
             @endforeach
+            </flux:checkbox.group>
 
             <flux:error name="availabilities" />
             <flux:error name="workingHours" />

@@ -67,7 +67,7 @@
                             @endif
                         </div>
 
-                        <flux:menu class="min-w-[18rem] max-w-sm">
+                        <flux:menu class="min-w-[18rem] max-w-sm !border-zinc-200 !bg-white">
                             <div class="border-b border-zinc-100 px-3 py-2.5">
                                 <p class="text-sm font-semibold text-zinc-900">{{ __('patient.menu.notifications') }}</p>
                                 @if ($this->unreadNotificationCount > 0)

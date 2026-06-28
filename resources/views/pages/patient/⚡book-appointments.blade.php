@@ -303,10 +303,12 @@ new #[Layout('layouts::patient')] #[Title('Book an appointment')] class extends 
                 <flux:heading id="bk-for" level="4" size="sm" class="text-zinc-600">
                     {{ __('patient_booking.booking_for_label') }}
                 </flux:heading>
-                <flux:radio.group variant="pills" wire:model.live="appointmentFor">
-                    <flux:radio value="self">{{ __('patient_booking.for_self') }}</flux:radio>
-                    <flux:radio value="another">{{ __('patient_booking.for_other') }}</flux:radio>
-                </flux:radio.group>
+                <div class="patient-booking-pill-radios">
+                    <flux:radio.group variant="pills" wire:model.live="appointmentFor">
+                        <flux:radio value="self">{{ __('patient_booking.for_self') }}</flux:radio>
+                        <flux:radio value="another">{{ __('patient_booking.for_other') }}</flux:radio>
+                    </flux:radio.group>
+                </div>
             </section>
 
             <section class="space-y-3" aria-labelledby="bk-comm">
@@ -356,11 +358,21 @@ new #[Layout('layouts::patient')] #[Title('Book an appointment')] class extends 
                     <flux:error name="patientNotes" />
                 </flux:field>
 
-                <div class="flex flex-col gap-3 pt-2 sm:flex-row sm:justify-end">
-                    <flux:button variant="ghost" tag="a" :href="route('patient.schedule.specialists')" wire:navigate>
+                <div class="sticky bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-30 -mx-4 flex flex-col gap-3 border-t border-zinc-200/90 bg-white/95 px-4 py-3 backdrop-blur sm:static sm:mx-0 sm:flex-row sm:justify-end sm:border-0 sm:bg-transparent sm:px-0 sm:py-0 sm:pt-2 sm:backdrop-blur-none">
+                    <flux:button
+                        variant="outline"
+                        tag="a"
+                        :href="route('patient.schedule.specialists')"
+                        wire:navigate
+                        class="order-2 w-full border-zinc-300! bg-white! text-zinc-800! shadow-xs sm:order-1 sm:w-auto"
+                    >
                         {{ __('patient_booking.cancel') }}
                     </flux:button>
-                    <flux:button variant="primary" type="submit" class="border-[#064e3b] !bg-[#064e3b] !text-white hover:!brightness-[0.97]">
+                    <flux:button
+                        variant="primary"
+                        type="submit"
+                        class="order-1 w-full border-[#064e3b] !bg-[#064e3b] !text-white hover:!brightness-[0.97] sm:order-2 sm:w-auto"
+                    >
                         {{ __('patient_booking.next') }}
                     </flux:button>
                 </div>

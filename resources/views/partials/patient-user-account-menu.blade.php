@@ -41,18 +41,6 @@
     @endif
 
     <flux:menu @class(['min-w-[12rem]' => $density === 'chrome'])>
-        <flux:menu.item :href="route('profile.edit')" icon="user" wire:navigate>
-            {{ __('patient.menu.personal_profile') }}
-        </flux:menu.item>
-
-        <flux:menu.separator />
-
-        <div class="px-2 py-2">
-            @include('partials.patient-language-switch', ['variant' => 'menu'])
-        </div>
-
-        <flux:menu.separator />
-
         <form method="POST" action="{{ route('logout') }}" class="w-full">
             @csrf
             <flux:menu.item
