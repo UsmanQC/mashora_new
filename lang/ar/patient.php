@@ -19,6 +19,7 @@ return [
     'mood_feeling_cta' => 'كيف حالك اليوم؟',
     'mood_check_in_aria' => 'شاركنا كيف تشعر اليوم',
     'portal_toolbar_aria' => 'إجراءات بوابة المريض',
+    'portal_loading' => 'جاري التحميل…',
     'notifications_aria' => 'التنبيهات',
     'account_menu_aria' => 'قائمة الحساب',
 

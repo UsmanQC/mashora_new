@@ -95,47 +95,53 @@ new #[Layout('layouts::patient')] #[Title('Home')] class extends Component
 
 }; ?>
 
-<div class="w-full pb-10">
-    <header class="border-b border-zinc-200/80 bg-white px-4 py-5 sm:bg-slate-100/90 sm:py-6">
-        <div>
-            <flux:heading level="2" size="xl" class="font-semibold tracking-tight text-emerald-700">
+<div class="relative w-full pb-4">
+    <div
+        wire:loading.flex
+        wire:target="selectMoodDay"
+        class="absolute inset-0 z-20 items-center justify-center rounded-2xl bg-[#10B981]"
+        aria-hidden="true"
+    >
+        @include('partials.patient-brand-logo', [
+            'svgClass' => 'h-9 w-auto max-w-[9rem] object-contain',
+            'onGreenChrome' => true,
+        ])
+    </div>
+
+    <div class="space-y-5 sm:space-y-6">
+        <section class="rounded-2xl border border-zinc-200/80 bg-white p-5 shadow-sm ring-1 ring-zinc-900/[0.04]">
+            <flux:heading level="2" size="xl" class="font-semibold tracking-tight text-[#047857]">
                 @if (auth()->check())
                     {{ __('patient.welcome_user', ['name' => Auth::user()?->name ?? '']) }}
                 @else
                     {{ __('patient.welcome_guest') }}
                 @endif
             </flux:heading>
-            <flux:text class="mt-1 text-sm font-medium tabular-nums text-zinc-500">
+            <flux:text class="mt-1.5 text-sm font-medium tabular-nums text-zinc-500">
                 {{ now()->locale(app()->getLocale())->translatedFormat('M j, Y') }}
             </flux:text>
-        </div>
-    </header>
+        </section>
 
-    <div class="space-y-8 px-4 pt-6">
         {{-- Mood week strip --}}
         <section class="space-y-3">
             <flux:heading size="lg" class="text-base font-semibold text-zinc-900 sm:text-lg">
                 {{ __('patient.mood_section') }}
             </flux:heading>
-            <div class="grid grid-cols-7 gap-1.5 sm:gap-2">
+            <div class="grid grid-cols-7 gap-1 sm:gap-2">
                 @foreach ($this->moodWeekDays as $day)
                     @php($moodSrc = \App\Support\PatientMoodImage::url($day['mood_key'] ?? null))
                     <button
                         type="button"
                         wire:click="selectMoodDay('{{ $day['iso'] }}')"
                         wire:key="mood-day-{{ $day['iso'] }}"
-                        @class([
-                            'flex cursor-pointer flex-col items-center gap-1.5 rounded-xl border px-1 py-2.5 text-center transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[#10B981]/35 focus-visible:ring-offset-2 sm:gap-3 sm:rounded-2xl sm:px-2 sm:py-4',
-                            'border-[#10B981]/40 bg-emerald-50/80 shadow-sm ring-1 ring-[#10B981]/15' => $day['is_today'],
-                            'border-zinc-200/90 bg-white hover:border-emerald-200 hover:bg-emerald-50/40' => ! $day['is_today'],
-                        ])
+                        class="flex cursor-pointer flex-col items-center gap-1.5 rounded-xl px-0.5 py-1 text-center transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[#10B981]/35 focus-visible:ring-offset-2 sm:gap-2 sm:py-1.5"
                         aria-label="{{ $day['is_today'] ? __('patient.mood_strip_today_aria') : $day['label'] }}"
                     >
                         <span
                             @class([
                                 'flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-full sm:size-[3.25rem]',
-                                'bg-[#10B981] text-white shadow-sm ring-2 ring-white' => $day['is_today'],
-                                'border border-emerald-100 bg-emerald-50/90' => ! $day['is_today'],
+                                'bg-[#10B981] text-white shadow-sm ring-2 ring-[#10B981]/20' => $day['is_today'],
+                                'border border-emerald-100/80 bg-emerald-50/60' => ! $day['is_today'],
                             ])
                         >
                             @if ($moodSrc !== null)
@@ -167,8 +173,7 @@ new #[Layout('layouts::patient')] #[Title('Home')] class extends Component
                 @endforeach
             </div>
         </section>
-
-        {{-- Spotlight tiles --}}
+        {{--
         <section class="grid gap-4 sm:grid-cols-2 sm:gap-5">
             <div
                 class="relative flex min-h-[10.5rem] flex-col justify-between overflow-hidden rounded-2xl bg-gradient-to-br from-amber-400 via-orange-500 to-orange-600 p-5 text-white shadow-[0_12px_40px_-12px_rgba(249,115,22,0.55)] sm:min-h-44"
@@ -246,6 +251,7 @@ new #[Layout('layouts::patient')] #[Title('Home')] class extends Component
                 @endguest
             </a>
         </section>
+        --}}
 
         {{-- Session actions --}}
         <section class="space-y-3">
@@ -256,7 +262,7 @@ new #[Layout('layouts::patient')] #[Title('Home')] class extends Component
                 <a
                     href="{{ route('patient.schedule.filter') }}"
                     wire:navigate
-                    class="group relative flex items-center gap-3 overflow-hidden rounded-2xl border border-zinc-200/90 bg-white p-3.5 shadow-sm transition hover:border-orange-200 hover:shadow-md active:scale-[0.995] sm:flex-col sm:items-start sm:p-4"
+                    class="group relative flex items-center gap-3 overflow-hidden rounded-2xl border border-zinc-200/80 bg-white p-3.5 shadow-sm ring-1 ring-zinc-900/[0.03] transition hover:border-orange-200 hover:shadow-md active:scale-[0.995] sm:flex-col sm:items-start sm:p-4"
                 >
                     <span class="absolute inset-y-3 start-0 w-1 rounded-full bg-orange-500 sm:hidden" aria-hidden="true"></span>
                     <div
@@ -283,7 +289,7 @@ new #[Layout('layouts::patient')] #[Title('Home')] class extends Component
                 <a
                     href="{{ auth()->check() ? route('patient.schedule.filter') : route('patient.phone') }}"
                     wire:navigate
-                    class="group relative flex items-center gap-3 overflow-hidden rounded-2xl border border-zinc-200/90 bg-white p-3.5 shadow-sm transition hover:border-emerald-200 hover:shadow-md active:scale-[0.995] sm:flex-col sm:items-start sm:p-4"
+                    class="group relative flex items-center gap-3 overflow-hidden rounded-2xl border border-zinc-200/80 bg-white p-3.5 shadow-sm ring-1 ring-zinc-900/[0.03] transition hover:border-emerald-200 hover:shadow-md active:scale-[0.995] sm:flex-col sm:items-start sm:p-4"
                 >
                     <span class="absolute inset-y-3 start-0 w-1 rounded-full bg-[#10B981] sm:hidden" aria-hidden="true"></span>
                     <div
@@ -310,7 +316,7 @@ new #[Layout('layouts::patient')] #[Title('Home')] class extends Component
                 <a
                     href="{{ auth()->check() ? route('patient.appointments') : route('patient.phone') }}"
                     wire:navigate
-                    class="group relative flex items-center gap-3 overflow-hidden rounded-2xl border border-zinc-200/90 bg-white p-3.5 shadow-sm transition hover:border-sky-200 hover:shadow-md active:scale-[0.995] sm:flex-col sm:items-start sm:p-4"
+                    class="group relative flex items-center gap-3 overflow-hidden rounded-2xl border border-zinc-200/80 bg-white p-3.5 shadow-sm ring-1 ring-zinc-900/[0.03] transition hover:border-sky-200 hover:shadow-md active:scale-[0.995] sm:flex-col sm:items-start sm:p-4"
                 >
                     <span class="absolute inset-y-3 start-0 w-1 rounded-full bg-sky-500 sm:hidden" aria-hidden="true"></span>
                     <div

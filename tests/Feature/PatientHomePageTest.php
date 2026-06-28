@@ -18,7 +18,7 @@ test('guest can view patient home', function () {
         ->assertSee(__('patient.menu.locale_ar_short'), false);
 });
 
-test('authenticated patient home shows mood strip above spotlight cards', function () {
+test('authenticated patient home shows mood strip above appointment actions', function () {
     $user = User::factory()->create(['profile_completed' => true]);
 
     $content = $this->actingAs($user)
@@ -27,7 +27,7 @@ test('authenticated patient home shows mood strip above spotlight cards', functi
         ->getContent();
 
     expect(strpos($content, __('patient.mood_section')))
-        ->toBeLessThan(strpos($content, __('patient.daily_balance')));
+        ->toBeLessThan(strpos($content, __('patient.book_title')));
 });
 
 test('guest mood day click redirects to patient phone entry', function () {

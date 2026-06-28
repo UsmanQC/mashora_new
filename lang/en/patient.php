@@ -19,6 +19,7 @@ return [
     'mood_feeling_cta' => 'How are you today?',
     'mood_check_in_aria' => 'Share how you are feeling today',
     'portal_toolbar_aria' => 'Patient portal actions',
+    'portal_loading' => 'Loading…',
     'notifications_aria' => 'Notifications',
     'account_menu_aria' => 'Account menu',
 

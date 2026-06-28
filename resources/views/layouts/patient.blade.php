@@ -67,6 +67,10 @@
         @endpersist
         @stack('scripts')
 
+        @persist('patient-portal-nav-loader')
+            @include('partials.patient-portal-nav-loader')
+        @endpersist
+
         @fluxScripts
     </body>
 </html>
