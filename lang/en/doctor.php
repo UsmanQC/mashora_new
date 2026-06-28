@@ -20,7 +20,7 @@ return [
 
     'header' => [
         'welcome' => 'Welcome, :name',
-        'notifications_placeholder' => 'Notifications (coming soon)',
+        'notifications_placeholder' => 'Notifications',
         'today_placeholder' => 'Today',
     ],
 
@@ -537,6 +537,15 @@ return [
     ],
 
     'notifications' => [
+        'title' => 'Notifications',
+        'subtitle' => 'Updates about appointments, messages, and your practice.',
+        'empty' => 'No notifications yet.',
+        'unread' => 'New',
+        'unread_count' => '{0} No unread|{1} :count unread|[2,*] :count unread',
+        'view_all' => 'View all notifications',
+        'open' => 'View',
+        'mark_all_read' => 'Mark all read',
+        'aria' => 'Notifications',
         'chat_message_title' => 'New message from :patient',
         'chat_message_body' => ':preview',
     ],

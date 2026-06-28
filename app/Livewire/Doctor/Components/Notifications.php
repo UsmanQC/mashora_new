@@ -4,8 +4,10 @@ namespace App\Livewire\Doctor\Components;
 
 use App\Models\Doctor;
 use App\Models\Notification;
-use Illuminate\Support\Collection;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
+use Livewire\Attributes\Computed;
 use Livewire\Component;
 
 class Notifications extends Component
@@ -20,35 +22,64 @@ class Notifications extends Component
         return $doctor;
     }
 
-    public function readNotification(): void
+    /**
+     * @return Builder<Notification>
+     */
+    private function notificationQuery(): Builder
     {
-        Notification::query()
+        return Notification::query()
             ->where('userable_type', Doctor::class)
-            ->where('userable_id', $this->doctor()->id)
-            ->whereNull('read_at')
-            ->update(['read_at' => now()]);
+            ->where('userable_id', $this->doctor()->id);
+    }
+
+    #[Computed]
+    public function unreadCount(): int
+    {
+        return $this->notificationQuery()->whereNull('read_at')->count();
     }
 
     /**
      * @return Collection<int, Notification>
      */
-    public function getNotificationsProperty(): Collection
+    #[Computed]
+    public function notifications(): Collection
     {
-        return Notification::query()
-            ->where('userable_type', Doctor::class)
-            ->where('userable_id', $this->doctor()->id)
+        return $this->notificationQuery()
             ->latest()
             ->limit(5)
             ->get();
     }
 
-    public function getUnreadCountProperty(): int
+    public function openNotification(int $notificationId): void
     {
-        return Notification::query()
-            ->where('userable_type', Doctor::class)
-            ->where('userable_id', $this->doctor()->id)
+        $notification = $this->notificationQuery()
+            ->whereKey($notificationId)
+            ->first();
+
+        if ($notification === null) {
+            return;
+        }
+
+        if ($notification->read_at === null) {
+            $notification->forceFill(['read_at' => now()])->save();
+        }
+
+        unset($this->unreadCount, $this->notifications);
+
+        $destination = filled($notification->action)
+            ? (string) $notification->action
+            : route('doctor.settings.notifications');
+
+        $this->redirect($destination, navigate: true);
+    }
+
+    public function readNotification(): void
+    {
+        $this->notificationQuery()
             ->whereNull('read_at')
-            ->count();
+            ->update(['read_at' => now()]);
+
+        unset($this->unreadCount, $this->notifications);
     }
 
     public function render()

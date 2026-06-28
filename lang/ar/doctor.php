@@ -20,7 +20,7 @@ return [
 
     'header' => [
         'welcome' => 'مرحبًا، :name',
-        'notifications_placeholder' => 'الإشعارات (قريبًا)',
+        'notifications_placeholder' => 'الإشعارات',
         'today_placeholder' => 'اليوم',
     ],
 
@@ -538,6 +538,15 @@ return [
     ],
 
     'notifications' => [
+        'title' => 'الإشعارات',
+        'subtitle' => 'تحديثات حول المواعيد والرسائل وممارستك.',
+        'empty' => 'لا توجد إشعارات بعد.',
+        'unread' => 'جديد',
+        'unread_count' => '{0} لا توجد غير مقروءة|{1} :count غير مقروء|[2,*] :count غير مقروء',
+        'view_all' => 'عرض كل الإشعارات',
+        'open' => 'عرض',
+        'mark_all_read' => 'تعليم الكل كمقروء',
+        'aria' => 'الإشعارات',
         'chat_message_title' => 'رسالة جديدة من :patient',
         'chat_message_body' => ':preview',
     ],
