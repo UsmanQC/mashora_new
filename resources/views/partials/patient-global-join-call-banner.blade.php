@@ -57,9 +57,20 @@
                     }
 
                     const activeId = Number(banner.dataset.appointmentId || 0);
-                    if (!appointmentId || activeId === appointmentId) {
-                        banner.classList.add('hidden');
-                        delete banner.dataset.appointmentId;
+
+                    if (appointmentId && activeId && activeId !== appointmentId) {
+                        return;
+                    }
+
+                    banner.classList.add('hidden');
+                    delete banner.dataset.appointmentId;
+
+                    if (appointmentId) {
+                        try {
+                            sessionStorage.removeItem(pendingCallKey(appointmentId));
+                        } catch (_) {
+                            // ignore storage errors
+                        }
                     }
                 }
 

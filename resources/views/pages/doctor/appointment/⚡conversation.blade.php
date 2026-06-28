@@ -480,8 +480,35 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
             const callChip = document.getElementById('call-status-chip');
             const callTypeLabel = document.getElementById('call-type-label');
             const callDurationDisplay = document.getElementById('call-duration-display');
-            const overlayCallDuration = document.getElementById('overlay-call-duration');
-            const agoraTitle = document.getElementById('agora-call-title');
+
+            function overlayTitleEl() {
+                return document.getElementById('agora-call-title');
+            }
+
+            function overlayDurationEl() {
+                return document.getElementById('overlay-call-duration');
+            }
+
+            function updateActiveCallOverlayUi() {
+                if (!currentMode) {
+                    return;
+                }
+
+                const labelVideo = metricsEl?.dataset.labelVideo || 'Video call';
+                const labelVoice = metricsEl?.dataset.labelVoice || 'Voice call';
+                const titleEl = overlayTitleEl();
+
+                if (titleEl) {
+                    titleEl.textContent = currentMode === 'video' ? labelVideo : labelVoice;
+                }
+
+                if (callTypeLabel) {
+                    callTypeLabel.textContent = currentMode === 'video' ? labelVideo : labelVoice;
+                }
+
+                tickCallTimer();
+                syncMediaControlUi();
+            }
 
             function btnVideo() {
                 return document.getElementById('btn-agora-video');
@@ -585,34 +612,67 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
             }
 
             function tickCallTimer() {
-                if (!callStartedAt) return;
-                const sec = (Date.now() - callStartedAt) / 1000;
-                const t = formatDuration(sec);
-                if (callDurationDisplay) callDurationDisplay.textContent = t;
-                if (overlayCallDuration) overlayCallDuration.textContent = t;
+                if (!callStartedAt) {
+                    return;
+                }
+
+                const formatted = formatDuration((Date.now() - callStartedAt) / 1000);
+
+                if (callDurationDisplay) {
+                    callDurationDisplay.textContent = formatted;
+                }
+
+                const durationEl = overlayDurationEl();
+                if (durationEl) {
+                    durationEl.textContent = formatted;
+                }
             }
 
             function startCallTimer(mode, labelVideo, labelVoice) {
-                if (callTimerId) clearInterval(callTimerId);
+                if (callTimerId) {
+                    clearInterval(callTimerId);
+                }
+
                 callStartedAt = Date.now();
                 tickCallTimer();
                 callTimerId = setInterval(tickCallTimer, 1000);
-                if (callChip) callChip.classList.remove('hidden');
-                if (callChip) callChip.classList.add('flex');
-                if (callTypeLabel) callTypeLabel.textContent = mode === 'video' ? labelVideo : labelVoice;
-                if (agoraTitle) agoraTitle.textContent = mode === 'video' ? labelVideo : labelVoice;
+
+                if (callChip) {
+                    callChip.classList.remove('hidden');
+                    callChip.classList.add('flex');
+                }
+
+                if (callTypeLabel) {
+                    callTypeLabel.textContent = mode === 'video' ? labelVideo : labelVoice;
+                }
+
+                const titleEl = overlayTitleEl();
+                if (titleEl) {
+                    titleEl.textContent = mode === 'video' ? labelVideo : labelVoice;
+                }
             }
 
             function stopCallTimer() {
-                if (callTimerId) clearInterval(callTimerId);
+                if (callTimerId) {
+                    clearInterval(callTimerId);
+                }
+
                 callTimerId = null;
                 callStartedAt = null;
+
                 if (callChip) {
                     callChip.classList.add('hidden');
                     callChip.classList.remove('flex');
                 }
-                if (callDurationDisplay) callDurationDisplay.textContent = '00:00';
-                if (overlayCallDuration) overlayCallDuration.textContent = '00:00';
+
+                if (callDurationDisplay) {
+                    callDurationDisplay.textContent = '00:00';
+                }
+
+                const durationEl = overlayDurationEl();
+                if (durationEl) {
+                    durationEl.textContent = '00:00';
+                }
             }
 
             function setCallButtonsIdle() {
@@ -1059,19 +1119,22 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
             }
 
             function setOverlayConnecting(mode, labelConnecting) {
-                if (agoraTitle) {
-                    agoraTitle.textContent = labelConnecting;
+                const titleEl = overlayTitleEl();
+                if (titleEl) {
+                    titleEl.textContent = labelConnecting;
                 }
 
                 if (callTypeLabel) {
                     callTypeLabel.textContent = mode === 'video' ? labelVideo : labelVoice;
                 }
 
-                if (overlayCallDuration) {
-                    overlayCallDuration.textContent = '00:00';
+                const durationEl = overlayDurationEl();
+                if (durationEl) {
+                    durationEl.textContent = '00:00';
                 }
 
                 document.getElementById('agora-toggle-video')?.classList.toggle('hidden', mode !== 'video');
+                document.getElementById('agora-toggle-mic')?.classList.remove('hidden');
             }
 
             const labelVideo = metricsEl?.dataset.labelVideo || 'Video call';
@@ -1130,6 +1193,7 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                         audioBtn.disabled = true;
                     }
                     document.getElementById('agora-toggle-video')?.classList.remove('hidden');
+                    document.getElementById('agora-toggle-mic')?.classList.remove('hidden');
                     startCallTimer('video', labelVideo, labelVoice);
                     syncMediaControlUi();
                 } catch (e) {
@@ -1186,6 +1250,7 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                         videoBtn.disabled = true;
                     }
                     document.getElementById('agora-toggle-video')?.classList.add('hidden');
+                    document.getElementById('agora-toggle-mic')?.classList.remove('hidden');
                     startCallTimer('audio', labelVideo, labelVoice);
                     syncMediaControlUi();
                 } catch (e) {
@@ -1202,6 +1267,7 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
             boot.__syncCallOverlay = () => {
                 if (currentMode) {
                     showOverlay(true);
+                    updateActiveCallOverlayUi();
                 }
             };
 

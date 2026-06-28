@@ -169,9 +169,10 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
             @if ($appointment->allowsPatientCalls())
                 <span
                     id="patient-call-started-chip"
-                    class="hidden rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700"
+                    class="hidden inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700"
                 >
-                    {{ __('patient.appointments.call_in_progress') }}
+                    <span id="patient-call-chip-label">{{ __('patient.appointments.call_in_progress') }}</span>
+                    <span id="patient-call-chip-duration" class="font-mono tabular-nums">00:00</span>
                 </span>
                 @if ($appointment->allowsPatientCalls())
                     <span
@@ -511,9 +512,20 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
             const overlay = document.getElementById('patient-agora-overlay');
             const remoteWrap = document.getElementById('patient-agora-remote');
             const localWrap = document.getElementById('patient-agora-local');
-            const overlayTitle = document.getElementById('patient-agora-title');
-            const overlayCallDuration = document.getElementById('patient-overlay-call-duration');
             const chip = document.getElementById('patient-call-started-chip');
+
+            function overlayTitleEl() {
+                return document.getElementById('patient-agora-title');
+            }
+
+            function overlayDurationEl() {
+                return document.getElementById('patient-overlay-call-duration');
+            }
+
+            function callChipDurationEl() {
+                return document.getElementById('patient-call-chip-duration');
+            }
+
             const labelVideo = @js(__('patient.appointments.video_call'));
             const labelVoice = @js(__('patient.appointments.voice_call'));
             const labelConnecting = metrics?.dataset.labelConnecting || 'Connecting…';
@@ -631,15 +643,32 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
             }
 
             function setOverlayConnecting(mode) {
-                if (overlayTitle) {
-                    overlayTitle.textContent = labelConnecting;
+                const titleEl = overlayTitleEl();
+                if (titleEl) {
+                    titleEl.textContent = labelConnecting;
                 }
 
-                if (overlayCallDuration) {
-                    overlayCallDuration.textContent = '00:00';
+                const durationEl = overlayDurationEl();
+                if (durationEl) {
+                    durationEl.textContent = '00:00';
                 }
 
                 document.getElementById('patient-agora-toggle-video')?.classList.toggle('hidden', mode !== 'video');
+                document.getElementById('patient-agora-toggle-mic')?.classList.remove('hidden');
+            }
+
+            function updateActiveCallOverlayUi() {
+                if (!activeMode) {
+                    return;
+                }
+
+                const titleEl = overlayTitleEl();
+                if (titleEl) {
+                    titleEl.textContent = activeMode === 'video' ? labelVideo : labelVoice;
+                }
+
+                tickCallTimer();
+                syncMediaControlUi();
             }
 
             function refreshCallUiState() {
@@ -656,6 +685,11 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
 
                 if (chip) {
                     chip.classList.toggle('hidden', !activeMode);
+                }
+
+                const joinSessionBtn = document.getElementById('patient-session-join-call-btn');
+                if (joinSessionBtn) {
+                    joinSessionBtn.classList.toggle('hidden', Boolean(activeMode));
                 }
             }
 
@@ -674,12 +708,20 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
             }
 
             function tickCallTimer() {
-                if (!callStartedAt || !overlayCallDuration) {
+                if (!callStartedAt) {
                     return;
                 }
 
-                const sec = (Date.now() - callStartedAt) / 1000;
-                overlayCallDuration.textContent = formatDuration(sec);
+                const formatted = formatDuration((Date.now() - callStartedAt) / 1000);
+                const durationEl = overlayDurationEl();
+                if (durationEl) {
+                    durationEl.textContent = formatted;
+                }
+
+                const chipDurationEl = callChipDurationEl();
+                if (chipDurationEl) {
+                    chipDurationEl.textContent = formatted;
+                }
             }
 
             function startCallTimer(mode) {
@@ -691,8 +733,14 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 tickCallTimer();
                 callTimerId = setInterval(tickCallTimer, 1000);
 
-                if (overlayTitle) {
-                    overlayTitle.textContent = mode === 'video' ? labelVideo : labelVoice;
+                const titleEl = overlayTitleEl();
+                if (titleEl) {
+                    titleEl.textContent = mode === 'video' ? labelVideo : labelVoice;
+                }
+
+                const chipLabel = document.getElementById('patient-call-chip-label');
+                if (chipLabel) {
+                    chipLabel.textContent = mode === 'video' ? labelVideo : labelVoice;
                 }
             }
 
@@ -704,8 +752,19 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 callTimerId = null;
                 callStartedAt = null;
 
-                if (overlayCallDuration) {
-                    overlayCallDuration.textContent = '00:00';
+                const durationEl = overlayDurationEl();
+                if (durationEl) {
+                    durationEl.textContent = '00:00';
+                }
+
+                const chipDurationEl = callChipDurationEl();
+                if (chipDurationEl) {
+                    chipDurationEl.textContent = '00:00';
+                }
+
+                const chipLabel = document.getElementById('patient-call-chip-label');
+                if (chipLabel) {
+                    chipLabel.textContent = @js(__('patient.appointments.call_in_progress'));
                 }
             }
 
@@ -893,6 +952,10 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                     await leaveCallLocal();
                     refreshCallUiState();
                 }
+
+                window.dispatchEvent(new CustomEvent('mashora:call-ended', {
+                    detail: { appointment_id: appointmentId },
+                }));
             }
 
             function registerRemoteUserHandlers(client, mode) {
@@ -1193,6 +1256,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                     incomingPayload = null;
                     startCallTimer(mode);
                     document.getElementById('patient-agora-toggle-video')?.classList.toggle('hidden', mode !== 'video');
+                    document.getElementById('patient-agora-toggle-mic')?.classList.remove('hidden');
                     syncMediaControlUi();
                     refreshCallUiState();
                 } catch (e) {
@@ -1410,6 +1474,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
             boot.__syncCallOverlay = () => {
                 if (activeMode) {
                     showOverlay(true);
+                    updateActiveCallOverlayUi();
                 }
             };
 
