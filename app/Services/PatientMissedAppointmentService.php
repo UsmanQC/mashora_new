@@ -21,6 +21,7 @@ final class PatientMissedAppointmentService
     public function canResolve(Appointment $appointment): bool
     {
         return $appointment->isDoctorMissed()
+            && ! $appointment->is_follow_up
             && ! $this->wallet->hasRefunded($appointment);
     }
 
@@ -28,6 +29,12 @@ final class PatientMissedAppointmentService
     {
         if ((int) $appointment->user_id !== (int) $user->id) {
             abort(403);
+        }
+
+        if ($appointment->is_follow_up) {
+            throw ValidationException::withMessages([
+                'appointment' => __('patient.missed.follow_up_not_eligible'),
+            ]);
         }
 
         if (! $appointment->isDoctorMissed()) {

@@ -14,6 +14,7 @@ use App\Services\AppointmentMissedService;
 use App\Services\PatientMissedAppointmentService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Validation\ValidationException;
 use Livewire\Livewire;
 
 uses(RefreshDatabase::class);
@@ -190,6 +191,39 @@ test('patient missed tab shows reschedule and refund actions', function () {
         ->assertSee(__('patient.missed.reschedule'), false)
         ->assertSee(__('patient.missed.refund'), false)
         ->assertSee(route('patient.appointments.missed-reschedule', $appointment), false);
+});
+
+test('missed follow-up appointments cannot be rescheduled or refunded', function () {
+    app()->setLocale('en');
+
+    $user = User::factory()->create(['profile_completed' => true]);
+    $doctor = Doctor::factory()->create(['status' => 'approved']);
+
+    $appointment = Appointment::factory()->create([
+        'doctor_id' => $doctor->id,
+        'user_id' => $user->id,
+        'status' => 'not_attended',
+        'cancel_status' => 'doctor_missed',
+        'is_follow_up' => true,
+        'patient_name' => $user->name,
+        'appointment_date' => now()->subDay()->toDateString(),
+        'start_time' => '11:00:00',
+        'end_time' => '11:30:00',
+        'total' => 0,
+        'wallet_amount' => 0,
+        'doctor_share' => 0,
+    ]);
+
+    expect(app(PatientMissedAppointmentService::class)->canResolve($appointment))->toBeFalse();
+
+    $this->actingAs($user)
+        ->get(route('patient.appointments', ['tab' => 'missed']))
+        ->assertSuccessful()
+        ->assertDontSee(__('patient.missed.prompt'), false)
+        ->assertDontSee(route('patient.appointments.missed-reschedule', $appointment), false);
+
+    expect(fn () => app(PatientMissedAppointmentService::class)->refund($user, $appointment->fresh()))
+        ->toThrow(ValidationException::class);
 });
 
 test('patient can refund missed appointment from appointments page', function () {

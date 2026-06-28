@@ -290,6 +290,7 @@ return [
         'no_slots_weekday' => 'No times on :day.',
         'slot_unavailable' => 'That time is no longer available.',
         'not_eligible' => 'This missed session can no longer be updated.',
+        'follow_up_not_eligible' => 'Follow-up sessions cannot be rescheduled or refunded from here.',
         'already_refunded' => 'This session has already been refunded.',
         'doctor_unavailable' => 'The specialist is no longer available.',
         'submit' => 'Confirm new time',
