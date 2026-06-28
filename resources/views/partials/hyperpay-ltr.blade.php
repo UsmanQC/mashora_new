@@ -160,12 +160,12 @@
     };
 
     window.hyperpayEnsureFieldHints = function () {
-        var labelMap = @json([
-            'cardHolder' => __('patient_booking.payment_label_card_holder'),
-            'cardNumber' => __('patient_booking.payment_label_card_number'),
-            'expiry' => __('patient_booking.payment_label_expiry'),
-            'cvv' => __('patient_booking.payment_label_cvv'),
-        ]);
+        var labelMap = {
+            cardHolder: @json(__('patient_booking.payment_label_card_holder')),
+            cardNumber: @json(__('patient_booking.payment_label_card_number')),
+            expiry: @json(__('patient_booking.payment_label_expiry')),
+            cvv: @json(__('patient_booking.payment_label_cvv')),
+        };
 
         Object.keys(labelMap).forEach(function (key) {
             document.querySelectorAll('.hyperpay-ltr .wpwl-label-' + key).forEach(function (el) {

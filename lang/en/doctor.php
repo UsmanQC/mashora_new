@@ -364,6 +364,7 @@ return [
         'patient_flow_hint' => 'The patient will receive a notification to confirm this free follow-up.',
         'free_hint' => 'Follow-up sessions are complimentary for the patient.',
         'complete_session_first' => 'Complete this session first, then you can invite the patient to a follow-up.',
+        'session_finished' => 'Your follow-up appointment is finished.',
         'pending_title' => 'Follow-up invitation sent',
         'pending_body' => 'Waiting for the patient to confirm this one-time follow-up invitation.',
         'pending_status' => 'Awaiting patient confirmation',

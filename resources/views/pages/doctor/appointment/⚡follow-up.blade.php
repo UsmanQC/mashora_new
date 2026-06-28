@@ -242,6 +242,12 @@ new #[Layout('layouts::doctor')] #[Title('Follow Up')] class extends Component
 
     <div class="rounded-2xl border border-zinc-200/90 bg-white p-5 shadow-sm sm:p-6">
         <flux:heading size="lg" class="font-semibold text-zinc-900">{{ __('doctor.follow_up.title') }}</flux:heading>
+
+        @if ($appointment->is_follow_up)
+            <flux:callout variant="success" icon="check-circle" class="mt-6">
+                {{ __('doctor.follow_up.session_finished') }}
+            </flux:callout>
+        @else
         <flux:text class="mt-2 text-zinc-600">{{ __('doctor.follow_up.subtitle', ['days' => $this->windowDays()]) }}</flux:text>
 
         @if ($this->pendingFollowUp)
@@ -340,6 +346,7 @@ new #[Layout('layouts::doctor')] #[Title('Follow Up')] class extends Component
                 </flux:button>
             </div>
         </form>
+        @endif
         @endif
     </div>
 </div>

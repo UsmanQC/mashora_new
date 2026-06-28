@@ -465,3 +465,39 @@ test('completed appointment workspace shows follow up tab not reschedule', funct
         ->assertSee(__('doctor.follow_up.free_hint'), false)
         ->assertDontSee(__('doctor.reschedule.title'), false);
 });
+
+test('follow-up appointment page shows finished message instead of schedule form', function () {
+    app()->setLocale('en');
+
+    $doctor = seedDoctorWithSlots();
+    $user = User::factory()->create();
+
+    $parent = Appointment::factory()->create([
+        'doctor_id' => $doctor->id,
+        'user_id' => $user->id,
+        'status' => 'completed',
+        'duration' => 30,
+        'appointment_date' => now()->format('Y-m-d'),
+        'start_time' => '10:00:00',
+        'end_time' => '10:30:00',
+    ]);
+
+    $followUp = Appointment::factory()->create([
+        'doctor_id' => $doctor->id,
+        'user_id' => $user->id,
+        'parent_id' => $parent->id,
+        'is_follow_up' => true,
+        'status' => 'completed',
+        'duration' => 30,
+        'appointment_date' => now()->addDay()->format('Y-m-d'),
+        'start_time' => '11:00:00',
+        'end_time' => '11:30:00',
+    ]);
+
+    $this->actingAs($doctor, 'doctor')
+        ->get(route('doctor.appointments.follow-up', $followUp))
+        ->assertSuccessful()
+        ->assertSee(__('doctor.follow_up.session_finished'), false)
+        ->assertDontSee(__('doctor.follow_up.complete_session_first'), false)
+        ->assertDontSee(__('doctor.follow_up.submit'), false);
+});
