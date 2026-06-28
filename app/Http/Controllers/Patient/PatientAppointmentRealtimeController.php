@@ -47,6 +47,12 @@ class PatientAppointmentRealtimeController
     {
         abort_unless((int) $appointment->user_id === (int) auth()->id(), 403);
 
+        if ((string) $appointment->status !== 'in_process') {
+            self::clearPendingIncomingCall((int) auth()->id(), (int) $appointment->id);
+
+            return response()->json(['pending' => false]);
+        }
+
         $cached = Cache::get(self::pendingCallCacheKey((int) auth()->id(), (int) $appointment->id));
 
         if (! is_array($cached)) {

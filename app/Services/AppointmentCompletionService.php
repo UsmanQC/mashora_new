@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Events\AppointmentCallEnded;
+use App\Http\Controllers\Patient\PatientAppointmentRealtimeController;
 use App\Models\Appointment;
 
 final class AppointmentCompletionService
@@ -38,6 +40,25 @@ final class AppointmentCompletionService
             'actual_end_at' => now()->format('Y-m-d H:i:s'),
         ])->save();
 
+        $this->clearPendingCallState($appointment->fresh());
+
         return self::COMPLETED;
+    }
+
+    private function clearPendingCallState(Appointment $appointment): void
+    {
+        if ($appointment->user_id === null) {
+            return;
+        }
+
+        PatientAppointmentRealtimeController::clearPendingIncomingCall(
+            (int) $appointment->user_id,
+            (int) $appointment->id,
+        );
+
+        broadcast(new AppointmentCallEnded(
+            (int) $appointment->id,
+            (int) $appointment->user_id,
+        ));
     }
 }

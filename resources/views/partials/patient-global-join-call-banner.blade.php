@@ -47,6 +47,7 @@
 
                     text.textContent = label;
                     btn.href = template.replace('__ID__', String(appointmentId));
+                    banner.dataset.appointmentId = String(appointmentId);
                     banner.classList.remove('hidden');
                 }
 
@@ -74,38 +75,64 @@
                     }
                 }
 
-                function restoreGlobalJoinBannerFromStorage() {
-                    const template = @js(route('patient.appointments.conversation', ['appointment' => '__ID__']));
-                    if (!template) {
+                function hideGlobalJoinBanner(appointmentId) {
+                    const conversationTemplate = @js(route('patient.appointments.conversation', ['appointment' => '__ID__']));
+                    const pendingUrlTemplate = @js(route('patient.appointments.realtime.pending-call', ['appointment' => '__ID__']));
+
+                    if (!conversationTemplate || !pendingUrlTemplate) {
                         return;
                     }
 
+                    const keys = [];
                     for (let i = 0; i < sessionStorage.length; i++) {
                         const key = sessionStorage.key(i) || '';
-                        if (!key.startsWith('mashora_pending_call_')) {
+                        if (key.startsWith('mashora_pending_call_')) {
+                            keys.push(key);
+                        }
+                    }
+
+                    for (const key of keys) {
+                        const appointmentId = key.replace('mashora_pending_call_', '');
+                        if (!appointmentId) {
+                            try {
+                                sessionStorage.removeItem(key);
+                            } catch (_) {
+                                // ignore storage errors
+                            }
+
                             continue;
                         }
 
                         try {
-                            const raw = sessionStorage.getItem(key);
-                            if (!raw) {
+                            const res = await fetch(pendingUrlTemplate.replace('__ID__', appointmentId), {
+                                headers: {
+                                    Accept: 'application/json',
+                                    'X-Requested-With': 'XMLHttpRequest',
+                                },
+                            });
+
+                            if (!res.ok) {
+                                sessionStorage.removeItem(key);
+
                                 continue;
                             }
 
-                            const data = JSON.parse(raw);
-                            if (data?.agora_app_id && data?.appointment_id) {
-                                showGlobalJoinBanner(data);
-                                const banner = document.getElementById('patient-global-call-join-banner');
-                                if (banner) {
-                                    banner.dataset.appointmentId = String(data.appointment_id);
-                                }
+                            const data = await res.json();
+                            if (!data?.pending || !data?.agora_app_id) {
+                                sessionStorage.removeItem(key);
 
-                                return;
+                                continue;
                             }
+
+                            showGlobalJoinBanner(data);
+
+                            return;
                         } catch (_) {
-                            // ignore parse errors
+                            sessionStorage.removeItem(key);
                         }
                     }
+
+                    hideGlobalJoinBanner();
                 }
 
                 if (!window.__patientGlobalJoinBannerHook) {
@@ -114,10 +141,6 @@
                     window.addEventListener('mashora:incoming-call', (event) => {
                         const data = event.detail || {};
                         showGlobalJoinBanner(data);
-                        const banner = document.getElementById('patient-global-call-join-banner');
-                        if (banner && data.appointment_id) {
-                            banner.dataset.appointmentId = String(data.appointment_id);
-                        }
                     });
 
                     window.addEventListener('mashora:call-ended', (event) => {
@@ -129,9 +152,13 @@
                     });
                 }
 
-                document.addEventListener('DOMContentLoaded', restoreGlobalJoinBannerFromStorage);
-                document.addEventListener('livewire:navigated', restoreGlobalJoinBannerFromStorage);
-                restoreGlobalJoinBannerFromStorage();
+                document.addEventListener('DOMContentLoaded', () => {
+                    restoreGlobalJoinBannerFromStorage().catch(() => {});
+                });
+                document.addEventListener('livewire:navigated', () => {
+                    restoreGlobalJoinBannerFromStorage().catch(() => {});
+                });
+                restoreGlobalJoinBannerFromStorage().catch(() => {});
             })();
         </script>
     @endpush

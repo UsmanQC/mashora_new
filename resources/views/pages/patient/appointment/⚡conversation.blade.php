@@ -771,6 +771,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
             function syncPatientSessionFromDom(bootEl) {
                 const metricsEl = document.getElementById('patient-conversation-metrics');
                 const nextStatus = bootEl?.dataset.appointmentStatus || metricsEl?.dataset.status || appointmentStatus;
+                const prevStatus = appointmentStatus;
                 const wasWaiting = appointmentStatus !== 'in_process' && nextStatus === 'in_process';
 
                 appointmentStatus = nextStatus;
@@ -780,6 +781,16 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
 
                 if (metricsEl && nextStatus === 'in_process') {
                     metricsEl.dataset.status = nextStatus;
+                }
+
+                if (prevStatus === 'in_process' && nextStatus === 'completed') {
+                    clearPendingCallStorage();
+                    incomingPayload = null;
+                    incomingBanner?.classList.add('hidden');
+                    dismissIncomingAlert();
+                    window.dispatchEvent(new CustomEvent('mashora:call-ended', {
+                        detail: { appointment_id: appointmentId },
+                    }));
                 }
 
                 if (wasWaiting && incomingLabel && incomingBanner) {
@@ -1087,6 +1098,14 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
             }
 
             function showIncomingCallBanner(data, options = {}) {
+                if (appointmentStatus !== 'in_process') {
+                    clearPendingCallStorage();
+                    incomingPayload = null;
+                    incomingBanner?.classList.add('hidden');
+
+                    return;
+                }
+
                 if (
                     incomingPayload?.agora_channel === data?.agora_channel
                     && incomingBanner
@@ -1166,6 +1185,11 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
 
                     const data = await res.json();
                     if (!data?.pending || !data?.agora_app_id) {
+                        clearPendingCallStorage();
+                        incomingPayload = null;
+                        incomingBanner?.classList.add('hidden');
+                        refreshCallUiState();
+
                         return;
                     }
 
@@ -1325,8 +1349,15 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
             bindCallControlButtons();
             boot.__bindCallControlButtons = bindCallControlButtons;
             boot.__restorePendingCall = restorePendingCallFromStorage;
-            restorePendingCallFromStorage();
-            restorePendingCallFromServer();
+
+            if (appointmentStatus === 'in_process') {
+                restorePendingCallFromStorage();
+                restorePendingCallFromServer();
+            } else {
+                clearPendingCallStorage();
+                incomingPayload = null;
+                incomingBanner?.classList.add('hidden');
+            }
 
             if (!window.__patientConversationClickBound) {
                 window.__patientConversationClickBound = true;
