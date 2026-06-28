@@ -109,6 +109,10 @@
                         }
                     });
 
+                    window.addEventListener('mashora:call-ended', (event) => {
+                        hideGlobalJoinBanner(Number(event.detail?.appointment_id || 0));
+                    });
+
                     document.addEventListener('livewire:navigating', () => {
                         hideGlobalJoinBanner();
                     });

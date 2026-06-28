@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Patient;
 
+use App\Events\AppointmentCallEnded;
 use App\Models\Appointment;
 use App\Services\AppointmentSessionService;
 use App\Support\DoctorAgoraChannel;
@@ -14,6 +15,11 @@ class PatientAppointmentRealtimeController
     public static function pendingCallCacheKey(int $userId, int $appointmentId): string
     {
         return "patient_pending_call:{$userId}:{$appointmentId}";
+    }
+
+    public static function clearPendingIncomingCall(int $userId, int $appointmentId): void
+    {
+        Cache::forget(self::pendingCallCacheKey($userId, $appointmentId));
     }
 
     /**
@@ -55,6 +61,20 @@ class PatientAppointmentRealtimeController
             'agora_token' => (string) ($cached['agora_token'] ?? ''),
             'agora_channel' => (string) ($cached['agora_channel'] ?? ''),
         ]);
+    }
+
+    public function endCall(Appointment $appointment): JsonResponse
+    {
+        abort_unless((int) $appointment->user_id === (int) auth()->id(), 403);
+
+        self::clearPendingIncomingCall((int) auth()->id(), (int) $appointment->id);
+
+        broadcast(new AppointmentCallEnded(
+            (int) $appointment->id,
+            (int) $appointment->user_id,
+        ));
+
+        return response()->json(['ok' => true]);
     }
 
     public function refreshAgoraToken(Request $request, Appointment $appointment, AppointmentSessionService $sessions): JsonResponse

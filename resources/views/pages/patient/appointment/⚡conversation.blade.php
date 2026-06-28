@@ -277,6 +277,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
         data-appointment-id="{{ $appointment->id }}"
         data-notify-url="{{ route('patient.appointments.realtime.notify-call', $appointment) }}"
         data-pending-call-url="{{ route('patient.appointments.realtime.pending-call', $appointment) }}"
+        data-end-call-url="{{ route('patient.appointments.realtime.end-call', $appointment) }}"
         data-token-url="{{ route('patient.appointments.realtime.agora-token', $appointment) }}"
         data-csrf="{{ csrf_token() }}"
     >
@@ -433,8 +434,10 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
             const appointmentId = Number(boot.dataset.appointmentId || 0);
 
             if (boot.dataset.initialized === '1' && boot.dataset.boundAppointmentId === String(appointmentId)) {
+                boot.__mountOverlayToBody?.();
                 boot.__bindCallControlButtons?.();
                 boot.__restorePendingCall?.();
+                boot.__syncCallOverlay?.();
 
                 return;
             }
@@ -450,6 +453,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
             const csrf = panel.dataset.csrf || '';
             const tokenUrl = panel.dataset.tokenUrl || '';
             const pendingCallUrl = panel.dataset.pendingCallUrl || '';
+            const endCallUrl = panel.dataset.endCallUrl || '';
             const pusherKey = boot.dataset.pusherKey || '';
             const pusherCluster = boot.dataset.pusherCluster || 'mt1';
             const callEnabled = boot.dataset.agoraReady === '1';
@@ -553,6 +557,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
             }
 
             mountOverlayToBody();
+            boot.__mountOverlayToBody = mountOverlayToBody;
 
             function ensureAgoraSdk(timeoutMs = 12000) {
                 if (window.AgoraRTC) {
@@ -802,7 +807,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 }
             }
 
-            async function leaveCall() {
+            async function leaveCallLocal() {
                 stopCallTimer();
                 if (localVideo) {
                     localVideo.stop();
@@ -815,15 +820,117 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                     localAudio = null;
                 }
                 if (agoraClient) {
-                    await agoraClient.leave();
+                    try {
+                        await agoraClient.leave();
+                    } catch {
+                        // ignore cleanup errors
+                    }
+
                     agoraClient = null;
                 }
                 activeMode = null;
-                if (remoteWrap) remoteWrap.innerHTML = '';
-                if (localWrap) localWrap.innerHTML = '';
+                incomingPayload = null;
+                if (remoteWrap) {
+                    remoteWrap.innerHTML = '';
+                }
+                if (localWrap) {
+                    localWrap.innerHTML = '';
+                }
                 showOverlay(false);
                 syncMediaControlUi();
+            }
+
+            async function postEndCall() {
+                if (!endCallUrl) {
+                    return;
+                }
+
+                try {
+                    await fetch(endCallUrl, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': csrf,
+                            Accept: 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest',
+                        },
+                    });
+                } catch (_) {
+                    // ignore network errors
+                }
+
+                clearPendingCallStorage();
+            }
+
+            async function leaveCall(notifyRemote = true) {
+                const wasActive = activeMode;
+
+                dismissIncomingAlert();
+                incomingBanner?.classList.add('hidden');
+                await leaveCallLocal();
+
+                if (notifyRemote && wasActive) {
+                    await postEndCall();
+                    window.dispatchEvent(new CustomEvent('mashora:call-ended', {
+                        detail: { appointment_id: appointmentId },
+                    }));
+                }
+
                 refreshCallUiState();
+            }
+
+            async function handleRemoteCallEnded(data) {
+                if (Number(data?.appointment_id || 0) !== appointmentId) {
+                    return;
+                }
+
+                clearPendingCallStorage();
+                incomingPayload = null;
+                incomingBanner?.classList.add('hidden');
+                dismissIncomingAlert();
+                window.MashoraRealtimeAlerts?.stopIncomingRing();
+
+                if (activeMode) {
+                    await leaveCallLocal();
+                    refreshCallUiState();
+                }
+            }
+
+            function registerRemoteUserHandlers(client, mode) {
+                client.on('user-published', async (user, mediaType) => {
+                    await client.subscribe(user, mediaType);
+                    if (mediaType === 'video') {
+                        user.videoTrack?.play('patient-agora-remote');
+                    }
+                    if (mediaType === 'audio') {
+                        user.audioTrack?.play();
+                    }
+                });
+
+                client.on('user-unpublished', (user, mediaType) => {
+                    if (mediaType === 'video' && remoteWrap) {
+                        remoteWrap.innerHTML = '';
+                    }
+                });
+
+                client.on('user-left', () => {
+                    if (remoteWrap) {
+                        remoteWrap.innerHTML = '';
+                    }
+                });
+            }
+
+            async function subscribeExistingRemoteUsers(client, mode) {
+                for (const user of client.remoteUsers) {
+                    if (user.hasAudio) {
+                        await client.subscribe(user, 'audio');
+                        user.audioTrack?.play();
+                    }
+
+                    if (user.hasVideo && mode === 'video') {
+                        await client.subscribe(user, 'video');
+                        user.videoTrack?.play('patient-agora-remote');
+                    }
+                }
             }
 
             function maybeEndCallWhenSessionExpired(leftSeconds) {
@@ -1063,34 +1170,24 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
 
                     const client = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
                     agoraClient = client;
-                    client.on('user-published', async (user, mediaType) => {
-                        await client.subscribe(user, mediaType);
-                        if (mediaType === 'video') {
-                            user.videoTrack.play('patient-agora-remote');
-                        }
-                        if (mediaType === 'audio') {
-                            user.audioTrack.play();
-                        }
-                    });
+                    registerRemoteUserHandlers(client, mode);
 
                     if (mode === 'video') {
-                        const [, micTrack, camTrack] = await Promise.all([
-                            client.join(cfg.agora_app_id, cfg.agora_channel, cfg.agora_token || null, null),
-                            AgoraRTC.createMicrophoneAudioTrack(),
-                            AgoraRTC.createCameraVideoTrack(),
-                        ]);
+                        await client.join(cfg.agora_app_id, cfg.agora_channel, cfg.agora_token || null, null);
+                        const micTrack = await AgoraRTC.createMicrophoneAudioTrack();
+                        const camTrack = await AgoraRTC.createCameraVideoTrack();
                         localAudio = micTrack;
                         localVideo = camTrack;
                         camTrack.play('patient-agora-local');
                         await client.publish([micTrack, camTrack]);
                     } else {
-                        const [, micTrack] = await Promise.all([
-                            client.join(cfg.agora_app_id, cfg.agora_channel, cfg.agora_token || null, null),
-                            AgoraRTC.createMicrophoneAudioTrack(),
-                        ]);
+                        await client.join(cfg.agora_app_id, cfg.agora_channel, cfg.agora_token || null, null);
+                        const micTrack = await AgoraRTC.createMicrophoneAudioTrack();
                         localAudio = micTrack;
                         await client.publish([micTrack]);
                     }
+
+                    await subscribeExistingRemoteUsers(client, mode);
 
                     activeMode = mode;
                     incomingPayload = null;
@@ -1111,7 +1208,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
 
             boot.__joinCall = (mode, payload = null) => joinCall(mode, payload);
             boot.__joinSessionCall = () => joinSessionCall();
-            boot.__leaveCall = () => leaveCall();
+            boot.__leaveCall = (notifyRemote = true) => leaveCall(notifyRemote);
             boot.__toggleMic = () => {
                 if (!localAudio) {
                     return;
@@ -1208,6 +1305,14 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 });
             }
 
+            if (!window.__patientConversationCallEndedHook) {
+                window.__patientConversationCallEndedHook = true;
+
+                window.addEventListener('mashora:call-ended', (event) => {
+                    handleRemoteCallEnded(event.detail || {});
+                });
+            }
+
             if (!window.__patientConversationIncomingCallHook) {
                 window.__patientConversationIncomingCallHook = true;
 
@@ -1271,6 +1376,9 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
 
                     showIncomingCallBanner(data);
                 });
+                channel.bind('call.ended', (data) => {
+                    handleRemoteCallEnded(data);
+                });
 
                 if (patientId > 0) {
                     const patientChannel = pusher.subscribe('private-patient.' + patientId);
@@ -1290,6 +1398,9 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                         }
 
                         showIncomingCallBanner(data, { silent: true });
+                    });
+                    patientChannel.bind('call.ended', (data) => {
+                        handleRemoteCallEnded(data);
                     });
                 }
             } else {

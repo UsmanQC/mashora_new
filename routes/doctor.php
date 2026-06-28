@@ -82,6 +82,10 @@ Route::middleware('auth:doctor')->group(function (): void {
                 [DoctorAppointmentRealtimeController::class, 'notifyCall'],
             )->name('appointments.realtime.notify-call');
             Route::post(
+                'appointments/{appointment}/realtime/end-call',
+                [DoctorAppointmentRealtimeController::class, 'endCall'],
+            )->name('appointments.realtime.end-call');
+            Route::post(
                 'appointments/{appointment}/realtime/agora-token',
                 [DoctorAppointmentRealtimeController::class, 'refreshAgoraToken'],
             )->name('appointments.realtime.agora-token');

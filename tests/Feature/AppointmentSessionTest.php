@@ -1,9 +1,11 @@
 <?php
 
+use App\Events\AppointmentCallEnded;
 use App\Events\AppointmentIncomingCallAnnounced;
 use App\Events\AppointmentSessionStarted;
 use App\Events\PatientAppointmentSessionStarted;
 use App\Events\PatientSessionJoinRequested;
+use App\Http\Controllers\Patient\PatientAppointmentRealtimeController;
 use App\Models\Appointment;
 use App\Models\Doctor;
 use App\Models\Notification;
@@ -180,6 +182,80 @@ test('doctor notify call stores pending incoming call for patient fetch', functi
             'agora_app_id' => 'test-app-id',
             'agora_channel' => 'video_call_'.$appointment->id,
         ]);
+});
+
+test('doctor end call clears pending incoming call and broadcasts call ended', function () {
+    $user = User::factory()->create();
+    $doctor = Doctor::factory()->create(['profile_completed' => true]);
+    $appointment = Appointment::factory()->create([
+        'doctor_id' => $doctor->id,
+        'user_id' => $user->id,
+        'status' => 'in_process',
+        'actual_start_at' => now(),
+    ]);
+
+    PatientAppointmentRealtimeController::storePendingIncomingCall(
+        (int) $user->id,
+        (int) $appointment->id,
+        [
+            'call_type' => 'video',
+            'agora_app_id' => 'test-app-id',
+            'agora_token' => 'token',
+            'agora_channel' => 'video_call_'.$appointment->id,
+        ],
+    );
+
+    Event::fake([AppointmentCallEnded::class]);
+
+    $this->actingAs($doctor, 'doctor')
+        ->postJson(route('doctor.appointments.realtime.end-call', $appointment))
+        ->assertOk();
+
+    Event::assertDispatched(AppointmentCallEnded::class, function (AppointmentCallEnded $event) use ($appointment, $user): bool {
+        return $event->appointmentId === $appointment->id && $event->patientUserId === $user->id;
+    });
+
+    $this->actingAs($user)
+        ->getJson(route('patient.appointments.realtime.pending-call', $appointment))
+        ->assertSuccessful()
+        ->assertJson(['pending' => false]);
+});
+
+test('patient end call clears pending incoming call and broadcasts call ended', function () {
+    Event::fake([AppointmentCallEnded::class]);
+
+    $user = User::factory()->create();
+    $doctor = Doctor::factory()->create();
+    $appointment = Appointment::factory()->create([
+        'doctor_id' => $doctor->id,
+        'user_id' => $user->id,
+        'status' => 'in_process',
+        'actual_start_at' => now(),
+    ]);
+
+    PatientAppointmentRealtimeController::storePendingIncomingCall(
+        (int) $user->id,
+        (int) $appointment->id,
+        [
+            'call_type' => 'video',
+            'agora_app_id' => 'test-app-id',
+            'agora_token' => 'token',
+            'agora_channel' => 'video_call_'.$appointment->id,
+        ],
+    );
+
+    $this->actingAs($user)
+        ->postJson(route('patient.appointments.realtime.end-call', $appointment))
+        ->assertOk();
+
+    Event::assertDispatched(AppointmentCallEnded::class, function (AppointmentCallEnded $event) use ($appointment, $user): bool {
+        return $event->appointmentId === $appointment->id && $event->patientUserId === $user->id;
+    });
+
+    $this->actingAs($user)
+        ->getJson(route('patient.appointments.realtime.pending-call', $appointment))
+        ->assertSuccessful()
+        ->assertJson(['pending' => false]);
 });
 
 test('patient cannot fetch agora token before doctor starts session', function () {

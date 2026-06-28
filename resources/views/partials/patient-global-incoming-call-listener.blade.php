@@ -101,6 +101,21 @@
                     });
                     patientChannel.bind('session.join-requested', handleIncomingCall);
                     patientChannel.bind('appointment.session-started', handleSessionStarted);
+                    patientChannel.bind('call.ended', (data) => {
+                        const appointmentId = Number(data?.appointment_id || 0);
+                        if (!appointmentId) {
+                            return;
+                        }
+
+                        try {
+                            sessionStorage.removeItem(pendingCallKey(appointmentId));
+                        } catch (_) {
+                            // ignore storage errors
+                        }
+
+                        window.MashoraRealtimeAlerts?.stopIncomingRing();
+                        window.dispatchEvent(new CustomEvent('mashora:call-ended', { detail: data }));
+                    });
 
                     if (!window.__patientGlobalIncomingNavigateHook) {
                         window.__patientGlobalIncomingNavigateHook = true;

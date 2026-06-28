@@ -281,6 +281,7 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                     id="doctor-chat-panel"
                     data-appointment-id="{{ $appointment->id }}"
                     data-notify-url="{{ route('doctor.appointments.realtime.notify-call', $appointment) }}"
+                    data-end-call-url="{{ route('doctor.appointments.realtime.end-call', $appointment) }}"
                     data-token-url="{{ route('doctor.appointments.realtime.agora-token', $appointment) }}"
                     data-csrf="{{ csrf_token() }}"
                 >
@@ -725,10 +726,14 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
 
                 const channel = pusher.subscribe('private-appointment.' + appointmentId);
                 channel.bind('message.created', (data) => appendMessageRow(data));
+                channel.bind('call.ended', (data) => {
+                    handleRemoteCallEnded(data);
+                });
             }
 
             const panel = document.getElementById('doctor-chat-panel');
             const notifyUrl = panel?.dataset.notifyUrl || '';
+            const endCallUrl = panel?.dataset.endCallUrl || '';
             const tokenUrl = panel?.dataset.tokenUrl || '';
 
             async function refreshAgoraConfig() {
@@ -782,7 +787,7 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                 }
             }
 
-            async function leaveCall() {
+            async function leaveCallLocal() {
                 stopCallTimer();
                 setCallButtonsIdle();
                 const videoBtn = btnVideo();
@@ -804,18 +809,112 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                     localAudio = null;
                 }
                 if (agoraClient) {
-                    await agoraClient.leave();
+                    try {
+                        await agoraClient.leave();
+                    } catch {
+                        // ignore cleanup errors
+                    }
+
                     agoraClient = null;
                 }
                 currentMode = null;
                 const rp = document.getElementById('agora-remote-player');
                 const lp = document.getElementById('agora-local-player');
-                if (rp) rp.innerHTML = '';
-                if (lp) lp.innerHTML = '';
+                if (rp) {
+                    rp.innerHTML = '';
+                }
+                if (lp) {
+                    lp.innerHTML = '';
+                }
                 showOverlay(false);
                 syncMediaControlUi();
                 const tv = document.getElementById('agora-toggle-video');
-                if (tv) tv.classList.remove('hidden');
+                if (tv) {
+                    tv.classList.remove('hidden');
+                }
+            }
+
+            async function postEndCall() {
+                if (!endCallUrl) {
+                    return;
+                }
+
+                try {
+                    await fetch(endCallUrl, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': csrfToken,
+                            Accept: 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest',
+                        },
+                    });
+                } catch (_) {
+                    // ignore network errors
+                }
+            }
+
+            async function leaveCall(notifyRemote = true) {
+                const wasActive = currentMode;
+
+                await leaveCallLocal();
+
+                if (notifyRemote && wasActive) {
+                    await postEndCall();
+                }
+            }
+
+            async function handleRemoteCallEnded(data) {
+                if (Number(data?.appointment_id || 0) !== appointmentId) {
+                    return;
+                }
+
+                if (!currentMode) {
+                    return;
+                }
+
+                await leaveCallLocal();
+            }
+
+            function registerRemoteUserHandlers(client, mode) {
+                client.on('user-published', async (user, mediaType) => {
+                    await client.subscribe(user, mediaType);
+                    if (mediaType === 'video') {
+                        user.videoTrack?.play('agora-remote-player');
+                    }
+                    if (mediaType === 'audio') {
+                        user.audioTrack?.play();
+                    }
+                });
+
+                client.on('user-unpublished', (user, mediaType) => {
+                    if (mediaType === 'video') {
+                        const rp = document.getElementById('agora-remote-player');
+                        if (rp) {
+                            rp.innerHTML = '';
+                        }
+                    }
+                });
+
+                client.on('user-left', () => {
+                    const rp = document.getElementById('agora-remote-player');
+                    if (rp) {
+                        rp.innerHTML = '';
+                    }
+                });
+            }
+
+            async function subscribeExistingRemoteUsers(client, mode) {
+                for (const user of client.remoteUsers) {
+                    if (user.hasAudio) {
+                        await client.subscribe(user, 'audio');
+                        user.audioTrack?.play();
+                    }
+
+                    if (user.hasVideo && mode === 'video') {
+                        await client.subscribe(user, 'video');
+                        user.videoTrack?.play('agora-remote-player');
+                    }
+                }
             }
 
             async function postNotify(callType, cfg) {
@@ -1013,25 +1112,16 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
 
                     const client = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
                     agoraClient = client;
-                    client.on('user-published', async (user, mediaType) => {
-                        await client.subscribe(user, mediaType);
-                        if (mediaType === 'video') {
-                            user.videoTrack.play('agora-remote-player');
-                        }
-                        if (mediaType === 'audio') {
-                            user.audioTrack.play();
-                        }
-                    });
+                    registerRemoteUserHandlers(client, 'video');
 
-                    const [, audioTrack, videoTrack] = await Promise.all([
-                        client.join(cfg.agora_app_id, cfg.agora_channel, cfg.agora_token || null, null),
-                        AgoraRTC.createMicrophoneAudioTrack(),
-                        AgoraRTC.createCameraVideoTrack(),
-                    ]);
+                    await client.join(cfg.agora_app_id, cfg.agora_channel, cfg.agora_token || null, null);
+                    const audioTrack = await AgoraRTC.createMicrophoneAudioTrack();
+                    const videoTrack = await AgoraRTC.createCameraVideoTrack();
                     localAudio = audioTrack;
                     localVideo = videoTrack;
                     videoTrack.play('agora-local-player');
                     await client.publish([audioTrack, videoTrack]);
+                    await subscribeExistingRemoteUsers(client, 'video');
                     currentMode = 'video';
                     const videoBtn = btnVideo();
                     const audioBtn = btnAudio();
@@ -1081,19 +1171,13 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
 
                     const client = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
                     agoraClient = client;
-                    client.on('user-published', async (user, mediaType) => {
-                        await client.subscribe(user, mediaType);
-                        if (mediaType === 'audio') {
-                            user.audioTrack.play();
-                        }
-                    });
+                    registerRemoteUserHandlers(client, 'audio');
 
-                    const [, audioTrack] = await Promise.all([
-                        client.join(cfg.agora_app_id, cfg.agora_channel, cfg.agora_token || null, null),
-                        AgoraRTC.createMicrophoneAudioTrack(),
-                    ]);
+                    await client.join(cfg.agora_app_id, cfg.agora_channel, cfg.agora_token || null, null);
+                    const audioTrack = await AgoraRTC.createMicrophoneAudioTrack();
                     localAudio = audioTrack;
                     await client.publish([audioTrack]);
+                    await subscribeExistingRemoteUsers(client, 'audio');
                     currentMode = 'audio';
                     const videoBtn = btnVideo();
                     const audioBtn = btnAudio();
@@ -1149,7 +1233,7 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
 
             boot.__joinVideoCall = () => joinVideoCall();
             boot.__joinAudioCall = () => joinAudioCall();
-            boot.__leaveCall = () => leaveCall();
+            boot.__leaveCall = (notifyRemote = true) => leaveCall(notifyRemote);
             boot.__toggleMic = () => {
                 if (!localAudio) {
                     return;
@@ -1205,12 +1289,20 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
 
                 document.addEventListener('livewire:navigating', () => {
                     const bootEl = document.getElementById('doctor-conversation-bootstrap');
-                    bootEl?.__leaveCall?.().catch(() => {});
+                    bootEl?.__leaveCall?.(true).catch(() => {});
 
                     if (bootEl) {
                         delete bootEl.dataset.initialized;
                         delete bootEl.dataset.boundAppointmentId;
                     }
+                });
+            }
+
+            if (!window.__doctorConversationCallEndedHook) {
+                window.__doctorConversationCallEndedHook = true;
+
+                window.addEventListener('mashora:call-ended', (event) => {
+                    handleRemoteCallEnded(event.detail || {});
                 });
             }
 
