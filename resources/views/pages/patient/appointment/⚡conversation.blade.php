@@ -212,14 +212,14 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
             {{ __('patient.appointments.chat_locked_until_doctor_starts') }}
         </flux:callout>
     @elseif ($appointment->status === 'completed' && ! $appointment->isChatOpen())
-        <flux:callout variant="secondary" icon="check-circle" class="border-zinc-200">
-            {{ __('patient.appointments.session_closed') }}
+        <flux:callout variant="secondary" icon="check-circle" class="border-zinc-200 bg-white scheme-light !text-zinc-900">
+            <span class="text-sm text-zinc-900">{{ __('patient.appointments.session_closed') }}</span>
         </flux:callout>
     @elseif ($appointment->status === 'completed' && $appointment->isChatOpen())
-        <flux:callout variant="success" icon="chat-bubble-left-right" class="border-emerald-200">
-            {{ __('patient.appointments.chat_open_after_completed', [
+        <flux:callout variant="secondary" icon="chat-bubble-left-right" class="border-zinc-200 bg-white scheme-light !text-zinc-900">
+            <span class="text-sm text-zinc-900">{{ __('patient.appointments.chat_open_after_completed', [
                 'date' => $appointment->chatOpenUntil()->locale(app()->getLocale())->translatedFormat('d M Y'),
-            ]) }}
+            ]) }}</span>
         </flux:callout>
     @endif
 

@@ -355,7 +355,7 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                     @if (in_array($appointment->status, ['new', 'rescheduled'], true))
                         <p class="mt-2.5 text-center text-xs text-zinc-500">{{ __('doctor.conversation.chat_locked_until_started') }}</p>
                     @elseif ($appointment->status === 'completed' && $appointment->isChatOpen())
-                        <p class="mt-2.5 text-center text-xs text-emerald-700">
+                        <p class="mt-2.5 text-center text-xs text-zinc-900">
                             {{ __('doctor.conversation.chat_open_after_completed', [
                                 'date' => $appointment->chatOpenUntil()->locale(app()->getLocale())->translatedFormat('d M Y'),
                             ]) }}
