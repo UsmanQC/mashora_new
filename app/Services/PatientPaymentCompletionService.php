@@ -30,7 +30,7 @@ final class PatientPaymentCompletionService
         }
 
         try {
-            return DB::transaction(function () use ($temporaryAppointment): Appointment {
+            $appointment = DB::transaction(function () use ($temporaryAppointment): Appointment {
                 $temporaryAppointment->refresh();
 
                 if ($temporaryAppointment->appointment_id !== null) {
@@ -55,6 +55,10 @@ final class PatientPaymentCompletionService
 
                 return $appointment;
             });
+
+            self::notifyDoctorAfterBooking($appointment);
+
+            return $appointment;
         } catch (Throwable $e) {
             report($e);
 
@@ -146,6 +150,8 @@ final class PatientPaymentCompletionService
 
             return ['appointment' => null, 'state' => 'failed'];
         }
+
+        self::notifyDoctorAfterBooking($appointment);
 
         return ['appointment' => $appointment, 'state' => 'paid'];
     }
@@ -248,6 +254,8 @@ final class PatientPaymentCompletionService
             return ['appointment' => null, 'state' => 'failed'];
         }
 
+        self::notifyDoctorAfterBooking($appointment);
+
         return ['appointment' => $appointment, 'state' => 'paid'];
     }
 
@@ -322,6 +330,8 @@ final class PatientPaymentCompletionService
 
             return ['appointment' => null, 'state' => 'failed'];
         }
+
+        self::notifyDoctorAfterBooking($appointment);
 
         return ['appointment' => $appointment, 'state' => 'paid'];
     }
@@ -416,7 +426,7 @@ final class PatientPaymentCompletionService
         }
 
         try {
-            return DB::transaction(function () use ($temporaryAppointment): Appointment {
+            $appointment = DB::transaction(function () use ($temporaryAppointment): Appointment {
                 $temporaryAppointment->refresh();
 
                 if ($temporaryAppointment->appointment_id !== null) {
@@ -440,6 +450,10 @@ final class PatientPaymentCompletionService
 
                 return $appointment;
             });
+
+            self::notifyDoctorAfterBooking($appointment);
+
+            return $appointment;
         } catch (Throwable $e) {
             report($e);
 
@@ -459,23 +473,13 @@ final class PatientPaymentCompletionService
         $wallet->creditDoctorEarning($appointment);
     }
 
-    private static function notifyDoctorOfNewBooking(Appointment $appointment): void
+    private static function notifyDoctorAfterBooking(Appointment $appointment): void
     {
         if (! $appointment->wasRecentlyCreated) {
             return;
         }
 
-        $appointmentId = $appointment->id;
-
-        DB::afterCommit(static function (): void {
-            $booked = Appointment::query()->find($appointmentId);
-
-            if ($booked === null) {
-                return;
-            }
-
-            App::make(DoctorAppointmentNotifier::class)->notifyNewBooking($booked);
-        });
+        App::make(DoctorAppointmentNotifier::class)->notifyNewBooking($appointment->fresh());
     }
 
     public static function generateAppointmentNumber(): string
