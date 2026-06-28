@@ -446,6 +446,8 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
             const appointmentId = Number(boot.dataset.appointmentId);
 
             if (boot.dataset.initialized === '1' && boot.dataset.boundAppointmentId === String(appointmentId)) {
+                boot.__bindCallButtons?.();
+
                 return;
             }
 
@@ -1095,16 +1097,31 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                 }
             };
 
-            if (!window.__doctorConversationMorphHook) {
+            function registerDoctorConversationMorphHook() {
+                if (window.__doctorConversationMorphHook) {
+                    return;
+                }
+
                 window.__doctorConversationMorphHook = true;
-                document.addEventListener('livewire:init', () => {
+
+                const registerHook = () => {
                     Livewire.hook('commit', ({ succeed }) => {
                         succeed(() => {
-                            document.getElementById('doctor-conversation-bootstrap')?.__syncCallOverlay?.();
+                            const bootEl = document.getElementById('doctor-conversation-bootstrap');
+                            bootEl?.__bindCallButtons?.();
+                            bootEl?.__syncCallOverlay?.();
                         });
                     });
-                });
+                };
+
+                if (window.Livewire) {
+                    registerHook();
+                } else {
+                    document.addEventListener('livewire:init', registerHook);
+                }
             }
+
+            registerDoctorConversationMorphHook();
 
             boot.__joinVideoCall = () => joinVideoCall();
             boot.__joinAudioCall = () => joinAudioCall();
@@ -1170,6 +1187,43 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
             }
 
             bindCallControlButtons();
+            boot.__bindCallButtons = bindCallControlButtons;
+
+            if (!window.__doctorConversationClickBound) {
+                window.__doctorConversationClickBound = true;
+
+                document.addEventListener('click', (event) => {
+                    const bootEl = document.getElementById('doctor-conversation-bootstrap');
+                    if (!bootEl) {
+                        return;
+                    }
+
+                    if (event.target.closest('#btn-agora-video')) {
+                        event.preventDefault();
+                        bootEl.__joinVideoCall?.().catch((error) => console.error(error));
+                    }
+
+                    if (event.target.closest('#btn-agora-audio')) {
+                        event.preventDefault();
+                        bootEl.__joinAudioCall?.().catch((error) => console.error(error));
+                    }
+
+                    if (event.target.closest('#agora-leave-btn')) {
+                        event.preventDefault();
+                        bootEl.__leaveCall?.().catch((error) => console.error(error));
+                    }
+
+                    if (event.target.closest('#agora-toggle-mic')) {
+                        event.preventDefault();
+                        bootEl.__toggleMic?.();
+                    }
+
+                    if (event.target.closest('#agora-toggle-video')) {
+                        event.preventDefault();
+                        bootEl.__toggleVideo?.();
+                    }
+                });
+            }
 
             if (!window.__doctorConversationNavigateHook) {
                 window.__doctorConversationNavigateHook = true;
