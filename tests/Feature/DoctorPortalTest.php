@@ -802,6 +802,24 @@ test('doctor can start session from conversation tab', function () {
         ->and($fresh->extend_at)->not->toBeNull();
 });
 
+test('doctor conversation page includes resilient video call client bootstrap', function () {
+    $user = User::factory()->create();
+    $doctor = Doctor::factory()->create(['profile_completed' => true]);
+    $appointment = Appointment::factory()->create([
+        'doctor_id' => $doctor->id,
+        'user_id' => $user->id,
+        'status' => 'in_process',
+        'actual_start_at' => now(),
+        'extend_at' => now()->addMinutes(30),
+    ]);
+
+    Livewire::actingAs($doctor, 'doctor')
+        ->test('pages::doctor.appointment.conversation', ['appointment' => $appointment])
+        ->assertSee('data-label-call-failed', false)
+        ->assertSee('data-label-agora-sdk-missing', false)
+        ->assertSee('id="btn-agora-video"', false);
+});
+
 test('doctor can send a session chat message after starting session', function () {
     $user = User::factory()->create();
     $doctor = Doctor::factory()->create([

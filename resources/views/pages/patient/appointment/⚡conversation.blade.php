@@ -156,24 +156,14 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 >
                     {{ __('patient.appointments.call_in_progress') }}
                 </span>
-                <button
-                    type="button"
-                    id="btn-patient-video"
-                    class="inline-flex min-h-10 items-center gap-2 rounded-xl border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-800 shadow-sm transition hover:border-[#10B981]/35 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-45"
-                    @disabled($agoraAppId === '' || $appointment->status !== 'in_process')
-                >
-                    <flux:icon name="video-camera" variant="mini" class="size-4 text-zinc-600" />
-                    {{ __('patient.appointments.video_call') }}
-                </button>
-                <button
-                    type="button"
-                    id="btn-patient-audio"
-                    class="inline-flex min-h-10 items-center gap-2 rounded-xl border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-800 shadow-sm transition hover:border-[#10B981]/35 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-45"
-                    @disabled($agoraAppId === '' || $appointment->status !== 'in_process')
-                >
-                    <flux:icon name="phone" variant="mini" class="size-4 text-zinc-600" />
-                    {{ __('patient.appointments.voice_call') }}
-                </button>
+                @if ($appointment->status === 'in_process')
+                    <span
+                        id="patient-waiting-for-call-chip"
+                        class="rounded-full border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-[11px] font-semibold text-zinc-600"
+                    >
+                        {{ __('patient.appointments.waiting_for_specialist_call') }}
+                    </span>
+                @endif
             @endif
         </div>
         </div>
@@ -187,7 +177,12 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
         data-session-end="{{ $appointment->extend_at?->toIso8601String() }}"
         data-session-scheduled-time="{{ filled($appointment->start_time) ? \Illuminate\Support\Carbon::createFromFormat('H:i:s', (string) $appointment->start_time)->format('h:i A') : '--:--' }}"
         data-session-not-started="{{ __('patient.appointments.session_not_started') }}"
-        data-session-started-banner="{{ __('patient.appointments.session_started_join_now') }}"
+        data-session-started-waiting="{{ __('patient.appointments.session_started_waiting') }}"
+        data-label-connecting="{{ __('patient.appointments.connecting') }}"
+        data-label-call-failed="{{ __('patient.appointments.call_failed') }}"
+        data-label-camera-permission="{{ __('patient.appointments.camera_permission_required') }}"
+        data-label-agora-sdk-missing="{{ __('patient.appointments.agora_sdk_missing') }}"
+        data-label-no-active-call="{{ __('patient.appointments.no_active_call') }}"
         data-session-ended="{{ __('patient.appointments.session_time_ended') }}"
     ></div>
 
@@ -224,12 +219,24 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
         </flux:callout>
     @endif
 
-    <div id="incoming-call-banner" class="hidden rounded-xl border border-emerald-200 bg-emerald-50 p-3 ring-2 ring-emerald-300/60">
-        <div class="flex flex-wrap items-center justify-between gap-2">
-            <p id="incoming-call-label" class="text-sm font-medium text-emerald-900"></p>
-            <div class="flex items-center gap-2">
-                <button type="button" id="incoming-call-accept" class="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white">{{ __('patient.appointments.accept_call') }}</button>
-                <button type="button" id="incoming-call-dismiss" class="rounded-lg border border-emerald-300 bg-white px-3 py-1.5 text-xs font-semibold text-emerald-800">{{ __('patient.appointments.dismiss_call') }}</button>
+    <div id="incoming-call-banner" class="hidden rounded-xl border border-emerald-200 bg-emerald-50 p-4 shadow-md shadow-emerald-900/10 ring-2 ring-emerald-300/60">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p id="incoming-call-label" class="text-sm font-semibold text-emerald-900"></p>
+            <div class="flex shrink-0 items-center gap-2">
+                <button
+                    type="button"
+                    id="incoming-call-accept"
+                    class="inline-flex min-h-10 items-center justify-center rounded-xl bg-[#10B981] px-4 py-2 text-sm font-semibold text-white shadow-md shadow-emerald-900/20 transition hover:brightness-95"
+                >
+                    {{ __('patient.appointments.join_call') }}
+                </button>
+                <button
+                    type="button"
+                    id="incoming-call-dismiss"
+                    class="inline-flex min-h-10 items-center justify-center rounded-xl border border-emerald-300 bg-white px-4 py-2 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-50"
+                >
+                    {{ __('patient.appointments.dismiss_call') }}
+                </button>
             </div>
         </div>
     </div>
@@ -350,7 +357,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
 @push('scripts')
     @include('partials.realtime-call-alerts')
     <script src="https://js.pusher.com/8.2.0/pusher.min.js"></script>
-    <script src="https://download.agora.io/sdk/release/AgoraRTC_N-4.23.0.js"></script>
+    <script src="https://download.agora.io/sdk/release/AgoraRTC_N-4.23.0.js" data-agora-sdk="1"></script>
     <script>
         function initPatientConversationRealtime() {
             const boot = document.getElementById('patient-conversation-bootstrap');
@@ -359,16 +366,21 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 return;
             }
 
-            if (boot.dataset.initialized === '1') {
+            const appointmentId = Number(boot.dataset.appointmentId || 0);
+
+            if (boot.dataset.initialized === '1' && boot.dataset.boundAppointmentId === String(appointmentId)) {
                 return;
             }
 
-            boot.dataset.initialized = '1';
+            if (boot.dataset.initialized === '1') {
+                boot.__leaveCall?.().catch(() => {});
+            }
 
-            const appointmentId = Number(boot.dataset.appointmentId || 0);
+            boot.dataset.initialized = '1';
+            boot.dataset.boundAppointmentId = String(appointmentId);
+
             const patientId = Number(boot.dataset.patientId || 0);
             const csrf = panel.dataset.csrf || '';
-            const notifyUrl = panel.dataset.notifyUrl || '';
             const tokenUrl = panel.dataset.tokenUrl || '';
             const pusherKey = boot.dataset.pusherKey || '';
             const pusherCluster = boot.dataset.pusherCluster || 'mt1';
@@ -431,13 +443,142 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
             const chip = document.getElementById('patient-call-started-chip');
             const labelVideo = @js(__('patient.appointments.video_call'));
             const labelVoice = @js(__('patient.appointments.voice_call'));
+            const labelConnecting = metrics?.dataset.labelConnecting || 'Connecting…';
+            const labelCallFailed = metrics?.dataset.labelCallFailed || 'Could not join the call.';
+            const labelNoActiveCall = metrics?.dataset.labelNoActiveCall || 'No active call yet.';
+            const waitingChip = document.getElementById('patient-waiting-for-call-chip');
 
-            function btnPatientVideo() {
-                return document.getElementById('btn-patient-video');
+            function showCallToast(text, variant = 'danger') {
+                if (window.Flux?.toast) {
+                    window.Flux.toast({ text, variant });
+
+                    return;
+                }
+
+                console.error(text);
             }
 
-            function btnPatientAudio() {
-                return document.getElementById('btn-patient-audio');
+            function callErrorMessage(error, fallback) {
+                if (!error) {
+                    return fallback;
+                }
+
+                const name = error?.name || '';
+                const message = error?.message || '';
+
+                if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
+                    return metrics?.dataset.labelCameraPermission || fallback;
+                }
+
+                if (message) {
+                    return message;
+                }
+
+                return fallback;
+            }
+
+            function mountOverlayToBody() {
+                if (overlay && overlay.parentElement !== document.body) {
+                    document.body.appendChild(overlay);
+                }
+            }
+
+            mountOverlayToBody();
+
+            function ensureAgoraSdk(timeoutMs = 12000) {
+                if (window.AgoraRTC) {
+                    return Promise.resolve(window.AgoraRTC);
+                }
+
+                const existing = document.querySelector('script[data-agora-sdk="1"]');
+                if (!existing) {
+                    return Promise.reject(new Error(metrics?.dataset.labelAgoraSdkMissing || 'Agora SDK missing'));
+                }
+
+                return new Promise((resolve, reject) => {
+                    const startedAt = Date.now();
+
+                    const tick = () => {
+                        if (window.AgoraRTC) {
+                            resolve(window.AgoraRTC);
+
+                            return;
+                        }
+
+                        if (Date.now() - startedAt >= timeoutMs) {
+                            reject(new Error(metrics?.dataset.labelAgoraSdkMissing || 'Agora SDK missing'));
+
+                            return;
+                        }
+
+                        window.setTimeout(tick, 50);
+                    };
+
+                    tick();
+                });
+            }
+
+            async function resetPartialAgoraJoin() {
+                if (localVideo) {
+                    localVideo.stop();
+                    localVideo.close();
+                    localVideo = null;
+                }
+
+                if (localAudio) {
+                    localAudio.stop();
+                    localAudio.close();
+                    localAudio = null;
+                }
+
+                if (agoraClient) {
+                    try {
+                        await agoraClient.leave();
+                    } catch {
+                        // ignore cleanup errors
+                    }
+
+                    agoraClient = null;
+                }
+
+                activeMode = null;
+
+                if (remoteWrap) {
+                    remoteWrap.innerHTML = '';
+                }
+
+                if (localWrap) {
+                    localWrap.innerHTML = '';
+                }
+            }
+
+            function setOverlayConnecting(mode) {
+                if (overlayTitle) {
+                    overlayTitle.textContent = labelConnecting;
+                }
+
+                if (overlayCallDuration) {
+                    overlayCallDuration.textContent = '00:00';
+                }
+
+                document.getElementById('patient-agora-toggle-video')?.classList.toggle('hidden', mode !== 'video');
+            }
+
+            function refreshCallUiState() {
+                syncPatientSessionFromDom(boot);
+
+                const sessionActive = callEnabled && appointmentStatus === 'in_process';
+
+                if (waitingChip) {
+                    waitingChip.classList.toggle(
+                        'hidden',
+                        !sessionActive || activeMode || incomingPayload || incomingBanner && !incomingBanner.classList.contains('hidden'),
+                    );
+                }
+
+                if (chip) {
+                    chip.classList.toggle('hidden', !activeMode);
+                }
             }
 
             let callTimerId = null;
@@ -452,22 +593,6 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                     return h + ':' + String(m).padStart(2, '0') + ':' + String(r).padStart(2, '0');
                 }
                 return String(m).padStart(2, '0') + ':' + String(r).padStart(2, '0');
-            }
-
-            function refreshCallButtonsState() {
-                syncPatientSessionFromDom(boot);
-                const enabled = callEnabled && appointmentStatus === 'in_process';
-                const videoBtn = btnPatientVideo();
-                const audioBtn = btnPatientAudio();
-                if (videoBtn && !activeMode) {
-                    videoBtn.disabled = !enabled;
-                }
-                if (audioBtn && !activeMode) {
-                    audioBtn.disabled = !enabled;
-                }
-                if (chip) {
-                    chip.classList.toggle('hidden', !activeMode);
-                }
             }
 
             function tickCallTimer() {
@@ -521,9 +646,9 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 }
 
                 if (wasWaiting && incomingLabel && incomingBanner) {
-                    incomingLabel.textContent = metricsEl?.dataset.sessionStartedBanner || 'Session started. Join now.';
-                    incomingBanner.classList.remove('hidden');
+                    showCallToast(metricsEl?.dataset.sessionStartedWaiting || 'Session started.', 'success');
                     startSessionTimers();
+                    refreshCallUiState();
                 }
             }
 
@@ -625,7 +750,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 if (localWrap) localWrap.innerHTML = '';
                 showOverlay(false);
                 syncMediaControlUi();
-                refreshCallButtonsState();
+                refreshCallUiState();
             }
 
             function maybeEndCallWhenSessionExpired(leftSeconds) {
@@ -663,27 +788,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 return res.json();
             }
 
-            async function notifyDoctor(type, cfg) {
-                const res = await fetch(notifyUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': csrf,
-                        'Accept': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        agora_app_id: cfg.agora_app_id,
-                        agora_token: cfg.agora_token,
-                        agora_channel: cfg.agora_channel,
-                        call_type: type,
-                    }),
-                });
-
-                if (!res.ok) return null;
-                return res.json();
-            }
-
-            function alertIncomingCall(label) {
+            async function refreshConfig() {
                 window.MashoraRealtimeAlerts?.playIncomingRing();
                 window.MashoraRealtimeAlerts?.showDesktopNotification(
                     @js(__('patient.appointments.incoming_call_title')),
@@ -703,70 +808,94 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 return null;
             }
 
-            async function joinCall(mode, payload = null, shouldNotify = false) {
-                if (!callEnabled || activeMode || !window.AgoraRTC) return;
+            function showIncomingCallBanner(data) {
+                incomingPayload = data;
 
-                const cfg = resolveAgoraConfig(payload) ?? await refreshConfig();
-                if (!cfg) return;
-
-                if (shouldNotify) {
-                    const notify = await notifyDoctor(mode, cfg);
-                    if (notify && metrics) {
-                        appointmentStatus = notify.status || 'in_process';
-                        metrics.dataset.status = notify.status || 'in_process';
-                        metrics.dataset.sessionStart = notify.actual_start_at || '';
-                        metrics.dataset.sessionEnd = notify.extend_at || '';
-                        startSessionTimers();
-                        refreshCallButtonsState();
-                    }
+                if (incomingLabel) {
+                    incomingLabel.textContent = data.call_type === 'video'
+                        ? @js(__('patient.appointments.incoming_video'))
+                        : @js(__('patient.appointments.incoming_voice'));
                 }
 
-                agoraClient = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
-                agoraClient.on('user-published', async (user, mediaType) => {
-                    await agoraClient.subscribe(user, mediaType);
-                    if (mediaType === 'video') {
-                        user.videoTrack.play('patient-agora-remote');
-                    }
-                    if (mediaType === 'audio') {
-                        user.audioTrack.play();
-                    }
-                });
-
-                if (mode === 'video') {
-                    const [, micTrack, camTrack] = await Promise.all([
-                        agoraClient.join(cfg.agora_app_id, cfg.agora_channel, cfg.agora_token || null, null),
-                        AgoraRTC.createMicrophoneAudioTrack(),
-                        AgoraRTC.createCameraVideoTrack(),
-                    ]);
-                    localAudio = micTrack;
-                    localVideo = camTrack;
-                    camTrack.play('patient-agora-local');
-                    await agoraClient.publish([micTrack, camTrack]);
-                } else {
-                    const [, micTrack] = await Promise.all([
-                        agoraClient.join(cfg.agora_app_id, cfg.agora_channel, cfg.agora_token || null, null),
-                        AgoraRTC.createMicrophoneAudioTrack(),
-                    ]);
-                    localAudio = micTrack;
-                    await agoraClient.publish([micTrack]);
-                }
-
-                activeMode = mode;
-                const videoBtn = btnPatientVideo();
-                const audioBtn = btnPatientAudio();
-                if (videoBtn) {
-                    videoBtn.disabled = true;
-                }
-                if (audioBtn) {
-                    audioBtn.disabled = true;
-                }
-                startCallTimer(mode);
-                showOverlay(true);
-                document.getElementById('patient-agora-toggle-video')?.classList.toggle('hidden', mode !== 'video');
-                syncMediaControlUi();
+                alertIncomingCall(incomingLabel?.textContent || @js(__('patient.appointments.incoming_call_title')));
+                incomingBanner?.classList.remove('hidden');
+                refreshCallUiState();
             }
 
-            boot.__joinCall = (mode, payload = null, shouldNotify = false) => joinCall(mode, payload, shouldNotify);
+            async function joinCall(mode, payload = null) {
+                if (!callEnabled || activeMode) {
+                    return;
+                }
+
+                const resolvedPayload = resolveAgoraConfig(payload);
+                if (!resolvedPayload) {
+                    showCallToast(labelNoActiveCall, 'warning');
+
+                    return;
+                }
+
+                dismissIncomingAlert();
+                incomingBanner?.classList.add('hidden');
+                showOverlay(true);
+                setOverlayConnecting(mode);
+
+                try {
+                    await ensureAgoraSdk();
+
+                    const cfg = resolvedPayload.agora_token
+                        ? resolvedPayload
+                        : await refreshConfig();
+
+                    if (!cfg || !cfg.agora_app_id || !cfg.agora_channel) {
+                        throw new Error(labelCallFailed);
+                    }
+
+                    agoraClient = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
+                    agoraClient.on('user-published', async (user, mediaType) => {
+                        await agoraClient.subscribe(user, mediaType);
+                        if (mediaType === 'video') {
+                            user.videoTrack.play('patient-agora-remote');
+                        }
+                        if (mediaType === 'audio') {
+                            user.audioTrack.play();
+                        }
+                    });
+
+                    if (mode === 'video') {
+                        const [, micTrack, camTrack] = await Promise.all([
+                            agoraClient.join(cfg.agora_app_id, cfg.agora_channel, cfg.agora_token || null, null),
+                            AgoraRTC.createMicrophoneAudioTrack(),
+                            AgoraRTC.createCameraVideoTrack(),
+                        ]);
+                        localAudio = micTrack;
+                        localVideo = camTrack;
+                        camTrack.play('patient-agora-local');
+                        await agoraClient.publish([micTrack, camTrack]);
+                    } else {
+                        const [, micTrack] = await Promise.all([
+                            agoraClient.join(cfg.agora_app_id, cfg.agora_channel, cfg.agora_token || null, null),
+                            AgoraRTC.createMicrophoneAudioTrack(),
+                        ]);
+                        localAudio = micTrack;
+                        await agoraClient.publish([micTrack]);
+                    }
+
+                    activeMode = mode;
+                    incomingPayload = null;
+                    startCallTimer(mode);
+                    document.getElementById('patient-agora-toggle-video')?.classList.toggle('hidden', mode !== 'video');
+                    syncMediaControlUi();
+                    refreshCallUiState();
+                } catch (e) {
+                    console.error(e);
+                    await resetPartialAgoraJoin();
+                    showOverlay(false);
+                    showCallToast(callErrorMessage(e, labelCallFailed));
+                    refreshCallUiState();
+                }
+            }
+
+            boot.__joinCall = (mode, payload = null) => joinCall(mode, payload);
             boot.__leaveCall = () => leaveCall();
             boot.__toggleMic = () => {
                 if (!localAudio) {
@@ -785,66 +914,78 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 syncMediaControlUi();
             };
             boot.__acceptIncoming = () => {
-                dismissIncomingAlert();
-                if (!incomingPayload) {
+                if (!incomingPayload || !incomingPayload.agora_app_id) {
+                    showCallToast(labelNoActiveCall, 'warning');
+                    dismissIncomingAlert();
                     incomingBanner?.classList.add('hidden');
-                    refreshCallButtonsState();
+                    refreshCallUiState();
 
                     return;
                 }
 
                 const mode = incomingPayload.call_type === 'video' ? 'video' : 'audio';
-                incomingBanner?.classList.add('hidden');
-                joinCall(mode, incomingPayload, false);
-                incomingPayload = null;
+                joinCall(mode, incomingPayload).catch((error) => console.error(error));
             };
             boot.__dismissIncoming = () => {
                 dismissIncomingAlert();
                 incomingPayload = null;
                 incomingBanner?.classList.add('hidden');
+                refreshCallUiState();
             };
 
-            if (!window.__patientConversationClickBound) {
-                window.__patientConversationClickBound = true;
+            function bindCallControlButtons() {
+                if (incomingAccept) {
+                    incomingAccept.onclick = (event) => {
+                        event.preventDefault();
+                        boot.__acceptIncoming?.();
+                    };
+                }
 
-                document.addEventListener('click', (event) => {
-                    const bootEl = document.getElementById('patient-conversation-bootstrap');
-                    if (!bootEl) {
-                        return;
-                    }
+                if (incomingDismiss) {
+                    incomingDismiss.onclick = (event) => {
+                        event.preventDefault();
+                        boot.__dismissIncoming?.();
+                    };
+                }
 
-                    if (event.target.closest('#btn-patient-video')) {
-                        bootEl.__joinCall?.('video', null, false).catch((error) => console.error(error));
-                    }
+                const leaveBtn = document.getElementById('patient-agora-leave');
+                if (leaveBtn) {
+                    leaveBtn.onclick = (event) => {
+                        event.preventDefault();
+                        leaveCall().catch((error) => console.error(error));
+                    };
+                }
 
-                    if (event.target.closest('#btn-patient-audio')) {
-                        bootEl.__joinCall?.('audio', null, false).catch((error) => console.error(error));
-                    }
+                const micBtn = document.getElementById('patient-agora-toggle-mic');
+                if (micBtn) {
+                    micBtn.onclick = (event) => {
+                        event.preventDefault();
+                        boot.__toggleMic?.();
+                    };
+                }
 
-                    if (event.target.closest('#patient-agora-leave')) {
-                        bootEl.__leaveCall?.().catch(() => {});
-                    }
+                const overlayVideoBtn = document.getElementById('patient-agora-toggle-video');
+                if (overlayVideoBtn) {
+                    overlayVideoBtn.onclick = (event) => {
+                        event.preventDefault();
+                        boot.__toggleVideo?.();
+                    };
+                }
+            }
 
-                    if (event.target.closest('#patient-agora-toggle-mic')) {
-                        bootEl.__toggleMic?.();
-                    }
+            bindCallControlButtons();
 
-                    if (event.target.closest('#patient-agora-toggle-video')) {
-                        bootEl.__toggleVideo?.();
-                    }
-
-                    if (event.target.closest('#incoming-call-accept')) {
-                        bootEl.__acceptIncoming?.();
-                    }
-
-                    if (event.target.closest('#incoming-call-dismiss')) {
-                        bootEl.__dismissIncoming?.();
-                    }
-                });
+            if (!window.__patientConversationNavigateHook) {
+                window.__patientConversationNavigateHook = true;
 
                 document.addEventListener('livewire:navigating', () => {
                     const bootEl = document.getElementById('patient-conversation-bootstrap');
                     bootEl?.__leaveCall?.().catch(() => {});
+
+                    if (bootEl) {
+                        delete bootEl.dataset.initialized;
+                        delete bootEl.dataset.boundAppointmentId;
+                    }
                 });
             }
 
@@ -877,23 +1018,12 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                         metrics.dataset.sessionStart = data.actual_start_at || '';
                         metrics.dataset.sessionEnd = data.extend_at || '';
                     }
-                    if (incomingLabel) {
-                        incomingLabel.textContent = metrics?.dataset.sessionStartedBanner || 'Session started. Join now.';
-                    }
-                    alertIncomingCall(incomingLabel?.textContent || @js(__('patient.appointments.session_started_join_now')));
-                    incomingBanner?.classList.remove('hidden');
+                    showCallToast(metrics?.dataset.sessionStartedWaiting || @js(__('patient.appointments.session_started_waiting')), 'success');
                     startSessionTimers();
-                    refreshCallButtonsState();
+                    refreshCallUiState();
                 });
                 channel.bind('call.incoming', (data) => {
-                    incomingPayload = data;
-                    if (incomingLabel) {
-                        incomingLabel.textContent = data.call_type === 'video'
-                            ? @js(__('patient.appointments.incoming_video'))
-                            : @js(__('patient.appointments.incoming_voice'));
-                    }
-                    alertIncomingCall(incomingLabel?.textContent || @js(__('patient.appointments.incoming_call_title')));
-                    incomingBanner?.classList.remove('hidden');
+                    showIncomingCallBanner(data);
                 });
 
                 if (patientId > 0) {
@@ -902,14 +1032,11 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                         console.error('Pusher patient channel error', error);
                     });
                     patientChannel.bind('session.join-requested', (data) => {
-                        incomingPayload = data;
-                        if (incomingLabel) {
-                            incomingLabel.textContent = data.call_type === 'video'
-                                ? @js(__('patient.appointments.incoming_video'))
-                                : @js(__('patient.appointments.incoming_voice'));
+                        if (Number(data.appointment_id || 0) !== appointmentId) {
+                            return;
                         }
-                        alertIncomingCall(incomingLabel?.textContent || @js(__('patient.appointments.incoming_call_title')));
-                        incomingBanner?.classList.remove('hidden');
+
+                        showIncomingCallBanner(data);
                     });
                 }
             } else {
@@ -934,13 +1061,13 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
             }
 
             startSessionTimers();
-            refreshCallButtonsState();
+            refreshCallUiState();
 
             if (boot.dataset.sessionObserved !== '1') {
                 boot.dataset.sessionObserved = '1';
                 const sessionObserver = new MutationObserver(() => {
                     syncPatientSessionFromDom(boot);
-                    refreshCallButtonsState();
+                    refreshCallUiState();
                     startSessionTimers();
                 });
                 sessionObserver.observe(boot, { attributes: true, attributeFilter: ['data-appointment-status'] });
@@ -953,5 +1080,6 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
 
         document.addEventListener('DOMContentLoaded', initPatientConversationRealtime);
         document.addEventListener('livewire:navigated', initPatientConversationRealtime);
+        initPatientConversationRealtime();
     </script>
 @endpush

@@ -128,7 +128,9 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
         data-label-voice="{{ __('doctor.conversation.voice_call') }}"
         data-label-live="{{ __('doctor.conversation.live') }}"
         data-label-connecting="{{ __('doctor.conversation.connecting') }}"
-        data-label-live="{{ __('doctor.conversation.live') }}"
+        data-label-call-failed="{{ __('doctor.conversation.call_failed') }}"
+        data-label-camera-permission="{{ __('doctor.conversation.camera_permission_required') }}"
+        data-label-agora-sdk-missing="{{ __('doctor.conversation.agora_sdk_missing') }}"
         data-session-ended="{{ __('doctor.conversation.session_time_ended') }}"
     ></div>
 
@@ -432,7 +434,7 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
 
 @push('scripts')
     <script src="https://js.pusher.com/8.2.0/pusher.min.js"></script>
-    <script src="https://download.agora.io/sdk/release/AgoraRTC_N-4.23.0.js"></script>
+    <script src="https://download.agora.io/sdk/release/AgoraRTC_N-4.23.0.js" data-agora-sdk="1"></script>
     <script>
         function initDoctorConversationRealtime() {
             const boot = document.getElementById('doctor-conversation-bootstrap');
@@ -440,13 +442,19 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                 return;
             }
 
-            if (boot.dataset.initialized === '1') {
+            const appointmentId = Number(boot.dataset.appointmentId);
+
+            if (boot.dataset.initialized === '1' && boot.dataset.boundAppointmentId === String(appointmentId)) {
                 return;
             }
 
-            boot.dataset.initialized = '1';
+            if (boot.dataset.initialized === '1') {
+                boot.__leaveCall?.().catch(() => {});
+            }
 
-            const appointmentId = Number(boot.dataset.appointmentId);
+            boot.dataset.initialized = '1';
+            boot.dataset.boundAppointmentId = String(appointmentId);
+
             const pusherKey = boot.dataset.pusherKey || '';
             const pusherCluster = boot.dataset.pusherCluster || 'mt1';
             const csrfToken = document.querySelector('#doctor-chat-panel')?.dataset.csrf || '';
@@ -818,21 +826,150 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                 return res.json();
             }
 
+            function showCallToast(text, variant = 'danger') {
+                if (window.Flux?.toast) {
+                    window.Flux.toast({ text, variant });
+
+                    return;
+                }
+
+                console.error(text);
+            }
+
+            function callErrorMessage(error, fallback) {
+                if (!error) {
+                    return fallback;
+                }
+
+                const name = error?.name || '';
+                const message = error?.message || '';
+
+                if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
+                    return metricsEl?.dataset.labelCameraPermission || fallback;
+                }
+
+                if (message) {
+                    return message;
+                }
+
+                return fallback;
+            }
+
+            function mountOverlayToBody() {
+                const overlayEl = document.getElementById('agora-call-overlay');
+                if (overlayEl && overlayEl.parentElement !== document.body) {
+                    document.body.appendChild(overlayEl);
+                }
+            }
+
+            mountOverlayToBody();
+
+            function ensureAgoraSdk(timeoutMs = 12000) {
+                if (window.AgoraRTC) {
+                    return Promise.resolve(window.AgoraRTC);
+                }
+
+                const existing = document.querySelector('script[data-agora-sdk="1"]');
+                if (!existing) {
+                    return Promise.reject(new Error(metricsEl?.dataset.labelAgoraSdkMissing || 'Agora SDK missing'));
+                }
+
+                return new Promise((resolve, reject) => {
+                    const startedAt = Date.now();
+
+                    const tick = () => {
+                        if (window.AgoraRTC) {
+                            resolve(window.AgoraRTC);
+
+                            return;
+                        }
+
+                        if (Date.now() - startedAt >= timeoutMs) {
+                            reject(new Error(metricsEl?.dataset.labelAgoraSdkMissing || 'Agora SDK missing'));
+
+                            return;
+                        }
+
+                        window.setTimeout(tick, 50);
+                    };
+
+                    tick();
+                });
+            }
+
+            async function resetPartialAgoraJoin() {
+                if (localVideo) {
+                    localVideo.stop();
+                    localVideo.close();
+                    localVideo = null;
+                }
+
+                if (localAudio) {
+                    localAudio.stop();
+                    localAudio.close();
+                    localAudio = null;
+                }
+
+                if (agoraClient) {
+                    try {
+                        await agoraClient.leave();
+                    } catch {
+                        // ignore cleanup errors
+                    }
+
+                    agoraClient = null;
+                }
+
+                currentMode = null;
+                const rp = document.getElementById('agora-remote-player');
+                const lp = document.getElementById('agora-local-player');
+                if (rp) {
+                    rp.innerHTML = '';
+                }
+                if (lp) {
+                    lp.innerHTML = '';
+                }
+            }
+
+            function setOverlayConnecting(mode, labelConnecting) {
+                if (agoraTitle) {
+                    agoraTitle.textContent = labelConnecting;
+                }
+
+                if (callTypeLabel) {
+                    callTypeLabel.textContent = mode === 'video' ? labelVideo : labelVoice;
+                }
+
+                if (overlayCallDuration) {
+                    overlayCallDuration.textContent = '00:00';
+                }
+
+                document.getElementById('agora-toggle-video')?.classList.toggle('hidden', mode !== 'video');
+            }
+
             const labelVideo = metricsEl?.dataset.labelVideo || 'Video call';
             const labelVoice = metricsEl?.dataset.labelVoice || 'Voice call';
             const labelLive = metricsEl?.dataset.labelLive || 'Live';
+            const labelConnecting = metricsEl?.dataset.labelConnecting || 'Connecting…';
+            const labelCallFailed = metricsEl?.dataset.labelCallFailed || 'Could not start the call.';
 
             async function joinVideoCall() {
                 if (currentMode) {
                     return;
                 }
+
                 setCallButtonConnecting(btnVideo());
+                showOverlay(true);
+                setOverlayConnecting('video', labelConnecting);
+
                 try {
+                    await ensureAgoraSdk();
+
                     const cfg = await refreshAgoraConfig();
-                    if (!cfg || !window.AgoraRTC) {
-                        restoreCallButtonsAfterError();
-                        return;
+                    if (!cfg) {
+                        throw new Error(labelCallFailed);
                     }
+
                     const notify = await postNotify('video', cfg);
                     if (metricsEl && notify) {
                         metricsEl.dataset.status = notify.status || 'in_process';
@@ -869,10 +1006,12 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                     }
                     document.getElementById('agora-toggle-video')?.classList.remove('hidden');
                     startCallTimer('video', labelVideo, labelVoice);
-                    showOverlay(true);
                     syncMediaControlUi();
                 } catch (e) {
                     console.error(e);
+                    await resetPartialAgoraJoin();
+                    showOverlay(false);
+                    showCallToast(callErrorMessage(e, labelCallFailed));
                     restoreCallButtonsAfterError();
                 }
             }
@@ -881,13 +1020,19 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                 if (currentMode) {
                     return;
                 }
+
                 setCallButtonConnecting(btnAudio());
+                showOverlay(true);
+                setOverlayConnecting('audio', labelConnecting);
+
                 try {
+                    await ensureAgoraSdk();
+
                     const cfg = await refreshAgoraConfig();
-                    if (!cfg || !window.AgoraRTC) {
-                        restoreCallButtonsAfterError();
-                        return;
+                    if (!cfg) {
+                        throw new Error(labelCallFailed);
                     }
+
                     const notify = await postNotify('audio', cfg);
                     if (metricsEl && notify) {
                         metricsEl.dataset.status = notify.status || 'in_process';
@@ -918,10 +1063,12 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                     }
                     document.getElementById('agora-toggle-video')?.classList.add('hidden');
                     startCallTimer('audio', labelVideo, labelVoice);
-                    showOverlay(true);
                     syncMediaControlUi();
                 } catch (e) {
                     console.error(e);
+                    await resetPartialAgoraJoin();
+                    showOverlay(false);
+                    showCallToast(callErrorMessage(e, labelCallFailed));
                     restoreCallButtonsAfterError();
                 }
             }
@@ -963,39 +1110,62 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                 syncMediaControlUi();
             };
 
-            if (!window.__doctorConversationClickBound) {
-                window.__doctorConversationClickBound = true;
+            function bindCallControlButtons() {
+                const videoBtn = btnVideo();
+                const audioBtn = btnAudio();
 
-                document.addEventListener('click', (event) => {
-                    const bootEl = document.getElementById('doctor-conversation-bootstrap');
-                    if (!bootEl) {
-                        return;
-                    }
+                if (videoBtn) {
+                    videoBtn.onclick = (event) => {
+                        event.preventDefault();
+                        joinVideoCall().catch((error) => console.error(error));
+                    };
+                }
 
-                    if (event.target.closest('#btn-agora-video')) {
-                        bootEl.__joinVideoCall?.().catch((error) => console.error(error));
-                    }
+                if (audioBtn) {
+                    audioBtn.onclick = (event) => {
+                        event.preventDefault();
+                        joinAudioCall().catch((error) => console.error(error));
+                    };
+                }
 
-                    if (event.target.closest('#btn-agora-audio')) {
-                        bootEl.__joinAudioCall?.().catch((error) => console.error(error));
-                    }
+                const leaveBtn = document.getElementById('agora-leave-btn');
+                if (leaveBtn) {
+                    leaveBtn.onclick = (event) => {
+                        event.preventDefault();
+                        leaveCall().catch((error) => console.error(error));
+                    };
+                }
 
-                    if (event.target.closest('#agora-leave-btn')) {
-                        bootEl.__leaveCall?.().catch((error) => console.error(error));
-                    }
+                const micBtn = document.getElementById('agora-toggle-mic');
+                if (micBtn) {
+                    micBtn.onclick = (event) => {
+                        event.preventDefault();
+                        boot.__toggleMic?.();
+                    };
+                }
 
-                    if (event.target.closest('#agora-toggle-mic')) {
-                        bootEl.__toggleMic?.();
-                    }
+                const overlayVideoBtn = document.getElementById('agora-toggle-video');
+                if (overlayVideoBtn) {
+                    overlayVideoBtn.onclick = (event) => {
+                        event.preventDefault();
+                        boot.__toggleVideo?.();
+                    };
+                }
+            }
 
-                    if (event.target.closest('#agora-toggle-video')) {
-                        bootEl.__toggleVideo?.();
-                    }
-                });
+            bindCallControlButtons();
+
+            if (!window.__doctorConversationNavigateHook) {
+                window.__doctorConversationNavigateHook = true;
 
                 document.addEventListener('livewire:navigating', () => {
                     const bootEl = document.getElementById('doctor-conversation-bootstrap');
                     bootEl?.__leaveCall?.().catch(() => {});
+
+                    if (bootEl) {
+                        delete bootEl.dataset.initialized;
+                        delete bootEl.dataset.boundAppointmentId;
+                    }
                 });
             }
 
@@ -1011,9 +1181,8 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
         }
 
         document.addEventListener('DOMContentLoaded', initDoctorConversationRealtime);
-        document.addEventListener('livewire:navigated', () => {
-            initDoctorConversationRealtime();
-        });
+        document.addEventListener('livewire:navigated', initDoctorConversationRealtime);
+        initDoctorConversationRealtime();
     </script>
 @endpush
 

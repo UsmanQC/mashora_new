@@ -78,6 +78,26 @@ test('patient conversation refresh picks up doctor started session', function ()
         ->assertSet('appointment.status', 'in_process');
 });
 
+test('patient conversation shows attend-only call ui without outbound call buttons', function () {
+    $user = User::factory()->create(['profile_completed' => true]);
+    $doctor = Doctor::factory()->create();
+
+    $appointment = Appointment::factory()->create([
+        'user_id' => $user->id,
+        'doctor_id' => $doctor->id,
+        'status' => 'in_process',
+        'actual_start_at' => now(),
+        'extend_at' => now()->addMinutes(30),
+    ]);
+
+    Livewire::actingAs($user)
+        ->test('pages::patient.appointment.conversation', ['appointment' => $appointment])
+        ->assertDontSee('id="btn-patient-video"', false)
+        ->assertSee('id="incoming-call-accept"', false)
+        ->assertSee('data-label-no-active-call', false)
+        ->assertSee(__('patient.appointments.waiting_for_specialist_call'));
+});
+
 test('patient cannot fetch agora token before doctor starts session', function () {
     config([
         'agora.AGORA_APP_ID' => 'test-app-id',
