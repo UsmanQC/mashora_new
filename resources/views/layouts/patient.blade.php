@@ -30,16 +30,26 @@
 
         {{-- Desktop / tablet sidebar — same width as doctor portal --}}
         <aside
-            class="sticky top-0 z-40 hidden h-svh w-64 shrink-0 flex-col bg-[#10B981] text-white shadow-lg sm:flex"
+            class="patient-portal-sidebar sticky top-0 z-40 hidden h-svh min-h-0 w-64 shrink-0 flex-col overflow-hidden bg-[#10B981] text-white shadow-lg sm:flex"
             aria-label="{{ __('patient.sidebar_label') }}"
         >
-            <div class="border-b border-white/10 px-4 pb-5 pt-5">
+            <div class="shrink-0 border-b border-white/10 px-4 pb-5 pt-5">
                 @include('partials.patient-brand-strip', ['density' => 'sidebar'])
             </div>
 
-            <nav class="flex flex-1 flex-col gap-1 overflow-y-auto px-2 py-4" aria-label="{{ __('patient.nav.label') }}">
+            <nav
+                class="patient-sidebar-scroll min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain px-2 py-4"
+                aria-label="{{ __('patient.nav.label') }}"
+            >
                 @include('partials.patient-sidebar-nav')
             </nav>
+
+            <div class="shrink-0 space-y-3 border-t border-white/10 bg-[#10B981] px-4 py-4">
+                @include('partials.patient-language-switch', ['variant' => 'header', 'showLabel' => true])
+                @auth
+                    @include('partials.patient-user-account-menu', ['density' => 'sidebar'])
+                @endauth
+            </div>
         </aside>
 
         <main class="relative flex min-h-svh min-w-0 flex-1 flex-col">
