@@ -219,28 +219,6 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
         </flux:callout>
     @endif
 
-    <div id="incoming-call-banner" class="hidden rounded-xl border border-emerald-200 bg-emerald-50 p-4 shadow-md shadow-emerald-900/10 ring-2 ring-emerald-300/60">
-        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <p id="incoming-call-label" class="text-sm font-semibold text-emerald-900"></p>
-            <div class="flex shrink-0 items-center gap-2">
-                <button
-                    type="button"
-                    id="incoming-call-accept"
-                    class="inline-flex min-h-10 items-center justify-center rounded-xl bg-[#10B981] px-4 py-2 text-sm font-semibold text-white shadow-md shadow-emerald-900/20 transition hover:brightness-95"
-                >
-                    {{ __('patient.appointments.join_call') }}
-                </button>
-                <button
-                    type="button"
-                    id="incoming-call-dismiss"
-                    class="inline-flex min-h-10 items-center justify-center rounded-xl border border-emerald-300 bg-white px-4 py-2 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-50"
-                >
-                    {{ __('patient.appointments.dismiss_call') }}
-                </button>
-            </div>
-        </div>
-    </div>
-
     <div
         id="patient-chat-panel"
         class="overflow-hidden rounded-3xl border border-zinc-200/90 bg-white shadow-[0_20px_55px_-32px_rgba(15,23,42,0.35)] ring-1 ring-zinc-100"
@@ -251,6 +229,40 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
     >
         <div class="grid min-h-[34rem] grid-cols-1 lg:grid-cols-12">
             <div class="flex min-h-[30rem] flex-col border-zinc-200 lg:col-span-8 lg:border-e">
+                <div
+                    id="incoming-call-banner"
+                    class="hidden shrink-0 border-b border-emerald-300 bg-gradient-to-r from-emerald-50 via-emerald-50/95 to-white px-4 py-3 shadow-md shadow-emerald-900/10 ring-1 ring-inset ring-emerald-200/80 sm:px-5"
+                    role="alert"
+                >
+                    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div class="flex min-w-0 items-start gap-2.5">
+                            <span class="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white shadow-sm shadow-emerald-900/25">
+                                <flux:icon name="video-camera" variant="mini" class="size-4" />
+                            </span>
+                            <div class="min-w-0">
+                                <p class="text-sm font-semibold text-emerald-950">{{ __('patient.appointments.incoming_call_title') }}</p>
+                                <p id="incoming-call-label" class="mt-0.5 text-sm text-emerald-800"></p>
+                            </div>
+                        </div>
+                        <div class="flex shrink-0 items-center gap-2">
+                            <button
+                                type="button"
+                                id="incoming-call-accept"
+                                class="inline-flex min-h-10 items-center justify-center rounded-xl bg-[#10B981] px-4 py-2 text-sm font-semibold text-white shadow-md shadow-emerald-900/20 transition hover:brightness-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2"
+                            >
+                                {{ __('patient.appointments.join_call') }}
+                            </button>
+                            <button
+                                type="button"
+                                id="incoming-call-dismiss"
+                                class="inline-flex min-h-10 items-center justify-center rounded-xl border border-emerald-300 bg-white px-4 py-2 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2"
+                            >
+                                {{ __('patient.appointments.dismiss_call') }}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
                 <div id="patient-chat-messages" class="min-h-0 flex-1 space-y-3 overflow-y-auto bg-gradient-to-b from-zinc-50/90 via-zinc-50/70 to-zinc-100/70 px-4 py-4 sm:px-5">
             @forelse ($messages as $msg)
                 <div @class(['flex', 'justify-end' => $msg['send_by'] === 'patient', 'justify-start' => $msg['send_by'] !== 'patient']) wire:key="patient-chat-{{ $msg['id'] }}">
@@ -369,6 +381,9 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
             const appointmentId = Number(boot.dataset.appointmentId || 0);
 
             if (boot.dataset.initialized === '1' && boot.dataset.boundAppointmentId === String(appointmentId)) {
+                boot.__bindCallControlButtons?.();
+                boot.__restorePendingCall?.();
+
                 return;
             }
 
@@ -784,16 +799,23 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                         'Accept': 'application/json',
                     },
                 });
-                if (!res.ok) return null;
+                if (!res.ok) {
+                    return null;
+                }
+
                 return res.json();
             }
 
-            async function refreshConfig() {
+            function notifyIncomingCallAlert(message) {
                 window.MashoraRealtimeAlerts?.playIncomingRing();
                 window.MashoraRealtimeAlerts?.showDesktopNotification(
                     @js(__('patient.appointments.incoming_call_title')),
-                    label,
+                    message,
                 );
+
+                if (window.Flux?.toast) {
+                    window.Flux.toast({ text: message, variant: 'success' });
+                }
             }
 
             function dismissIncomingAlert() {
@@ -834,7 +856,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                     // ignore storage errors
                 }
 
-                alertIncomingCall(incomingLabel?.textContent || @js(__('patient.appointments.incoming_call_title')));
+                notifyIncomingCallAlert(incomingLabel?.textContent || @js(__('patient.appointments.incoming_call_title')));
                 incomingBanner?.classList.remove('hidden');
                 refreshCallUiState();
             }
@@ -1022,7 +1044,45 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
             }
 
             bindCallControlButtons();
+            boot.__bindCallControlButtons = bindCallControlButtons;
+            boot.__restorePendingCall = restorePendingCallFromStorage;
             restorePendingCallFromStorage();
+
+            if (!window.__patientConversationClickBound) {
+                window.__patientConversationClickBound = true;
+
+                document.addEventListener('click', (event) => {
+                    const bootEl = document.getElementById('patient-conversation-bootstrap');
+                    if (!bootEl) {
+                        return;
+                    }
+
+                    if (event.target.closest('#incoming-call-accept')) {
+                        event.preventDefault();
+                        bootEl.__acceptIncoming?.();
+                    }
+
+                    if (event.target.closest('#incoming-call-dismiss')) {
+                        event.preventDefault();
+                        bootEl.__dismissIncoming?.();
+                    }
+
+                    if (event.target.closest('#patient-agora-leave')) {
+                        event.preventDefault();
+                        bootEl.__leaveCall?.().catch((error) => console.error(error));
+                    }
+
+                    if (event.target.closest('#patient-agora-toggle-mic')) {
+                        event.preventDefault();
+                        bootEl.__toggleMic?.();
+                    }
+
+                    if (event.target.closest('#patient-agora-toggle-video')) {
+                        event.preventDefault();
+                        bootEl.__toggleVideo?.();
+                    }
+                });
+            }
 
             if (!window.__patientConversationIncomingCallHook) {
                 window.__patientConversationIncomingCallHook = true;
@@ -1109,16 +1169,32 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 }
             };
 
-            if (!window.__patientConversationMorphHook) {
+            function registerPatientConversationMorphHook() {
+                if (window.__patientConversationMorphHook) {
+                    return;
+                }
+
                 window.__patientConversationMorphHook = true;
-                document.addEventListener('livewire:init', () => {
+
+                const registerHook = () => {
                     Livewire.hook('commit', ({ succeed }) => {
                         succeed(() => {
-                            document.getElementById('patient-conversation-bootstrap')?.__syncCallOverlay?.();
+                            const bootEl = document.getElementById('patient-conversation-bootstrap');
+                            bootEl?.__bindCallControlButtons?.();
+                            bootEl?.__restorePendingCall?.();
+                            bootEl?.__syncCallOverlay?.();
                         });
                     });
-                });
+                };
+
+                if (window.Livewire) {
+                    registerHook();
+                } else {
+                    document.addEventListener('livewire:init', registerHook);
+                }
             }
+
+            registerPatientConversationMorphHook();
 
             startSessionTimers();
             refreshCallUiState();

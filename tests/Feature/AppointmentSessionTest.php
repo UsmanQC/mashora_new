@@ -94,6 +94,8 @@ test('patient conversation shows attend-only call ui without outbound call butto
         ->test('pages::patient.appointment.conversation', ['appointment' => $appointment])
         ->assertDontSee('id="btn-patient-video"', false)
         ->assertSee('id="incoming-call-accept"', false)
+        ->assertSee('id="incoming-call-banner"', false)
+        ->assertSee(__('patient.appointments.incoming_call_title'), false)
         ->assertSee('data-label-no-active-call', false)
         ->assertSee(__('patient.appointments.waiting_for_specialist_call'));
 });
