@@ -39,8 +39,12 @@
                         ])
                     </a>
                 </div>
-                @include('partials.doctor-language-switch', ['variant' => 'chrome'])
-                @include('partials.doctor-user-account-menu', ['density' => 'chrome'])
+                <div class="flex shrink-0 items-center gap-2">
+                    <div class="hidden sm:block">
+                        @include('partials.doctor-language-switch', ['variant' => 'chrome'])
+                    </div>
+                    @include('partials.doctor-user-account-menu', ['density' => 'chrome'])
+                </div>
             </header>
 
             <header

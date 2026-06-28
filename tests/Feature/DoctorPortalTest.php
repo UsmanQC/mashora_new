@@ -236,10 +236,9 @@ test('authenticated doctor navbar shows language switch', function () {
         ->get(route('doctor.dashboard'))
         ->assertSuccessful()
         ->assertSee('data-test="doctor-navbar-language-switch"', false)
-        ->assertSee(route('doctor.locale', ['locale' => 'en']), false)
         ->assertSee(route('doctor.locale', ['locale' => 'ar']), false)
-        ->assertSee(__('doctor.language.locale_en'), false)
-        ->assertSee(__('doctor.language.locale_ar_short'), false);
+        ->assertSee(__('doctor.language.locale_ar_short'), false)
+        ->assertDontSee(route('doctor.locale', ['locale' => 'en']), false);
 });
 
 test('authenticated doctor account menu shows personal profile link', function () {
@@ -249,6 +248,7 @@ test('authenticated doctor account menu shows personal profile link', function (
         ->get(route('doctor.dashboard'))
         ->assertSuccessful()
         ->assertSee('data-test="doctor-account-menu-button"', false)
+        ->assertSee('data-test="doctor-account-menu-language-switch"', false)
         ->assertSee('data-test="doctor-personal-profile-link"', false)
         ->assertSee(route('doctor.settings.profile'), false)
         ->assertSee(__('doctor.settings.personal_profile'), false);
@@ -258,8 +258,8 @@ test('doctor guest welcome page shows language switch', function () {
     $this->get(route('doctor.welcome'))
         ->assertSuccessful()
         ->assertSee(__('doctor.auth.phone_heading'), false)
-        ->assertSee(route('doctor.locale', ['locale' => 'en']), false)
-        ->assertSee(route('doctor.locale', ['locale' => 'ar']), false);
+        ->assertSee(route('doctor.locale', ['locale' => 'ar']), false)
+        ->assertSee(__('doctor.language.locale_ar_short'), false);
 });
 
 test('doctor with incomplete profile is redirected to basic info from dashboard', function () {

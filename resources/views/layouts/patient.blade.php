@@ -20,9 +20,12 @@
             <div class="min-w-0 flex-1">
                 @include('partials.patient-brand-strip', ['density' => 'compact'])
             </div>
-            @auth
-                @include('partials.patient-user-account-menu', ['density' => 'header'])
-            @endauth
+            <div class="flex shrink-0 items-center gap-2">
+                @include('partials.patient-language-switch', ['variant' => 'header'])
+                @auth
+                    @include('partials.patient-user-account-menu', ['density' => 'header'])
+                @endauth
+            </div>
         </header>
 
         {{-- Desktop / tablet sidebar — same width as doctor portal --}}

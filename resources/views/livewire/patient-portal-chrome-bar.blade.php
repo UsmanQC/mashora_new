@@ -18,7 +18,9 @@
                     role="toolbar"
                     aria-label="{{ __('patient.portal_toolbar_aria') }}"
                 >
-                    @include('partials.patient-language-switch', ['variant' => 'chrome'])
+                    <div class="hidden sm:block">
+                        @include('partials.patient-language-switch', ['variant' => 'chrome'])
+                    </div>
 
                     <flux:button
                         type="button"
@@ -107,7 +109,9 @@
                         </flux:menu>
                     </flux:dropdown>
 
-                    @include('partials.patient-user-account-menu', ['density' => 'chrome'])
+                    <div class="hidden sm:block">
+                        @include('partials.patient-user-account-menu', ['density' => 'chrome'])
+                    </div>
                 </div>
             </div>
         </header>

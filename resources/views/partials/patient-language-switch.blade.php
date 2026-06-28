@@ -2,31 +2,16 @@
     $variant = $variant ?? 'chrome';
     $showLabel = $showLabel ?? false;
 
-    $activeClasses = match ($variant) {
-        'chrome' => 'bg-white text-zinc-900 shadow-sm ring-1 ring-zinc-200/80',
-        'header', 'sidebar' => 'bg-[#047857] text-white shadow-sm ring-1 ring-white/20',
-        'guest' => 'bg-[#10B981]/10 text-[#10B981] ring-1 ring-[#10B981]/20',
-        default => 'bg-[#10B981] text-white shadow-sm',
-    };
+    $alternateLocale = app()->getLocale() === 'ar' ? 'en' : 'ar';
+    $alternateLabel = $alternateLocale === 'en'
+        ? __('patient.menu.locale_en')
+        : __('patient.menu.locale_ar_short');
 
-    $inactiveClasses = match ($variant) {
-        'chrome' => 'text-zinc-600 hover:text-zinc-900',
-        'header', 'sidebar' => 'bg-white/15 text-white hover:bg-white/25',
-        'guest' => 'text-zinc-600 hover:text-zinc-900',
-        default => 'bg-[#10B981]/10 text-[#10B981] hover:bg-[#10B981]/15',
-    };
-
-    $pillClass = match ($variant) {
-        'sidebar' => 'rounded-full px-3 py-1 text-xs font-semibold transition hover:opacity-90',
-        'chrome', 'guest' => 'rounded-full px-2.5 py-1.5 text-[0.6875rem] font-semibold uppercase tracking-[0.08em] transition',
-        default => 'rounded-full px-2.5 py-1 text-xs font-semibold transition hover:opacity-90',
-    };
-
-    $wrapperClass = match ($variant) {
-        'sidebar' => 'flex flex-wrap gap-2',
-        'chrome', 'guest' => 'inline-flex shrink-0 items-center gap-0.5 rounded-full border border-zinc-200/90 bg-zinc-100/90 p-0.5',
-        'header' => 'inline-flex shrink-0 items-center gap-0.5 rounded-full border border-white/20 bg-white/10 p-0.5',
-        default => 'inline-flex shrink-0 items-center gap-0.5 rounded-full border border-zinc-200/90 bg-zinc-100/90 p-0.5',
+    $singleLinkClass = match ($variant) {
+        'header', 'sidebar' => 'inline-flex shrink-0 items-center justify-center rounded-full border border-white/30 bg-white/15 px-3.5 py-1.5 text-[0.6875rem] font-bold uppercase tracking-[0.06em] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] transition hover:bg-white/25',
+        'chrome', 'guest' => 'inline-flex shrink-0 items-center justify-center rounded-full border border-zinc-200/90 bg-zinc-100/95 px-3.5 py-1.5 text-[0.6875rem] font-bold uppercase tracking-[0.06em] text-zinc-700 shadow-sm transition hover:bg-white',
+        'menu' => 'flex w-full items-center justify-center rounded-full border border-zinc-200/90 bg-zinc-100/95 px-3.5 py-2 text-xs font-bold uppercase tracking-[0.06em] text-zinc-700 transition hover:bg-white',
+        default => 'inline-flex shrink-0 items-center justify-center rounded-full border border-zinc-200/90 bg-zinc-100/95 px-3.5 py-1.5 text-xs font-bold uppercase text-zinc-700 transition hover:bg-white',
     };
 @endphp
 
@@ -36,24 +21,14 @@
     </p>
 @endif
 
-<div
-    class="{{ $wrapperClass }}"
-    role="group"
+<a
+    href="{{ route('patient.locale', ['locale' => $alternateLocale]) }}"
+    wire:navigate="false"
+    class="{{ $singleLinkClass }}"
+    role="button"
     aria-label="{{ __('patient.menu.language_aria') }}"
     @if ($variant === 'chrome' || $variant === 'header' || $variant === 'guest') data-test="patient-navbar-language-switch" @endif
+    @if ($variant === 'menu') data-test="patient-account-menu-language-switch" @endif
 >
-    <a
-        href="{{ route('patient.locale', ['locale' => 'en']) }}"
-        wire:navigate="false"
-        @class([$pillClass, app()->getLocale() === 'en' ? $activeClasses : $inactiveClasses])
-    >
-        {{ __('patient.menu.locale_en') }}
-    </a>
-    <a
-        href="{{ route('patient.locale', ['locale' => 'ar']) }}"
-        wire:navigate="false"
-        @class([$pillClass, app()->getLocale() === 'ar' ? $activeClasses : $inactiveClasses])
-    >
-        {{ __('patient.menu.locale_ar_short') }}
-    </a>
-</div>
+    {{ $alternateLabel }}
+</a>

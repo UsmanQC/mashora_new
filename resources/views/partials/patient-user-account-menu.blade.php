@@ -47,6 +47,12 @@
 
         <flux:menu.separator />
 
+        <div class="px-2 py-2">
+            @include('partials.patient-language-switch', ['variant' => 'menu'])
+        </div>
+
+        <flux:menu.separator />
+
         <form method="POST" action="{{ route('logout') }}" class="w-full">
             @csrf
             <flux:menu.item

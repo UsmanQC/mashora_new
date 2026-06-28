@@ -12,7 +12,10 @@ uses(RefreshDatabase::class);
 test('guest can view patient home', function () {
     $this->get(route('patient.home'))
         ->assertSuccessful()
-        ->assertSee(__('patient.mood_section'), false);
+        ->assertSee(__('patient.mood_section'), false)
+        ->assertSee('data-test="patient-navbar-language-switch"', false)
+        ->assertSee(route('patient.locale', ['locale' => 'ar']), false)
+        ->assertSee(__('patient.menu.locale_ar_short'), false);
 });
 
 test('authenticated patient home shows mood strip above spotlight cards', function () {
@@ -49,10 +52,9 @@ test('authenticated patient navbar shows language switch', function () {
     $this->actingAs($user)->get(route('patient.home'))
         ->assertSuccessful()
         ->assertSee('data-test="patient-navbar-language-switch"', false)
-        ->assertSee(route('patient.locale', ['locale' => 'en']), false)
         ->assertSee(route('patient.locale', ['locale' => 'ar']), false)
-        ->assertSee(__('patient.menu.locale_en'), false)
-        ->assertSee(__('patient.menu.locale_ar_short'), false);
+        ->assertSee(__('patient.menu.locale_ar_short'), false)
+        ->assertDontSee(route('patient.locale', ['locale' => 'en']), false);
 });
 
 test('authenticated patient sidebar shows grouped navigation links', function () {
@@ -126,6 +128,7 @@ test('signed-in patient navbar exposes account menu with logout', function () {
     $this->actingAs($user)->get(route('patient.home'))
         ->assertSuccessful()
         ->assertSee('data-test="patient-account-menu-button"', false)
+        ->assertSee('data-test="patient-account-menu-language-switch"', false)
         ->assertSee('data-test="patient-logout-button"', false)
         ->assertSee(route('logout'), false)
         ->assertSee(route('profile.edit'), false);
