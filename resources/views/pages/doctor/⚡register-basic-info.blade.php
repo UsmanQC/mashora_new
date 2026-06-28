@@ -108,27 +108,50 @@ new #[Layout('layouts::doctor')] #[Title('Complete profile')] class extends Comp
         }
     }
 
+    public function updatedProfilePhoto(): void
+    {
+        $this->resetValidation('profile_photo');
+    }
+
+    public function updatedSpecialityIds(): void
+    {
+        $this->resetValidation('speciality_ids');
+    }
+
+    public function updatedDegreeId(): void
+    {
+        $this->resetValidation('degree_id');
+    }
+
     public function nextFromBasic(): void
     {
+        $doctor = $this->doctor();
+
         $this->validate([
             'name' => ['required', 'string', 'max:255'],
-            'name_ar' => ['nullable', 'string', 'max:255'],
-            'about' => ['nullable', 'string', 'max:2000'],
-            'about_ar' => ['nullable', 'string', 'max:2000'],
-            'profile_photo' => ['required', 'image', 'max:2048'],
+            'name_ar' => ['required', 'string', 'max:255'],
+            'about' => ['required', 'string', 'max:2000'],
+            'about_ar' => ['required', 'string', 'max:2000'],
+            'profile_photo' => [
+                Rule::requiredIf(fn (): bool => ! filled($doctor->profile_photo_path)),
+                'nullable',
+                'image',
+                'max:2048',
+            ],
         ]);
 
-        $doctor = $this->doctor();
         $doctor->name = $this->name;
-        $doctor->name_ar = $this->name_ar !== '' ? $this->name_ar : null;
-        $doctor->about = $this->about !== '' ? $this->about : null;
-        $doctor->about_ar = $this->about_ar !== '' ? $this->about_ar : null;
+        $doctor->name_ar = $this->name_ar;
+        $doctor->about = $this->about;
+        $doctor->about_ar = $this->about_ar;
 
-        $newPhotoPath = $this->storeProfilePhotoAsWebp();
-        $oldPhotoPath = $doctor->profile_photo_path;
-        $doctor->profile_photo_path = $newPhotoPath;
-        if (filled($oldPhotoPath) && Storage::disk('public')->exists((string) $oldPhotoPath)) {
-            Storage::disk('public')->delete((string) $oldPhotoPath);
+        if ($this->profile_photo) {
+            $newPhotoPath = $this->storeProfilePhotoAsWebp();
+            $oldPhotoPath = $doctor->profile_photo_path;
+            $doctor->profile_photo_path = $newPhotoPath;
+            if (filled($oldPhotoPath) && Storage::disk('public')->exists((string) $oldPhotoPath)) {
+                Storage::disk('public')->delete((string) $oldPhotoPath);
+            }
         }
 
         $doctor->save();
@@ -307,7 +330,7 @@ new #[Layout('layouts::doctor')] #[Title('Complete profile')] class extends Comp
     $localeIsAr = app()->getLocale() === 'ar';
 @endphp
 
-<div class="mx-auto max-w-xl space-y-8">
+<div class="mx-auto max-w-2xl space-y-6 pb-8 sm:space-y-8">
     @once
         @push('scripts')
             <script>
@@ -428,100 +451,137 @@ new #[Layout('layouts::doctor')] #[Title('Complete profile')] class extends Comp
         @endpush
     @endonce
 
-    <div class="space-y-2">
-        <flux:text class="text-sm font-medium text-zinc-500">
-            {{ __('doctor.auth.onboarding_progress', ['current' => $step, 'total' => 5]) }}
-        </flux:text>
-        <flux:heading size="xl" class="font-semibold text-zinc-900">
-            @if ($step === 1)
-                {{ __('doctor.auth.basic_info_title') }}
-            @elseif ($step === 2)
-                {{ __('doctor.auth.professional_title') }}
-            @else
-                {{ __('doctor.auth.documents_title') }}
-            @endif
-        </flux:heading>
-        <flux:text class="text-zinc-600">
-            @if ($step === 1)
-                {{ __('doctor.auth.basic_info_subtitle') }}
-            @elseif ($step === 2)
-                {{ __('doctor.auth.professional_subtitle') }}
-            @else
-                {{ __('doctor.auth.documents_subtitle') }}
-            @endif
-        </flux:text>
+    <div class="space-y-4">
+        <div class="flex items-center justify-between gap-3">
+            <flux:text class="text-xs font-semibold uppercase tracking-wider text-[#047857]">
+                {{ __('doctor.auth.onboarding_progress', ['current' => $step, 'total' => 5]) }}
+            </flux:text>
+            <flux:text class="text-xs font-medium tabular-nums text-zinc-500">
+                {{ round(($step / 5) * 100) }}%
+            </flux:text>
+        </div>
+        <div class="flex gap-1.5" aria-hidden="true">
+            @for ($progressStep = 1; $progressStep <= 5; $progressStep++)
+                <div
+                    @class([
+                        'h-1.5 flex-1 rounded-full transition-colors duration-300',
+                        'bg-[#10B981]' => $progressStep <= $step,
+                        'bg-zinc-200/90' => $progressStep > $step,
+                    ])
+                ></div>
+            @endfor
+        </div>
+        <div>
+            <flux:heading size="xl" class="font-semibold tracking-tight text-zinc-900">
+                @if ($step === 1)
+                    {{ __('doctor.auth.basic_info_title') }}
+                @elseif ($step === 2)
+                    {{ __('doctor.auth.professional_title') }}
+                @else
+                    {{ __('doctor.auth.documents_title') }}
+                @endif
+            </flux:heading>
+            <flux:text class="mt-1.5 text-sm leading-relaxed text-zinc-600">
+                @if ($step === 1)
+                    {{ __('doctor.auth.basic_info_subtitle') }}
+                @elseif ($step === 2)
+                    {{ __('doctor.auth.professional_subtitle') }}
+                @else
+                    {{ __('doctor.auth.documents_subtitle') }}
+                @endif
+            </flux:text>
+        </div>
     </div>
 
     @if ($step === 1)
-        <form wire:submit="nextFromBasic" class="space-y-4">
-            <div class="flex flex-col items-center gap-2">
-                <label class="
-                    relative flex items-center justify-center size-24 rounded-full transition-colors cursor-pointer
-                    border border-zinc-200 dark:border-white/10 hover:border-zinc-300 dark:hover:border-white/10
-                    bg-zinc-100 hover:bg-zinc-200 dark:bg-white/10 hover:dark:bg-white/15
-                ">
-                    <input
-                        type="file"
-                        wire:model="profile_photo"
-                        accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
-                        class="sr-only"
-                    />
+        <form wire:submit="nextFromBasic" class="space-y-6">
+            <div class="rounded-2xl border border-zinc-200/90 bg-white p-5 shadow-sm ring-1 ring-zinc-900/[0.04] sm:p-6">
+                <flux:heading size="sm" class="mb-4 font-semibold text-zinc-900">
+                    {{ __('doctor.auth.profile_photo_label') }}
+                </flux:heading>
+                <div class="flex flex-col items-center gap-3 rounded-xl border border-dashed border-[#10B981]/30 bg-gradient-to-b from-emerald-50/80 to-white px-4 py-6">
+                    <label class="group relative flex size-28 cursor-pointer items-center justify-center rounded-full bg-white shadow-md ring-4 ring-[#10B981]/15 transition hover:ring-[#10B981]/30 sm:size-32">
+                        <input
+                            type="file"
+                            wire:model.live="profile_photo"
+                            accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
+                            class="sr-only"
+                        />
 
-                    <span class="contents" wire:loading.remove wire:target="profile_photo">
-                        @if ($profile_photo)
-                            <img src="{{ $profile_photo->temporaryUrl() }}" alt="" class="size-full rounded-full object-cover" />
-                        @elseif (filled($this->doctor()->profile_photo_path))
-                            <img src="{{ $this->doctor()->profilePhotoUrl() }}" alt="" class="size-full rounded-full object-cover" />
-                        @else
-                            <flux:icon name="user" variant="solid" class="size-8 text-zinc-500 dark:text-zinc-400" />
-                        @endif
-                    </span>
+                        <span class="contents" wire:loading.remove wire:target="profile_photo">
+                            @if ($profile_photo)
+                                <img src="{{ $profile_photo->temporaryUrl() }}" alt="" class="size-full rounded-full object-cover" />
+                            @elseif (filled($this->doctor()->profile_photo_path))
+                                <img src="{{ $this->doctor()->profilePhotoUrl() }}" alt="" class="size-full rounded-full object-cover" />
+                            @else
+                                <flux:icon name="camera" variant="outline" class="size-9 text-[#10B981]" />
+                            @endif
+                        </span>
 
-                    <span
-                        class="absolute inset-0 flex items-center justify-center rounded-full bg-white/70 dark:bg-zinc-900/70"
-                        wire:loading
-                        wire:target="profile_photo"
-                    >
-                        <flux:icon name="arrow-path" variant="solid" class="size-5 animate-spin text-zinc-500" />
-                    </span>
+                        <span
+                            class="absolute inset-0 flex items-center justify-center rounded-full bg-white/80 backdrop-blur-[1px]"
+                            wire:loading
+                            wire:target="profile_photo"
+                        >
+                            <flux:icon name="arrow-path" variant="solid" class="size-6 animate-spin text-[#10B981]" />
+                        </span>
 
-                    <span class="absolute bottom-0 end-0 rounded-full bg-white dark:bg-zinc-800">
-                        <flux:icon name="arrow-up-circle" variant="solid" class="size-6 text-zinc-500 dark:text-zinc-400" />
-                    </span>
-                </label>
-                <flux:text class="text-center text-sm text-zinc-600">{{ __('doctor.auth.profile_photo_help') }}</flux:text>
-                <flux:error name="profile_photo" />
+                        <span class="absolute -bottom-0.5 -end-0.5 flex size-9 items-center justify-center rounded-full border border-zinc-200/90 bg-white shadow-sm">
+                            <flux:icon name="arrow-up-circle" variant="solid" class="size-6 text-[#047857]" />
+                        </span>
+                    </label>
+                    <flux:text class="max-w-xs text-center text-sm text-zinc-600">
+                        {{ __('doctor.auth.profile_photo_help') }}
+                    </flux:text>
+                    <flux:error name="profile_photo" />
+                </div>
             </div>
 
-            <flux:field>
-                <flux:label>{{ __('doctor.auth.name') }}</flux:label>
-                <flux:input wire:model="name" />
-                <flux:error name="name" />
-            </flux:field>
-            <flux:field>
-                <flux:label>{{ __('doctor.auth.name_ar') }}</flux:label>
-                <flux:input wire:model="name_ar" dir="rtl" />
-                <flux:error name="name_ar" />
-            </flux:field>
-            <flux:field>
-                <flux:label>{{ __('doctor.auth.about') }}</flux:label>
-                <flux:textarea wire:model="about" rows="4" />
-                <flux:error name="about" />
-            </flux:field>
-            <flux:field>
-                <flux:label>{{ __('doctor.auth.about_ar') }}</flux:label>
-                <flux:textarea wire:model="about_ar" rows="4" dir="rtl" />
-                <flux:error name="about_ar" />
-            </flux:field>
+            <div class="rounded-2xl border border-zinc-200/90 bg-white p-5 shadow-sm ring-1 ring-zinc-900/[0.04] sm:p-6">
+                <flux:heading size="sm" class="mb-4 font-semibold text-zinc-900">
+                    {{ __('doctor.auth.name') }}
+                </flux:heading>
+                <div class="grid gap-4 sm:grid-cols-2">
+                    <flux:field>
+                        <flux:label>{{ __('doctor.auth.name') }}</flux:label>
+                        <flux:input wire:model="name" required class="rounded-xl!" />
+                        <flux:error name="name" />
+                    </flux:field>
+                    <flux:field>
+                        <flux:label>{{ __('doctor.auth.name_ar') }}</flux:label>
+                        <flux:input wire:model="name_ar" dir="rtl" required class="rounded-xl!" />
+                        <flux:error name="name_ar" />
+                    </flux:field>
+                </div>
+            </div>
+
+            <div class="rounded-2xl border border-zinc-200/90 bg-white p-5 shadow-sm ring-1 ring-zinc-900/[0.04] sm:p-6">
+                <flux:heading size="sm" class="mb-4 font-semibold text-zinc-900">
+                    {{ __('doctor.auth.about') }}
+                </flux:heading>
+                <div class="grid gap-4 lg:grid-cols-2">
+                    <flux:field>
+                        <flux:label>{{ __('doctor.auth.about') }}</flux:label>
+                        <flux:textarea wire:model="about" rows="5" required class="rounded-xl!" />
+                        <flux:error name="about" />
+                    </flux:field>
+                    <flux:field>
+                        <flux:label>{{ __('doctor.auth.about_ar') }}</flux:label>
+                        <flux:textarea wire:model="about_ar" rows="5" dir="rtl" required class="rounded-xl!" />
+                        <flux:error name="about_ar" />
+                    </flux:field>
+                </div>
+            </div>
 
             <flux:button
-                class="w-full !bg-[#047857] !text-white hover:!brightness-95"
+                class="min-h-12 w-full rounded-xl! !bg-[#10B981] !text-white shadow-md shadow-emerald-900/15 hover:!brightness-95"
                 type="submit"
                 variant="primary"
                 wire:loading.attr="disabled"
                 wire:target="profile_photo,nextFromBasic"
             >
-                {{ __('doctor.auth.continue') }}
+                <span wire:loading wire:target="profile_photo">{{ __('doctor.auth.profile_photo_uploading') }}</span>
+                <span wire:loading.remove wire:target="profile_photo">{{ __('doctor.auth.continue') }}</span>
             </flux:button>
         </form>
     @elseif ($step === 2)
@@ -534,42 +594,46 @@ new #[Layout('layouts::doctor')] #[Title('Complete profile')] class extends Comp
         <form wire:submit="nextFromProfessional" class="space-y-4">
             <flux:field>
                 <flux:label>{{ __('doctor.auth.gender') }}</flux:label>
-                <flux:radio.group variant="pills" wire:model.live="gender" class="flex flex-wrap gap-2">
-                    <flux:radio value="male" :label="__('doctor.auth.gender_male')" />
-                    <flux:radio value="female" :label="__('doctor.auth.gender_female')" />
-                    <flux:radio value="other" :label="__('doctor.auth.gender_other')" />
-                </flux:radio.group>
+                <div class="doctor-emerald-pill-radios">
+                    <flux:radio.group variant="pills" wire:model.live="gender" class="flex flex-wrap gap-2">
+                        <flux:radio value="male" :label="__('doctor.auth.gender_male')" />
+                        <flux:radio value="female" :label="__('doctor.auth.gender_female')" />
+                        <flux:radio value="other" :label="__('doctor.auth.gender_other')" />
+                    </flux:radio.group>
+                </div>
                 <flux:error name="gender" />
             </flux:field>
 
             <flux:field>
                 <flux:label>{{ __('doctor.auth.degree') }}</flux:label>
-                {{-- Native select: Flux select often fails to sync with Livewire on this stack. --}}
-                <select
-                    wire:model.live="degree_id"
-                    class="block w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 shadow-xs transition focus:border-[#047857] focus:outline-none focus:ring-2 focus:ring-[#047857]/25 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
-                >
-                    <option value="">{{ __('doctor.auth.choose') }}</option>
-                    @foreach ($this->degrees as $degree)
-                        <option value="{{ $degree->id }}">
-                            {{ $localeIsAr && filled($degree->title_ar) ? $degree->title_ar : $degree->title }}
-                        </option>
-                    @endforeach
-                </select>
+                <div class="doctor-emerald-pill-radios">
+                    <flux:radio.group variant="pills" wire:model.live="degree_id" class="flex flex-wrap gap-2">
+                        @foreach ($this->degrees as $degree)
+                            <flux:radio
+                                value="{{ $degree->id }}"
+                                :label="$localeIsAr && filled($degree->title_ar) ? $degree->title_ar : $degree->title"
+                            />
+                        @endforeach
+                    </flux:radio.group>
+                </div>
                 <flux:error name="degree_id" />
             </flux:field>
 
             <flux:field>
                 <flux:label>{{ __('doctor.auth.specialities') }}</flux:label>
-                <div class="grid max-h-48 gap-2 overflow-y-auto rounded-xl border border-zinc-200 bg-zinc-50/80 p-3 sm:grid-cols-2">
+                <flux:checkbox.group
+                    wire:model.live="speciality_ids"
+                    class="doctor-emerald-accent grid max-h-48 gap-2 overflow-y-auto rounded-xl border border-zinc-200 bg-zinc-50/80 p-3 sm:grid-cols-2"
+                >
                     @foreach ($this->specialities as $speciality)
-                        <flux:checkbox
-                            wire:model="speciality_ids"
-                            value="{{ $speciality->id }}"
-                            :label="$localeIsAr && filled($speciality->title_ar) ? $speciality->title_ar : $speciality->title"
-                        />
+                        <label class="flex items-start gap-2.5 text-sm font-medium text-zinc-800">
+                            <flux:checkbox value="{{ $speciality->id }}" class="mt-0.5 shrink-0" />
+                            <span>
+                                {{ $localeIsAr && filled($speciality->title_ar) ? $speciality->title_ar : $speciality->title }}
+                            </span>
+                        </label>
                     @endforeach
-                </div>
+                </flux:checkbox.group>
                 <flux:error name="speciality_ids" />
             </flux:field>
 
@@ -593,11 +657,13 @@ new #[Layout('layouts::doctor')] #[Title('Complete profile')] class extends Comp
 
             <flux:field>
                 <flux:label>{{ __('doctor.auth.spoken_languages') }}</flux:label>
-                <flux:radio.group variant="pills" wire:model.live="spoken_languages" class="flex flex-wrap gap-2">
-                    <flux:radio value="ar" :label="__('doctor.auth.lang_ar')" />
-                    <flux:radio value="en" :label="__('doctor.auth.lang_en')" />
-                    <flux:radio value="ar_en" :label="__('doctor.auth.lang_ar_en')" />
-                </flux:radio.group>
+                <div class="doctor-emerald-pill-radios">
+                    <flux:radio.group variant="pills" wire:model.live="spoken_languages" class="flex flex-wrap gap-2">
+                        <flux:radio value="ar" :label="__('doctor.auth.lang_ar')" />
+                        <flux:radio value="en" :label="__('doctor.auth.lang_en')" />
+                        <flux:radio value="ar_en" :label="__('doctor.auth.lang_ar_en')" />
+                    </flux:radio.group>
+                </div>
                 <flux:error name="spoken_languages" />
             </flux:field>
 

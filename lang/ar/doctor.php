@@ -92,7 +92,7 @@ return [
         'rejected_body' => 'للأسف لم يتم اعتماد تسجيلك. يُرجى مراجعة بياناتك والتواصل مع فريقنا إذا كنت تعتقد أن هناك خطأً.',
         'reason_label' => 'سبب الرفض',
         'email_note' => 'ستصلك رسالة بريد إلكتروني فور اعتماد حسابك، وعندها يمكنك البدء في استقبال المواعيد.',
-        'help_html' => 'بحاجة إلى مساعدة؟ راسلنا على <a class="font-medium text-[#10B981] underline hover:no-underline" href="mailto:contact@mashora.co">contact@mashora.co</a>.',
+        'help_html' => 'بحاجة إلى مساعدة؟ راسلنا على <a class="font-medium text-[#10B981] underline hover:no-underline" href="mailto:contact@awaan.io">contact@awaan.io</a>.',
     ],
 
     'auth' => [
@@ -130,6 +130,7 @@ return [
         'about_ar' => 'نبذة بالعربية',
         'profile_photo_label' => 'صورة الملف الشخصي',
         'profile_photo_help' => 'تظهر للمرضى بعد الموافقة. JPG أو PNG أو WebP حتى 2 ميجابايت.',
+        'profile_photo_uploading' => 'جارٍ رفع الصورة…',
         'onboarding_progress' => 'الخطوة :current من :total',
         'professional_title' => 'البيانات المهنية',
         'professional_subtitle' => 'التخصص ومعلومات التسجيل للتحقق من أوان.',
@@ -194,7 +195,7 @@ return [
         'share_profile' => 'مشاركة الملف',
         'verification_pending_title' => 'الحساب قيد المراجعة',
         'verification_rejected_title' => 'لم تُعتمد التسجيل',
-        'verification_body_html' => 'للمساعدة تواصل معنا عبر <a class="font-medium text-[#10B981] underline hover:no-underline" href="mailto:contact@mashora.co">contact@mashora.co</a>.',
+        'verification_body_html' => 'للمساعدة تواصل معنا عبر <a class="font-medium text-[#10B981] underline hover:no-underline" href="mailto:contact@awaan.io">contact@awaan.io</a>.',
         'period_label' => 'الفترة',
         'tab_today' => 'اليوم',
         'tab_week' => 'الأسبوع',

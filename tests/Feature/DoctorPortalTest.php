@@ -297,6 +297,53 @@ test('doctor register page accepts phone email password in onboarding flow', fun
         ->and($doctor->profile_completed)->toBeFalse();
 });
 
+test('doctor basic info step requires name, arabic name, bios, and profile photo', function () {
+    $doctor = Doctor::factory()->pendingOnboarding()->create([
+        'phone' => '966511123488',
+        'name' => null,
+        'name_ar' => null,
+        'about' => null,
+        'about_ar' => null,
+    ]);
+
+    $this->actingAs($doctor, 'doctor');
+
+    Livewire::test('pages::doctor.register-basic-info')
+        ->call('nextFromBasic')
+        ->assertHasErrors(['name', 'name_ar', 'about', 'about_ar', 'profile_photo']);
+});
+
+test('doctor basic info step accepts an already saved profile photo without re-upload', function () {
+    Storage::fake('public');
+
+    $existingPhotoPath = 'doctors/existing-headshot.webp';
+    Storage::disk('public')->put($existingPhotoPath, 'fake-image');
+
+    $doctor = Doctor::factory()->pendingOnboarding()->create([
+        'phone' => '966511123489',
+        'name' => null,
+        'name_ar' => null,
+        'about' => null,
+        'about_ar' => null,
+        'profile_photo_path' => $existingPhotoPath,
+    ]);
+
+    $this->actingAs($doctor, 'doctor');
+
+    Livewire::test('pages::doctor.register-basic-info')
+        ->set('name', 'Dr. Saved Photo')
+        ->set('name_ar', 'د. صورة محفوظة')
+        ->set('about', 'About text in English.')
+        ->set('about_ar', 'نبذة بالعربية.')
+        ->call('nextFromBasic')
+        ->assertHasNoErrors()
+        ->assertSet('step', 2);
+
+    $doctor->refresh();
+
+    expect($doctor->profile_photo_path)->toBe($existingPhotoPath);
+});
+
 test('doctor completes multi-step onboarding with professional details and certificate', function () {
     Storage::fake('public');
 

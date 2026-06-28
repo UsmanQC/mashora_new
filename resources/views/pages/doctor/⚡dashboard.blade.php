@@ -204,7 +204,7 @@ new #[Layout('layouts::doctor')] #[Title('Dashboard')] class extends Component
                 {{ $doc->status === 'rejected' ? __('doctor.dashboard.verification_rejected_title') : __('doctor.dashboard.verification_pending_title') }}
             </flux:heading>
             <flux:text class="mx-auto mt-3 max-w-lg text-zinc-600">
-                {!! __('doctor.dashboard.verification_body_html', ['email' => 'contact@mashora.co']) !!}
+                {!! __('doctor.dashboard.verification_body_html', ['email' => 'contact@awaan.io']) !!}
             </flux:text>
         </div>
     @elseif ($doc && $doc->status === 'approved')

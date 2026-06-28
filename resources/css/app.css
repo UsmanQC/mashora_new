@@ -135,7 +135,34 @@ select:focus[data-flux-control] {
         @apply !bg-mashora-brand !text-white !shadow-none hover:!bg-mashora-brand hover:!text-white;
     }
 
-    .patient-auth-content [data-flux-control]:not([data-flux-otp-input]):not([data-flux-otp]) {
+    /** Doctor onboarding: Mashora green accent for pills and checkboxes. */
+    .doctor-emerald-accent,
+    .doctor-emerald-pill-radios {
+        --color-accent: #10b981;
+        --color-accent-content: #10b981;
+        --color-accent-foreground: #ffffff;
+    }
+
+    .doctor-emerald-accent ui-checkbox[data-checked] [data-flux-checkbox-indicator] {
+        @apply !border-mashora-brand !bg-mashora-brand !shadow-none;
+    }
+
+    .doctor-emerald-accent ui-checkbox[data-checked] [data-flux-checkbox-indicator] svg {
+        @apply !text-white;
+    }
+
+    .doctor-emerald-pill-radios ui-radio[data-flux-radio-pills] {
+        @apply !rounded-full !border !border-zinc-200/90 !bg-white !px-4 !py-2 text-sm font-semibold !text-zinc-900 !shadow-none hover:!border-zinc-300;
+        -webkit-text-fill-color: #18181b !important;
+    }
+
+    .doctor-emerald-pill-radios ui-radio[data-flux-radio-pills][data-checked] {
+        @apply !border-mashora-brand !bg-mashora-brand !text-white !shadow-none hover:!border-mashora-brand hover:!bg-mashora-brand hover:!text-white;
+        -webkit-text-fill-color: #ffffff !important;
+        caret-color: #ffffff !important;
+    }
+
+    .patient-auth-content [data-flux-control]:not([data-flux-otp-input]):not([data-flux-otp]):not([data-flux-radio-pills]) {
         @apply !shadow-none;
         color: #18181b !important;
         background-color: #ffffff !important;
@@ -144,12 +171,12 @@ select:focus[data-flux-control] {
         caret-color: #18181b !important;
     }
 
-    .patient-auth-content [data-flux-control]:not([data-flux-otp-input]):not([data-flux-otp]):focus {
+    .patient-auth-content [data-flux-control]:not([data-flux-otp-input]):not([data-flux-otp]):not([data-flux-radio-pills]):focus {
         border-color: #10b981 !important;
         box-shadow: 0 0 0 2px rgb(16 185 129 / 0.2) !important;
     }
 
-    .patient-auth-content [data-flux-control]:not([data-flux-otp-input]):not([data-flux-otp])::placeholder {
+    .patient-auth-content [data-flux-control]:not([data-flux-otp-input]):not([data-flux-otp]):not([data-flux-radio-pills])::placeholder {
         color: #a1a1aa !important;
         opacity: 1;
     }
@@ -166,7 +193,7 @@ select:focus[data-flux-control] {
         color: #18181b !important;
     }
 
-    .scheme-light [data-flux-control]:not([data-flux-otp-input]):not([data-flux-otp]):not([data-flux-switch]):not([data-flux-checkbox]),
+    .scheme-light [data-flux-control]:not([data-flux-otp-input]):not([data-flux-otp]):not([data-flux-switch]):not([data-flux-checkbox]):not([data-flux-radio-pills]),
     .scheme-light input[data-flux-control]:not([data-flux-otp-input]),
     .scheme-light textarea[data-flux-control],
     .scheme-light select[data-flux-control] {
@@ -177,7 +204,7 @@ select:focus[data-flux-control] {
         caret-color: #18181b !important;
     }
 
-    .scheme-light [data-flux-control]:not([data-flux-otp-input]):not([data-flux-otp]):not([data-flux-switch]):not([data-flux-checkbox]):focus,
+    .scheme-light [data-flux-control]:not([data-flux-otp-input]):not([data-flux-otp]):not([data-flux-switch]):not([data-flux-checkbox]):not([data-flux-radio-pills]):focus,
     .scheme-light input[data-flux-control]:not([data-flux-otp-input]):focus,
     .scheme-light textarea[data-flux-control]:focus,
     .scheme-light select[data-flux-control]:focus {
@@ -185,7 +212,7 @@ select:focus[data-flux-control] {
         box-shadow: 0 0 0 2px rgb(16 185 129 / 0.2) !important;
     }
 
-    .scheme-light [data-flux-control]:not([data-flux-otp-input]):not([data-flux-otp]):not([data-flux-switch]):not([data-flux-checkbox])::placeholder,
+    .scheme-light [data-flux-control]:not([data-flux-otp-input]):not([data-flux-otp]):not([data-flux-switch]):not([data-flux-checkbox]):not([data-flux-radio-pills])::placeholder,
     .scheme-light input[data-flux-control]:not([data-flux-otp-input])::placeholder,
     .scheme-light textarea[data-flux-control]::placeholder {
         color: #a1a1aa !important;
@@ -201,7 +228,7 @@ select:focus[data-flux-control] {
         @apply !text-sm;
     }
 
-    .patient-auth-density-compact .patient-auth-content [data-flux-control]:not([data-flux-otp-input]):not([data-flux-otp]) {
+    .patient-auth-density-compact .patient-auth-content [data-flux-control]:not([data-flux-otp-input]):not([data-flux-otp]):not([data-flux-radio-pills]) {
         @apply !min-h-10 !py-2 !text-sm sm:!min-h-11 sm:!text-base;
     }
 
@@ -218,7 +245,7 @@ select:focus[data-flux-control] {
             @apply !text-xl sm:!text-2xl;
         }
 
-        .patient-auth-density-compact .patient-auth-content [data-flux-control]:not([data-flux-otp-input]):not([data-flux-otp]) {
+        .patient-auth-density-compact .patient-auth-content [data-flux-control]:not([data-flux-otp-input]):not([data-flux-otp]):not([data-flux-radio-pills]) {
             @apply !min-h-9 !py-1.5;
         }
 

@@ -182,54 +182,51 @@ new #[Layout('layouts::doctor')] #[Title('Working hours')] class extends Compone
         <flux:text class="text-zinc-600">{{ __('doctor.auth.working_hours_subtitle') }}</flux:text>
     </div>
 
-    <form wire:submit="finish" class="space-y-4">
-        @foreach ($daysOfWeek as $dayOfWeek)
-            <div class="rounded-xl border border-zinc-200/80 p-3">
-                <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                    <label class="inline-flex items-center gap-3">
-                        <input
-                            type="checkbox"
-                            value="{{ $dayOfWeek }}"
-                            wire:model.live="availabilities"
-                            class="h-4 w-4 rounded border-zinc-300 text-[#047857] focus:ring-[#047857]"
-                        />
-                        <span class="text-sm font-semibold capitalize text-zinc-800">{{ __($dayOfWeek) }}</span>
-                    </label>
+    <form wire:submit="finish" class="doctor-emerald-accent space-y-4">
+        <flux:checkbox.group wire:model.live="availabilities" class="space-y-4">
+            @foreach ($daysOfWeek as $dayOfWeek)
+                <div class="rounded-xl border border-zinc-200/80 bg-white p-3">
+                    <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                        <label class="inline-flex items-center gap-3">
+                            <flux:checkbox value="{{ $dayOfWeek }}" class="shrink-0" />
+                            <span class="text-sm font-semibold capitalize text-zinc-800">{{ __($dayOfWeek) }}</span>
+                        </label>
 
-                    <div class="flex w-full flex-col gap-2 lg:max-w-2xl">
-                        @if (in_array($dayOfWeek, $availabilities, true))
-                            @foreach (($workingHours[$dayOfWeek] ?? []) as $slotIndex => $slot)
-                                <div class="flex flex-wrap items-center gap-2">
-                                    <input
-                                        type="time"
-                                        step="1"
-                                        wire:model="workingHours.{{ $dayOfWeek }}.{{ $slotIndex }}.start_time"
-                                        class="rounded-lg border border-zinc-200 px-3 py-2 text-sm"
-                                    />
-                                    <span class="text-zinc-500">-</span>
-                                    <input
-                                        type="time"
-                                        step="1"
-                                        wire:model="workingHours.{{ $dayOfWeek }}.{{ $slotIndex }}.end_time"
-                                        class="rounded-lg border border-zinc-200 px-3 py-2 text-sm"
-                                    />
+                        <div class="flex w-full flex-col gap-2 lg:max-w-2xl">
+                            @if (in_array($dayOfWeek, $availabilities, true))
+                                @foreach (($workingHours[$dayOfWeek] ?? []) as $slotIndex => $slot)
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        <input
+                                            type="time"
+                                            step="1"
+                                            wire:model="workingHours.{{ $dayOfWeek }}.{{ $slotIndex }}.start_time"
+                                            class="rounded-lg border border-zinc-200 px-3 py-2 text-sm"
+                                        />
+                                        <span class="text-zinc-500">-</span>
+                                        <input
+                                            type="time"
+                                            step="1"
+                                            wire:model="workingHours.{{ $dayOfWeek }}.{{ $slotIndex }}.end_time"
+                                            class="rounded-lg border border-zinc-200 px-3 py-2 text-sm"
+                                        />
 
-                                    @if ($loop->first)
-                                        <flux:button type="button" size="sm" variant="ghost" wire:click="addSlot('{{ $dayOfWeek }}')" icon="plus">
-                                            {{ __('Add') }}
-                                        </flux:button>
-                                    @else
-                                        <flux:button type="button" size="sm" variant="ghost" wire:click="removeSlot('{{ $dayOfWeek }}', {{ $slotIndex }})" icon="trash" class="!text-rose-600">
-                                            {{ __('Remove') }}
-                                        </flux:button>
-                                    @endif
-                                </div>
-                            @endforeach
-                        @endif
+                                        @if ($loop->first)
+                                            <flux:button type="button" size="sm" variant="ghost" wire:click="addSlot('{{ $dayOfWeek }}')" icon="plus">
+                                                {{ __('Add') }}
+                                            </flux:button>
+                                        @else
+                                            <flux:button type="button" size="sm" variant="ghost" wire:click="removeSlot('{{ $dayOfWeek }}', {{ $slotIndex }})" icon="trash" class="!text-rose-600">
+                                                {{ __('Remove') }}
+                                            </flux:button>
+                                        @endif
+                                    </div>
+                                @endforeach
+                            @endif
+                        </div>
                     </div>
                 </div>
-            </div>
-        @endforeach
+            @endforeach
+        </flux:checkbox.group>
 
         <flux:error name="availabilities" />
         <flux:error name="workingHours" />
@@ -239,7 +236,7 @@ new #[Layout('layouts::doctor')] #[Title('Working hours')] class extends Compone
                 {{ __('doctor.auth.back') }}
             </flux:button>
             <flux:button
-                class="order-1 w-full !bg-[#047857] !text-white hover:!brightness-95 sm:order-2 sm:w-auto"
+                class="order-1 w-full !bg-[#10B981] !text-white hover:!brightness-95 sm:order-2 sm:w-auto"
                 type="submit"
                 variant="primary"
             >

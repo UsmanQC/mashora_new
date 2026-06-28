@@ -92,7 +92,7 @@ return [
         'rejected_body' => 'Unfortunately your registration was not approved. Please review your details and get in touch with our team if you believe this is a mistake.',
         'reason_label' => 'Reason for rejection',
         'email_note' => 'You will receive an email as soon as your account is approved, and you can then start receiving appointments.',
-        'help_html' => 'Need help? Email us at <a class="font-medium text-[#10B981] underline hover:no-underline" href="mailto:contact@mashora.co">contact@mashora.co</a>.',
+        'help_html' => 'Need help? Email us at <a class="font-medium text-[#10B981] underline hover:no-underline" href="mailto:contact@awaan.io">contact@awaan.io</a>.',
     ],
 
     'auth' => [
@@ -129,6 +129,7 @@ return [
         'about_ar' => 'About / bio (Arabic)',
         'profile_photo_label' => 'Profile photo',
         'profile_photo_help' => 'Shown to patients after approval. JPG, PNG, or WebP up to 2 MB.',
+        'profile_photo_uploading' => 'Uploading photo…',
         'onboarding_progress' => 'Step :current of :total',
         'professional_title' => 'Professional details',
         'professional_subtitle' => 'Your specialty and registration information for Awaan verification.',
@@ -193,7 +194,7 @@ return [
         'share_profile' => 'Share profile',
         'verification_pending_title' => 'Account under review',
         'verification_rejected_title' => 'Registration not approved',
-        'verification_body_html' => 'If you need help, email us at <a class="font-medium text-[#10B981] underline hover:no-underline" href="mailto:contact@mashora.co">contact@mashora.co</a>.',
+        'verification_body_html' => 'If you need help, email us at <a class="font-medium text-[#10B981] underline hover:no-underline" href="mailto:contact@awaan.io">contact@awaan.io</a>.',
         'period_label' => 'Statistics period',
         'tab_today' => 'Today',
         'tab_week' => 'Week',
