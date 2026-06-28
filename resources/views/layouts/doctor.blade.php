@@ -12,13 +12,16 @@
     </head>
     <body class="min-h-svh antialiased">
         <aside
-            class="fixed inset-y-0 start-0 z-50 hidden w-64 flex-col bg-[#10B981] text-white shadow-lg lg:flex"
+            class="portal-chrome-sidebar fixed inset-y-0 start-0 z-50 hidden w-64 min-h-0 flex-col overflow-hidden bg-[#10B981] text-white shadow-lg lg:flex"
             aria-label="{{ __('doctor.sidebar_label') }}"
         >
-            <div class="border-b border-white/10 px-4 pb-5 pt-5">
+            <div class="shrink-0 border-b border-white/10 px-4 pb-5 pt-5">
                 @include('partials.doctor-brand-strip', ['density' => 'sidebar'])
             </div>
-            <nav class="flex flex-1 flex-col gap-1 overflow-y-auto px-2 py-4">
+            <nav
+                class="portal-sidebar-scroll min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain px-2 py-4"
+                aria-label="{{ __('doctor.sidebar_label') }}"
+            >
                 @include('partials.doctor-sidebar-nav')
             </nav>
         </aside>

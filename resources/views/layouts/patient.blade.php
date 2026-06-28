@@ -30,7 +30,7 @@
 
         {{-- Desktop / tablet sidebar — same width as doctor portal --}}
         <aside
-            class="patient-portal-sidebar sticky top-0 z-40 hidden h-svh min-h-0 w-64 shrink-0 flex-col overflow-hidden bg-[#10B981] text-white shadow-lg sm:flex"
+            class="portal-chrome-sidebar sticky top-0 z-40 hidden h-svh min-h-0 w-64 shrink-0 flex-col overflow-hidden bg-[#10B981] text-white shadow-lg sm:flex"
             aria-label="{{ __('patient.sidebar_label') }}"
         >
             <div class="shrink-0 border-b border-white/10 px-4 pb-5 pt-5">
@@ -38,7 +38,7 @@
             </div>
 
             <nav
-                class="patient-sidebar-scroll min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain px-2 py-4"
+                class="portal-sidebar-scroll min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain px-2 py-4"
                 aria-label="{{ __('patient.nav.label') }}"
             >
                 @include('partials.patient-sidebar-nav')
