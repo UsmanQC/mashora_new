@@ -129,6 +129,7 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
         data-label-live="{{ __('doctor.conversation.live') }}"
         data-label-connecting="{{ __('doctor.conversation.connecting') }}"
         data-label-call-failed="{{ __('doctor.conversation.call_failed') }}"
+        data-label-patient-notify-failed="{{ __('doctor.conversation.patient_notify_failed') }}"
         data-label-camera-permission="{{ __('doctor.conversation.camera_permission_required') }}"
         data-label-agora-sdk-missing="{{ __('doctor.conversation.agora_sdk_missing') }}"
         data-session-ended="{{ __('doctor.conversation.session_time_ended') }}"
@@ -806,7 +807,7 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
             }
 
             async function postNotify(callType, cfg) {
-                if (!notifyUrl) return;
+                if (!notifyUrl) return null;
                 const res = await fetch(notifyUrl, {
                     method: 'POST',
                     headers: {
@@ -822,7 +823,22 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                     }),
                 });
 
-                if (!res.ok) return null;
+                if (!res.ok) {
+                    let message = metricsEl?.dataset.labelPatientNotifyFailed || 'Could not notify the patient.';
+                    try {
+                        const body = await res.json();
+                        if (body?.message) {
+                            message = body.message;
+                        }
+                    } catch (_) {
+                        // ignore json parse errors
+                    }
+
+                    showCallToast(message, 'warning');
+
+                    return null;
+                }
+
                 return res.json();
             }
 

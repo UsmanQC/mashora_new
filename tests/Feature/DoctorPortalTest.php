@@ -879,6 +879,11 @@ test('doctor notify call broadcasts incoming call events to patient', function (
         ->assertOk()
         ->assertJsonPath('ok', true);
 
+    expect(Notification::query()
+        ->where('userable_id', $user->id)
+        ->where('type', 'incoming_call')
+        ->exists())->toBeTrue();
+
     Event::assertDispatched(
         AppointmentIncomingCallAnnounced::class,
         fn (AppointmentIncomingCallAnnounced $event): bool => $event->appointmentId === $appointment->id

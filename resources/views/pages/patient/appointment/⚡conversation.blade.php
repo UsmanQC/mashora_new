@@ -809,6 +809,14 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
             }
 
             function showIncomingCallBanner(data) {
+                if (
+                    incomingPayload?.agora_channel === data?.agora_channel
+                    && incomingBanner
+                    && !incomingBanner.classList.contains('hidden')
+                ) {
+                    return;
+                }
+
                 incomingPayload = data;
 
                 if (incomingLabel) {
@@ -817,9 +825,42 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                         : @js(__('patient.appointments.incoming_voice'));
                 }
 
+                try {
+                    sessionStorage.setItem(
+                        'mashora_pending_call_' + appointmentId,
+                        JSON.stringify(data),
+                    );
+                } catch (_) {
+                    // ignore storage errors
+                }
+
                 alertIncomingCall(incomingLabel?.textContent || @js(__('patient.appointments.incoming_call_title')));
                 incomingBanner?.classList.remove('hidden');
                 refreshCallUiState();
+            }
+
+            function clearPendingCallStorage() {
+                try {
+                    sessionStorage.removeItem('mashora_pending_call_' + appointmentId);
+                } catch (_) {
+                    // ignore storage errors
+                }
+            }
+
+            function restorePendingCallFromStorage() {
+                try {
+                    const raw = sessionStorage.getItem('mashora_pending_call_' + appointmentId);
+                    if (!raw) {
+                        return;
+                    }
+
+                    const data = JSON.parse(raw);
+                    if (data?.agora_app_id) {
+                        showIncomingCallBanner(data);
+                    }
+                } catch (_) {
+                    // ignore parse errors
+                }
             }
 
             async function joinCall(mode, payload = null) {
@@ -827,8 +868,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                     return;
                 }
 
-                const resolvedPayload = resolveAgoraConfig(payload);
-                if (!resolvedPayload) {
+                if (appointmentStatus !== 'in_process') {
                     showCallToast(labelNoActiveCall, 'warning');
 
                     return;
@@ -842,13 +882,16 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 try {
                     await ensureAgoraSdk();
 
-                    const cfg = resolvedPayload.agora_token
-                        ? resolvedPayload
-                        : await refreshConfig();
+                    let cfg = resolveAgoraConfig(payload);
+                    if (!cfg) {
+                        cfg = await refreshConfig();
+                    }
 
                     if (!cfg || !cfg.agora_app_id || !cfg.agora_channel) {
-                        throw new Error(labelCallFailed);
+                        throw new Error(labelNoActiveCall);
                     }
+
+                    clearPendingCallStorage();
 
                     agoraClient = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
                     agoraClient.on('user-published', async (user, mediaType) => {
@@ -914,7 +957,11 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 syncMediaControlUi();
             };
             boot.__acceptIncoming = () => {
-                if (!incomingPayload || !incomingPayload.agora_app_id) {
+                if (!incomingPayload?.agora_app_id) {
+                    restorePendingCallFromStorage();
+                }
+
+                if (!incomingPayload?.agora_app_id) {
                     showCallToast(labelNoActiveCall, 'warning');
                     dismissIncomingAlert();
                     incomingBanner?.classList.add('hidden');
@@ -929,6 +976,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
             boot.__dismissIncoming = () => {
                 dismissIncomingAlert();
                 incomingPayload = null;
+                clearPendingCallStorage();
                 incomingBanner?.classList.add('hidden');
                 refreshCallUiState();
             };
@@ -974,6 +1022,18 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
             }
 
             bindCallControlButtons();
+            restorePendingCallFromStorage();
+
+            if (!window.__patientConversationIncomingCallHook) {
+                window.__patientConversationIncomingCallHook = true;
+
+                window.addEventListener('mashora:incoming-call', (event) => {
+                    const data = event.detail;
+                    if (Number(data?.appointment_id || 0) === appointmentId) {
+                        showIncomingCallBanner(data);
+                    }
+                });
+            }
 
             if (!window.__patientConversationNavigateHook) {
                 window.__patientConversationNavigateHook = true;

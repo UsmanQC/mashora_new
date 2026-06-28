@@ -7,6 +7,7 @@ use App\Events\PatientSessionJoinRequested;
 use App\Models\Appointment;
 use App\Models\Doctor;
 use App\Services\AppointmentSessionService;
+use App\Services\PatientAppointmentNotifier;
 use App\Support\DoctorAgoraChannel;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -14,7 +15,7 @@ use Illuminate\Support\Facades\Auth;
 
 class DoctorAppointmentRealtimeController
 {
-    public function notifyCall(Request $request, Appointment $appointment, AppointmentSessionService $sessions): JsonResponse
+    public function notifyCall(Request $request, Appointment $appointment, AppointmentSessionService $sessions, PatientAppointmentNotifier $patientNotifier): JsonResponse
     {
         $doctor = Auth::guard('doctor')->user();
         if (! $doctor instanceof Doctor) {
@@ -50,6 +51,8 @@ class DoctorAppointmentRealtimeController
             (string) $validated['agora_token'],
             (string) $validated['agora_channel'],
         ));
+
+        $patientNotifier->notifyIncomingCall($appointment, $doctor, (string) $validated['call_type']);
 
         return response()->json([
             'ok' => true,

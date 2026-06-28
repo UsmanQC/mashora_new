@@ -273,7 +273,7 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
                     wire:navigate
                     class="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-700"
                 >
-                    {{ __('patient.appointments.join_session') }}
+                    {{ __('patient.appointments.join_call') }}
                 </a>
             </div>
         </div>
@@ -771,5 +771,6 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
 
         document.addEventListener('DOMContentLoaded', initPatientAppointmentsRealtime);
         document.addEventListener('livewire:navigated', initPatientAppointmentsRealtime);
+        initPatientAppointmentsRealtime();
     </script>
 @endpush

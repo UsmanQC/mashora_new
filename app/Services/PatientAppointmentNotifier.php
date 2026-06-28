@@ -229,6 +229,41 @@ final class PatientAppointmentNotifier
         ]);
     }
 
+    public function notifyIncomingCall(Appointment $appointment, Doctor $doctor, string $callType): void
+    {
+        $user = $this->patientUser($appointment);
+        if ($user === null) {
+            return;
+        }
+
+        $locale = app()->getLocale();
+        $title = __('patient.notifications.incoming_call_title', locale: $locale);
+        $message = $callType === 'video'
+            ? __('patient.notifications.incoming_call_video_body', [
+                'doctor' => $doctor->displayName(),
+            ], locale: $locale)
+            : __('patient.notifications.incoming_call_voice_body', [
+                'doctor' => $doctor->displayName(),
+            ], locale: $locale);
+
+        Notification::query()->create([
+            'type' => 'incoming_call',
+            'title' => $title,
+            'message' => $message,
+            'userable_type' => User::class,
+            'userable_id' => $user->id,
+            'senderable_type' => Doctor::class,
+            'senderable_id' => $doctor->id,
+            'action' => route('patient.appointments.conversation', $appointment),
+        ]);
+
+        $this->push->sendToUser($user, $title, $message, [
+            'type' => 'incoming_call',
+            'appointment_id' => (string) $appointment->id,
+            'call_type' => $callType,
+        ]);
+    }
+
     private function patientUser(Appointment $appointment): ?User
     {
         if ($appointment->user_id === null) {
