@@ -35,6 +35,8 @@
                     const incomingCallTitle = @js(__('patient.appointments.incoming_call_title'));
                     const incomingVideoLabel = @js(__('patient.appointments.incoming_video'));
                     const incomingVoiceLabel = @js(__('patient.appointments.incoming_voice'));
+                    const sessionStartedTitle = @js(__('patient.notifications.session_started_title'));
+                    const sessionStartedBody = @js(__('patient.notifications.session_started_body'));
 
                     function pendingCallKey(appointmentId) {
                         return 'mashora_pending_call_' + appointmentId;
@@ -47,6 +49,21 @@
                         }
 
                         sessionStorage.setItem(pendingCallKey(appointmentId), JSON.stringify(data));
+                    }
+
+                    function handleSessionStarted(data) {
+                        const appointmentId = Number(data?.appointment_id || 0);
+                        if (!appointmentId) {
+                            return;
+                        }
+
+                        window.MashoraRealtimeAlerts?.showDesktopNotification(sessionStartedTitle, sessionStartedBody);
+
+                        if (window.Flux?.toast) {
+                            window.Flux.toast({ text: sessionStartedBody, variant: 'success' });
+                        }
+
+                        window.dispatchEvent(new CustomEvent('mashora:session-started', { detail: data }));
                     }
 
                     function handleIncomingCall(data) {
@@ -88,6 +105,7 @@
                         console.error('Pusher patient channel error', error);
                     });
                     patientChannel.bind('session.join-requested', handleIncomingCall);
+                    patientChannel.bind('appointment.session-started', handleSessionStarted);
 
                     if (!window.__patientGlobalIncomingNavigateHook) {
                         window.__patientGlobalIncomingNavigateHook = true;

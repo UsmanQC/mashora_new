@@ -278,6 +278,8 @@ return [
         'missed_message' => 'Dr. :doctor did not attend your session on :date at :time. Open your missed appointments to reschedule or request a :amount SAR refund.',
         'start_reminder_title' => 'Session starting soon',
         'start_reminder_message' => 'Your session with :doctor starts at :time on :date.',
+        'session_started_title' => 'Session is live',
+        'session_started_body' => 'Dr. :doctor started your session. Open it now to join and chat.',
         'incoming_call_title' => 'Specialist is calling',
         'incoming_call_video_body' => 'Dr. :doctor started a video call. Open the session and tap Join call.',
         'incoming_call_voice_body' => 'Dr. :doctor started a voice call. Open the session and tap Join call.',

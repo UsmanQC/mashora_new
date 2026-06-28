@@ -831,6 +831,19 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 return null;
             }
 
+            function applySessionStartedPayload(data) {
+                appointmentStatus = data.status || 'in_process';
+                boot.dataset.appointmentStatus = appointmentStatus;
+                if (metrics) {
+                    metrics.dataset.status = data.status || 'in_process';
+                    metrics.dataset.sessionStart = data.actual_start_at || '';
+                    metrics.dataset.sessionEnd = data.extend_at || '';
+                }
+                showCallToast(metrics?.dataset.sessionStartedWaiting || @js(__('patient.appointments.session_started_waiting')), 'success');
+                startSessionTimers();
+                refreshCallUiState();
+            }
+
             function showIncomingCallBanner(data) {
                 if (
                     incomingPayload?.agora_channel === data?.agora_channel
@@ -1067,6 +1080,13 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                         showIncomingCallBanner(data);
                     }
                 });
+
+                window.addEventListener('mashora:session-started', (event) => {
+                    const data = event.detail;
+                    if (Number(data?.appointment_id || 0) === appointmentId) {
+                        applySessionStartedPayload(data);
+                    }
+                });
             }
 
             if (!window.__patientConversationNavigateHook) {
@@ -1105,16 +1125,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 });
                 channel.bind('message.created', (data) => appendMessageRow(data));
                 channel.bind('session.started', (data) => {
-                    appointmentStatus = data.status || 'in_process';
-                    boot.dataset.appointmentStatus = appointmentStatus;
-                    if (metrics) {
-                        metrics.dataset.status = data.status || 'in_process';
-                        metrics.dataset.sessionStart = data.actual_start_at || '';
-                        metrics.dataset.sessionEnd = data.extend_at || '';
-                    }
-                    showCallToast(metrics?.dataset.sessionStartedWaiting || @js(__('patient.appointments.session_started_waiting')), 'success');
-                    startSessionTimers();
-                    refreshCallUiState();
+                    applySessionStartedPayload(data);
                 });
                 channel.bind('call.incoming', (data) => {
                     showIncomingCallBanner(data);
@@ -1131,6 +1142,13 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                         }
 
                         showIncomingCallBanner(data);
+                    });
+                    patientChannel.bind('appointment.session-started', (data) => {
+                        if (Number(data.appointment_id || 0) !== appointmentId) {
+                            return;
+                        }
+
+                        applySessionStartedPayload(data);
                     });
                 }
             } else {

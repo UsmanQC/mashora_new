@@ -278,6 +278,8 @@ return [
         'missed_message' => 'لم يحضر د. :doctor جلستك في :date الساعة :time. افتح المواعيد الفائتة لإعادة الجدولة أو طلب استرداد :amount ر.س.',
         'start_reminder_title' => 'جلستك تبدأ قريبًا',
         'start_reminder_message' => 'جلستك مع :doctor تبدأ الساعة :time يوم :date.',
+        'session_started_title' => 'الجلسة بدأت',
+        'session_started_body' => 'بدأ د. :doctor جلستك. افتحها الآن للانضمام والمحادثة.',
         'incoming_call_title' => 'الأخصائي يتصل',
         'incoming_call_video_body' => 'بدأ د. :doctor مكالمة فيديو. افتح الجلسة واضغط انضم للمكالمة.',
         'incoming_call_voice_body' => 'بدأ د. :doctor مكالمة صوتية. افتح الجلسة واضغط انضم للمكالمة.',

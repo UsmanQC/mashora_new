@@ -1,17 +1,21 @@
 <?php
 
+use App\Events\AppointmentSessionStarted;
+use App\Events\PatientAppointmentSessionStarted;
 use App\Models\Appointment;
 use App\Models\Doctor;
+use App\Models\Notification;
 use App\Models\User;
 use App\Services\AppointmentSessionService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Event;
 use Livewire\Livewire;
 
 uses(RefreshDatabase::class);
 
 test('doctor can start session for new or rescheduled appointments', function () {
     $user = User::factory()->create();
-    $doctor = Doctor::factory()->create(['profile_completed' => true]);
+    $doctor = Doctor::factory()->create(['profile_completed' => true, 'name' => 'Test Doctor']);
 
     $appointment = Appointment::factory()->create([
         'doctor_id' => $doctor->id,
@@ -31,6 +35,38 @@ test('doctor can start session for new or rescheduled appointments', function ()
     expect($fresh->status)->toBe('in_process')
         ->and($fresh->actual_start_at)->not->toBeNull()
         ->and($fresh->extend_at)->not->toBeNull();
+
+    expect(Notification::query()
+        ->where('userable_id', $user->id)
+        ->where('type', 'session_started')
+        ->exists())->toBeTrue();
+});
+
+test('doctor starting session broadcasts patient session started event', function () {
+    Event::fake([
+        AppointmentSessionStarted::class,
+        PatientAppointmentSessionStarted::class,
+    ]);
+
+    $user = User::factory()->create();
+    $doctor = Doctor::factory()->create(['profile_completed' => true]);
+
+    $appointment = Appointment::factory()->create([
+        'doctor_id' => $doctor->id,
+        'user_id' => $user->id,
+        'status' => 'new',
+        'duration' => 30,
+        'appointment_date' => now()->toDateString(),
+        'scheduled_at' => now(),
+    ]);
+
+    Livewire::actingAs($doctor, 'doctor')
+        ->test('pages::doctor.appointment.conversation', ['appointment' => $appointment])
+        ->call('startSession');
+
+    Event::assertDispatched(PatientAppointmentSessionStarted::class, function (PatientAppointmentSessionStarted $event) use ($user, $appointment): bool {
+        return $event->userId === $user->id && $event->appointmentId === $appointment->id;
+    });
 });
 
 test('patient cannot start session through realtime notify endpoint', function () {
