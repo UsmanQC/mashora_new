@@ -550,5 +550,7 @@ return [
         'aria' => 'الإشعارات',
         'chat_message_title' => 'رسالة جديدة من :patient',
         'chat_message_body' => ':preview',
+        'appointment_booked_title' => 'موعد جديد',
+        'appointment_booked_body' => 'حجز :patient جلسة في :date الساعة :time.',
     ],
 ];

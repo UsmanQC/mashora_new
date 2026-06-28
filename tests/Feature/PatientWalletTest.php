@@ -2,6 +2,7 @@
 
 use App\Models\Appointment;
 use App\Models\Doctor;
+use App\Models\Notification;
 use App\Models\TemporaryAppointment;
 use App\Models\User;
 use App\Services\AppointmentWalletService;
@@ -189,4 +190,13 @@ test('wallet only booking deducts patient balance', function (): void {
         ->and((float) $patient->fresh()->balanceFloat)->toBe(50.0)
         ->and((float) $appointment->wallet_amount)->toBe(250.0)
         ->and((float) $doctor->fresh()->balanceFloat)->toBe(200.0);
+
+    $notification = Notification::query()
+        ->where('userable_type', Doctor::class)
+        ->where('userable_id', $doctor->id)
+        ->where('type', 'appointment_booked')
+        ->first();
+
+    expect($notification)->not->toBeNull()
+        ->and($notification->title)->toBe(__('doctor.notifications.appointment_booked_title'));
 });

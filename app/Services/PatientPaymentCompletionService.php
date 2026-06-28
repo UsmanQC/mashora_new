@@ -43,7 +43,6 @@ final class PatientPaymentCompletionService
                 $appointment = self::createAppointmentRecord($temporaryAppointment);
                 self::syncCommunications($appointment, $temporaryAppointment);
                 self::finalizeWallet($appointment, $temporaryAppointment);
-
                 $temporaryAppointment->appointment_id = $appointment->id;
                 $temporaryAppointment->payment_status = 'paid';
                 $temporaryAppointment->payment_response = json_encode([
@@ -135,7 +134,6 @@ final class PatientPaymentCompletionService
                 $appointment = self::createAppointmentRecord($temporaryAppointment);
                 self::syncCommunications($appointment, $temporaryAppointment);
                 self::finalizeWallet($appointment, $temporaryAppointment);
-
                 $temporaryAppointment->appointment_id = $appointment->id;
                 $temporaryAppointment->payment_status = 'paid';
                 $temporaryAppointment->payment_response = json_encode($data);
@@ -219,7 +217,6 @@ final class PatientPaymentCompletionService
                 $appointment = self::createAppointmentRecord($temporaryAppointment);
                 self::syncCommunications($appointment, $temporaryAppointment);
                 self::finalizeWallet($appointment, $temporaryAppointment);
-
                 $temporaryAppointment->appointment_id = $appointment->id;
                 $temporaryAppointment->payment_status = 'paid';
                 $temporaryAppointment->payment_session_id = (string) data_get($responseData, 'ndc', $temporaryAppointment->payment_session_id);
@@ -305,7 +302,6 @@ final class PatientPaymentCompletionService
                 $appointment = self::createAppointmentRecord($temporaryAppointment);
                 self::syncCommunications($appointment, $temporaryAppointment);
                 self::finalizeWallet($appointment, $temporaryAppointment);
-
                 $temporaryAppointment->appointment_id = $appointment->id;
                 $temporaryAppointment->payment_status = 'paid';
                 $temporaryAppointment->payment_session_id = (string) $session->id;
@@ -433,7 +429,6 @@ final class PatientPaymentCompletionService
                 $appointment = self::createAppointmentRecord($temporaryAppointment);
                 self::syncCommunications($appointment, $temporaryAppointment);
                 self::finalizeWallet($appointment, $temporaryAppointment);
-
                 $temporaryAppointment->appointment_id = $appointment->id;
                 $temporaryAppointment->payment_status = 'paid';
                 $temporaryAppointment->payment_response = json_encode([
@@ -462,6 +457,25 @@ final class PatientPaymentCompletionService
         $wallet = App::make(AppointmentWalletService::class);
         $wallet->chargePatientWallet($appointment, (float) $temporaryAppointment->wallet_amount);
         $wallet->creditDoctorEarning($appointment);
+    }
+
+    private static function notifyDoctorOfNewBooking(Appointment $appointment): void
+    {
+        if (! $appointment->wasRecentlyCreated) {
+            return;
+        }
+
+        $appointmentId = $appointment->id;
+
+        DB::afterCommit(static function (): void {
+            $booked = Appointment::query()->find($appointmentId);
+
+            if ($booked === null) {
+                return;
+            }
+
+            App::make(DoctorAppointmentNotifier::class)->notifyNewBooking($booked);
+        });
     }
 
     public static function generateAppointmentNumber(): string

@@ -549,5 +549,7 @@ return [
         'aria' => 'Notifications',
         'chat_message_title' => 'New message from :patient',
         'chat_message_body' => ':preview',
+        'appointment_booked_title' => 'New appointment',
+        'appointment_booked_body' => ':patient booked a session on :date at :time.',
     ],
 ];
