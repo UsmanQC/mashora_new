@@ -195,6 +195,46 @@ test('patient appointments ongoing tab shows only new and in process for authent
         ->assertDontSee('Other User Ongoing Hidden', false);
 });
 
+test('patient ongoing appointments are ordered by earliest session date first', function () {
+    $user = User::factory()->create(['profile_completed' => true]);
+    $doctor = Doctor::factory()->create();
+
+    Appointment::factory()->create([
+        'user_id' => $user->id,
+        'doctor_id' => $doctor->id,
+        'appointment_date' => '2026-07-11',
+        'start_time' => '09:00:00',
+        'status' => 'new',
+    ]);
+
+    Appointment::factory()->create([
+        'user_id' => $user->id,
+        'doctor_id' => $doctor->id,
+        'appointment_date' => '2026-06-28',
+        'start_time' => '14:00:00',
+        'status' => 'pending_follow_up',
+        'is_follow_up' => true,
+    ]);
+
+    Appointment::factory()->create([
+        'user_id' => $user->id,
+        'doctor_id' => $doctor->id,
+        'appointment_date' => '2026-07-04',
+        'start_time' => '09:00:00',
+        'status' => 'new',
+    ]);
+
+    $dates = Livewire::actingAs($user)
+        ->test('pages::patient.appointments', ['tab' => 'ongoing'])
+        ->instance()
+        ->appointments
+        ->pluck('appointment_date')
+        ->map(fn ($date) => $date?->toDateString())
+        ->all();
+
+    expect($dates)->toBe(['2026-06-28', '2026-07-04', '2026-07-11']);
+});
+
 test('patient appointments rescheduled tab shows only rescheduled for authenticated user', function () {
     $user = User::factory()->create(['profile_completed' => true]);
     $doctor = Doctor::factory()->create();

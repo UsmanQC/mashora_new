@@ -73,7 +73,7 @@ new #[Layout('layouts::doctor')] #[Title('Appointments')] class extends Componen
 
     public function getAppointmentsProperty(): LengthAwarePaginator
     {
-        return $this->baseAppointmentsQuery()
+        $query = $this->baseAppointmentsQuery()
             ->with([
                 'followUps' => fn ($query) => $query
                     ->where('status', 'pending_follow_up')
@@ -88,10 +88,15 @@ new #[Layout('layouts::doctor')] #[Title('Appointments')] class extends Componen
                 } else {
                     $query->where('status', $this->status);
                 }
-            })
-            ->orderByDesc('appointment_date')
-            ->orderByDesc('start_time')
-            ->paginate(12);
+            });
+
+        if (in_array($this->status, ['new', 'in_process', 'pending_follow_up', 'rescheduled'], true)) {
+            $query->orderBy('appointment_date')->orderBy('start_time');
+        } else {
+            $query->orderByDesc('appointment_date')->orderByDesc('start_time');
+        }
+
+        return $query->paginate(12);
     }
 
     public function canScheduleFollowUp(Appointment $appointment): bool

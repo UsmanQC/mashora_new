@@ -72,11 +72,16 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
 
     public function getAppointmentsProperty(): LengthAwarePaginator
     {
-        return $this->baseQuery()
-            ->whereIn('status', $this->tabStatuses()[$this->tab])
-            ->orderByDesc('appointment_date')
-            ->orderByDesc('start_time')
-            ->paginate(10);
+        $query = $this->baseQuery()
+            ->whereIn('status', $this->tabStatuses()[$this->tab]);
+
+        if (in_array($this->tab, ['ongoing', 'rescheduled'], true)) {
+            $query->orderBy('appointment_date')->orderBy('start_time');
+        } else {
+            $query->orderByDesc('appointment_date')->orderByDesc('start_time');
+        }
+
+        return $query->paginate(10);
     }
 
     /**
