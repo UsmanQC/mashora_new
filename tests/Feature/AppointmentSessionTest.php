@@ -1,7 +1,9 @@
 <?php
 
+use App\Events\AppointmentIncomingCallAnnounced;
 use App\Events\AppointmentSessionStarted;
 use App\Events\PatientAppointmentSessionStarted;
+use App\Events\PatientSessionJoinRequested;
 use App\Models\Appointment;
 use App\Models\Doctor;
 use App\Models\Notification;
@@ -131,9 +133,53 @@ test('patient conversation shows attend-only call ui without outbound call butto
         ->assertDontSee('id="btn-patient-video"', false)
         ->assertSee('id="incoming-call-accept"', false)
         ->assertSee('id="incoming-call-banner"', false)
+        ->assertSee('id="patient-session-join-call-btn"', false)
         ->assertSee(__('patient.appointments.incoming_call_title'), false)
         ->assertSee('data-label-no-active-call', false)
         ->assertSee(__('patient.appointments.waiting_for_specialist_call'));
+});
+
+test('doctor notify call stores pending incoming call for patient fetch', function () {
+    config([
+        'broadcasting.default' => 'pusher',
+        'agora.AGORA_APP_ID' => 'test-app-id',
+        'agora.AGORA_APP_CERTIFICATE' => str_repeat('a', 32),
+    ]);
+
+    Event::fake([
+        AppointmentIncomingCallAnnounced::class,
+        PatientSessionJoinRequested::class,
+    ]);
+
+    $user = User::factory()->create();
+    $doctor = Doctor::factory()->create(['profile_completed' => true]);
+    $appointment = Appointment::factory()->create([
+        'doctor_id' => $doctor->id,
+        'user_id' => $user->id,
+        'status' => 'in_process',
+        'actual_start_at' => now(),
+        'extend_at' => now()->addMinutes(30),
+    ]);
+
+    $this->actingAs($doctor, 'doctor')
+        ->postJson(route('doctor.appointments.realtime.notify-call', $appointment), [
+            'agora_app_id' => 'test-app-id',
+            'agora_token' => 'test-token',
+            'agora_channel' => 'video_call_'.$appointment->id,
+            'call_type' => 'video',
+        ])
+        ->assertOk();
+
+    $this->actingAs($user)
+        ->getJson(route('patient.appointments.realtime.pending-call', $appointment))
+        ->assertSuccessful()
+        ->assertJson([
+            'pending' => true,
+            'appointment_id' => $appointment->id,
+            'call_type' => 'video',
+            'agora_app_id' => 'test-app-id',
+            'agora_channel' => 'video_call_'.$appointment->id,
+        ]);
 });
 
 test('patient cannot fetch agora token before doctor starts session', function () {

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Doctor;
 
 use App\Events\AppointmentIncomingCallAnnounced;
 use App\Events\PatientSessionJoinRequested;
+use App\Http\Controllers\Patient\PatientAppointmentRealtimeController;
 use App\Models\Appointment;
 use App\Models\Doctor;
 use App\Services\AppointmentSessionService;
@@ -51,6 +52,17 @@ class DoctorAppointmentRealtimeController
             (string) $validated['agora_token'],
             (string) $validated['agora_channel'],
         ));
+
+        PatientAppointmentRealtimeController::storePendingIncomingCall(
+            (int) $appointment->user_id,
+            (int) $appointment->id,
+            [
+                'call_type' => (string) $validated['call_type'],
+                'agora_app_id' => (string) $validated['agora_app_id'],
+                'agora_token' => (string) $validated['agora_token'],
+                'agora_channel' => (string) $validated['agora_channel'],
+            ],
+        );
 
         $patientNotifier->notifyIncomingCall($appointment, $doctor, (string) $validated['call_type']);
 

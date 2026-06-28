@@ -66,6 +66,7 @@
             </flux:toast.group>
         @endpersist
         @include('partials.patient-global-incoming-call-listener')
+        @include('partials.patient-global-join-call-banner')
         @stack('scripts')
 
         @persist('patient-portal-nav-loader')

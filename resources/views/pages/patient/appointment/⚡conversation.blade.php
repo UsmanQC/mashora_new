@@ -234,12 +234,23 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 <p class="text-sm font-semibold text-emerald-950">{{ __('patient.appointments.session_live_banner_title') }}</p>
                 <p class="mt-0.5 text-sm text-emerald-800">{{ __('patient.appointments.session_live_banner_body') }}</p>
             </div>
-            <a
-                href="#patient-chat-panel"
-                class="inline-flex shrink-0 min-h-10 items-center justify-center rounded-xl bg-[#10B981] px-4 py-2 text-sm font-semibold text-white shadow-md shadow-emerald-900/20 transition hover:brightness-95"
-            >
-                {{ __('patient.appointments.open_session_chat') }}
-            </a>
+            <div class="flex shrink-0 flex-col gap-2 sm:flex-row sm:items-center">
+                @if ($appointment->allowsPatientCalls())
+                    <button
+                        type="button"
+                        id="patient-session-join-call-btn"
+                        class="inline-flex min-h-10 items-center justify-center rounded-xl bg-[#10B981] px-4 py-2 text-sm font-semibold text-white shadow-md shadow-emerald-900/20 transition hover:brightness-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2"
+                    >
+                        {{ __('patient.appointments.join_call') }}
+                    </button>
+                @endif
+                <a
+                    href="#patient-chat-panel"
+                    class="inline-flex min-h-10 items-center justify-center rounded-xl border border-emerald-300 bg-white px-4 py-2 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-50"
+                >
+                    {{ __('patient.appointments.open_session_chat') }}
+                </a>
+            </div>
         </div>
     </div>
 
@@ -265,6 +276,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
         class="overflow-hidden rounded-3xl border border-zinc-200/90 bg-white shadow-[0_20px_55px_-32px_rgba(15,23,42,0.35)] ring-1 ring-zinc-100"
         data-appointment-id="{{ $appointment->id }}"
         data-notify-url="{{ route('patient.appointments.realtime.notify-call', $appointment) }}"
+        data-pending-call-url="{{ route('patient.appointments.realtime.pending-call', $appointment) }}"
         data-token-url="{{ route('patient.appointments.realtime.agora-token', $appointment) }}"
         data-csrf="{{ csrf_token() }}"
     >
@@ -437,6 +449,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
             const patientId = Number(boot.dataset.patientId || 0);
             const csrf = panel.dataset.csrf || '';
             const tokenUrl = panel.dataset.tokenUrl || '';
+            const pendingCallUrl = panel.dataset.pendingCallUrl || '';
             const pusherKey = boot.dataset.pusherKey || '';
             const pusherCluster = boot.dataset.pusherCluster || 'mt1';
             const callEnabled = boot.dataset.agoraReady === '1';
@@ -964,6 +977,58 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 }
             }
 
+            async function restorePendingCallFromServer() {
+                if (!pendingCallUrl) {
+                    return;
+                }
+
+                try {
+                    const res = await fetch(pendingCallUrl, {
+                        headers: {
+                            Accept: 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest',
+                        },
+                    });
+
+                    if (!res.ok) {
+                        return;
+                    }
+
+                    const data = await res.json();
+                    if (!data?.pending || !data?.agora_app_id) {
+                        return;
+                    }
+
+                    showIncomingCallBanner(data, { silent: true });
+                } catch (_) {
+                    // ignore network errors
+                }
+            }
+
+            async function joinSessionCall() {
+                if (incomingPayload?.agora_app_id) {
+                    boot.__acceptIncoming?.();
+
+                    return;
+                }
+
+                restorePendingCallFromStorage();
+                if (incomingPayload?.agora_app_id) {
+                    boot.__acceptIncoming?.();
+
+                    return;
+                }
+
+                await restorePendingCallFromServer();
+                if (incomingPayload?.agora_app_id) {
+                    boot.__acceptIncoming?.();
+
+                    return;
+                }
+
+                joinCall('video').catch((error) => console.error(error));
+            }
+
             async function joinCall(mode, payload = null) {
                 if (!callEnabled || activeMode || callJoinInProgress) {
                     return;
@@ -1045,6 +1110,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
             }
 
             boot.__joinCall = (mode, payload = null) => joinCall(mode, payload);
+            boot.__joinSessionCall = () => joinSessionCall();
             boot.__leaveCall = () => leaveCall();
             boot.__toggleMic = () => {
                 if (!localAudio) {
@@ -1099,6 +1165,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
             boot.__bindCallControlButtons = bindCallControlButtons;
             boot.__restorePendingCall = restorePendingCallFromStorage;
             restorePendingCallFromStorage();
+            restorePendingCallFromServer();
 
             if (!window.__patientConversationClickBound) {
                 window.__patientConversationClickBound = true;
@@ -1117,6 +1184,11 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                     if (event.target.closest('#incoming-call-dismiss')) {
                         event.preventDefault();
                         bootEl.__dismissIncoming?.();
+                    }
+
+                    if (event.target.closest('#patient-session-join-call-btn')) {
+                        event.preventDefault();
+                        bootEl.__joinSessionCall?.();
                     }
 
                     if (event.target.closest('#patient-agora-leave')) {
@@ -1192,6 +1264,13 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 channel.bind('session.started', (data) => {
                     applySessionStartedPayload(data);
                 });
+                channel.bind('call.incoming', (data) => {
+                    if (Number(data?.appointment_id || appointmentId) !== appointmentId) {
+                        return;
+                    }
+
+                    showIncomingCallBanner(data);
+                });
 
                 if (patientId > 0) {
                     const patientChannel = pusher.subscribe('private-patient.' + patientId);
@@ -1204,6 +1283,13 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                         }
 
                         applySessionStartedPayload(data);
+                    });
+                    patientChannel.bind('session.join-requested', (data) => {
+                        if (Number(data?.appointment_id || 0) !== appointmentId) {
+                            return;
+                        }
+
+                        showIncomingCallBanner(data, { silent: true });
                     });
                 }
             } else {

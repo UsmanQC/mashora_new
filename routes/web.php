@@ -157,6 +157,10 @@ Route::post('patient/appointments/{appointment}/realtime/notify-call', [PatientA
     ->middleware(['auth', 'patient.profile'])
     ->name('patient.appointments.realtime.notify-call');
 
+Route::get('patient/appointments/{appointment}/realtime/pending-call', [PatientAppointmentRealtimeController::class, 'pendingIncomingCall'])
+    ->middleware(['auth', 'patient.profile'])
+    ->name('patient.appointments.realtime.pending-call');
+
 Route::post('patient/appointments/{appointment}/realtime/agora-token', [PatientAppointmentRealtimeController::class, 'refreshAgoraToken'])
     ->middleware(['auth', 'patient.profile'])
     ->name('patient.appointments.realtime.agora-token');
