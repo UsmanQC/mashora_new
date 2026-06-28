@@ -3,6 +3,7 @@
         <script>
             window.MashoraRealtimeAlerts = window.MashoraRealtimeAlerts || {
                 ringIntervalId: null,
+                audioContext: null,
 
                 playIncomingRing() {
                     this.stopIncomingRing();
@@ -13,7 +14,11 @@
                             return;
                         }
 
-                        const ctx = new AudioContext();
+                        if (!this.audioContext) {
+                            this.audioContext = new AudioContext();
+                        }
+
+                        const ctx = this.audioContext;
                         const playTone = () => {
                             const oscillator = ctx.createOscillator();
                             const gain = ctx.createGain();
@@ -62,6 +67,52 @@
                             }
                         });
                     }
+                },
+            };
+
+            window.MashoraIncomingCall = window.MashoraIncomingCall || {
+                dedupeMs: 5000,
+                lastKey: '',
+                lastAt: 0,
+
+                callKey(data) {
+                    const appointmentId = Number(data?.appointment_id || 0);
+                    const channel = data?.agora_channel || '';
+                    const callType = data?.call_type || '';
+
+                    return appointmentId + ':' + channel + ':' + callType;
+                },
+
+                shouldNotify(data) {
+                    const key = this.callKey(data);
+                    const now = Date.now();
+
+                    if (key === this.lastKey && now - this.lastAt < this.dedupeMs) {
+                        return false;
+                    }
+
+                    this.lastKey = key;
+                    this.lastAt = now;
+
+                    return true;
+                },
+
+                notifyPatient(data, title, message, options = {}) {
+                    if (!this.shouldNotify(data)) {
+                        return false;
+                    }
+
+                    if (options.playRing !== false) {
+                        window.MashoraRealtimeAlerts?.playIncomingRing();
+                    }
+
+                    window.MashoraRealtimeAlerts?.showDesktopNotification(title, message);
+
+                    if (window.Flux?.toast) {
+                        window.Flux.toast({ text: message, variant: 'success' });
+                    }
+
+                    return true;
                 },
             };
         </script>

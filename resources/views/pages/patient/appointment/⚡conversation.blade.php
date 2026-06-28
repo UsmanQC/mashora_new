@@ -6,6 +6,7 @@ use App\Models\ChMessage;
 use App\Models\User;
 use App\Support\DoctorAgoraChannel;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\On;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
@@ -101,11 +102,26 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
 
     public function refreshAppointmentSession(): void
     {
-        if (! in_array((string) $this->appointment->status, ['new', 'rescheduled'], true)) {
+        if (in_array((string) $this->appointment->status, ['completed', 'cancelled', 'not_attended'], true)) {
             return;
         }
 
         $this->appointment->refresh();
+
+        if ((string) $this->appointment->status === 'in_process') {
+            $this->refreshAgoraCredentials();
+        }
+    }
+
+    #[On('patient-session-started')]
+    public function onPatientSessionStarted(int $appointmentId): void
+    {
+        if ((int) $this->appointment->id !== $appointmentId) {
+            return;
+        }
+
+        $this->appointment->refresh();
+        $this->refreshAgoraCredentials();
     }
 
     public function formattedAppointmentTime(): string
@@ -128,8 +144,9 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
 }; ?>
 
 <div
+    id="patient-conversation-root"
     class="space-y-5"
-    @if (in_array($appointment->status, ['new', 'rescheduled'], true)) wire:poll.5s="refreshAppointmentSession" @endif
+    @if (! in_array($appointment->status, ['in_process', 'completed', 'cancelled', 'not_attended'], true)) wire:poll.3s="refreshAppointmentSession" @endif
 >
     <header class="relative overflow-hidden rounded-2xl border border-zinc-200/80 bg-gradient-to-br from-white via-white to-[#f7f9ff] p-4 shadow-sm shadow-zinc-200/60 ring-1 ring-zinc-100 sm:p-5">
         <div class="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#10B981] via-[#34d399] to-[#059669] opacity-85"></div>
@@ -144,7 +161,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
             </a>
             <div>
                 <h1 class="text-lg font-semibold tracking-tight text-zinc-900">{{ $appointment->doctor?->displayName() ?: __('patient.appointments.title') }}</h1>
-                <p class="mt-0.5 text-xs text-zinc-500">{{ __('patient.appointments.status_'.$appointment->status) }}</p>
+                <p id="patient-conversation-status-label" class="mt-0.5 text-xs text-zinc-500">{{ __('patient.appointments.status_'.$appointment->status) }}</p>
             </div>
         </div>
 
@@ -156,10 +173,13 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 >
                     {{ __('patient.appointments.call_in_progress') }}
                 </span>
-                @if ($appointment->status === 'in_process')
+                @if ($appointment->allowsPatientCalls())
                     <span
                         id="patient-waiting-for-call-chip"
-                        class="rounded-full border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-[11px] font-semibold text-zinc-600"
+                        @class([
+                            'rounded-full border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-[11px] font-semibold text-zinc-600',
+                            'hidden' => $appointment->status !== 'in_process',
+                        ])
                     >
                         {{ __('patient.appointments.waiting_for_specialist_call') }}
                     </span>
@@ -187,7 +207,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
     ></div>
 
     @if (in_array($appointment->status, ['new', 'rescheduled'], true) && ! $appointment->isChatOpen())
-        <flux:callout variant="secondary" icon="clock" class="border-zinc-200">
+        <flux:callout id="patient-chat-locked-callout" variant="secondary" icon="clock" class="border-zinc-200">
             {{ __('patient.appointments.chat_locked_until_doctor_starts') }}
         </flux:callout>
     @elseif ($appointment->status === 'completed' && ! $appointment->isChatOpen())
@@ -201,6 +221,27 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
             ]) }}
         </flux:callout>
     @endif
+
+    <div
+        id="patient-session-live-banner"
+        @class([
+            'rounded-xl border border-emerald-200 bg-gradient-to-r from-emerald-50 to-white px-4 py-3 shadow-sm shadow-emerald-900/5 ring-1 ring-emerald-100',
+            'hidden' => $appointment->status !== 'in_process',
+        ])
+    >
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div class="min-w-0">
+                <p class="text-sm font-semibold text-emerald-950">{{ __('patient.appointments.session_live_banner_title') }}</p>
+                <p class="mt-0.5 text-sm text-emerald-800">{{ __('patient.appointments.session_live_banner_body') }}</p>
+            </div>
+            <a
+                href="#patient-chat-panel"
+                class="inline-flex shrink-0 min-h-10 items-center justify-center rounded-xl bg-[#10B981] px-4 py-2 text-sm font-semibold text-white shadow-md shadow-emerald-900/20 transition hover:brightness-95"
+            >
+                {{ __('patient.appointments.open_session_chat') }}
+            </a>
+        </div>
+    </div>
 
     <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:max-w-xl">
         <div class="rounded-xl border border-zinc-200/80 bg-gradient-to-br from-white to-zinc-50 px-3 py-2 shadow-sm">
@@ -369,7 +410,6 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
 @push('scripts')
     @include('partials.realtime-call-alerts')
     <script src="https://js.pusher.com/8.2.0/pusher.min.js"></script>
-    <script src="https://download.agora.io/sdk/release/AgoraRTC_N-4.23.0.js" data-agora-sdk="1"></script>
     <script>
         function initPatientConversationRealtime() {
             const boot = document.getElementById('patient-conversation-bootstrap');
@@ -506,9 +546,13 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                     return Promise.resolve(window.AgoraRTC);
                 }
 
-                const existing = document.querySelector('script[data-agora-sdk="1"]');
+                let existing = document.querySelector('script[data-agora-sdk="1"]');
                 if (!existing) {
-                    return Promise.reject(new Error(metrics?.dataset.labelAgoraSdkMissing || 'Agora SDK missing'));
+                    existing = document.createElement('script');
+                    existing.src = 'https://download.agora.io/sdk/release/AgoraRTC_N-4.23.0.js';
+                    existing.dataset.agoraSdk = '1';
+                    existing.async = true;
+                    document.head.appendChild(existing);
                 }
 
                 return new Promise((resolve, reject) => {
@@ -807,16 +851,13 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 return res.json();
             }
 
-            function notifyIncomingCallAlert(message) {
-                window.MashoraRealtimeAlerts?.playIncomingRing();
-                window.MashoraRealtimeAlerts?.showDesktopNotification(
+            function notifyIncomingCallAlert(message, data = null) {
+                const payload = data || { appointment_id: appointmentId };
+                window.MashoraIncomingCall?.notifyPatient(
+                    payload,
                     @js(__('patient.appointments.incoming_call_title')),
                     message,
                 );
-
-                if (window.Flux?.toast) {
-                    window.Flux.toast({ text: message, variant: 'success' });
-                }
             }
 
             function dismissIncomingAlert() {
@@ -839,12 +880,30 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                     metrics.dataset.sessionStart = data.actual_start_at || '';
                     metrics.dataset.sessionEnd = data.extend_at || '';
                 }
+
+                document.getElementById('patient-session-live-banner')?.classList.remove('hidden');
+                document.getElementById('patient-chat-locked-callout')?.classList.add('hidden');
+
+                const waitingChipEl = document.getElementById('patient-waiting-for-call-chip');
+                if (waitingChipEl) {
+                    waitingChipEl.classList.remove('hidden');
+                }
+
+                const statusLabel = document.getElementById('patient-conversation-status-label');
+                if (statusLabel) {
+                    statusLabel.textContent = @js(__('patient.appointments.status_in_process'));
+                }
+
+                if (window.Livewire) {
+                    Livewire.dispatch('patient-session-started', { appointmentId });
+                }
+
                 showCallToast(metrics?.dataset.sessionStartedWaiting || @js(__('patient.appointments.session_started_waiting')), 'success');
                 startSessionTimers();
                 refreshCallUiState();
             }
 
-            function showIncomingCallBanner(data) {
+            function showIncomingCallBanner(data, options = {}) {
                 if (
                     incomingPayload?.agora_channel === data?.agora_channel
                     && incomingBanner
@@ -870,7 +929,13 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                     // ignore storage errors
                 }
 
-                notifyIncomingCallAlert(incomingLabel?.textContent || @js(__('patient.appointments.incoming_call_title')));
+                if (!options.silent) {
+                    notifyIncomingCallAlert(
+                        incomingLabel?.textContent || @js(__('patient.appointments.incoming_call_title')),
+                        data,
+                    );
+                }
+
                 incomingBanner?.classList.remove('hidden');
                 refreshCallUiState();
             }
@@ -892,7 +957,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
 
                     const data = JSON.parse(raw);
                     if (data?.agora_app_id) {
-                        showIncomingCallBanner(data);
+                        showIncomingCallBanner(data, { silent: true });
                     }
                 } catch (_) {
                     // ignore parse errors
@@ -1077,7 +1142,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 window.addEventListener('mashora:incoming-call', (event) => {
                     const data = event.detail;
                     if (Number(data?.appointment_id || 0) === appointmentId) {
-                        showIncomingCallBanner(data);
+                        showIncomingCallBanner(data, { silent: true });
                     }
                 });
 
@@ -1127,21 +1192,11 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 channel.bind('session.started', (data) => {
                     applySessionStartedPayload(data);
                 });
-                channel.bind('call.incoming', (data) => {
-                    showIncomingCallBanner(data);
-                });
 
                 if (patientId > 0) {
                     const patientChannel = pusher.subscribe('private-patient.' + patientId);
                     patientChannel.bind('pusher:subscription_error', (error) => {
                         console.error('Pusher patient channel error', error);
-                    });
-                    patientChannel.bind('session.join-requested', (data) => {
-                        if (Number(data.appointment_id || 0) !== appointmentId) {
-                            return;
-                        }
-
-                        showIncomingCallBanner(data);
                     });
                     patientChannel.bind('appointment.session-started', (data) => {
                         if (Number(data.appointment_id || 0) !== appointmentId) {

@@ -75,12 +75,7 @@
                         storePendingCall(data);
 
                         const label = data.call_type === 'video' ? incomingVideoLabel : incomingVoiceLabel;
-                        window.MashoraRealtimeAlerts?.playIncomingRing();
-                        window.MashoraRealtimeAlerts?.showDesktopNotification(incomingCallTitle, label);
-
-                        if (window.Flux?.toast) {
-                            window.Flux.toast({ text: label, variant: 'success' });
-                        }
+                        window.MashoraIncomingCall?.notifyPatient(data, incomingCallTitle, label);
 
                         window.dispatchEvent(new CustomEvent('mashora:incoming-call', { detail: data }));
                     }
