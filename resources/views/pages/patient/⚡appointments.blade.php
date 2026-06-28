@@ -575,6 +575,7 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
             let agoraClient = null;
             let localAudio = null;
             let localVideo = null;
+            let inlineJoinInProgress = false;
 
             const pusher = new Pusher(pusherKey, {
                 cluster: pusherCluster,
@@ -662,57 +663,75 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
             }
 
             async function joinInlineCall(appointmentId, payload = null, shouldNotify = false, callType = 'video') {
-                if (!window.AgoraRTC || !appointmentId) return;
-                const cfg = (payload && payload.agora_app_id) ? payload : await fetchAgoraConfig(appointmentId);
-                if (!cfg) {
-                    window.location.href = joinBase.replace('__ID__', String(appointmentId));
+                if (!window.AgoraRTC || !appointmentId || inlineJoinInProgress) {
                     return;
                 }
 
-                window.MashoraRealtimeAlerts?.stopIncomingRing();
+                inlineJoinInProgress = true;
 
-                if (shouldNotify) {
-                    await notifyDoctor(appointmentId, callType, cfg);
-                }
+                try {
+                    const cfg = (payload && payload.agora_app_id) ? payload : await fetchAgoraConfig(appointmentId);
+                    if (!cfg) {
+                        window.location.href = joinBase.replace('__ID__', String(appointmentId));
 
-                await leaveInlineCall();
-                agoraClient = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
-                agoraClient.on('user-published', async (user, mediaType) => {
-                    await agoraClient.subscribe(user, mediaType);
-                    if (mediaType === 'video') user.videoTrack.play('patient-inline-call-remote');
-                    if (mediaType === 'audio') user.audioTrack.play();
-                });
+                        return;
+                    }
 
-                const resolvedCallType = (payload?.call_type === 'audio' || callType === 'audio') ? 'audio' : 'video';
-                if (resolvedCallType === 'video') {
-                    const [, micTrack, camTrack] = await Promise.all([
-                        agoraClient.join(cfg.agora_app_id, cfg.agora_channel, cfg.agora_token || null, null),
-                        AgoraRTC.createMicrophoneAudioTrack(),
-                        AgoraRTC.createCameraVideoTrack(),
-                    ]);
-                    localAudio = micTrack;
-                    localVideo = camTrack;
-                    camTrack.play('patient-inline-call-local');
-                    await agoraClient.publish([micTrack, camTrack]);
-                } else {
-                    const [, micTrack] = await Promise.all([
-                        agoraClient.join(cfg.agora_app_id, cfg.agora_channel, cfg.agora_token || null, null),
-                        AgoraRTC.createMicrophoneAudioTrack(),
-                    ]);
-                    localAudio = micTrack;
-                    await agoraClient.publish([micTrack]);
-                }
+                    window.MashoraRealtimeAlerts?.stopIncomingRing();
 
-                if (callState) {
-                    callState.textContent = resolvedCallType === 'video'
-                        ? @js(__('patient.appointments.incoming_video'))
-                        : @js(__('patient.appointments.incoming_voice'));
+                    if (shouldNotify) {
+                        await notifyDoctor(appointmentId, callType, cfg);
+                    }
+
+                    await leaveInlineCall();
+
+                    const client = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
+                    agoraClient = client;
+                    client.on('user-published', async (user, mediaType) => {
+                        await client.subscribe(user, mediaType);
+                        if (mediaType === 'video') {
+                            user.videoTrack.play('patient-inline-call-remote');
+                        }
+                        if (mediaType === 'audio') {
+                            user.audioTrack.play();
+                        }
+                    });
+
+                    const resolvedCallType = (payload?.call_type === 'audio' || callType === 'audio') ? 'audio' : 'video';
+                    if (resolvedCallType === 'video') {
+                        const [, micTrack, camTrack] = await Promise.all([
+                            client.join(cfg.agora_app_id, cfg.agora_channel, cfg.agora_token || null, null),
+                            AgoraRTC.createMicrophoneAudioTrack(),
+                            AgoraRTC.createCameraVideoTrack(),
+                        ]);
+                        localAudio = micTrack;
+                        localVideo = camTrack;
+                        camTrack.play('patient-inline-call-local');
+                        await client.publish([micTrack, camTrack]);
+                    } else {
+                        const [, micTrack] = await Promise.all([
+                            client.join(cfg.agora_app_id, cfg.agora_channel, cfg.agora_token || null, null),
+                            AgoraRTC.createMicrophoneAudioTrack(),
+                        ]);
+                        localAudio = micTrack;
+                        await client.publish([micTrack]);
+                    }
+
+                    if (callState) {
+                        callState.textContent = resolvedCallType === 'video'
+                            ? @js(__('patient.appointments.incoming_video'))
+                            : @js(__('patient.appointments.incoming_voice'));
+                    }
+                    if (openChat) {
+                        openChat.href = joinBase.replace('__ID__', String(appointmentId));
+                    }
+                    if (overlay) {
+                        overlay.classList.remove('hidden');
+                    }
+                    banner?.classList.add('hidden');
+                } finally {
+                    inlineJoinInProgress = false;
                 }
-                if (openChat) {
-                    openChat.href = joinBase.replace('__ID__', String(appointmentId));
-                }
-                if (overlay) overlay.classList.remove('hidden');
-                banner?.classList.add('hidden');
             }
 
             joinNowBtn?.addEventListener('click', async (event) => {

@@ -511,6 +511,7 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
             let localAudio = null;
             let localVideo = null;
             let currentMode = null;
+            let callJoinInProgress = false;
 
             function maybeEndCallWhenSessionExpired(leftSeconds) {
                 if (leftSeconds > 0) {
@@ -972,16 +973,18 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
             const labelCallFailed = metricsEl?.dataset.labelCallFailed || 'Could not start the call.';
 
             async function joinVideoCall() {
-                if (currentMode) {
+                if (currentMode || callJoinInProgress) {
                     return;
                 }
 
+                callJoinInProgress = true;
                 setCallButtonConnecting(btnVideo());
                 showOverlay(true);
                 setOverlayConnecting('video', labelConnecting);
 
                 try {
                     await ensureAgoraSdk();
+                    await resetPartialAgoraJoin();
 
                     const cfg = await refreshAgoraConfig();
                     if (!cfg) {
@@ -995,9 +998,10 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                         metricsEl.dataset.sessionEnd = notify.extend_at || '';
                     }
 
-                    agoraClient = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
-                    agoraClient.on('user-published', async (user, mediaType) => {
-                        await agoraClient.subscribe(user, mediaType);
+                    const client = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
+                    agoraClient = client;
+                    client.on('user-published', async (user, mediaType) => {
+                        await client.subscribe(user, mediaType);
                         if (mediaType === 'video') {
                             user.videoTrack.play('agora-remote-player');
                         }
@@ -1007,14 +1011,14 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                     });
 
                     const [, audioTrack, videoTrack] = await Promise.all([
-                        agoraClient.join(cfg.agora_app_id, cfg.agora_channel, cfg.agora_token || null, null),
+                        client.join(cfg.agora_app_id, cfg.agora_channel, cfg.agora_token || null, null),
                         AgoraRTC.createMicrophoneAudioTrack(),
                         AgoraRTC.createCameraVideoTrack(),
                     ]);
                     localAudio = audioTrack;
                     localVideo = videoTrack;
                     videoTrack.play('agora-local-player');
-                    await agoraClient.publish([audioTrack, videoTrack]);
+                    await client.publish([audioTrack, videoTrack]);
                     currentMode = 'video';
                     const videoBtn = btnVideo();
                     const audioBtn = btnAudio();
@@ -1031,20 +1035,24 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                     showOverlay(false);
                     showCallToast(callErrorMessage(e, labelCallFailed));
                     restoreCallButtonsAfterError();
+                } finally {
+                    callJoinInProgress = false;
                 }
             }
 
             async function joinAudioCall() {
-                if (currentMode) {
+                if (currentMode || callJoinInProgress) {
                     return;
                 }
 
+                callJoinInProgress = true;
                 setCallButtonConnecting(btnAudio());
                 showOverlay(true);
                 setOverlayConnecting('audio', labelConnecting);
 
                 try {
                     await ensureAgoraSdk();
+                    await resetPartialAgoraJoin();
 
                     const cfg = await refreshAgoraConfig();
                     if (!cfg) {
@@ -1058,20 +1066,21 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                         metricsEl.dataset.sessionEnd = notify.extend_at || '';
                     }
 
-                    agoraClient = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
-                    agoraClient.on('user-published', async (user, mediaType) => {
-                        await agoraClient.subscribe(user, mediaType);
+                    const client = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
+                    agoraClient = client;
+                    client.on('user-published', async (user, mediaType) => {
+                        await client.subscribe(user, mediaType);
                         if (mediaType === 'audio') {
                             user.audioTrack.play();
                         }
                     });
 
                     const [, audioTrack] = await Promise.all([
-                        agoraClient.join(cfg.agora_app_id, cfg.agora_channel, cfg.agora_token || null, null),
+                        client.join(cfg.agora_app_id, cfg.agora_channel, cfg.agora_token || null, null),
                         AgoraRTC.createMicrophoneAudioTrack(),
                     ]);
                     localAudio = audioTrack;
-                    await agoraClient.publish([audioTrack]);
+                    await client.publish([audioTrack]);
                     currentMode = 'audio';
                     const videoBtn = btnVideo();
                     const audioBtn = btnAudio();
@@ -1088,6 +1097,8 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                     showOverlay(false);
                     showCallToast(callErrorMessage(e, labelCallFailed));
                     restoreCallButtonsAfterError();
+                } finally {
+                    callJoinInProgress = false;
                 }
             }
 
@@ -1144,46 +1155,7 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
             };
 
             function bindCallControlButtons() {
-                const videoBtn = btnVideo();
-                const audioBtn = btnAudio();
-
-                if (videoBtn) {
-                    videoBtn.onclick = (event) => {
-                        event.preventDefault();
-                        joinVideoCall().catch((error) => console.error(error));
-                    };
-                }
-
-                if (audioBtn) {
-                    audioBtn.onclick = (event) => {
-                        event.preventDefault();
-                        joinAudioCall().catch((error) => console.error(error));
-                    };
-                }
-
-                const leaveBtn = document.getElementById('agora-leave-btn');
-                if (leaveBtn) {
-                    leaveBtn.onclick = (event) => {
-                        event.preventDefault();
-                        leaveCall().catch((error) => console.error(error));
-                    };
-                }
-
-                const micBtn = document.getElementById('agora-toggle-mic');
-                if (micBtn) {
-                    micBtn.onclick = (event) => {
-                        event.preventDefault();
-                        boot.__toggleMic?.();
-                    };
-                }
-
-                const overlayVideoBtn = document.getElementById('agora-toggle-video');
-                if (overlayVideoBtn) {
-                    overlayVideoBtn.onclick = (event) => {
-                        event.preventDefault();
-                        boot.__toggleVideo?.();
-                    };
-                }
+                // Call controls use document-level delegation to avoid duplicate handlers after Livewire morphs.
             }
 
             bindCallControlButtons();

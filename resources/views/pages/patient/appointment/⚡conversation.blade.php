@@ -449,6 +449,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
             let localAudio = null;
             let localVideo = null;
             let activeMode = null;
+            let callJoinInProgress = false;
 
             const overlay = document.getElementById('patient-agora-overlay');
             const remoteWrap = document.getElementById('patient-agora-remote');
@@ -886,7 +887,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
             }
 
             async function joinCall(mode, payload = null) {
-                if (!callEnabled || activeMode) {
+                if (!callEnabled || activeMode || callJoinInProgress) {
                     return;
                 }
 
@@ -896,6 +897,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                     return;
                 }
 
+                callJoinInProgress = true;
                 dismissIncomingAlert();
                 incomingBanner?.classList.add('hidden');
                 showOverlay(true);
@@ -903,6 +905,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
 
                 try {
                     await ensureAgoraSdk();
+                    await resetPartialAgoraJoin();
 
                     let cfg = resolveAgoraConfig(payload);
                     if (!cfg) {
@@ -915,9 +918,10 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
 
                     clearPendingCallStorage();
 
-                    agoraClient = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
-                    agoraClient.on('user-published', async (user, mediaType) => {
-                        await agoraClient.subscribe(user, mediaType);
+                    const client = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
+                    agoraClient = client;
+                    client.on('user-published', async (user, mediaType) => {
+                        await client.subscribe(user, mediaType);
                         if (mediaType === 'video') {
                             user.videoTrack.play('patient-agora-remote');
                         }
@@ -928,21 +932,21 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
 
                     if (mode === 'video') {
                         const [, micTrack, camTrack] = await Promise.all([
-                            agoraClient.join(cfg.agora_app_id, cfg.agora_channel, cfg.agora_token || null, null),
+                            client.join(cfg.agora_app_id, cfg.agora_channel, cfg.agora_token || null, null),
                             AgoraRTC.createMicrophoneAudioTrack(),
                             AgoraRTC.createCameraVideoTrack(),
                         ]);
                         localAudio = micTrack;
                         localVideo = camTrack;
                         camTrack.play('patient-agora-local');
-                        await agoraClient.publish([micTrack, camTrack]);
+                        await client.publish([micTrack, camTrack]);
                     } else {
                         const [, micTrack] = await Promise.all([
-                            agoraClient.join(cfg.agora_app_id, cfg.agora_channel, cfg.agora_token || null, null),
+                            client.join(cfg.agora_app_id, cfg.agora_channel, cfg.agora_token || null, null),
                             AgoraRTC.createMicrophoneAudioTrack(),
                         ]);
                         localAudio = micTrack;
-                        await agoraClient.publish([micTrack]);
+                        await client.publish([micTrack]);
                     }
 
                     activeMode = mode;
@@ -957,6 +961,8 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                     showOverlay(false);
                     showCallToast(callErrorMessage(e, labelCallFailed));
                     refreshCallUiState();
+                } finally {
+                    callJoinInProgress = false;
                 }
             }
 
@@ -979,6 +985,10 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 syncMediaControlUi();
             };
             boot.__acceptIncoming = () => {
+                if (callJoinInProgress || activeMode) {
+                    return;
+                }
+
                 if (!incomingPayload?.agora_app_id) {
                     restorePendingCallFromStorage();
                 }
@@ -1004,43 +1014,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
             };
 
             function bindCallControlButtons() {
-                if (incomingAccept) {
-                    incomingAccept.onclick = (event) => {
-                        event.preventDefault();
-                        boot.__acceptIncoming?.();
-                    };
-                }
-
-                if (incomingDismiss) {
-                    incomingDismiss.onclick = (event) => {
-                        event.preventDefault();
-                        boot.__dismissIncoming?.();
-                    };
-                }
-
-                const leaveBtn = document.getElementById('patient-agora-leave');
-                if (leaveBtn) {
-                    leaveBtn.onclick = (event) => {
-                        event.preventDefault();
-                        leaveCall().catch((error) => console.error(error));
-                    };
-                }
-
-                const micBtn = document.getElementById('patient-agora-toggle-mic');
-                if (micBtn) {
-                    micBtn.onclick = (event) => {
-                        event.preventDefault();
-                        boot.__toggleMic?.();
-                    };
-                }
-
-                const overlayVideoBtn = document.getElementById('patient-agora-toggle-video');
-                if (overlayVideoBtn) {
-                    overlayVideoBtn.onclick = (event) => {
-                        event.preventDefault();
-                        boot.__toggleVideo?.();
-                    };
-                }
+                // Join and overlay controls use document-level delegation to prevent duplicate Agora joins.
             }
 
             bindCallControlButtons();
