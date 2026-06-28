@@ -504,6 +504,8 @@ return [
         'voice_call' => 'Voice call',
         'connecting' => 'Connecting…',
         'call_failed' => 'Could not start the call. Check your camera and microphone, then try again.',
+        'call_already_active' => 'A call is already in progress. End it first, then start again.',
+        'call_controls_failed' => 'Call controls failed to load. Refresh the page and try again.',
         'patient_notify_failed' => 'The patient was not alerted. Check real-time settings and try again.',
         'camera_permission_required' => 'Allow camera and microphone access in your browser to start a video call.',
         'agora_sdk_missing' => 'Call service is still loading. Wait a moment and try again.',

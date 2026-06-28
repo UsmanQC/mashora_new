@@ -129,6 +129,8 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
         data-label-live="{{ __('doctor.conversation.live') }}"
         data-label-connecting="{{ __('doctor.conversation.connecting') }}"
         data-label-call-failed="{{ __('doctor.conversation.call_failed') }}"
+        data-label-call-already-active="{{ __('doctor.conversation.call_already_active') }}"
+        data-label-call-controls-failed="{{ __('doctor.conversation.call_controls_failed') }}"
         data-label-patient-notify-failed="{{ __('doctor.conversation.patient_notify_failed') }}"
         data-label-camera-permission="{{ __('doctor.conversation.camera_permission_required') }}"
         data-label-agora-sdk-missing="{{ __('doctor.conversation.agora_sdk_missing') }}"
@@ -226,6 +228,7 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                                 <button
                                     type="button"
                                     id="btn-agora-video"
+                                    onclick="window.mashoraDoctorStartVideoCall?.(event)"
                                     @class([
                                         'inline-flex min-h-10 items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[#10B981] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-45',
                                         'border-zinc-200 bg-gradient-to-b from-white to-zinc-50 text-zinc-800 shadow-sm hover:border-[#047857]/30 hover:from-zinc-50 hover:to-zinc-100' => true,
@@ -239,6 +242,7 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                                 <button
                                     type="button"
                                     id="btn-agora-audio"
+                                    onclick="window.mashoraDoctorStartAudioCall?.(event)"
                                     @class([
                                         'inline-flex min-h-10 items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[#10B981] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-45',
                                         'border-zinc-200 bg-gradient-to-b from-white to-zinc-50 text-zinc-800 shadow-sm hover:border-[#047857]/30 hover:from-zinc-50 hover:to-zinc-100' => true,
@@ -446,6 +450,14 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
             const appointmentId = Number(boot.dataset.appointmentId);
 
             if (boot.dataset.initialized === '1' && boot.dataset.boundAppointmentId === String(appointmentId)) {
+                if (!boot.__joinVideoCall) {
+                    delete boot.dataset.initialized;
+                    delete boot.dataset.boundAppointmentId;
+                    initDoctorConversationRealtime();
+
+                    return;
+                }
+
                 boot.__bindCallButtons?.();
 
                 return;
@@ -454,9 +466,6 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
             if (boot.dataset.initialized === '1') {
                 boot.__leaveCall?.().catch(() => {});
             }
-
-            boot.dataset.initialized = '1';
-            boot.dataset.boundAppointmentId = String(appointmentId);
 
             const pusherKey = boot.dataset.pusherKey || '';
             const pusherCluster = boot.dataset.pusherCluster || 'mt1';
@@ -974,6 +983,10 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
 
             async function joinVideoCall() {
                 if (currentMode || callJoinInProgress) {
+                    if (currentMode) {
+                        showCallToast(metricsEl?.dataset.labelCallAlreadyActive || 'A call is already in progress. End it first.', 'warning');
+                    }
+
                     return;
                 }
 
@@ -1170,16 +1183,6 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                         return;
                     }
 
-                    if (event.target.closest('#btn-agora-video')) {
-                        event.preventDefault();
-                        bootEl.__joinVideoCall?.().catch((error) => console.error(error));
-                    }
-
-                    if (event.target.closest('#btn-agora-audio')) {
-                        event.preventDefault();
-                        bootEl.__joinAudioCall?.().catch((error) => console.error(error));
-                    }
-
                     if (event.target.closest('#agora-leave-btn')) {
                         event.preventDefault();
                         bootEl.__leaveCall?.().catch((error) => console.error(error));
@@ -1220,7 +1223,43 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                     attributeFilter: ['data-status', 'data-session-start', 'data-session-end'],
                 });
             }
+
+            boot.dataset.initialized = '1';
+            boot.dataset.boundAppointmentId = String(appointmentId);
         }
+
+        function mashoraDoctorInvokeCall(method) {
+            const boot = document.getElementById('doctor-conversation-bootstrap');
+            if (!boot?.__joinVideoCall && !boot?.__joinAudioCall) {
+                initDoctorConversationRealtime();
+            }
+
+            const bootEl = document.getElementById('doctor-conversation-bootstrap');
+            const fn = bootEl?.[method];
+            if (typeof fn !== 'function') {
+                const message = document.getElementById('conversation-page-metrics')?.dataset.labelCallControlsFailed
+                    || 'Call controls failed to load. Please refresh the page.';
+                if (window.Flux?.toast) {
+                    window.Flux.toast({ text: message, variant: 'danger' });
+                } else {
+                    console.error(message);
+                }
+
+                return;
+            }
+
+            fn().catch((error) => console.error(error));
+        }
+
+        window.mashoraDoctorStartVideoCall = (event) => {
+            event?.preventDefault?.();
+            mashoraDoctorInvokeCall('__joinVideoCall');
+        };
+
+        window.mashoraDoctorStartAudioCall = (event) => {
+            event?.preventDefault?.();
+            mashoraDoctorInvokeCall('__joinAudioCall');
+        };
 
         document.addEventListener('DOMContentLoaded', initDoctorConversationRealtime);
         document.addEventListener('livewire:navigated', initDoctorConversationRealtime);
