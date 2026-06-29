@@ -865,7 +865,9 @@ test('doctor conversation page includes resilient video call client bootstrap', 
         ->test('pages::doctor.appointment.conversation', ['appointment' => $appointment])
         ->assertSee('data-label-call-failed', false)
         ->assertSee('data-label-agora-sdk-missing', false)
-        ->assertSee('id="btn-agora-video"', false);
+        ->assertSee('id="btn-agora-video"', false)
+        ->assertSee('id="agora-toggle-mic"', false)
+        ->assertSee('id="agora-toggle-video"', false);
 });
 
 test('doctor can send a session chat message after starting session', function () {

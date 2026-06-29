@@ -30,6 +30,12 @@
                     return 'mashora_pending_call_' + appointmentId;
                 }
 
+                function patientConversationPathAppointmentId() {
+                    const match = window.location.pathname.match(/\/patient\/appointments\/(\d+)(?:\/|$)/);
+
+                    return match ? Number(match[1]) : 0;
+                }
+
                 function showGlobalJoinBanner(data) {
                     const banner = document.getElementById('patient-global-call-join-banner');
                     const text = document.getElementById('patient-global-call-join-text');
@@ -38,6 +44,12 @@
 
                     const appointmentId = Number(data?.appointment_id || 0);
                     if (!banner || !text || !btn || !appointmentId || !template) {
+                        return;
+                    }
+
+                    if (patientConversationPathAppointmentId() === appointmentId) {
+                        hideGlobalJoinBanner(appointmentId);
+
                         return;
                     }
 

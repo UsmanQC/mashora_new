@@ -225,12 +225,19 @@ new #[Layout('layouts::doctor')] #[Title('Follow Up')] class extends Component
             throw $exception;
         }
 
+        $followUpService = app(FollowUpAppointmentService::class);
+
         Flux::toast(
             variant: 'success',
-            text: __('doctor.follow_up.success', [
-                'date' => Carbon::parse($this->newDate)->locale(app()->getLocale())->translatedFormat('d M Y'),
-                'time' => $this->displaySlot($this->selectedTime),
-            ]),
+            text: __(
+                $followUpService->skipsPatientConfirmation()
+                    ? 'doctor.follow_up.success_direct'
+                    : 'doctor.follow_up.success',
+                [
+                    'date' => Carbon::parse($this->newDate)->locale(app()->getLocale())->translatedFormat('d M Y'),
+                    'time' => $this->displaySlot($this->selectedTime),
+                ],
+            ),
         );
 
         $this->redirectRoute('doctor.appointments', navigate: true);
@@ -330,7 +337,9 @@ new #[Layout('layouts::doctor')] #[Title('Follow Up')] class extends Component
             </flux:field>
 
             <flux:text class="text-sm text-zinc-500">
-                {{ __('doctor.follow_up.patient_flow_hint') }}
+                {{ config('appointments.follow_up_skip_patient_confirmation')
+                    ? __('doctor.follow_up.patient_flow_hint_direct')
+                    : __('doctor.follow_up.patient_flow_hint') }}
             </flux:text>
 
             <flux:callout variant="success" icon="gift" class="text-sm">
@@ -342,7 +351,9 @@ new #[Layout('layouts::doctor')] #[Title('Follow Up')] class extends Component
                     {{ __('doctor.auth.back') }}
                 </flux:button>
                 <flux:button type="submit" variant="primary" class="!bg-[#047857] !text-white hover:!brightness-95">
-                    {{ __('doctor.follow_up.submit') }}
+                    {{ config('appointments.follow_up_skip_patient_confirmation')
+                        ? __('doctor.follow_up.submit_direct')
+                        : __('doctor.follow_up.submit') }}
                 </flux:button>
             </div>
         </form>

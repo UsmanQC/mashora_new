@@ -136,6 +136,10 @@ test('patient conversation shows attend-only call ui without outbound call butto
         ->assertSee('id="incoming-call-accept"', false)
         ->assertSee('id="incoming-call-banner"', false)
         ->assertSee('id="patient-session-join-call-btn"', false)
+        ->assertSee('id="patient-agora-toggle-mic"', false)
+        ->assertSee('id="patient-agora-toggle-video"', false)
+        ->assertSee(__('patient.appointments.mic'), false)
+        ->assertSee(__('patient.appointments.camera'), false)
         ->assertSee(__('patient.appointments.incoming_call_title'), false)
         ->assertSee('data-label-no-active-call', false)
         ->assertSee(__('patient.appointments.waiting_for_specialist_call'));

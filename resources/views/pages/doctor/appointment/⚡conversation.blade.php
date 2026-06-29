@@ -420,7 +420,11 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
         'endCallLabel' => __('doctor.conversation.end_call'),
         'micLabel' => __('doctor.conversation.mic'),
         'cameraLabel' => __('doctor.conversation.camera'),
+        'micMutedLabel' => __('doctor.conversation.mic_muted'),
+        'cameraOffLabel' => __('doctor.conversation.camera_off'),
     ])
+
+    @include('partials.agora-media-controls')
 
     <div
         id="doctor-conversation-bootstrap"
@@ -821,35 +825,38 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                 el.setAttribute('aria-hidden', show ? 'false' : 'true');
             }
 
-            function syncMediaControlUi() {
-                const micBtn = document.getElementById('agora-toggle-mic');
-                const videoBtn = document.getElementById('agora-toggle-video');
+            function assignLocalTracks(audio, video = null) {
+                localAudio = audio;
+                localVideo = video;
+                boot.__localAudio = audio;
+                boot.__localVideo = video;
+            }
 
-                if (micBtn) {
-                    const muted = Boolean(localAudio) && !localAudio.enabled;
-                    micBtn.classList.toggle('video-call-control--off', muted);
-                    micBtn.setAttribute('aria-pressed', muted ? 'true' : 'false');
-                    micBtn.title = muted ? (micBtn.dataset.labelOff || 'Muted') : (micBtn.dataset.labelOn || '');
-                    const label = micBtn.querySelector('[data-control-label]');
-                    if (label) {
-                        label.textContent = muted
-                            ? (micBtn.dataset.labelOff || 'Muted')
-                            : (micBtn.dataset.labelOn || '');
-                    }
-                }
+            function clearLocalTracks() {
+                assignLocalTracks(null, null);
+            }
 
-                if (videoBtn && !videoBtn.classList.contains('hidden')) {
-                    const cameraOff = Boolean(localVideo) && !localVideo.enabled;
-                    videoBtn.classList.toggle('video-call-control--off', cameraOff);
-                    videoBtn.setAttribute('aria-pressed', cameraOff ? 'true' : 'false');
-                    videoBtn.title = cameraOff ? (videoBtn.dataset.labelOff || 'Camera off') : (videoBtn.dataset.labelOn || '');
-                    const label = videoBtn.querySelector('[data-control-label]');
-                    if (label) {
-                        label.textContent = cameraOff
-                            ? (videoBtn.dataset.labelOff || 'Camera off')
-                            : (videoBtn.dataset.labelOn || '');
-                    }
-                }
+            function mediaControlOptions(mode = currentMode) {
+                return {
+                    micBtnId: 'agora-toggle-mic',
+                    videoBtnId: 'agora-toggle-video',
+                    localPreviewId: 'agora-local-player',
+                    localAudio: boot.__localAudio || localAudio,
+                    localVideo: boot.__localVideo || localVideo,
+                    mode,
+                };
+            }
+
+            function syncMediaControlUi(mode = currentMode) {
+                window.MashoraAgoraMediaControls?.sync(mediaControlOptions(mode));
+            }
+
+            function showMediaControlsForMode(mode) {
+                window.MashoraAgoraMediaControls?.showControlsForMode(
+                    'agora-toggle-mic',
+                    'agora-toggle-video',
+                    mode,
+                );
             }
 
             async function leaveCallLocal() {
@@ -866,13 +873,12 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                 if (localVideo) {
                     localVideo.stop();
                     localVideo.close();
-                    localVideo = null;
                 }
                 if (localAudio) {
                     localAudio.stop();
                     localAudio.close();
-                    localAudio = null;
                 }
+                clearLocalTracks();
                 if (agoraClient) {
                     try {
                         await agoraClient.leave();
@@ -892,11 +898,9 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                     lp.innerHTML = '';
                 }
                 showOverlay(false);
-                syncMediaControlUi();
-                const tv = document.getElementById('agora-toggle-video');
-                if (tv) {
-                    tv.classList.remove('hidden');
-                }
+                syncMediaControlUi(null);
+                document.getElementById('agora-toggle-mic')?.classList.add('hidden');
+                document.getElementById('agora-toggle-video')?.classList.add('hidden');
             }
 
             async function postEndCall() {
@@ -1093,14 +1097,14 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                 if (localVideo) {
                     localVideo.stop();
                     localVideo.close();
-                    localVideo = null;
                 }
 
                 if (localAudio) {
                     localAudio.stop();
                     localAudio.close();
-                    localAudio = null;
                 }
+
+                clearLocalTracks();
 
                 if (agoraClient) {
                     try {
@@ -1138,8 +1142,7 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                     durationEl.textContent = '00:00';
                 }
 
-                document.getElementById('agora-toggle-video')?.classList.toggle('hidden', mode !== 'video');
-                document.getElementById('agora-toggle-mic')?.classList.remove('hidden');
+                showMediaControlsForMode(mode);
             }
 
             const labelVideo = metricsEl?.dataset.labelVideo || 'Video call';
@@ -1185,8 +1188,7 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                     await client.join(cfg.agora_app_id, cfg.agora_channel, cfg.agora_token || null, null);
                     const audioTrack = await AgoraRTC.createMicrophoneAudioTrack();
                     const videoTrack = await AgoraRTC.createCameraVideoTrack();
-                    localAudio = audioTrack;
-                    localVideo = videoTrack;
+                    assignLocalTracks(audioTrack, videoTrack);
                     videoTrack.play('agora-local-player');
                     await client.publish([audioTrack, videoTrack]);
                     await subscribeExistingRemoteUsers(client, 'video');
@@ -1197,10 +1199,9 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                     if (audioBtn) {
                         audioBtn.disabled = true;
                     }
-                    document.getElementById('agora-toggle-video')?.classList.remove('hidden');
-                    document.getElementById('agora-toggle-mic')?.classList.remove('hidden');
+                    showMediaControlsForMode('video');
                     startCallTimer('video', labelVideo, labelVoice);
-                    syncMediaControlUi();
+                    syncMediaControlUi('video');
                 } catch (e) {
                     console.error(e);
                     await resetPartialAgoraJoin();
@@ -1244,7 +1245,7 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
 
                     await client.join(cfg.agora_app_id, cfg.agora_channel, cfg.agora_token || null, null);
                     const audioTrack = await AgoraRTC.createMicrophoneAudioTrack();
-                    localAudio = audioTrack;
+                    assignLocalTracks(audioTrack, null);
                     await client.publish([audioTrack]);
                     await subscribeExistingRemoteUsers(client, 'audio');
                     currentMode = 'audio';
@@ -1254,10 +1255,9 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                     if (videoBtn) {
                         videoBtn.disabled = true;
                     }
-                    document.getElementById('agora-toggle-video')?.classList.add('hidden');
-                    document.getElementById('agora-toggle-mic')?.classList.remove('hidden');
+                    showMediaControlsForMode('audio');
                     startCallTimer('audio', labelVideo, labelVoice);
-                    syncMediaControlUi();
+                    syncMediaControlUi('audio');
                 } catch (e) {
                     console.error(e);
                     await resetPartialAgoraJoin();
@@ -1306,20 +1306,12 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
             boot.__joinAudioCall = () => joinAudioCall();
             boot.__leaveCall = (notifyRemote = true) => leaveCall(notifyRemote);
             boot.__toggleMic = () => {
-                if (!localAudio) {
-                    return;
-                }
-
-                localAudio.setEnabled(!localAudio.enabled);
-                syncMediaControlUi();
+                window.MashoraAgoraMediaControls?.toggleMic(mediaControlOptions())
+                    .catch((error) => console.error(error));
             };
             boot.__toggleVideo = () => {
-                if (!localVideo) {
-                    return;
-                }
-
-                localVideo.setEnabled(!localVideo.enabled);
-                syncMediaControlUi();
+                window.MashoraAgoraMediaControls?.toggleVideo(mediaControlOptions())
+                    .catch((error) => console.error(error));
             };
 
             function bindCallControlButtons() {

@@ -218,6 +218,47 @@ test('follow up is booked immediately when patient confirmation is skipped', fun
         ->and($followUp->patient_confirmed_at)->not->toBeNull();
 });
 
+test('doctor can schedule follow up during in process session when relaxed', function () {
+    config([
+        'appointments.relaxed_session_limits' => true,
+        'appointments.follow_up_skip_patient_confirmation' => true,
+    ]);
+
+    $doctor = seedDoctorWithSlots(7);
+    $user = User::factory()->create(['profile_completed' => true]);
+
+    $followUpDate = now()->addDays(14)->format('Y-m-d');
+
+    $appointment = Appointment::factory()->create([
+        'doctor_id' => $doctor->id,
+        'user_id' => $user->id,
+        'status' => 'in_process',
+        'duration' => 30,
+        'appointment_date' => now()->format('Y-m-d'),
+        'start_time' => '10:00:00',
+        'end_time' => '10:30:00',
+        'patient_name' => $user->name,
+        'patient_phone' => $user->phone,
+        'actual_start_at' => now(),
+    ]);
+
+    expect(app(FollowUpAppointmentService::class)->parentCanScheduleFollowUp($appointment))->toBeTrue();
+
+    $this->actingAs($doctor, 'doctor');
+
+    Livewire::test('pages::doctor.appointment.follow-up', ['appointment' => $appointment])
+        ->set('newDate', $followUpDate)
+        ->set('selectedTime', '10:00')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $followUp = Appointment::query()->where('parent_id', $appointment->id)->first();
+
+    expect($followUp)->not->toBeNull()
+        ->and($followUp->status)->toBe('new')
+        ->and($followUp->is_follow_up)->toBeTrue();
+});
+
 test('patient confirms free follow-up without payment', function () {
     $doctor = seedDoctorWithSlots(7);
     $user = User::factory()->create(['profile_completed' => true]);

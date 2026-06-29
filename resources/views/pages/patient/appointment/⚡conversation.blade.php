@@ -409,6 +409,8 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
         'cameraOffLabel' => __('patient.appointments.camera_off'),
     ])
 
+    @include('partials.agora-media-controls')
+
     <div
         id="patient-conversation-bootstrap"
         wire:ignore
@@ -622,14 +624,14 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 if (localVideo) {
                     localVideo.stop();
                     localVideo.close();
-                    localVideo = null;
                 }
 
                 if (localAudio) {
                     localAudio.stop();
                     localAudio.close();
-                    localAudio = null;
                 }
+
+                clearLocalTracks();
 
                 if (agoraClient) {
                     try {
@@ -664,7 +666,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 }
 
                 document.getElementById('patient-agora-toggle-video')?.classList.toggle('hidden', mode !== 'video');
-                document.getElementById('patient-agora-toggle-mic')?.classList.remove('hidden');
+                showMediaControlsForMode(mode);
             }
 
             function updateActiveCallOverlayUi() {
@@ -698,8 +700,10 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 }
 
                 const joinSessionBtn = document.getElementById('patient-session-join-call-btn');
+                const hasIncomingCall = Boolean(incomingPayload)
+                    || (incomingBanner && !incomingBanner.classList.contains('hidden'));
                 if (joinSessionBtn) {
-                    joinSessionBtn.classList.toggle('hidden', Boolean(activeMode));
+                    joinSessionBtn.classList.toggle('hidden', Boolean(activeMode) || hasIncomingCall);
                 }
             }
 
@@ -856,35 +860,38 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 overlay.setAttribute('aria-hidden', show ? 'false' : 'true');
             }
 
-            function syncMediaControlUi() {
-                const micBtn = document.getElementById('patient-agora-toggle-mic');
-                const videoBtn = document.getElementById('patient-agora-toggle-video');
+            function assignLocalTracks(audio, video = null) {
+                localAudio = audio;
+                localVideo = video;
+                boot.__localAudio = audio;
+                boot.__localVideo = video;
+            }
 
-                if (micBtn) {
-                    const muted = Boolean(localAudio) && !localAudio.enabled;
-                    micBtn.classList.toggle('video-call-control--off', muted);
-                    micBtn.setAttribute('aria-pressed', muted ? 'true' : 'false');
-                    micBtn.title = muted ? (micBtn.dataset.labelOff || 'Muted') : (micBtn.dataset.labelOn || '');
-                    const label = micBtn.querySelector('[data-control-label]');
-                    if (label) {
-                        label.textContent = muted
-                            ? (micBtn.dataset.labelOff || 'Muted')
-                            : (micBtn.dataset.labelOn || '');
-                    }
-                }
+            function clearLocalTracks() {
+                assignLocalTracks(null, null);
+            }
 
-                if (videoBtn && !videoBtn.classList.contains('hidden')) {
-                    const cameraOff = Boolean(localVideo) && !localVideo.enabled;
-                    videoBtn.classList.toggle('video-call-control--off', cameraOff);
-                    videoBtn.setAttribute('aria-pressed', cameraOff ? 'true' : 'false');
-                    videoBtn.title = cameraOff ? (videoBtn.dataset.labelOff || 'Camera off') : (videoBtn.dataset.labelOn || '');
-                    const label = videoBtn.querySelector('[data-control-label]');
-                    if (label) {
-                        label.textContent = cameraOff
-                            ? (videoBtn.dataset.labelOff || 'Camera off')
-                            : (videoBtn.dataset.labelOn || '');
-                    }
-                }
+            function mediaControlOptions(mode = activeMode) {
+                return {
+                    micBtnId: 'patient-agora-toggle-mic',
+                    videoBtnId: 'patient-agora-toggle-video',
+                    localPreviewId: 'patient-agora-local',
+                    localAudio: boot.__localAudio || localAudio,
+                    localVideo: boot.__localVideo || localVideo,
+                    mode,
+                };
+            }
+
+            function syncMediaControlUi(mode = activeMode) {
+                window.MashoraAgoraMediaControls?.sync(mediaControlOptions(mode));
+            }
+
+            function showMediaControlsForMode(mode) {
+                window.MashoraAgoraMediaControls?.showControlsForMode(
+                    'patient-agora-toggle-mic',
+                    'patient-agora-toggle-video',
+                    mode,
+                );
             }
 
             async function leaveCallLocal() {
@@ -892,13 +899,12 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 if (localVideo) {
                     localVideo.stop();
                     localVideo.close();
-                    localVideo = null;
                 }
                 if (localAudio) {
                     localAudio.stop();
                     localAudio.close();
-                    localAudio = null;
                 }
+                clearLocalTracks();
                 if (agoraClient) {
                     try {
                         await agoraClient.leave();
@@ -917,7 +923,9 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                     localWrap.innerHTML = '';
                 }
                 showOverlay(false);
-                syncMediaControlUi();
+                syncMediaControlUi(null);
+                document.getElementById('patient-agora-toggle-mic')?.classList.add('hidden');
+                document.getElementById('patient-agora-toggle-video')?.classList.add('hidden');
             }
 
             async function postEndCall() {
@@ -1277,14 +1285,13 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                         await client.join(cfg.agora_app_id, cfg.agora_channel, cfg.agora_token || null, null);
                         const micTrack = await AgoraRTC.createMicrophoneAudioTrack();
                         const camTrack = await AgoraRTC.createCameraVideoTrack();
-                        localAudio = micTrack;
-                        localVideo = camTrack;
+                        assignLocalTracks(micTrack, camTrack);
                         camTrack.play('patient-agora-local');
                         await client.publish([micTrack, camTrack]);
                     } else {
                         await client.join(cfg.agora_app_id, cfg.agora_channel, cfg.agora_token || null, null);
                         const micTrack = await AgoraRTC.createMicrophoneAudioTrack();
-                        localAudio = micTrack;
+                        assignLocalTracks(micTrack, null);
                         await client.publish([micTrack]);
                     }
 
@@ -1293,9 +1300,8 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                     activeMode = mode;
                     incomingPayload = null;
                     startCallTimer(mode);
-                    document.getElementById('patient-agora-toggle-video')?.classList.toggle('hidden', mode !== 'video');
-                    document.getElementById('patient-agora-toggle-mic')?.classList.remove('hidden');
-                    syncMediaControlUi();
+                    showMediaControlsForMode(mode);
+                    syncMediaControlUi(mode);
                     refreshCallUiState();
                 } catch (e) {
                     console.error(e);
@@ -1312,20 +1318,12 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
             boot.__joinSessionCall = () => joinSessionCall();
             boot.__leaveCall = (notifyRemote = true) => leaveCall(notifyRemote);
             boot.__toggleMic = () => {
-                if (!localAudio) {
-                    return;
-                }
-
-                localAudio.setEnabled(!localAudio.enabled);
-                syncMediaControlUi();
+                window.MashoraAgoraMediaControls?.toggleMic(mediaControlOptions())
+                    .catch((error) => console.error(error));
             };
             boot.__toggleVideo = () => {
-                if (!localVideo) {
-                    return;
-                }
-
-                localVideo.setEnabled(!localVideo.enabled);
-                syncMediaControlUi();
+                window.MashoraAgoraMediaControls?.toggleVideo(mediaControlOptions())
+                    .catch((error) => console.error(error));
             };
             boot.__acceptIncoming = () => {
                 if (callJoinInProgress || activeMode) {

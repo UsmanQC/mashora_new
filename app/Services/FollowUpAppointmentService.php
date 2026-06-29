@@ -17,6 +17,23 @@ final class FollowUpAppointmentService
      */
     public const SCHEDULABLE_PARENT_STATUSES = ['completed'];
 
+    /**
+     * @return list<string>
+     */
+    public function schedulableParentStatuses(): array
+    {
+        if ((bool) config('appointments.relaxed_session_limits', false)) {
+            return ['completed', 'in_process'];
+        }
+
+        return self::SCHEDULABLE_PARENT_STATUSES;
+    }
+
+    public function skipsPatientConfirmation(): bool
+    {
+        return (bool) config('appointments.follow_up_skip_patient_confirmation', false);
+    }
+
     public function __construct(
         private readonly DoctorAvailabilityService $availability,
         private readonly PatientAppointmentNotifier $notifier,
@@ -52,6 +69,10 @@ final class FollowUpAppointmentService
 
     public function maxSelectableDate(Appointment $parent): CarbonInterface
     {
+        if ((bool) config('appointments.relaxed_session_limits', false)) {
+            return now(config('app.timezone'))->addYear()->startOfDay();
+        }
+
         $end = $this->windowEnd($parent);
         $start = $this->windowStart();
 
@@ -68,7 +89,7 @@ final class FollowUpAppointmentService
             abort(403);
         }
 
-        if (! in_array((string) $parent->status, self::SCHEDULABLE_PARENT_STATUSES, true)) {
+        if (! in_array((string) $parent->status, $this->schedulableParentStatuses(), true)) {
             throw ValidationException::withMessages([
                 'selectedTime' => __('doctor.follow_up.parent_not_eligible'),
             ]);
@@ -192,7 +213,7 @@ final class FollowUpAppointmentService
 
     public function parentCanScheduleFollowUp(Appointment $parent): bool
     {
-        if (! in_array((string) $parent->status, self::SCHEDULABLE_PARENT_STATUSES, true)) {
+        if (! in_array((string) $parent->status, $this->schedulableParentStatuses(), true)) {
             return false;
         }
 
@@ -209,6 +230,10 @@ final class FollowUpAppointmentService
 
     public function assertDateWithinWindow(Appointment $parent, string $date): void
     {
+        if ((bool) config('appointments.relaxed_session_limits', false)) {
+            return;
+        }
+
         $timezone = config('app.timezone');
 
         try {

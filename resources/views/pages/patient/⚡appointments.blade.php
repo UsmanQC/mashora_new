@@ -326,22 +326,6 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
         </flux:callout>
     @endif
 
-    <div id="patient-call-join-banner" class="hidden">
-        <div class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
-            <div class="flex flex-wrap items-center justify-between gap-3">
-                <p id="patient-call-join-text" class="text-sm font-medium text-emerald-900"></p>
-                <a
-                    id="patient-call-join-now"
-                    href="#"
-                    wire:navigate
-                    class="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-700"
-                >
-                    <span id="patient-call-join-now-label">{{ __('patient.appointments.join_session') }}</span>
-                </a>
-            </div>
-        </div>
-    </div>
-
     {{-- Page header --}}
     <div class="border-b border-zinc-200/80 bg-white px-4 py-5 sm:px-6">
         <div class="flex w-full items-start justify-between gap-4">
@@ -544,10 +528,6 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
         data-join-base="{{ route('patient.appointments.conversation', ['appointment' => '__ID__']) }}"
         data-token-base="{{ route('patient.appointments.realtime.agora-token', ['appointment' => '__ID__']) }}"
         data-notify-base="{{ route('patient.appointments.realtime.notify-call', ['appointment' => '__ID__']) }}"
-        data-label-call="{{ __('patient.appointments.join_session') }}"
-        data-label-join-session="{{ __('patient.appointments.join_session') }}"
-        data-label-join-call="{{ __('patient.appointments.join_call') }}"
-        data-session-started-text="{{ __('patient.notifications.session_started_body') }}"
     ></div>
 
     <div id="patient-inline-call-overlay" class="fixed inset-0 z-[210] hidden bg-zinc-950/90 backdrop-blur-sm">
@@ -697,14 +677,6 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
             const joinBase = boot.dataset.joinBase || '';
             const tokenBase = boot.dataset.tokenBase || '';
             const notifyBase = boot.dataset.notifyBase || '';
-            const labelCall = boot.dataset.labelCall || 'Session started. Join now.';
-            const labelJoinSession = boot.dataset.labelJoinSession || labelCall;
-            const labelJoinCall = boot.dataset.labelJoinCall || 'Join call';
-            const sessionStartedText = boot.dataset.sessionStartedText || labelCall;
-            const banner = document.getElementById('patient-call-join-banner');
-            const text = document.getElementById('patient-call-join-text');
-            const joinNowBtn = document.getElementById('patient-call-join-now');
-            const joinNowLabel = document.getElementById('patient-call-join-now-label');
             const overlay = document.getElementById('patient-inline-call-overlay');
             const remoteWrap = document.getElementById('patient-inline-call-remote');
             const localWrap = document.getElementById('patient-inline-call-local');
@@ -729,11 +701,6 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
                 return;
             }
 
-            const incomingCallTitle = @js(__('patient.appointments.incoming_call_title'));
-            const incomingVideoLabel = @js(__('patient.appointments.incoming_video'));
-            const incomingVoiceLabel = @js(__('patient.appointments.incoming_voice'));
-            const sessionStartedTitle = @js(__('patient.notifications.session_started_title'));
-
             function refreshAppointmentsList() {
                 if (window.Livewire) {
                     Livewire.dispatch('patient-appointment-session-started');
@@ -741,55 +708,23 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
             }
 
             function showSessionJoin(appointmentId) {
-                if (!banner || !text || !joinNowBtn) {
-                    return;
-                }
-
                 const id = Number(appointmentId) || 0;
                 if (!id) {
                     return;
                 }
 
-                text.textContent = sessionStartedText;
-                joinNowBtn.href = joinBase.replace('__ID__', String(id));
-                if (joinNowLabel) {
-                    joinNowLabel.textContent = labelJoinSession;
-                }
-
-                banner.classList.remove('hidden');
                 currentAppointmentId = id;
                 refreshAppointmentsList();
             }
 
-            function showIncomingCallJoin(appointmentId, options = {}) {
-                if (!banner || !text || !joinNowBtn) {
-                    return;
-                }
-
+            function showIncomingCallJoin(appointmentId) {
                 const id = Number(appointmentId) || 0;
                 if (!id) {
                     return;
                 }
 
-                const label = options.label || labelJoinCall;
-                const notifyPayload = {
-                    appointment_id: id,
-                    call_type: options.callType || 'video',
-                    agora_channel: options.agoraChannel || '',
-                };
-
-                if (!options.skipAlerts) {
-                    window.MashoraIncomingCall?.notifyPatient(notifyPayload, incomingCallTitle, label);
-                }
-
-                text.textContent = label;
-                joinNowBtn.href = joinBase.replace('__ID__', String(id));
-                if (joinNowLabel) {
-                    joinNowLabel.textContent = labelJoinCall;
-                }
-
-                banner.classList.remove('hidden');
                 currentAppointmentId = id;
+                refreshAppointmentsList();
             }
 
             async function leaveInlineCall() {
@@ -951,21 +886,10 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
                     if (overlay) {
                         overlay.classList.remove('hidden');
                     }
-                    banner?.classList.add('hidden');
                 } finally {
                     inlineJoinInProgress = false;
                 }
             }
-
-            joinNowBtn?.addEventListener('click', () => {
-                const appointmentId = currentAppointmentId;
-                if (!appointmentId) {
-                    return;
-                }
-
-                window.MashoraRealtimeAlerts?.stopIncomingRing();
-                joinNowBtn.href = joinBase.replace('__ID__', String(appointmentId));
-            });
 
             endBtn?.addEventListener('click', () => {
                 leaveInlineCall().catch(() => {});
@@ -991,12 +915,7 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
                 channel.bind('call.incoming', (payload) => {
                     const incomingAppointmentId = Number(payload?.appointment_id || appointmentId);
                     payloadByAppointment.set(incomingAppointmentId, payload || null);
-                    const label = payload?.call_type === 'video' ? incomingVideoLabel : incomingVoiceLabel;
-                    showIncomingCallJoin(incomingAppointmentId, {
-                        label,
-                        callType: payload?.call_type || 'video',
-                        agoraChannel: payload?.agora_channel || '',
-                    });
+                    showIncomingCallJoin(incomingAppointmentId);
                 });
             });
 
@@ -1024,13 +943,7 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
                     }
 
                     payloadByAppointment.set(appointmentId, payload);
-                    const label = payload.call_type === 'video' ? incomingVideoLabel : incomingVoiceLabel;
-                    showIncomingCallJoin(appointmentId, {
-                        label,
-                        callType: payload.call_type || 'video',
-                        agoraChannel: payload.agora_channel || '',
-                        skipAlerts: true,
-                    });
+                    showIncomingCallJoin(appointmentId);
                 });
             }
 

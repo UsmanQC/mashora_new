@@ -67,7 +67,8 @@
                                 data-label-on="{{ $micLabel }}"
                                 data-label-off="{{ $micMutedLabel ?? __('doctor.conversation.mic_muted') }}"
                                 aria-pressed="false"
-                                class="video-call-control group flex flex-col items-center gap-1.5 rounded-xl px-2 py-1 transition hover:bg-white/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#10B981]/60"
+                                disabled
+                                class="video-call-control group hidden flex flex-col items-center gap-1.5 rounded-xl px-2 py-1 transition hover:bg-white/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#10B981]/60 disabled:cursor-not-allowed disabled:opacity-50"
                                 title="{{ $micLabel }}"
                             >
                                 <span data-control-ring class="flex size-12 items-center justify-center rounded-full border border-white/15 bg-zinc-800/90 text-white transition group-hover:border-[#10B981]/40 group-hover:bg-zinc-700/90 sm:size-14">
@@ -81,7 +82,8 @@
                                 data-label-on="{{ $cameraLabel }}"
                                 data-label-off="{{ $cameraOffLabel ?? __('doctor.conversation.camera_off') }}"
                                 aria-pressed="false"
-                                class="video-call-control group flex flex-col items-center gap-1.5 rounded-xl px-2 py-1 transition hover:bg-white/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#10B981]/60"
+                                disabled
+                                class="video-call-control group hidden flex flex-col items-center gap-1.5 rounded-xl px-2 py-1 transition hover:bg-white/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#10B981]/60 disabled:cursor-not-allowed disabled:opacity-50"
                                 title="{{ $cameraLabel }}"
                             >
                                 <span data-control-ring class="flex size-12 items-center justify-center rounded-full border border-white/15 bg-zinc-800/90 text-white transition group-hover:border-[#10B981]/40 group-hover:bg-zinc-700/90 sm:size-14">
