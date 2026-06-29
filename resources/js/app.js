@@ -23,12 +23,21 @@ function initPatientPortalNavLoader() {
 
     let shownAt = 0;
     let hideTimer = null;
+    let failsafeTimer = null;
 
     const show = () => {
         if (hideTimer !== null) {
             clearTimeout(hideTimer);
             hideTimer = null;
         }
+
+        if (failsafeTimer !== null) {
+            clearTimeout(failsafeTimer);
+        }
+
+        failsafeTimer = setTimeout(() => {
+            hide();
+        }, 12000);
 
         shownAt = Date.now();
         loader.classList.remove('hidden');
@@ -37,6 +46,11 @@ function initPatientPortalNavLoader() {
     };
 
     const hide = () => {
+        if (failsafeTimer !== null) {
+            clearTimeout(failsafeTimer);
+            failsafeTimer = null;
+        }
+
         const delay = Math.max(0, PATIENT_LOADER_MIN_VISIBLE_MS - (Date.now() - shownAt));
 
         hideTimer = setTimeout(() => {

@@ -426,8 +426,36 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
 
 @push('scripts')
     @include('partials.realtime-call-alerts')
-    <script src="https://js.pusher.com/8.2.0/pusher.min.js"></script>
     <script>
+        function hidePatientPortalNavLoader() {
+            const loader = document.querySelector('[data-patient-portal-loader]');
+            if (!loader) {
+                return;
+            }
+
+            loader.classList.add('hidden');
+            loader.classList.remove('flex');
+            loader.setAttribute('aria-busy', 'false');
+        }
+
+        function schedulePatientConversationInit() {
+            if (window.__patientConversationInitScheduled) {
+                return;
+            }
+
+            window.__patientConversationInitScheduled = true;
+
+            window.setTimeout(() => {
+                window.__patientConversationInitScheduled = false;
+
+                try {
+                    initPatientConversationRealtime();
+                } finally {
+                    hidePatientPortalNavLoader();
+                }
+            }, 0);
+        }
+
         function teardownPatientConversationRealtime() {
             if (typeof window.__patientConversationTeardown === 'function') {
                 window.__patientConversationTeardown();
@@ -439,19 +467,28 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
             const boot = document.getElementById('patient-conversation-bootstrap');
             const panel = document.getElementById('patient-chat-panel');
             if (!boot || !panel) {
+                hidePatientPortalNavLoader();
+
                 return;
             }
 
             const appointmentId = Number(boot.dataset.appointmentId || 0);
+
+            if (window.__patientConversationInitLock) {
+                return;
+            }
 
             if (boot.dataset.initialized === '1' && boot.dataset.boundAppointmentId === String(appointmentId)) {
                 boot.__mountOverlayToBody?.();
                 boot.__bindCallControlButtons?.();
                 boot.__restorePendingCall?.();
                 boot.__syncCallOverlay?.();
+                hidePatientPortalNavLoader();
 
                 return;
             }
+
+            window.__patientConversationInitLock = true;
 
             teardownPatientConversationRealtime();
 
@@ -654,6 +691,21 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 }
             }
 
+            function markCallConnected(mode) {
+                activeMode = mode;
+                incomingPayload = null;
+
+                if (!callStartedAt) {
+                    startCallTimer(mode);
+                } else {
+                    updateActiveCallOverlayUi();
+                }
+
+                showMediaControlsForMode(mode);
+                syncMediaControlUi(mode);
+                refreshCallUiState();
+            }
+
             function setOverlayConnecting(mode) {
                 const titleEl = overlayTitleEl();
                 if (titleEl) {
@@ -789,11 +841,11 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 const wasWaiting = appointmentStatus !== 'in_process' && nextStatus === 'in_process';
 
                 appointmentStatus = nextStatus;
-                if (bootEl) {
+                if (bootEl && bootEl.dataset.appointmentStatus !== appointmentStatus) {
                     bootEl.dataset.appointmentStatus = appointmentStatus;
                 }
 
-                if (metricsEl && nextStatus === 'in_process') {
+                if (metricsEl && nextStatus === 'in_process' && metricsEl.dataset.status !== nextStatus) {
                     metricsEl.dataset.status = nextStatus;
                 }
 
@@ -989,12 +1041,18 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
 
             function registerRemoteUserHandlers(client, mode) {
                 client.on('user-published', async (user, mediaType) => {
-                    await client.subscribe(user, mediaType);
-                    if (mediaType === 'video') {
-                        user.videoTrack?.play('patient-agora-remote');
-                    }
-                    if (mediaType === 'audio') {
-                        user.audioTrack?.play();
+                    try {
+                        await client.subscribe(user, mediaType);
+                        if (mediaType === 'video') {
+                            user.videoTrack?.play('patient-agora-remote');
+                        }
+                        if (mediaType === 'audio') {
+                            user.audioTrack?.play();
+                        }
+
+                        markCallConnected(mode);
+                    } catch (error) {
+                        console.error('Failed to subscribe to remote user media', error);
                     }
                 });
 
@@ -1013,16 +1071,40 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
 
             async function subscribeExistingRemoteUsers(client, mode) {
                 for (const user of client.remoteUsers) {
-                    if (user.hasAudio) {
-                        await client.subscribe(user, 'audio');
-                        user.audioTrack?.play();
-                    }
+                    try {
+                        if (user.hasAudio) {
+                            await client.subscribe(user, 'audio');
+                            user.audioTrack?.play();
+                        }
 
-                    if (user.hasVideo && mode === 'video') {
-                        await client.subscribe(user, 'video');
-                        user.videoTrack?.play('patient-agora-remote');
+                        if (user.hasVideo && mode === 'video') {
+                            await client.subscribe(user, 'video');
+                            user.videoTrack?.play('patient-agora-remote');
+                        }
+                    } catch (error) {
+                        console.error('Failed to subscribe to existing remote user', error);
                     }
                 }
+
+                if (client.remoteUsers.length > 0) {
+                    markCallConnected(mode);
+                }
+            }
+
+            async function resolveJoinConfig(payload) {
+                const serverCfg = await refreshConfig();
+                const payloadCfg = resolveAgoraConfig(payload);
+
+                if (serverCfg?.agora_app_id && serverCfg?.agora_channel) {
+                    return {
+                        agora_app_id: serverCfg.agora_app_id,
+                        agora_token: serverCfg.agora_token || null,
+                        agora_channel: serverCfg.agora_channel,
+                        call_type: payloadCfg?.call_type || payload?.call_type || 'video',
+                    };
+                }
+
+                return payloadCfg;
             }
 
             function maybeEndCallWhenSessionExpired(leftSeconds) {
@@ -1266,10 +1348,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                     await ensureAgoraSdk();
                     await resetPartialAgoraJoin();
 
-                    let cfg = resolveAgoraConfig(payload);
-                    if (!cfg) {
-                        cfg = await refreshConfig();
-                    }
+                    const cfg = await resolveJoinConfig(payload);
 
                     if (!cfg || !cfg.agora_app_id || !cfg.agora_channel) {
                         throw new Error(labelNoActiveCall);
@@ -1295,14 +1374,11 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                         await client.publish([micTrack]);
                     }
 
-                    await subscribeExistingRemoteUsers(client, mode);
+                    markCallConnected(mode);
 
-                    activeMode = mode;
-                    incomingPayload = null;
-                    startCallTimer(mode);
-                    showMediaControlsForMode(mode);
-                    syncMediaControlUi(mode);
-                    refreshCallUiState();
+                    subscribeExistingRemoteUsers(client, mode).catch((error) => {
+                        console.error('Failed to subscribe to existing remote users', error);
+                    });
                 } catch (e) {
                     console.error(e);
                     await resetPartialAgoraJoin();
@@ -1456,26 +1532,34 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 if (pusher) {
                     const appointmentChannelName = 'private-appointment.' + appointmentId;
                     const channel = window.MashoraPatientPusher.subscribe(appointmentChannelName);
-                    channel?.bind('pusher:subscription_error', (error) => {
-                        console.error('Pusher appointment channel error', error);
-                    });
-                    channel?.bind('message.created', (data) => appendMessageRow(data));
-                    channel?.bind('session.started', (data) => {
-                        applySessionStartedPayload(data);
-                    });
-                    channel?.bind('call.incoming', (data) => {
-                        if (Number(data?.appointment_id || appointmentId) !== appointmentId) {
-                            return;
-                        }
 
-                        showIncomingCallBanner(data);
-                    });
-                    channel?.bind('call.ended', (data) => {
-                        handleRemoteCallEnded(data);
-                    });
+                    if (channel && channel.__mashoraPatientConversationBound !== appointmentId) {
+                        channel.__mashoraPatientConversationBound = appointmentId;
+
+                        channel.bind('pusher:subscription_error', (error) => {
+                            console.error('Pusher appointment channel error', error);
+                        });
+                        channel.bind('message.created', (data) => appendMessageRow(data));
+                        channel.bind('session.started', (data) => {
+                            applySessionStartedPayload(data);
+                        });
+                        channel.bind('call.incoming', (data) => {
+                            if (Number(data?.appointment_id || appointmentId) !== appointmentId) {
+                                return;
+                            }
+
+                            showIncomingCallBanner(data);
+                        });
+                        channel.bind('call.ended', (data) => {
+                            handleRemoteCallEnded(data);
+                        });
+                    }
 
                     window.__patientConversationTeardown = () => {
                         boot.__leaveCall?.().catch(() => {});
+                        if (channel) {
+                            delete channel.__mashoraPatientConversationBound;
+                        }
                         window.MashoraPatientPusher.unsubscribe(appointmentChannelName);
                         window.MashoraPatientPusher.release();
                         delete boot.dataset.initialized;
@@ -1506,7 +1590,6 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                         succeed(() => {
                             const bootEl = document.getElementById('patient-conversation-bootstrap');
                             bootEl?.__bindCallControlButtons?.();
-                            bootEl?.__restorePendingCall?.();
                             bootEl?.__syncCallOverlay?.();
                         });
                     });
@@ -1537,10 +1620,17 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                     sessionObserver.observe(metrics, { attributes: true, attributeFilter: ['data-status', 'data-session-start', 'data-session-end'] });
                 }
             }
+
+            window.__patientConversationInitLock = false;
         }
 
-        document.addEventListener('DOMContentLoaded', initPatientConversationRealtime);
-        document.addEventListener('livewire:navigated', initPatientConversationRealtime);
-        initPatientConversationRealtime();
+        if (!window.__patientConversationInitBound) {
+            window.__patientConversationInitBound = true;
+
+            document.addEventListener('DOMContentLoaded', schedulePatientConversationInit);
+            document.addEventListener('livewire:navigated', schedulePatientConversationInit);
+        }
+
+        schedulePatientConversationInit();
     </script>
 @endpush

@@ -88,6 +88,12 @@
                 }
 
                 async function restoreGlobalJoinBannerFromStorage() {
+                    if (patientConversationPathAppointmentId() > 0) {
+                        hideGlobalJoinBanner();
+
+                        return;
+                    }
+
                     const pendingUrlTemplate = @js(route('patient.appointments.realtime.pending-call', ['appointment' => '__ID__']));
 
                     if (!pendingUrlTemplate) {
