@@ -22,6 +22,7 @@ new #[Layout('layouts::doctor')] #[Title('Personal account')] class extends Comp
     public string $phone = '';
     public string $about = '';
     public string $about_ar = '';
+    public string $registration_number = '';
 
     /** @var list<int> */
     public array $speciality_ids = [];
@@ -63,6 +64,7 @@ new #[Layout('layouts::doctor')] #[Title('Personal account')] class extends Comp
         $this->phone = (string) ($doctor->phone ?? '');
         $this->about = (string) ($doctor->about ?? '');
         $this->about_ar = (string) ($doctor->about_ar ?? '');
+        $this->registration_number = (string) ($doctor->registration_number ?? '');
         $this->speciality_ids = $doctor->specialities
             ->pluck('id')
             ->map(static fn (mixed $id): int => (int) $id)
@@ -91,6 +93,7 @@ new #[Layout('layouts::doctor')] #[Title('Personal account')] class extends Comp
             'phone' => ['required', 'string', 'max:20', 'unique:doctors,phone,'.$doctor->id],
             'about' => ['nullable', 'string', 'max:2000'],
             'about_ar' => ['nullable', 'string', 'max:2000'],
+            'registration_number' => ['required', 'string', 'max:120'],
             'speciality_ids' => ['required', 'array', 'min:1'],
             'speciality_ids.*' => ['integer', Rule::exists(Speciality::class, 'id')],
             'profile_photo' => ['nullable', 'image', 'max:2048'],
@@ -113,6 +116,7 @@ new #[Layout('layouts::doctor')] #[Title('Personal account')] class extends Comp
             'phone' => $validated['phone'],
             'about' => $validated['about'] ?: null,
             'about_ar' => $validated['about_ar'] ?: null,
+            'registration_number' => $validated['registration_number'],
             'speciality_id' => $this->speciality_ids[0] ?? null,
         ])->save();
 
@@ -158,6 +162,7 @@ new #[Layout('layouts::doctor')] #[Title('Personal account')] class extends Comp
         filled($about_ar),
         filled($doctor?->profile_photo_path),
         count($speciality_ids) > 0,
+        filled($registration_number),
     ]);
     $profileCompletion = (int) round(($profileFields->filter()->count() / max(1, $profileFields->count())) * 100);
 @endphp
@@ -208,7 +213,7 @@ new #[Layout('layouts::doctor')] #[Title('Personal account')] class extends Comp
                 <flux:heading size="sm" class="font-semibold text-zinc-900">{{ __('Basic information') }}</flux:heading>
                 <div class="mt-3 grid gap-4 md:grid-cols-2">
                     <flux:field>
-                        <flux:label>{{ __('Name') }}</flux:label>
+                        <flux:label>{{ __('Name') }} @include('partials.required-field-mark')</flux:label>
                         <flux:input wire:model="name" />
                         <flux:error name="name" />
                     </flux:field>
@@ -218,12 +223,12 @@ new #[Layout('layouts::doctor')] #[Title('Personal account')] class extends Comp
                         <flux:error name="name_ar" />
                     </flux:field>
                     <flux:field>
-                        <flux:label>{{ __('Email') }}</flux:label>
+                        <flux:label>{{ __('Email') }} @include('partials.required-field-mark')</flux:label>
                         <flux:input wire:model="email" type="email" />
                         <flux:error name="email" />
                     </flux:field>
                     <flux:field>
-                        <flux:label>{{ __('Phone number') }}</flux:label>
+                        <flux:label>{{ __('Phone number') }} @include('partials.required-field-mark')</flux:label>
                         <flux:input wire:model="phone" />
                         <flux:error name="phone" />
                     </flux:field>
@@ -231,7 +236,41 @@ new #[Layout('layouts::doctor')] #[Title('Personal account')] class extends Comp
             </div>
 
             <div class="rounded-xl border border-zinc-200/80 bg-white p-4">
-                <flux:heading size="sm" class="font-semibold text-zinc-900">{{ __('doctor.auth.specialities') }}</flux:heading>
+                <flux:heading size="sm" class="font-semibold text-zinc-900">{{ __('doctor.settings.license_section_title') }}</flux:heading>
+                <flux:text class="mt-1 text-sm text-zinc-600">{{ __('doctor.settings.license_section_hint') }}</flux:text>
+
+                <div class="mt-3 grid gap-4 md:grid-cols-2">
+                    <flux:field>
+                        <flux:label>{{ __('doctor.auth.registration_number') }} @include('partials.required-field-mark')</flux:label>
+                        <flux:input wire:model="registration_number" autocomplete="off" />
+                        <flux:error name="registration_number" />
+                    </flux:field>
+
+                    <div class="flex flex-col justify-end">
+                        @if ($doctor?->profileDetailUrl())
+                            <a
+                                href="{{ $doctor->profileDetailUrl() }}"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                class="inline-flex min-h-10 items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-100"
+                            >
+                                <flux:icon name="document-text" class="size-5 shrink-0" />
+                                {{ __('doctor.settings.view_certificate') }}
+                            </a>
+                        @else
+                            <flux:callout variant="secondary" icon="document-text" class="border-zinc-200">
+                                {{ __('doctor.settings.no_certificate_on_file') }}
+                            </flux:callout>
+                        @endif
+                    </div>
+                </div>
+            </div>
+
+            <div class="rounded-xl border border-zinc-200/80 bg-white p-4">
+                <flux:heading size="sm" class="font-semibold text-zinc-900">
+                    {{ __('doctor.auth.specialities') }}
+                    @include('partials.required-field-mark')
+                </flux:heading>
                 <flux:text class="mt-1 text-sm text-zinc-600">{{ __('doctor.settings.profile_specialities_hint') }}</flux:text>
 
                 @if ($this->specialities->isEmpty())
@@ -297,18 +336,18 @@ new #[Layout('layouts::doctor')] #[Title('Personal account')] class extends Comp
 
         <form wire:submit="changePassword" class="space-y-4">
             <flux:field>
-                <flux:label>{{ __('Current password') }}</flux:label>
+                <flux:label>{{ __('Current password') }} @include('partials.required-field-mark')</flux:label>
                 <flux:input wire:model="current_password" type="password" />
                 <flux:error name="current_password" />
             </flux:field>
             <div class="grid gap-4 md:grid-cols-2">
                 <flux:field>
-                    <flux:label>{{ __('New password') }}</flux:label>
+                    <flux:label>{{ __('New password') }} @include('partials.required-field-mark')</flux:label>
                     <flux:input wire:model="new_password" type="password" />
                     <flux:error name="new_password" />
                 </flux:field>
                 <flux:field>
-                    <flux:label>{{ __('Confirm new password') }}</flux:label>
+                    <flux:label>{{ __('Confirm new password') }} @include('partials.required-field-mark')</flux:label>
                     <flux:input wire:model="new_password_confirmation" type="password" />
                     <flux:error name="new_password_confirmation" />
                 </flux:field>

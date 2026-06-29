@@ -102,13 +102,15 @@
                         return false;
                     }
 
-                    if (options.playRing !== false) {
+                    if (options.playRing === true) {
                         window.MashoraRealtimeAlerts?.playIncomingRing();
                     }
 
-                    window.MashoraRealtimeAlerts?.showDesktopNotification(title, message);
+                    if (options.showDesktopNotification !== false) {
+                        window.MashoraRealtimeAlerts?.showDesktopNotification(title, message);
+                    }
 
-                    if (window.Flux?.toast) {
+                    if (options.showToast !== false && window.Flux?.toast) {
                         window.Flux.toast({ text: message, variant: 'success' });
                     }
 

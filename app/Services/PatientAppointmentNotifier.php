@@ -291,7 +291,7 @@ final class PatientAppointmentNotifier
             'type' => 'incoming_call',
             'appointment_id' => (string) $appointment->id,
             'call_type' => $callType,
-        ]);
+        ], silent: true);
     }
 
     private function patientUser(Appointment $appointment): ?User

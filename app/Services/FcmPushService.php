@@ -15,15 +15,15 @@ final class FcmPushService
     /**
      * @param  array<string, string>  $data
      */
-    public function sendToUser(User $user, string $title, string $body, array $data = []): void
+    public function sendToUser(User $user, string $title, string $body, array $data = [], bool $silent = false): void
     {
-        $this->sendToNotifiable($user, $title, $body, $data);
+        $this->sendToNotifiable($user, $title, $body, $data, $silent);
     }
 
     /**
      * @param  array<string, string>  $data
      */
-    public function sendToNotifiable(Model $notifiable, string $title, string $body, array $data = []): void
+    public function sendToNotifiable(Model $notifiable, string $title, string $body, array $data = [], bool $silent = false): void
     {
         $serverKey = (string) config('push.firebase_server_key');
 
@@ -45,7 +45,7 @@ final class FcmPushService
         }
 
         foreach ($tokens->chunk(500) as $chunk) {
-            $this->sendChunk($chunk, $title, $body, $data, $serverKey);
+            $this->sendChunk($chunk, $title, $body, $data, $serverKey, $silent);
         }
     }
 
@@ -53,15 +53,20 @@ final class FcmPushService
      * @param  Collection<int, string>  $tokens
      * @param  array<string, string>  $data
      */
-    private function sendChunk(Collection $tokens, string $title, string $body, array $data, string $serverKey): void
+    private function sendChunk(Collection $tokens, string $title, string $body, array $data, string $serverKey, bool $silent = false): void
     {
+        $notification = [
+            'title' => $title,
+            'body' => $body,
+        ];
+
+        if (! $silent) {
+            $notification['sound'] = 'default';
+        }
+
         $payload = [
             'registration_ids' => $tokens->all(),
-            'notification' => [
-                'title' => $title,
-                'body' => $body,
-                'sound' => 'default',
-            ],
+            'notification' => $notification,
             'data' => array_merge(['click_action' => 'FLUTTER_NOTIFICATION_CLICK'], $data),
             'priority' => 'high',
         ];

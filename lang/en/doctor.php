@@ -49,6 +49,10 @@ return [
         'subtitle' => 'Account and preferences',
         'personal_profile' => 'Personal profile',
         'profile_specialities_hint' => 'Select the specialities you practice. You can choose more than one, just like during registration.',
+        'license_section_title' => 'License & credentials',
+        'license_section_hint' => 'Your registration number and certificate from onboarding.',
+        'view_certificate' => 'View uploaded certificate',
+        'no_certificate_on_file' => 'No certificate file on file yet.',
         'placeholder' => 'More settings from production will be wired here as the product grows.',
     ],
 

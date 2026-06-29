@@ -49,6 +49,10 @@ return [
         'subtitle' => 'الحساب والتفضيلات',
         'personal_profile' => 'الملف الشخصي',
         'profile_specialities_hint' => 'اختر التخصصات التي تمارسها. يمكنك اختيار أكثر من تخصص، كما في التسجيل.',
+        'license_section_title' => 'الترخيص والمؤهلات',
+        'license_section_hint' => 'رقم التسجيل والشهادة التي رفعتها عند التسجيل.',
+        'view_certificate' => 'عرض الشهادة المرفوعة',
+        'no_certificate_on_file' => 'لا توجد شهادة مرفوعة بعد.',
         'placeholder' => 'ستُضاف المزيد من الإعدادات مع تطوير المنتج.',
     ],
 

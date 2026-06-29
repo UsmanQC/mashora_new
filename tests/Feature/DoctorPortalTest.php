@@ -182,7 +182,10 @@ test('authenticated doctor can view appointments ratings and settings pages', fu
 });
 
 test('doctor profile shows and saves specialities like registration', function () {
-    $doctor = Doctor::factory()->create(['profile_completed' => true]);
+    $doctor = Doctor::factory()->create([
+        'profile_completed' => true,
+        'registration_number' => 'LIC-12345',
+    ]);
 
     $primary = Speciality::query()->create([
         'title' => 'Clinical Psychology',
@@ -202,8 +205,10 @@ test('doctor profile shows and saves specialities like registration', function (
 
     Livewire::test('pages::doctor.settings.profile')
         ->assertSet('speciality_ids', [$primary->id])
+        ->assertSet('registration_number', 'LIC-12345')
         ->assertSee('Clinical Psychology')
         ->set('speciality_ids', [$primary->id, $additional->id])
+        ->set('registration_number', 'LIC-67890')
         ->call('saveProfile')
         ->assertHasNoErrors();
 
@@ -212,7 +217,8 @@ test('doctor profile shows and saves specialities like registration', function (
 
     expect($doctor->specialities->pluck('id')->sort()->values()->all())
         ->toBe([$primary->id, $additional->id])
-        ->and($doctor->speciality_id)->toBe($primary->id);
+        ->and($doctor->speciality_id)->toBe($primary->id)
+        ->and($doctor->registration_number)->toBe('LIC-67890');
 });
 
 test('doctor can save dynamic working hours', function () {

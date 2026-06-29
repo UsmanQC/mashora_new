@@ -498,6 +498,9 @@ new #[Layout('layouts::doctor')] #[Title('Complete profile')] class extends Comp
             <div class="rounded-2xl border border-zinc-200/90 bg-white p-5 shadow-sm ring-1 ring-zinc-900/[0.04] sm:p-6">
                 <flux:heading size="sm" class="mb-4 font-semibold text-zinc-900">
                     {{ __('doctor.auth.profile_photo_label') }}
+                    @if (! filled($this->doctor()->profile_photo_path))
+                        @include('partials.required-field-mark')
+                    @endif
                 </flux:heading>
                 <div class="flex flex-col items-center gap-3 rounded-xl border border-dashed border-[#10B981]/30 bg-gradient-to-b from-emerald-50/80 to-white px-4 py-6">
                     <label class="group relative flex size-28 cursor-pointer items-center justify-center rounded-full bg-white shadow-md ring-4 ring-[#10B981]/15 transition hover:ring-[#10B981]/30 sm:size-32">
@@ -543,12 +546,12 @@ new #[Layout('layouts::doctor')] #[Title('Complete profile')] class extends Comp
                 </flux:heading>
                 <div class="grid gap-4 sm:grid-cols-2">
                     <flux:field>
-                        <flux:label>{{ __('doctor.auth.name') }}</flux:label>
+                        <flux:label>{{ __('doctor.auth.name') }} @include('partials.required-field-mark')</flux:label>
                         <flux:input wire:model="name" required class="rounded-xl!" />
                         <flux:error name="name" />
                     </flux:field>
                     <flux:field>
-                        <flux:label>{{ __('doctor.auth.name_ar') }}</flux:label>
+                        <flux:label>{{ __('doctor.auth.name_ar') }} @include('partials.required-field-mark')</flux:label>
                         <flux:input wire:model="name_ar" dir="rtl" required class="rounded-xl!" />
                         <flux:error name="name_ar" />
                     </flux:field>
@@ -561,12 +564,12 @@ new #[Layout('layouts::doctor')] #[Title('Complete profile')] class extends Comp
                 </flux:heading>
                 <div class="grid gap-4 lg:grid-cols-2">
                     <flux:field>
-                        <flux:label>{{ __('doctor.auth.about') }}</flux:label>
+                        <flux:label>{{ __('doctor.auth.about') }} @include('partials.required-field-mark')</flux:label>
                         <flux:textarea wire:model="about" rows="5" required class="rounded-xl!" />
                         <flux:error name="about" />
                     </flux:field>
                     <flux:field>
-                        <flux:label>{{ __('doctor.auth.about_ar') }}</flux:label>
+                        <flux:label>{{ __('doctor.auth.about_ar') }} @include('partials.required-field-mark')</flux:label>
                         <flux:textarea wire:model="about_ar" rows="5" dir="rtl" required class="rounded-xl!" />
                         <flux:error name="about_ar" />
                     </flux:field>
@@ -591,9 +594,9 @@ new #[Layout('layouts::doctor')] #[Title('Complete profile')] class extends Comp
             </flux:callout>
         @endif
 
-        <form wire:submit="nextFromProfessional" class="space-y-4">
+        <form wire:submit="nextFromProfessional" class="doctor-emerald-accent space-y-4">
             <flux:field>
-                <flux:label>{{ __('doctor.auth.gender') }}</flux:label>
+                <flux:label>{{ __('doctor.auth.gender') }} @include('partials.required-field-mark')</flux:label>
                 <div class="doctor-emerald-pill-radios">
                     <flux:radio.group variant="pills" wire:model.live="gender" class="flex flex-wrap gap-2">
                         <flux:radio value="male" :label="__('doctor.auth.gender_male')" />
@@ -605,7 +608,7 @@ new #[Layout('layouts::doctor')] #[Title('Complete profile')] class extends Comp
             </flux:field>
 
             <flux:field>
-                <flux:label>{{ __('doctor.auth.degree') }}</flux:label>
+                <flux:label>{{ __('doctor.auth.degree') }} @include('partials.required-field-mark')</flux:label>
                 <div class="doctor-emerald-pill-radios">
                     <flux:radio.group variant="pills" wire:model.live="degree_id" class="flex flex-wrap gap-2">
                         @foreach ($this->degrees as $degree)
@@ -620,7 +623,7 @@ new #[Layout('layouts::doctor')] #[Title('Complete profile')] class extends Comp
             </flux:field>
 
             <flux:field>
-                <flux:label>{{ __('doctor.auth.specialities') }}</flux:label>
+                <flux:label>{{ __('doctor.auth.specialities') }} @include('partials.required-field-mark')</flux:label>
                 <flux:checkbox.group
                     wire:model.live="speciality_ids"
                     class="doctor-emerald-accent grid max-h-48 gap-2 overflow-y-auto rounded-xl border border-zinc-200 bg-zinc-50/80 p-3 sm:grid-cols-2"
@@ -638,13 +641,13 @@ new #[Layout('layouts::doctor')] #[Title('Complete profile')] class extends Comp
             </flux:field>
 
             <flux:field>
-                <flux:label>{{ __('doctor.auth.registration_number') }}</flux:label>
+                <flux:label>{{ __('doctor.auth.registration_number') }} @include('partials.required-field-mark')</flux:label>
                 <flux:input wire:model="registration_number" autocomplete="off" />
                 <flux:error name="registration_number" />
             </flux:field>
 
             <flux:field>
-                <flux:label>{{ __('doctor.auth.experience_years') }}</flux:label>
+                <flux:label>{{ __('doctor.auth.experience_years') }} @include('partials.required-field-mark')</flux:label>
                 <flux:input wire:model.live="experience" type="number" min="0" max="80" />
                 <flux:error name="experience" />
             </flux:field>
@@ -656,7 +659,7 @@ new #[Layout('layouts::doctor')] #[Title('Complete profile')] class extends Comp
             </flux:field>
 
             <flux:field>
-                <flux:label>{{ __('doctor.auth.spoken_languages') }}</flux:label>
+                <flux:label>{{ __('doctor.auth.spoken_languages') }} @include('partials.required-field-mark')</flux:label>
                 <div class="doctor-emerald-pill-radios">
                     <flux:radio.group variant="pills" wire:model.live="spoken_languages" class="flex flex-wrap gap-2">
                         <flux:radio value="ar" :label="__('doctor.auth.lang_ar')" />
@@ -689,7 +692,7 @@ new #[Layout('layouts::doctor')] #[Title('Complete profile')] class extends Comp
             x-on:submit.prevent="submitDocuments($wire)"
         >
             <flux:field>
-                <flux:label>{{ __('doctor.auth.certificate_label') }}</flux:label>
+                <flux:label>{{ __('doctor.auth.certificate_label') }} @include('partials.required-field-mark')</flux:label>
                 <flux:text class="text-sm text-zinc-600">{{ __('doctor.auth.certificate_help') }}</flux:text>
                 <div class="relative mt-2">
                     <input
@@ -749,7 +752,7 @@ new #[Layout('layouts::doctor')] #[Title('Complete profile')] class extends Comp
             </flux:field>
 
             <flux:field>
-                <flux:label>{{ __('doctor.auth.signature_label') }}</flux:label>
+                <flux:label>{{ __('doctor.auth.signature_label') }} @include('partials.required-field-mark')</flux:label>
                 <flux:text class="text-sm text-zinc-600">{{ __('doctor.auth.signature_help') }}</flux:text>
                 <div wire:ignore class="mt-2 space-y-2">
                     <div

@@ -153,6 +153,10 @@ new #[Layout('layouts::doctor')] #[Title('Duration and price')] class extends Co
     </div>
 
     <form wire:submit="save" class="doctor-emerald-accent space-y-5">
+        <flux:text class="text-sm font-semibold text-zinc-800">
+            {{ __('doctor.auth.duration_title') }}
+            @include('partials.required-field-mark')
+        </flux:text>
         <flux:checkbox.group wire:model.live="doctorDurations" class="space-y-3">
             @foreach ($durations as $duration)
                 @php
@@ -171,7 +175,7 @@ new #[Layout('layouts::doctor')] #[Title('Duration and price')] class extends Co
                         @if ($checked)
                             <div class="w-full sm:w-52">
                                 <flux:field>
-                                    <flux:label>{{ __('Price') }} ({{ config('currency.sa_riyal_symbol') }})</flux:label>
+                                    <flux:label>{{ __('Price') }} ({{ config('currency.sa_riyal_symbol') }}) @include('partials.required-field-mark')</flux:label>
                                     <flux:input
                                         type="number"
                                         step="0.01"
@@ -190,7 +194,10 @@ new #[Layout('layouts::doctor')] #[Title('Duration and price')] class extends Co
         <flux:error name="durationPrices" />
 
         <div class="rounded-xl border border-zinc-200/80 bg-zinc-50/70 p-3">
-            <flux:text class="mb-3 text-sm font-semibold text-zinc-800">{{ __('doctor.auth.appointment_types') }}</flux:text>
+            <flux:text class="mb-3 text-sm font-semibold text-zinc-800">
+                {{ __('doctor.auth.appointment_types') }}
+                @include('partials.required-field-mark')
+            </flux:text>
             <flux:checkbox.group wire:model.live="selectedCommunications" class="grid gap-2 sm:grid-cols-3">
                 @foreach ($communications as $communication)
                     <label class="inline-flex items-center gap-3 rounded-lg border border-zinc-200 bg-white px-3 py-2">
