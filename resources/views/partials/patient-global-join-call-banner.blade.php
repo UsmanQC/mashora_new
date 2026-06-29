@@ -75,11 +75,10 @@
                     }
                 }
 
-                function hideGlobalJoinBanner(appointmentId) {
-                    const conversationTemplate = @js(route('patient.appointments.conversation', ['appointment' => '__ID__']));
+                async function restoreGlobalJoinBannerFromStorage() {
                     const pendingUrlTemplate = @js(route('patient.appointments.realtime.pending-call', ['appointment' => '__ID__']));
 
-                    if (!conversationTemplate || !pendingUrlTemplate) {
+                    if (!pendingUrlTemplate) {
                         return;
                     }
 
@@ -92,8 +91,8 @@
                     }
 
                     for (const key of keys) {
-                        const appointmentId = key.replace('mashora_pending_call_', '');
-                        if (!appointmentId) {
+                        const storedAppointmentId = key.replace('mashora_pending_call_', '');
+                        if (!storedAppointmentId) {
                             try {
                                 sessionStorage.removeItem(key);
                             } catch (_) {
@@ -104,7 +103,7 @@
                         }
 
                         try {
-                            const res = await fetch(pendingUrlTemplate.replace('__ID__', appointmentId), {
+                            const res = await fetch(pendingUrlTemplate.replace('__ID__', storedAppointmentId), {
                                 headers: {
                                     Accept: 'application/json',
                                     'X-Requested-With': 'XMLHttpRequest',
