@@ -24,24 +24,31 @@
                     <span class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-[#10B981] ring-1 ring-emerald-100">
                         <flux:icon name="clipboard-document-check" variant="mini" class="size-5" />
                     </span>
-                    <div class="min-w-0">
+                    <div class="min-w-0 flex-1">
                         <p class="text-sm font-semibold text-zinc-900 sm:text-base">{{ __('doctor.workflow.title') }}</p>
                         <p class="mt-0.5 text-xs leading-relaxed text-zinc-500 sm:text-sm">{{ __('doctor.workflow.subtitle') }}</p>
-                        <p class="mt-2 text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
-                            {{ $completedCount }}/{{ $totalSteps }} · {{ $progressPercent }}%
-                        </p>
                     </div>
                 </div>
 
-                <div class="mt-4 h-1.5 overflow-hidden rounded-full bg-zinc-100">
+                <div class="doctor-workflow-progress mt-4">
+                    <div class="mb-2 flex justify-end">
+                        <span class="tabular-nums text-xs font-bold text-[#047857]">
+                            {{ $completedCount }}/{{ $totalSteps }} · {{ $progressPercent }}%
+                        </span>
+                    </div>
                     <div
-                        class="h-full rounded-full bg-gradient-to-r from-[#10B981] to-[#047857] transition-all duration-500"
-                        style="width: {{ max($progressPercent, 6) }}%"
+                        class="doctor-workflow-progress-track"
                         role="progressbar"
                         aria-valuenow="{{ $progressPercent }}"
                         aria-valuemin="0"
                         aria-valuemax="100"
-                    ></div>
+                        aria-label="{{ __('doctor.workflow.title') }}"
+                    >
+                        <div
+                            class="doctor-workflow-progress-fill"
+                            style="width: {{ max($progressPercent, $progressPercent > 0 ? 8 : 0) }}%"
+                        ></div>
+                    </div>
                 </div>
             </div>
 
