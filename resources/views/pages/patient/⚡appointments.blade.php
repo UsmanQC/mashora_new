@@ -819,6 +819,14 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
                 });
             }
 
+            async function tryInlineCameraTrack() {
+                try {
+                    return await AgoraRTC.createCameraVideoTrack();
+                } catch {
+                    return null;
+                }
+            }
+
             function releaseInlineMediaTracks(micTrack, camTrack = null) {
                 if (camTrack) {
                     camTrack.stop();
@@ -847,7 +855,7 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
 
                     if (resolvedCallType === 'video') {
                         micTrack = await AgoraRTC.createMicrophoneAudioTrack();
-                        camTrack = await AgoraRTC.createCameraVideoTrack();
+                        camTrack = await tryInlineCameraTrack();
                     } else {
                         micTrack = await AgoraRTC.createMicrophoneAudioTrack();
                     }

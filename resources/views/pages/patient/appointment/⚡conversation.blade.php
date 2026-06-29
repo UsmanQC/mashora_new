@@ -204,6 +204,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
         data-label-camera-permission="{{ __('patient.appointments.camera_permission_required') }}"
         data-label-mic-permission="{{ __('patient.appointments.mic_permission_required') }}"
         data-label-system-media-permission="{{ __('patient.appointments.media_permission_denied_system') }}"
+        data-label-camera-unavailable="{{ __('patient.appointments.camera_unavailable_joined_audio') }}"
         data-label-agora-sdk-missing="{{ __('patient.appointments.agora_sdk_missing') }}"
         data-label-no-active-call="{{ __('patient.appointments.no_active_call') }}"
         data-session-ended="{{ __('patient.appointments.session_time_ended') }}"
@@ -663,18 +664,23 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 const micTrack = await AgoraRTC.createMicrophoneAudioTrack();
 
                 if (mode !== 'video') {
-                    return { micTrack, camTrack: null };
+                    return { micTrack, camTrack: null, cameraUnavailable: false };
                 }
 
                 try {
                     const camTrack = await AgoraRTC.createCameraVideoTrack();
 
-                    return { micTrack, camTrack };
-                } catch (error) {
-                    micTrack.stop();
-                    micTrack.close();
+                    return { micTrack, camTrack, cameraUnavailable: false };
+                } catch {
+                    return { micTrack, camTrack: null, cameraUnavailable: true };
+                }
+            }
 
-                    throw error;
+            async function tryCreateCameraTrack() {
+                try {
+                    return await AgoraRTC.createCameraVideoTrack();
+                } catch {
+                    return null;
                 }
             }
 
@@ -1421,6 +1427,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                     const tracks = await createLocalMediaTracks(effectiveMode);
                     micTrack = tracks.micTrack;
                     camTrack = tracks.camTrack;
+                    let cameraUnavailable = tracks.cameraUnavailable;
 
                     const cfg = await resolveJoinConfig(payload);
                     const resolvedMode = resolveEffectiveCallMode(mode, payload, cfg);
@@ -1430,8 +1437,10 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                             camTrack.stop();
                             camTrack.close();
                             camTrack = null;
+                            cameraUnavailable = false;
                         } else if (resolvedMode === 'video' && !camTrack) {
-                            camTrack = await AgoraRTC.createCameraVideoTrack();
+                            camTrack = await tryCreateCameraTrack();
+                            cameraUnavailable = !camTrack;
                         }
 
                         effectiveMode = resolvedMode;
@@ -1462,6 +1471,10 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                     camTrack = null;
 
                     markCallConnected(effectiveMode);
+
+                    if (cameraUnavailable && effectiveMode === 'video') {
+                        showCallToast(metrics?.dataset.labelCameraUnavailable || labelCallFailed, 'warning');
+                    }
 
                     subscribeExistingRemoteUsers(client, effectiveMode).catch((error) => {
                         console.error('Failed to subscribe to existing remote users', error);
