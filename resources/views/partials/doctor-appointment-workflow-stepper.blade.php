@@ -53,7 +53,7 @@
                         size="sm"
                         variant="primary"
                         icon="arrow-right"
-                        class="w-full !rounded-xl !bg-[#10B981] !px-5 !shadow-md !shadow-emerald-900/10 hover:!brightness-95 sm:w-auto"
+                        class="w-full !rounded-full !bg-[#10B981] !px-5 !shadow-md !shadow-emerald-900/10 hover:!brightness-95 sm:w-auto"
                     >
                         {{ __('doctor.workflow.continue') }}
                     </flux:button>
@@ -63,7 +63,7 @@
                         size="sm"
                         variant="primary"
                         icon="check-circle"
-                        class="w-full !rounded-xl !bg-[#10B981] !px-5 !shadow-md !shadow-emerald-900/10 hover:!brightness-95 sm:w-auto"
+                        class="w-full !rounded-full !bg-[#10B981] !px-5 !shadow-md !shadow-emerald-900/10 hover:!brightness-95 sm:w-auto"
                         wire:click="requestCompleteAppointment"
                     >
                         {{ __('doctor.workflow.mark_complete') }}
@@ -75,7 +75,7 @@
                         size="sm"
                         variant="primary"
                         icon="calendar-days"
-                        class="w-full !rounded-xl !bg-[#10B981] !px-5 !shadow-md !shadow-emerald-900/10 hover:!brightness-95 sm:w-auto"
+                        class="w-full !rounded-full !bg-[#10B981] !px-5 !shadow-md !shadow-emerald-900/10 hover:!brightness-95 sm:w-auto"
                     >
                         {{ __('doctor.workflow.schedule_follow_up') }}
                     </flux:button>
@@ -83,71 +83,85 @@
             </div>
         </div>
 
-        <ol class="doctor-workflow-steps mt-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-none lg:flex lg:items-start lg:justify-between">
+        <ol class="doctor-workflow-steps mt-5 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-stretch sm:gap-2">
             @foreach ($steps as $index => $step)
                 @php
-                    $isLast = $index === count($steps) - 1;
                     $isComplete = $step['complete'];
                     $isCurrent = $step['current'];
+
+                    $pillClass = match (true) {
+                        $isCurrent => 'border-[#10B981] bg-[#10B981] text-white shadow-md shadow-emerald-900/15',
+                        $isComplete => 'border-emerald-200 bg-emerald-50 text-emerald-900 hover:border-emerald-300',
+                        default => 'border-zinc-200 bg-white text-zinc-600 hover:border-zinc-300 hover:text-zinc-900',
+                    };
+
+                    $badgeClass = match (true) {
+                        $isCurrent => 'bg-white/20 text-white',
+                        $isComplete => 'bg-[#10B981] text-white',
+                        default => 'bg-zinc-100 text-zinc-600',
+                    };
+
+                    $labelClass = match (true) {
+                        $isCurrent => 'text-white',
+                        $isComplete => 'text-emerald-900',
+                        default => 'text-zinc-600',
+                    };
                 @endphp
-                <li @class([
-                    'doctor-workflow-step relative flex min-w-0 items-center gap-3 rounded-xl border px-3 py-3 transition',
-                    'border-[#10B981]/30 bg-emerald-50/50 ring-1 ring-[#10B981]/10' => $isCurrent,
-                    'border-emerald-100 bg-emerald-50/30' => $isComplete && ! $isCurrent,
-                    'border-zinc-200/80 bg-zinc-50/50' => ! $isComplete && ! $isCurrent,
-                    'lg:flex-1 lg:flex-col lg:items-center lg:gap-2 lg:border-0 lg:bg-transparent lg:px-2 lg:py-0 lg:text-center',
-                ])>
-                    @if (! $isLast)
-                        <span
-                            class="doctor-workflow-step-connector hidden lg:absolute lg:top-4 lg:block lg:h-px lg:bg-zinc-200"
-                            aria-hidden="true"
-                        ></span>
-                    @endif
 
-                    <span @class([
-                        'relative z-[1] flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-bold ring-2 ring-white',
-                        'bg-[#10B981] text-white shadow-sm shadow-emerald-900/20' => $isComplete || $isCurrent,
-                        'bg-zinc-200 text-zinc-600' => ! $isComplete && ! $isCurrent,
-                    ])>
-                        @if ($isComplete)
-                            <flux:icon name="check" variant="mini" class="size-4" />
-                        @else
-                            {{ $index + 1 }}
-                        @endif
-                    </span>
-
-                    <div class="min-w-0 flex-1 lg:flex-none">
-                        @if ($step['key'] === 'complete' && $appointment->status === 'in_process' && ! $isComplete)
-                            <button
-                                type="button"
-                                wire:click="requestCompleteAppointment"
-                                class="block truncate text-left text-xs font-semibold text-[#047857] transition hover:text-[#10B981] sm:text-sm lg:text-center"
-                            >
-                                {{ $step['label'] }}
-                            </button>
-                        @elseif ($step['route'])
-                            <a
-                                href="{{ $step['route'] }}"
-                                wire:navigate
-                                @class([
-                                    'block truncate text-xs font-semibold transition sm:text-sm lg:text-center',
-                                    'text-[#047857]' => $isCurrent,
-                                    'text-emerald-800/80' => $isComplete && ! $isCurrent,
-                                    'text-zinc-600 hover:text-[#10B981]' => ! $isCurrent && ! $isComplete,
-                                ])
-                            >
-                                {{ $step['label'] }}
-                            </a>
-                        @else
-                            <span @class([
-                                'block truncate text-xs font-semibold sm:text-sm lg:text-center',
-                                'text-[#047857]' => $isComplete || $isCurrent,
-                                'text-zinc-500' => ! $isComplete && ! $isCurrent,
-                            ])>
+                <li class="min-w-0 sm:flex-1">
+                    @if ($step['key'] === 'complete' && $appointment->status === 'in_process' && ! $isComplete)
+                        <button
+                            type="button"
+                            wire:click="requestCompleteAppointment"
+                            @class([
+                                'doctor-workflow-step-pill flex w-full min-w-0 items-center justify-center gap-2 rounded-full border px-3 py-2.5 transition sm:px-4',
+                                $pillClass,
+                            ])
+                        >
+                            <span @class(['flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-bold', $badgeClass])>
+                                {{ $index + 1 }}
+                            </span>
+                            <span @class(['truncate text-xs font-semibold sm:text-sm', $labelClass])>
                                 {{ $step['label'] }}
                             </span>
-                        @endif
-                    </div>
+                        </button>
+                    @elseif ($step['route'])
+                        <a
+                            href="{{ $step['route'] }}"
+                            wire:navigate
+                            @class([
+                                'doctor-workflow-step-pill flex w-full min-w-0 items-center justify-center gap-2 rounded-full border px-3 py-2.5 transition sm:px-4',
+                                $pillClass,
+                            ])
+                        >
+                            <span @class(['flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-bold', $badgeClass])>
+                                @if ($isComplete)
+                                    <flux:icon name="check" variant="mini" class="size-4" />
+                                @else
+                                    {{ $index + 1 }}
+                                @endif
+                            </span>
+                            <span @class(['truncate text-xs font-semibold sm:text-sm', $labelClass])>
+                                {{ $step['label'] }}
+                            </span>
+                        </a>
+                    @else
+                        <div @class([
+                            'doctor-workflow-step-pill flex w-full min-w-0 items-center justify-center gap-2 rounded-full border px-3 py-2.5 sm:px-4',
+                            $pillClass,
+                        ])>
+                            <span @class(['flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-bold', $badgeClass])>
+                                @if ($isComplete)
+                                    <flux:icon name="check" variant="mini" class="size-4" />
+                                @else
+                                    {{ $index + 1 }}
+                                @endif
+                            </span>
+                            <span @class(['truncate text-xs font-semibold sm:text-sm', $labelClass])>
+                                {{ $step['label'] }}
+                            </span>
+                        </div>
+                    @endif
                 </li>
             @endforeach
         </ol>

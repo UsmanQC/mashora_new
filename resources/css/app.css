@@ -200,8 +200,12 @@ select:focus[data-flux-control] {
         background-color: #f4f4f5 !important;
     }
 
+    .doctor-emerald-pill-radios ui-radio-group[data-flux-radio-group-pills] {
+        @apply grid w-full grid-cols-2 gap-2;
+    }
+
     .doctor-emerald-pill-radios ui-radio[data-flux-radio-pills] {
-        @apply !rounded-full !border !border-zinc-200/90 !bg-white !px-4 !py-2 text-sm font-semibold !text-zinc-900 !shadow-none hover:!border-zinc-300;
+        @apply min-h-11 min-w-0 flex-1 justify-center !rounded-full !border !border-zinc-200/90 !bg-white !px-4 !py-2.5 text-sm font-semibold !text-zinc-900 !shadow-none hover:!border-zinc-300;
         -webkit-text-fill-color: #18181b !important;
     }
 
@@ -209,6 +213,11 @@ select:focus[data-flux-control] {
         @apply !border-mashora-brand !bg-mashora-brand !text-white !shadow-none hover:!border-mashora-brand hover:!bg-mashora-brand hover:!text-white;
         -webkit-text-fill-color: #ffffff !important;
         caret-color: #ffffff !important;
+    }
+
+    .doctor-emerald-pill-radios ui-radio[data-flux-radio-pills][data-checked] * {
+        @apply !text-white;
+        -webkit-text-fill-color: #ffffff !important;
     }
 
     .patient-auth-content [data-flux-control]:not([data-flux-otp-input]):not([data-flux-otp]):not([data-flux-radio-pills]) {
@@ -548,13 +557,25 @@ select:focus[data-flux-control] {
     isolation: isolate;
 }
 
+.doctor-workflow-step-pill {
+    min-height: 2.75rem;
+}
+
+@media (min-width: 640px) {
+    .doctor-workflow-steps {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
 @media (min-width: 1024px) {
-    .doctor-workflow-steps > .doctor-workflow-step:not(:last-child) .doctor-workflow-step-connector {
-        top: 1rem;
-        left: calc(50% + 1.25rem);
-        right: -0.5rem;
-        height: 1px;
-        background-color: #e4e4e7;
+    .doctor-workflow-steps {
+        display: flex;
+        flex-wrap: nowrap;
+    }
+
+    .doctor-workflow-steps > li {
+        flex: 1 1 0;
     }
 }
 

@@ -69,10 +69,16 @@ new #[Layout('layouts::doctor')] #[Title('Diagnosis')] class extends Component
 
     <form wire:submit="save" class="space-y-6">
         <div class="rounded-2xl border border-zinc-200/90 bg-white p-5 shadow-sm sm:p-6">
-            <flux:radio.group wire:model="marital_status" :label="__('doctor.diagnosis_form.is_patient_married')" variant="segmented">
-                <flux:radio value="married" :label="__('doctor.diagnosis_form.yes')" />
-                <flux:radio value="unmarried" :label="__('doctor.diagnosis_form.no')" />
-            </flux:radio.group>
+            <flux:field>
+                <flux:label>{{ __('doctor.diagnosis_form.is_patient_married') }}</flux:label>
+                <div class="doctor-emerald-pill-radios max-w-sm">
+                    <flux:radio.group variant="pills" wire:model.live="marital_status" class="w-full">
+                        <flux:radio value="married" :label="__('doctor.diagnosis_form.yes')" />
+                        <flux:radio value="unmarried" :label="__('doctor.diagnosis_form.no')" />
+                    </flux:radio.group>
+                </div>
+                <flux:error name="marital_status" />
+            </flux:field>
         </div>
 
         <div class="rounded-2xl border border-zinc-200/90 bg-white p-5 shadow-sm sm:p-6">
