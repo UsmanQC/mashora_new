@@ -33,7 +33,7 @@ final class AppointmentSessionService
 
     public function canPatientJoin(Appointment $appointment): bool
     {
-        if ($appointment->is_follow_up) {
+        if ($appointment->is_follow_up && ! (bool) config('appointments.follow_up_allows_calls', false)) {
             return false;
         }
 

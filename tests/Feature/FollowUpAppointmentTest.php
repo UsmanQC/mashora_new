@@ -141,6 +141,8 @@ test('follow-up page picks first date with working hours when suggested day has 
 });
 
 test('doctor can schedule free follow-up and patient receives notification', function () {
+    config(['appointments.follow_up_skip_patient_confirmation' => false]);
+
     $doctor = seedDoctorWithSlots(7);
     $user = User::factory()->create(['profile_completed' => true]);
 
@@ -179,6 +181,41 @@ test('doctor can schedule free follow-up and patient receives notification', fun
         ->where('userable_id', $user->id)
         ->where('type', 'follow_up_appointment')
         ->exists())->toBeTrue();
+});
+
+test('follow up is booked immediately when patient confirmation is skipped', function () {
+    config(['appointments.follow_up_skip_patient_confirmation' => true]);
+
+    $doctor = seedDoctorWithSlots(7);
+    $user = User::factory()->create(['profile_completed' => true]);
+
+    $followUpDate = now()->addDays(7)->format('Y-m-d');
+
+    $appointment = Appointment::factory()->create([
+        'doctor_id' => $doctor->id,
+        'user_id' => $user->id,
+        'status' => 'completed',
+        'duration' => 30,
+        'appointment_date' => now()->format('Y-m-d'),
+        'start_time' => '10:00:00',
+        'end_time' => '10:30:00',
+        'patient_name' => $user->name,
+        'patient_phone' => $user->phone,
+    ]);
+
+    $this->actingAs($doctor, 'doctor');
+
+    Livewire::test('pages::doctor.appointment.follow-up', ['appointment' => $appointment])
+        ->set('newDate', $followUpDate)
+        ->set('selectedTime', '10:00')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $followUp = Appointment::query()->where('parent_id', $appointment->id)->first();
+
+    expect($followUp)->not->toBeNull()
+        ->and($followUp->status)->toBe('new')
+        ->and($followUp->patient_confirmed_at)->not->toBeNull();
 });
 
 test('patient confirms free follow-up without payment', function () {

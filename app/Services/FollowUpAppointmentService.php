@@ -135,6 +135,14 @@ final class FollowUpAppointmentService
 
         $this->notifier->notifyFollowUpScheduled($followUp, $doctor, $start);
 
+        if ((bool) config('appointments.follow_up_skip_patient_confirmation', false)) {
+            $patient = User::query()->find($parent->user_id);
+
+            if ($patient instanceof User) {
+                return $this->confirm($followUp->fresh(), $patient);
+            }
+        }
+
         return $followUp;
     }
 

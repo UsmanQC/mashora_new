@@ -264,7 +264,11 @@ class Appointment extends Model
 
     public function allowsPatientCalls(): bool
     {
-        return ! $this->is_follow_up;
+        if ($this->is_follow_up) {
+            return (bool) config('appointments.follow_up_allows_calls', false);
+        }
+
+        return true;
     }
 
     /**

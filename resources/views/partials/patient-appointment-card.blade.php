@@ -3,9 +3,10 @@
     /** @var \Livewire\Component $component */
     $status = (string) $appointment->status;
     $showTimer = $component->shouldShowStartTimer($appointment);
-    $canJoinSession = $status === 'in_process' && ! $appointment->is_follow_up;
+    $canJoinSession = $status === 'in_process' && $appointment->allowsPatientCalls();
     $canOpenChat = $component->canOpenChat($appointment);
-    $awaitingDoctor = in_array($status, ['new', 'rescheduled'], true) && ! $appointment->is_follow_up;
+    $awaitingDoctor = in_array($status, ['new', 'rescheduled'], true)
+        && (! $appointment->is_follow_up || $appointment->allowsPatientCalls());
     $canResolveMissed = $component->canResolveMissed($appointment);
     $hasMissedRefund = $component->hasMissedRefund($appointment);
     $hasAction = $appointment->status === 'pending_follow_up' || $canJoinSession || $canOpenChat || $awaitingDoctor || $canResolveMissed || ($appointment->isDoctorMissed() && $hasMissedRefund);
