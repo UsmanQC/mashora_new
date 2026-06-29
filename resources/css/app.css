@@ -562,6 +562,8 @@ select:focus[data-flux-control] {
 }
 
 .doctor-workflow-progress-track {
+    display: block;
+    width: 100%;
     height: 0.875rem;
     overflow: hidden;
     border-radius: 9999px;
