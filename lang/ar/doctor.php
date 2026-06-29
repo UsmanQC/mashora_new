@@ -268,6 +268,7 @@ return [
         'not_attended' => 'فائت',
         'pending_follow_up' => 'متابعات قادمة',
         'follow_up' => 'متابعة',
+        'refunded' => 'مسترد',
     ],
 
     'card' => [

@@ -338,4 +338,10 @@ class Appointment extends Model
         return $this->status === 'not_attended'
             && $this->cancel_status === 'doctor_missed';
     }
+
+    public function isPatientRefunded(): bool
+    {
+        return $this->status === 'cancelled'
+            && $this->cancel_status === 'patient_refunded';
+    }
 }

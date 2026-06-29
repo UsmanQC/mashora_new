@@ -22,6 +22,7 @@ final class PatientMissedAppointmentService
     {
         return $appointment->isDoctorMissed()
             && ! $appointment->is_follow_up
+            && ! $appointment->isPatientRefunded()
             && ! $this->wallet->hasRefunded($appointment);
     }
 
@@ -43,7 +44,7 @@ final class PatientMissedAppointmentService
             ]);
         }
 
-        if ($this->wallet->hasRefunded($appointment)) {
+        if ($appointment->isPatientRefunded() || $this->wallet->hasRefunded($appointment)) {
             throw ValidationException::withMessages([
                 'appointment' => __('patient.missed.already_refunded'),
             ]);
@@ -56,14 +57,25 @@ final class PatientMissedAppointmentService
             abort(403);
         }
 
-        if ($this->wallet->hasRefunded($appointment)) {
+        if ($appointment->isPatientRefunded() || $this->wallet->hasRefunded($appointment)) {
             return;
         }
 
         $this->assertCanResolve($user, $appointment);
 
         DB::transaction(function () use ($appointment): void {
-            $this->wallet->refundToPatient($appointment->fresh());
+            $fresh = $appointment->fresh();
+
+            if (! $fresh instanceof Appointment) {
+                return;
+            }
+
+            $this->wallet->refundToPatient($fresh);
+
+            $fresh->forceFill([
+                'status' => 'cancelled',
+                'cancel_status' => 'patient_refunded',
+            ])->save();
         });
     }
 

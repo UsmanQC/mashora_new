@@ -150,8 +150,7 @@
                             </flux:button>
                             <flux:button
                                 type="button"
-                                wire:click="refundMissed({{ $appointment->id }})"
-                                wire:confirm="{{ __('patient.missed.refund_confirm', ['amount' => number_format((float) $appointment->total, 2)]) }}"
+                                wire:click="promptRefundMissed({{ $appointment->id }})"
                                 class="flex-1 !rounded-xl !bg-[#10B981] !py-2.5 !text-white hover:!brightness-95"
                                 icon="banknotes"
                             >

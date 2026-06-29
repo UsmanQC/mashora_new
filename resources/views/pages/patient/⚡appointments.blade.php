@@ -122,6 +122,10 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
 
     public function statusLabelFor(Appointment $appointment): string
     {
+        if ($appointment->isPatientRefunded()) {
+            return __('patient.appointments.status_refunded');
+        }
+
         if ($appointment->is_follow_up) {
             return $appointment->isPendingFollowUp()
                 ? __('patient.follow_up.badge')
@@ -171,6 +175,10 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
 
     public function statusBadgeClassesFor(Appointment $appointment): string
     {
+        if ($appointment->isPatientRefunded()) {
+            return 'bg-emerald-100 text-emerald-800';
+        }
+
         if ($appointment->is_follow_up) {
             return 'bg-violet-100 text-violet-700';
         }
@@ -237,6 +245,54 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
     public function hasMissedRefund(Appointment $appointment): bool
     {
         return app(AppointmentWalletService::class)->hasRefunded($appointment);
+    }
+
+    public bool $showRefundModal = false;
+
+    public ?int $refundAppointmentId = null;
+
+    public function promptRefundMissed(int $appointmentId): void
+    {
+        $appointment = $this->baseQuery()->whereKey($appointmentId)->first();
+
+        if (! $appointment instanceof Appointment) {
+            abort(404);
+        }
+
+        if (! app(PatientMissedAppointmentService::class)->canResolve($appointment)) {
+            Flux::toast(variant: 'warning', text: __('patient.missed.not_eligible'));
+
+            return;
+        }
+
+        $this->refundAppointmentId = $appointment->id;
+        $this->showRefundModal = true;
+    }
+
+    public function dismissRefundMissedModal(): void
+    {
+        $this->showRefundModal = false;
+        $this->refundAppointmentId = null;
+    }
+
+    public function confirmRefundMissed(): void
+    {
+        if ($this->refundAppointmentId === null) {
+            return;
+        }
+
+        $appointmentId = $this->refundAppointmentId;
+        $this->dismissRefundMissedModal();
+        $this->refundMissed($appointmentId);
+    }
+
+    public function getPendingRefundAppointmentProperty(): ?Appointment
+    {
+        if ($this->refundAppointmentId === null) {
+            return null;
+        }
+
+        return $this->baseQuery()->whereKey($this->refundAppointmentId)->first();
     }
 
     public function refundMissed(int $appointmentId): void
@@ -419,6 +475,63 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
             @endif
         </section>
     </div>
+
+    <flux:modal wire:model.self="showRefundModal" class="max-w-md rounded-2xl shadow-xl" :closable="true">
+        <div class="px-6 py-8 sm:px-8">
+            <div class="mx-auto flex size-16 items-center justify-center rounded-full bg-[#10B981]/10 text-[#10B981]">
+                <flux:icon name="banknotes" variant="outline" class="size-8" />
+            </div>
+
+            <flux:heading size="lg" class="mt-5 text-center font-semibold text-zinc-900">
+                {{ __('patient.missed.refund_modal.title') }}
+            </flux:heading>
+
+            <flux:text class="mt-2 text-center text-sm leading-relaxed text-zinc-600">
+                {{ __('patient.missed.refund_modal.body') }}
+            </flux:text>
+
+            @if ($this->pendingRefundAppointment instanceof \App\Models\Appointment)
+                <div class="mt-5 rounded-xl border border-zinc-200/90 bg-zinc-50 px-4 py-3 text-sm">
+                    <p class="font-semibold text-zinc-900">{{ $this->pendingRefundAppointment->doctor?->displayName() }}</p>
+                    <p class="mt-1 tabular-nums text-zinc-600">
+                        {{ $this->formattedSessionDate($this->pendingRefundAppointment) }}
+                        ·
+                        {{ $this->formattedSessionTime($this->pendingRefundAppointment) }}
+                    </p>
+                    @if ((float) $this->pendingRefundAppointment->total > 0)
+                        <p class="mt-2 text-xs font-medium text-[#047857]">
+                            {{ __('patient.missed.refund_modal.refund_note', ['amount' => number_format((float) $this->pendingRefundAppointment->total, 2)]) }}
+                        </p>
+                    @endif
+                </div>
+            @endif
+
+            <div class="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <flux:button
+                    type="button"
+                    variant="ghost"
+                    class="w-full sm:w-auto"
+                    wire:click="dismissRefundMissedModal"
+                >
+                    {{ __('patient.missed.refund_modal.dismiss') }}
+                </flux:button>
+                <flux:button
+                    type="button"
+                    class="w-full !bg-[#10B981] !text-white hover:!brightness-95 sm:w-auto"
+                    wire:click="confirmRefundMissed"
+                    wire:loading.attr="disabled"
+                    wire:target="confirmRefundMissed"
+                >
+                    <span wire:loading.remove wire:target="confirmRefundMissed">
+                        {{ __('patient.missed.refund_modal.confirm') }}
+                    </span>
+                    <span wire:loading wire:target="confirmRefundMissed">
+                        {{ __('patient.missed.refund_modal.confirming') }}
+                    </span>
+                </flux:button>
+            </div>
+        </div>
+    </flux:modal>
 
     <div
         id="patient-appointments-realtime-bootstrap"

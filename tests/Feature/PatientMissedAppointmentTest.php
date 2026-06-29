@@ -252,4 +252,83 @@ test('patient can refund missed appointment from appointments page', function ()
         ->assertHasNoErrors();
 
     expect((float) $user->fresh()->balanceFloat)->toBe(100.0);
+
+    $appointment->refresh();
+    expect($appointment->status)->toBe('cancelled')
+        ->and($appointment->cancel_status)->toBe('patient_refunded')
+        ->and($appointment->isPatientRefunded())->toBeTrue();
+});
+
+test('patient missed refund opens confirmation modal before processing', function () {
+    app()->setLocale('en');
+
+    $user = User::factory()->create(['profile_completed' => true]);
+    $doctor = Doctor::factory()->create(['status' => 'approved', 'name' => 'Dr. Test']);
+
+    $appointment = Appointment::factory()->create([
+        'doctor_id' => $doctor->id,
+        'user_id' => $user->id,
+        'status' => 'not_attended',
+        'cancel_status' => 'doctor_missed',
+        'appointment_date' => now()->subDay()->toDateString(),
+        'start_time' => '11:00:00',
+        'end_time' => '11:30:00',
+        'total' => 100,
+        'wallet_amount' => 100,
+        'doctor_share' => 70,
+        'mashora_share' => 30,
+    ]);
+
+    $doctor->depositFloat(70.00);
+
+    Livewire::actingAs($user)
+        ->test('pages::patient.appointments')
+        ->call('promptRefundMissed', $appointment->id)
+        ->assertSet('showRefundModal', true)
+        ->assertSee(__('patient.missed.refund_modal.title'), false)
+        ->assertSee(__('patient.missed.refund_modal.refund_note', ['amount' => '100.00']), false)
+        ->call('confirmRefundMissed')
+        ->assertSet('showRefundModal', false)
+        ->assertHasNoErrors();
+
+    expect((float) $user->fresh()->balanceFloat)->toBe(100.0);
+
+    $appointment->refresh();
+    expect($appointment->status)->toBe('cancelled')
+        ->and($appointment->cancel_status)->toBe('patient_refunded');
+});
+
+test('refunded missed appointment appears in cancelled tab with refunded status', function () {
+    app()->setLocale('en');
+
+    $user = User::factory()->create(['profile_completed' => true]);
+    $doctor = Doctor::factory()->create(['status' => 'approved']);
+
+    $appointment = Appointment::factory()->create([
+        'doctor_id' => $doctor->id,
+        'user_id' => $user->id,
+        'status' => 'not_attended',
+        'cancel_status' => 'doctor_missed',
+        'appointment_date' => now()->subDay()->toDateString(),
+        'start_time' => '11:00:00',
+        'end_time' => '11:30:00',
+        'total' => 100,
+        'wallet_amount' => 100,
+        'doctor_share' => 70,
+        'mashora_share' => 30,
+    ]);
+
+    $doctor->depositFloat(70.00);
+
+    app(PatientMissedAppointmentService::class)->refund($user, $appointment);
+
+    $this->actingAs($user)
+        ->get(route('patient.appointments', ['tab' => 'missed']))
+        ->assertSuccessful()
+        ->assertDontSee(__('patient.missed.prompt'), false);
+
+    $this->actingAs($user)
+        ->get(route('patient.appointments', ['tab' => 'cancelled']))
+        ->assertSuccessful()
+        ->assertSee(__('patient.appointments.status_refunded'), false);
 });

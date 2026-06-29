@@ -134,6 +134,10 @@ new #[Layout('layouts::doctor')] #[Title('Appointments')] class extends Componen
 
     public function statusLabelFor(Appointment $appointment): string
     {
+        if ($appointment->isPatientRefunded()) {
+            return __('doctor.appointment_status.refunded');
+        }
+
         if ($appointment->is_follow_up && $appointment->status !== 'pending_follow_up') {
             return __('doctor.appointment_status.follow_up');
         }
@@ -143,6 +147,10 @@ new #[Layout('layouts::doctor')] #[Title('Appointments')] class extends Componen
 
     public function statusBadgeClassesFor(Appointment $appointment): string
     {
+        if ($appointment->isPatientRefunded()) {
+            return 'bg-emerald-100 text-emerald-800';
+        }
+
         if ($appointment->is_follow_up && $appointment->status !== 'pending_follow_up') {
             return 'bg-violet-100 text-violet-700';
         }

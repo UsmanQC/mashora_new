@@ -267,6 +267,7 @@ return [
         'not_attended' => 'Missed',
         'pending_follow_up' => 'Upcoming Follow Ups',
         'follow_up' => 'Follow Up',
+        'refunded' => 'Refunded',
     ],
 
     'card' => [
