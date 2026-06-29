@@ -16,6 +16,22 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Relaxed session limits (testing)
+    |--------------------------------------------------------------------------
+    |
+    | When true: doctors may start sessions before the scheduled time, overdue
+    | sessions are not auto-marked as missed, and calls are not auto-disconnected
+    | when extend_at passes.
+    |
+    */
+
+    'relaxed_session_limits' => filter_var(
+        env('APPOINTMENT_RELAXED_SESSION_LIMITS', env('APP_ENV') === 'local'),
+        FILTER_VALIDATE_BOOL
+    ),
+
+    /*
+    |--------------------------------------------------------------------------
     | Follow-up appointment window
     |--------------------------------------------------------------------------
     |

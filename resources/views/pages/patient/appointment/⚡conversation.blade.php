@@ -205,6 +205,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
         data-label-agora-sdk-missing="{{ __('patient.appointments.agora_sdk_missing') }}"
         data-label-no-active-call="{{ __('patient.appointments.no_active_call') }}"
         data-session-ended="{{ __('patient.appointments.session_time_ended') }}"
+        data-relaxed-session-limits="{{ config('appointments.relaxed_session_limits') ? '1' : '0' }}"
     ></div>
 
     @if (in_array($appointment->status, ['new', 'rescheduled'], true) && ! $appointment->isChatOpen())
@@ -425,6 +426,13 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
     @include('partials.realtime-call-alerts')
     <script src="https://js.pusher.com/8.2.0/pusher.min.js"></script>
     <script>
+        function teardownPatientConversationRealtime() {
+            if (typeof window.__patientConversationTeardown === 'function') {
+                window.__patientConversationTeardown();
+                window.__patientConversationTeardown = null;
+            }
+        }
+
         function initPatientConversationRealtime() {
             const boot = document.getElementById('patient-conversation-bootstrap');
             const panel = document.getElementById('patient-chat-panel');
@@ -442,6 +450,8 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
 
                 return;
             }
+
+            teardownPatientConversationRealtime();
 
             if (boot.dataset.initialized === '1') {
                 boot.__leaveCall?.().catch(() => {});
@@ -1008,6 +1018,10 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
             }
 
             function maybeEndCallWhenSessionExpired(leftSeconds) {
+                if (metrics?.dataset.relaxedSessionLimits === '1') {
+                    return;
+                }
+
                 if (leftSeconds > 0) {
                     sessionEndedDisconnectHandled = false;
 
@@ -1430,73 +1444,46 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 window.__patientConversationNavigateHook = true;
 
                 document.addEventListener('livewire:navigating', () => {
-                    const bootEl = document.getElementById('patient-conversation-bootstrap');
-                    bootEl?.__leaveCall?.().catch(() => {});
-
-                    if (bootEl) {
-                        delete bootEl.dataset.initialized;
-                        delete bootEl.dataset.boundAppointmentId;
-                    }
+                    teardownPatientConversationRealtime();
                 });
             }
 
             if (pusherKey) {
-                const pusher = new Pusher(pusherKey, {
+                const pusher = window.MashoraPatientPusher.acquire({
+                    key: pusherKey,
                     cluster: pusherCluster,
-                    authEndpoint: '/broadcasting/auth',
-                    auth: {
-                        headers: {
-                            'X-CSRF-TOKEN': csrf,
-                            'X-Requested-With': 'XMLHttpRequest',
-                        },
-                    },
+                    csrf,
                 });
 
-                pusher.connection.bind('error', (error) => {
-                    console.error('Pusher connection error', error);
-                });
-
-                const channel = pusher.subscribe('private-appointment.' + appointmentId);
-                channel.bind('pusher:subscription_error', (error) => {
-                    console.error('Pusher appointment channel error', error);
-                });
-                channel.bind('message.created', (data) => appendMessageRow(data));
-                channel.bind('session.started', (data) => {
-                    applySessionStartedPayload(data);
-                });
-                channel.bind('call.incoming', (data) => {
-                    if (Number(data?.appointment_id || appointmentId) !== appointmentId) {
-                        return;
-                    }
-
-                    showIncomingCallBanner(data);
-                });
-                channel.bind('call.ended', (data) => {
-                    handleRemoteCallEnded(data);
-                });
-
-                if (patientId > 0) {
-                    const patientChannel = pusher.subscribe('private-patient.' + patientId);
-                    patientChannel.bind('pusher:subscription_error', (error) => {
-                        console.error('Pusher patient channel error', error);
+                if (pusher) {
+                    const appointmentChannelName = 'private-appointment.' + appointmentId;
+                    const channel = window.MashoraPatientPusher.subscribe(appointmentChannelName);
+                    channel?.bind('pusher:subscription_error', (error) => {
+                        console.error('Pusher appointment channel error', error);
                     });
-                    patientChannel.bind('appointment.session-started', (data) => {
-                        if (Number(data.appointment_id || 0) !== appointmentId) {
-                            return;
-                        }
-
+                    channel?.bind('message.created', (data) => appendMessageRow(data));
+                    channel?.bind('session.started', (data) => {
                         applySessionStartedPayload(data);
                     });
-                    patientChannel.bind('session.join-requested', (data) => {
-                        if (Number(data?.appointment_id || 0) !== appointmentId) {
+                    channel?.bind('call.incoming', (data) => {
+                        if (Number(data?.appointment_id || appointmentId) !== appointmentId) {
                             return;
                         }
 
-                        showIncomingCallBanner(data, { silent: true });
+                        showIncomingCallBanner(data);
                     });
-                    patientChannel.bind('call.ended', (data) => {
+                    channel?.bind('call.ended', (data) => {
                         handleRemoteCallEnded(data);
                     });
+
+                    window.__patientConversationTeardown = () => {
+                        boot.__leaveCall?.().catch(() => {});
+                        window.MashoraPatientPusher.unsubscribe(appointmentChannelName);
+                        window.MashoraPatientPusher.release();
+                        delete boot.dataset.initialized;
+                        delete boot.dataset.boundAppointmentId;
+                        delete boot.dataset.sessionObserved;
+                    };
                 }
             } else {
                 console.warn('Pusher is not configured: set PUSHER_APP_KEY and BROADCAST_CONNECTION=pusher');

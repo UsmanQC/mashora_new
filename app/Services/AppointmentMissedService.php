@@ -16,6 +16,10 @@ final class AppointmentMissedService
 
     public function processDueMissedAppointments(): int
     {
+        if ((bool) config('appointments.relaxed_session_limits', false)) {
+            return 0;
+        }
+
         $graceMinutes = max(0, (int) config('appointments.doctor_missed_grace_minutes', 15));
         $now = now()->timezone(config('app.timezone'));
 

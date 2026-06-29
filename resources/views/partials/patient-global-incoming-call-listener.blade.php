@@ -80,22 +80,17 @@
                         window.dispatchEvent(new CustomEvent('mashora:incoming-call', { detail: data }));
                     }
 
-                    const pusher = new Pusher(pusherKey, {
+                    const pusher = window.MashoraPatientPusher.acquire({
+                        key: pusherKey,
                         cluster: pusherCluster,
-                        authEndpoint: '/broadcasting/auth',
-                        auth: {
-                            headers: {
-                                'X-CSRF-TOKEN': csrf,
-                                'X-Requested-With': 'XMLHttpRequest',
-                            },
-                        },
+                        csrf,
                     });
 
-                    pusher.connection.bind('error', (error) => {
-                        console.error('Pusher connection error', error);
-                    });
+                    if (!pusher) {
+                        return;
+                    }
 
-                    const patientChannel = pusher.subscribe('private-patient.' + patientId);
+                    const patientChannel = window.MashoraPatientPusher.subscribe('private-patient.' + patientId);
                     patientChannel.bind('pusher:subscription_error', (error) => {
                         console.error('Pusher patient channel error', error);
                     });

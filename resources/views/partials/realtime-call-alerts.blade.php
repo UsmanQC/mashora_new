@@ -115,6 +115,63 @@
                     return true;
                 },
             };
+
+            window.MashoraPatientPusher = window.MashoraPatientPusher || {
+                client: null,
+                refCount: 0,
+
+                acquire(options) {
+                    const key = options?.key || '';
+                    if (key === '') {
+                        return null;
+                    }
+
+                    if (!this.client) {
+                        this.client = new Pusher(key, {
+                            cluster: options?.cluster || 'mt1',
+                            authEndpoint: '/broadcasting/auth',
+                            auth: {
+                                headers: {
+                                    'X-CSRF-TOKEN': options?.csrf || '',
+                                    'X-Requested-With': 'XMLHttpRequest',
+                                },
+                            },
+                        });
+
+                        this.client.connection.bind('error', (error) => {
+                            console.error('Pusher connection error', error);
+                        });
+                    }
+
+                    this.refCount += 1;
+
+                    return this.client;
+                },
+
+                release() {
+                    if (this.refCount <= 0) {
+                        return;
+                    }
+
+                    this.refCount -= 1;
+                },
+
+                subscribe(channelName) {
+                    if (!this.client || !channelName) {
+                        return null;
+                    }
+
+                    return this.client.subscribe(channelName);
+                },
+
+                unsubscribe(channelName) {
+                    if (!this.client || !channelName) {
+                        return;
+                    }
+
+                    this.client.unsubscribe(channelName);
+                },
+            };
         </script>
     @endpush
 @endonce

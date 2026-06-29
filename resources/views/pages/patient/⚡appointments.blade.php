@@ -659,10 +659,25 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
     </script>
     <script src="https://js.pusher.com/8.2.0/pusher.min.js"></script>
     <script>
+        function teardownPatientAppointmentsRealtime() {
+            if (typeof window.__patientAppointmentsTeardown === 'function') {
+                window.__patientAppointmentsTeardown();
+                window.__patientAppointmentsTeardown = null;
+            }
+        }
+
         function initPatientAppointmentsRealtime() {
             const boot = document.getElementById('patient-appointments-realtime-bootstrap');
-            if (!boot) return;
-            if (boot.dataset.initialized === '1') return;
+            if (!boot) {
+                return;
+            }
+
+            teardownPatientAppointmentsRealtime();
+
+            if (boot.dataset.initialized === '1') {
+                return;
+            }
+
             boot.dataset.initialized = '1';
 
             const pusherKey = boot.dataset.pusherKey || '';
@@ -702,21 +717,17 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
             let localAudio = null;
             let localVideo = null;
             let inlineJoinInProgress = false;
+            const subscribedChannels = [];
 
-            const pusher = new Pusher(pusherKey, {
+            const pusher = window.MashoraPatientPusher.acquire({
+                key: pusherKey,
                 cluster: pusherCluster,
-                authEndpoint: '/broadcasting/auth',
-                auth: {
-                    headers: {
-                        'X-CSRF-TOKEN': csrf,
-                        'X-Requested-With': 'XMLHttpRequest',
-                    },
-                },
+                csrf,
             });
 
-            pusher.connection.bind('error', (error) => {
-                console.error('Pusher connection error', error);
-            });
+            if (!pusher) {
+                return;
+            }
 
             const incomingCallTitle = @js(__('patient.appointments.incoming_call_title'));
             const incomingVideoLabel = @js(__('patient.appointments.incoming_video'));
@@ -946,22 +957,13 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
                 }
             }
 
-            joinNowBtn?.addEventListener('click', async (event) => {
+            joinNowBtn?.addEventListener('click', () => {
                 const appointmentId = currentAppointmentId;
-                if (!appointmentId) return;
-
-                const payload = payloadByAppointment.get(appointmentId);
-                if (payload && payload.agora_app_id) {
-                    event.preventDefault();
-                    await joinInlineCall(
-                        appointmentId,
-                        payload,
-                        false,
-                        payload.call_type === 'audio' ? 'audio' : 'video',
-                    );
+                if (!appointmentId) {
                     return;
                 }
 
+                window.MashoraRealtimeAlerts?.stopIncomingRing();
                 joinNowBtn.href = joinBase.replace('__ID__', String(appointmentId));
             });
 
@@ -971,8 +973,17 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
 
             ids.forEach((id) => {
                 const appointmentId = Number(id);
-                if (!appointmentId) return;
-                const channel = pusher.subscribe('private-appointment.' + appointmentId);
+                if (!appointmentId) {
+                    return;
+                }
+
+                const channelName = 'private-appointment.' + appointmentId;
+                subscribedChannels.push(channelName);
+                const channel = window.MashoraPatientPusher.subscribe(channelName);
+                if (!channel) {
+                    return;
+                }
+
                 channel.bind('pusher:subscription_error', (error) => {
                     console.error('Pusher appointment channel error', error);
                 });
@@ -988,21 +999,6 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
                     });
                 });
             });
-
-            if (patientId > 0) {
-                const patientChannel = pusher.subscribe('private-patient.' + patientId);
-                patientChannel.bind('pusher:subscription_error', (error) => {
-                    console.error('Pusher patient channel error', error);
-                });
-                patientChannel.bind('appointment.session-started', (payload) => {
-                    const appointmentId = Number(payload?.appointment_id || 0);
-                    if (!appointmentId) {
-                        return;
-                    }
-
-                    showSessionJoin(appointmentId);
-                });
-            }
 
             if (!window.__patientAppointmentsSessionStartedHook) {
                 window.__patientAppointmentsSessionStartedHook = true;
@@ -1037,6 +1033,20 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
                     });
                 });
             }
+
+            window.__patientAppointmentsTeardown = () => {
+                leaveInlineCall().catch(() => {});
+                subscribedChannels.forEach((channelName) => {
+                    window.MashoraPatientPusher.unsubscribe(channelName);
+                });
+                window.MashoraPatientPusher.release();
+                delete boot.dataset.initialized;
+            };
+        }
+
+        if (!window.__patientAppointmentsNavigateHook) {
+            window.__patientAppointmentsNavigateHook = true;
+            document.addEventListener('livewire:navigating', teardownPatientAppointmentsRealtime);
         }
 
         document.addEventListener('DOMContentLoaded', initPatientAppointmentsRealtime);

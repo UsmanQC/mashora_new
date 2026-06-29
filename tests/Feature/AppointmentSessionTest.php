@@ -354,6 +354,8 @@ test('appointment session service rejects patient-side start attempts', function
 });
 
 test('doctor cannot start session before scheduled time', function () {
+    config(['appointments.relaxed_session_limits' => false]);
+
     $user = User::factory()->create();
     $doctor = Doctor::factory()->create(['profile_completed' => true]);
 
@@ -377,7 +379,35 @@ test('doctor cannot start session before scheduled time', function () {
     expect($appointment->fresh()->status)->toBe('new');
 });
 
+test('relaxed session limits allow doctor to start before scheduled time', function () {
+    config(['appointments.relaxed_session_limits' => true]);
+
+    $user = User::factory()->create();
+    $doctor = Doctor::factory()->create(['profile_completed' => true]);
+
+    $appointment = Appointment::factory()->create([
+        'doctor_id' => $doctor->id,
+        'user_id' => $user->id,
+        'status' => 'new',
+        'scheduled_at' => null,
+        'appointment_date' => now()->addDay()->toDateString(),
+        'start_time' => '10:00:00',
+    ]);
+
+    $service = app(AppointmentSessionService::class);
+
+    expect($service->canDoctorStart($appointment))->toBeTrue();
+
+    Livewire::actingAs($doctor, 'doctor')
+        ->test('pages::doctor.appointment.conversation', ['appointment' => $appointment])
+        ->call('startSession');
+
+    expect($appointment->fresh()->status)->toBe('in_process');
+});
+
 test('doctor appointments list disables open session before scheduled time', function () {
+    config(['appointments.relaxed_session_limits' => false]);
+
     $user = User::factory()->create();
     $doctor = Doctor::factory()->create(['profile_completed' => true]);
 

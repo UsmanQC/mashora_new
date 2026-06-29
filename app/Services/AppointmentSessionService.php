@@ -24,6 +24,10 @@ final class AppointmentSessionService
             return false;
         }
 
+        if ((bool) config('appointments.relaxed_session_limits', false)) {
+            return true;
+        }
+
         return $appointment->isSessionStartDue();
     }
 

@@ -135,6 +135,7 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
         data-label-camera-permission="{{ __('doctor.conversation.camera_permission_required') }}"
         data-label-agora-sdk-missing="{{ __('doctor.conversation.agora_sdk_missing') }}"
         data-session-ended="{{ __('doctor.conversation.session_time_ended') }}"
+        data-relaxed-session-limits="{{ config('appointments.relaxed_session_limits') ? '1' : '0' }}"
     ></div>
 
     <div class="relative overflow-hidden rounded-3xl border border-zinc-200/90 bg-white shadow-[0_20px_55px_-32px_rgba(15,23,42,0.35)] ring-1 ring-zinc-100">
@@ -551,6 +552,10 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
             let callJoinInProgress = false;
 
             function maybeEndCallWhenSessionExpired(leftSeconds) {
+                if (metricsEl?.dataset.relaxedSessionLimits === '1') {
+                    return;
+                }
+
                 if (leftSeconds > 0) {
                     sessionEndedDisconnectHandled = false;
 
