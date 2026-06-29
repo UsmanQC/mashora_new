@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Models\WorkingDay;
 use App\Models\WorkingHour;
 use App\Services\FollowUpAppointmentService;
+use App\Support\DoctorAppointmentWorkflow;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
 use Livewire\Livewire;
@@ -541,7 +542,66 @@ test('completed appointment workspace shows follow up tab not reschedule', funct
         ->assertSuccessful()
         ->assertSee(__('doctor.workspace.tab_follow_up'), false)
         ->assertSee(__('doctor.follow_up.free_hint'), false)
+        ->assertSee(__('doctor.follow_up.option_schedule_title'), false)
+        ->assertSee(__('doctor.follow_up.option_no_need_title'), false)
         ->assertDontSee(__('doctor.reschedule.title'), false);
+});
+
+test('doctor can mark follow up as not needed with toggle', function () {
+    app()->setLocale('en');
+
+    $doctor = seedDoctorWithSlots();
+    $user = User::factory()->create();
+
+    $appointment = Appointment::factory()->create([
+        'doctor_id' => $doctor->id,
+        'user_id' => $user->id,
+        'status' => 'completed',
+        'duration' => 30,
+        'appointment_date' => now()->format('Y-m-d'),
+        'start_time' => '10:00:00',
+        'end_time' => '10:30:00',
+    ]);
+
+    Livewire::actingAs($doctor, 'doctor')
+        ->test('pages::doctor.appointment.follow-up', ['appointment' => $appointment])
+        ->set('followUpNotNeeded', true)
+        ->assertSet('followUpNotNeeded', true)
+        ->assertSee(__('doctor.follow_up.no_need_title'), false);
+
+    expect(app(FollowUpAppointmentService::class)->parentDeclinedFollowUp($appointment))->toBeTrue();
+
+    $workflow = app(DoctorAppointmentWorkflow::class);
+    $steps = collect($workflow->steps($appointment->fresh(), 'follow_up'));
+    $followUpStep = $steps->firstWhere('key', 'follow_up');
+
+    expect($followUpStep)->not->toBeNull()
+        ->and($followUpStep['complete'])->toBeTrue();
+
+    expect(app(FollowUpAppointmentService::class)->parentCanScheduleFollowUp($appointment->fresh()))->toBeFalse();
+});
+
+test('doctor cannot schedule follow up after marking not needed', function () {
+    $doctor = seedDoctorWithSlots();
+    $user = User::factory()->create();
+
+    $parent = Appointment::factory()->create([
+        'doctor_id' => $doctor->id,
+        'user_id' => $user->id,
+        'status' => 'completed',
+        'duration' => 30,
+        'appointment_date' => now()->format('Y-m-d'),
+        'start_time' => '10:00:00',
+        'end_time' => '10:30:00',
+    ]);
+
+    $service = app(FollowUpAppointmentService::class);
+    $service->markFollowUpNotNeeded($doctor, $parent);
+
+    expect($service->parentCanScheduleFollowUp($parent))->toBeFalse();
+
+    expect(fn () => $service->create($doctor, $parent, now()->addDay()->format('Y-m-d'), '10:00'))
+        ->toThrow(ValidationException::class);
 });
 
 test('follow-up appointment page shows finished message instead of schedule form', function () {

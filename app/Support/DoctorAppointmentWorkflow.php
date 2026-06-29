@@ -28,7 +28,8 @@ final class DoctorAppointmentWorkflow
 
         if ($canFollowUp) {
             $followUpDone = $this->followUpService->existingFollowUpFor($appointment) !== null
-                || $this->followUpService->pendingFollowUpFor($appointment) !== null;
+                || $this->followUpService->pendingFollowUpFor($appointment) !== null
+                || $this->followUpService->parentDeclinedFollowUp($appointment);
         }
 
         $steps = [
@@ -92,6 +93,7 @@ final class DoctorAppointmentWorkflow
 
         if ($appointment->status === 'completed'
             && $appointment->parent_id === null
+            && ! $this->followUpService->parentDeclinedFollowUp($appointment)
             && $this->followUpService->parentCanScheduleFollowUp($appointment)
             && $this->followUpService->existingFollowUpFor($appointment) === null
             && $this->followUpService->pendingFollowUpFor($appointment) === null

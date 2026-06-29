@@ -23,10 +23,13 @@ new #[Layout('layouts::doctor')] #[Title('Follow Up')] class extends Component
 
     public int $durationMinutes = 15;
 
+    public bool $followUpNotNeeded = false;
+
     public function mount(Appointment $appointment): void
     {
         $this->appointment = $appointment;
         $this->durationMinutes = max(15, (int) $appointment->duration);
+        $this->followUpNotNeeded = app(FollowUpAppointmentService::class)->parentDeclinedFollowUp($appointment);
 
         $followUpService = app(FollowUpAppointmentService::class);
         $timezone = AppTimezone::name();
@@ -157,6 +160,36 @@ new #[Layout('layouts::doctor')] #[Title('Follow Up')] class extends Component
         return app(FollowUpAppointmentService::class)->existingFollowUpFor($this->appointment);
     }
 
+    public function updatedFollowUpNotNeeded(bool $value): void
+    {
+        $service = app(FollowUpAppointmentService::class);
+
+        try {
+            if ($value) {
+                $service->markFollowUpNotNeeded($this->doctor(), $this->appointment);
+                $this->selectedTime = '';
+
+                Flux::toast(
+                    variant: 'success',
+                    text: __('doctor.follow_up.no_need_success'),
+                );
+
+                return;
+            }
+
+            $service->clearFollowUpNotNeeded($this->doctor(), $this->appointment);
+
+            Flux::toast(
+                variant: 'success',
+                text: __('doctor.follow_up.no_need_cleared'),
+            );
+        } catch (ValidationException $exception) {
+            $this->followUpNotNeeded = app(FollowUpAppointmentService::class)->parentDeclinedFollowUp($this->appointment);
+
+            throw $exception;
+        }
+    }
+
     public function followUpStatusLabel(Appointment $appointment): string
     {
         if ($appointment->isPendingFollowUp()) {
@@ -281,12 +314,46 @@ new #[Layout('layouts::doctor')] #[Title('Follow Up')] class extends Component
                     </p>
                 </div>
             </flux:callout>
+        @elseif ($followUpNotNeeded)
+            <flux:callout variant="success" icon="check-circle" class="mt-6">
+                <div class="space-y-2">
+                    <p class="font-semibold">{{ __('doctor.follow_up.no_need_title') }}</p>
+                    <p class="text-sm">{{ __('doctor.follow_up.no_need_body') }}</p>
+                </div>
+            </flux:callout>
+
+            <div class="mt-6 rounded-2xl border border-zinc-200/90 bg-white p-5 shadow-sm">
+                <div class="flex items-center justify-between gap-4">
+                    <div>
+                        <flux:heading size="md" class="font-semibold text-zinc-900">
+                            {{ __('doctor.follow_up.no_need_toggle_label') }}
+                        </flux:heading>
+                        <flux:text class="mt-1 text-sm text-zinc-600">
+                            {{ __('doctor.follow_up.no_need_locked') }}
+                        </flux:text>
+                    </div>
+                    <div class="shrink-0 [--color-accent:#10B981] [--color-accent-foreground:#ffffff]">
+                        <flux:switch wire:model.live="followUpNotNeeded" />
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-6 flex justify-end">
+                <flux:button :href="route('doctor.appointments')" wire:navigate variant="primary" class="!bg-[#047857] !text-white hover:!brightness-95">
+                    {{ __('doctor.follow_up.back_to_appointments') }}
+                </flux:button>
+            </div>
         @elseif (! $this->canScheduleFollowUp)
             <flux:callout variant="warning" icon="exclamation-circle" class="mt-6">
                 {{ __('doctor.follow_up.complete_session_first') }}
             </flux:callout>
         @else
-        <form wire:submit="save" class="mt-6 space-y-5">
+        <div class="mt-6 grid gap-5 lg:grid-cols-2">
+            <div class="rounded-2xl border border-emerald-200/80 bg-emerald-50/40 p-5 shadow-sm">
+                <flux:heading size="md" class="font-semibold text-emerald-950">{{ __('doctor.follow_up.option_schedule_title') }}</flux:heading>
+                <flux:text class="mt-1 text-sm text-emerald-900/80">{{ __('doctor.follow_up.option_schedule_body') }}</flux:text>
+
+        <form wire:submit="save" class="mt-5 space-y-5">
             <flux:field>
                 <flux:label>{{ __('doctor.follow_up.date_label') }}</flux:label>
                 <flux:input wire:model.live="newDate" type="date" min="{{ $this->minDate() }}" max="{{ $this->maxDate() }}" required />
@@ -347,9 +414,6 @@ new #[Layout('layouts::doctor')] #[Title('Follow Up')] class extends Component
             </flux:callout>
 
             <div class="flex flex-col gap-3 sm:flex-row sm:justify-end">
-                <flux:button :href="route('doctor.appointments.prescription', $appointment)" wire:navigate variant="ghost">
-                    {{ __('doctor.auth.back') }}
-                </flux:button>
                 <flux:button type="submit" variant="primary" class="!bg-[#047857] !text-white hover:!brightness-95">
                     {{ config('appointments.follow_up_skip_patient_confirmation')
                         ? __('doctor.follow_up.submit_direct')
@@ -357,6 +421,24 @@ new #[Layout('layouts::doctor')] #[Title('Follow Up')] class extends Component
                 </flux:button>
             </div>
         </form>
+            </div>
+
+            <div class="rounded-2xl border border-zinc-200/90 bg-white p-5 shadow-sm">
+                <flux:heading size="md" class="font-semibold text-zinc-900">{{ __('doctor.follow_up.option_no_need_title') }}</flux:heading>
+                <flux:text class="mt-1 text-sm text-zinc-600">{{ __('doctor.follow_up.option_no_need_body') }}</flux:text>
+
+                <div class="mt-5 flex items-center justify-between gap-4 rounded-xl border border-zinc-200 bg-zinc-50/80 px-4 py-4">
+                    <div class="min-w-0">
+                        <p class="text-sm font-semibold text-zinc-900">{{ __('doctor.follow_up.no_need_toggle_label') }}</p>
+                        <p class="mt-0.5 text-xs text-zinc-600">{{ __('doctor.follow_up.no_need_toggle_hint') }}</p>
+                    </div>
+                    <div class="shrink-0 [--color-accent:#10B981] [--color-accent-foreground:#ffffff]">
+                        <flux:switch wire:model.live="followUpNotNeeded" />
+                    </div>
+                </div>
+                <flux:error name="followUpNotNeeded" />
+            </div>
+        </div>
         @endif
         @endif
     </div>

@@ -118,6 +118,12 @@ final class FollowUpAppointmentService
             ]);
         }
 
+        if ($this->parentDeclinedFollowUp($parent)) {
+            throw ValidationException::withMessages([
+                'selectedTime' => __('doctor.follow_up.no_need_already_marked'),
+            ]);
+        }
+
         $timezone = config('app.timezone');
         $start = Carbon::createFromFormat('Y-m-d H:i', $date.' '.$time, $timezone);
         $end = (clone $start)->addMinutes($durationMinutes);
@@ -153,6 +159,8 @@ final class FollowUpAppointmentService
 
             return $appointment;
         });
+
+        $this->clearFollowUpNotNeededSession($parent);
 
         $this->notifier->notifyFollowUpScheduled($followUp, $doctor, $start);
 
@@ -225,7 +233,68 @@ final class FollowUpAppointmentService
             return false;
         }
 
+        if ($this->parentDeclinedFollowUp($parent)) {
+            return false;
+        }
+
         return $this->maxSelectableDate($parent)->greaterThanOrEqualTo($this->windowStart());
+    }
+
+    public function markFollowUpNotNeeded(Doctor $doctor, Appointment $parent): void
+    {
+        if ((int) $parent->doctor_id !== (int) $doctor->id) {
+            abort(403);
+        }
+
+        if ($parent->parent_id !== null || $parent->is_follow_up) {
+            throw ValidationException::withMessages([
+                'followUpNotNeeded' => __('doctor.follow_up.not_eligible_decline'),
+            ]);
+        }
+
+        if (! in_array((string) $parent->status, $this->schedulableParentStatuses(), true)) {
+            throw ValidationException::withMessages([
+                'followUpNotNeeded' => __('doctor.follow_up.complete_session_first'),
+            ]);
+        }
+
+        if ($this->existingFollowUpFor($parent) !== null || $this->pendingFollowUpFor($parent) !== null) {
+            throw ValidationException::withMessages([
+                'followUpNotNeeded' => __('doctor.follow_up.already_scheduled'),
+            ]);
+        }
+
+        session()->put($this->followUpNotNeededSessionKey($parent), true);
+    }
+
+    public function clearFollowUpNotNeeded(Doctor $doctor, Appointment $parent): void
+    {
+        if ((int) $parent->doctor_id !== (int) $doctor->id) {
+            abort(403);
+        }
+
+        if ($this->existingFollowUpFor($parent) !== null || $this->pendingFollowUpFor($parent) !== null) {
+            throw ValidationException::withMessages([
+                'followUpNotNeeded' => __('doctor.follow_up.already_scheduled'),
+            ]);
+        }
+
+        $this->clearFollowUpNotNeededSession($parent);
+    }
+
+    public function parentDeclinedFollowUp(Appointment $parent): bool
+    {
+        return (bool) session()->get($this->followUpNotNeededSessionKey($parent), false);
+    }
+
+    private function followUpNotNeededSessionKey(Appointment $parent): string
+    {
+        return "doctor.workflow.follow_up_not_needed.{$parent->id}";
+    }
+
+    private function clearFollowUpNotNeededSession(Appointment $parent): void
+    {
+        session()->forget($this->followUpNotNeededSessionKey($parent));
     }
 
     public function assertDateWithinWindow(Appointment $parent, string $date): void
