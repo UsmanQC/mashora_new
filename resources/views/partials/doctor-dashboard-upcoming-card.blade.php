@@ -1,19 +1,13 @@
 {{-- Parent: doctor dashboard Livewire page (wire:click targets it). --}}
-@props(['appointment'])
+@props(['appointment', 'dashboard'])
 
 @php
     /** @var \App\Models\Appointment $appointment */
+    /** @var \Livewire\Component $dashboard */
 
     $statusSlug = (string) $appointment->status;
-
-    $badgeColor = match ($statusSlug) {
-        'new' => 'zinc',
-        'in_process' => 'lime',
-        'completed' => 'sky',
-        'cancelled', 'not_attended' => 'rose',
-        'rescheduled' => 'amber',
-        default => 'zinc',
-    };
+    $statusLabel = $dashboard->statusLabelFor($appointment);
+    $badgeColor = $dashboard->statusBadgeColorFor($appointment);
 @endphp
 
 <div class="rounded-2xl border border-zinc-200/90 bg-white p-5 shadow-sm" wire:key="up-{{ $appointment->id }}">
@@ -32,7 +26,7 @@
         <div class="flex justify-between gap-6">
             <dt class="shrink-0 font-semibold text-zinc-900">{{ __('doctor.card.session_status') }}</dt>
             <dd class="min-w-0 text-end">
-                <flux:badge variant="pill" color="{{ $badgeColor }}" size="sm">{{ __('doctor.appointment_status.'.$statusSlug) }}</flux:badge>
+                <flux:badge variant="pill" color="{{ $badgeColor }}" size="sm">{{ $statusLabel }}</flux:badge>
             </dd>
         </div>
         <div class="flex justify-between gap-6">

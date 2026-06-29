@@ -25,14 +25,50 @@ new #[Layout('layouts::doctor')] #[Title('Dashboard')] class extends Component
     /** @var list<string> */
     private const UPCOMING_STATUSES = ['new', 'in_process'];
 
+    /** @var list<string> */
+    private const UPCOMING_FILTERS = ['new', 'follow_up'];
+
     #[Url]
     public string $period = 'today';
+
+    #[Url]
+    public string $upcoming = 'new';
 
     public function mount(): void
     {
         if (! in_array($this->period, self::PERIODS, true)) {
             $this->period = 'today';
         }
+
+        if (! in_array($this->upcoming, self::UPCOMING_FILTERS, true)) {
+            $this->upcoming = 'new';
+        }
+    }
+
+    public function statusLabelFor(Appointment $appointment): string
+    {
+        if ($appointment->is_follow_up && $appointment->status !== 'pending_follow_up') {
+            return __('doctor.appointment_status.follow_up');
+        }
+
+        return __('doctor.appointment_status.'.$appointment->status);
+    }
+
+    public function statusBadgeColorFor(Appointment $appointment): string
+    {
+        if ($appointment->is_follow_up && $appointment->status !== 'pending_follow_up') {
+            return 'violet';
+        }
+
+        return match ($appointment->status) {
+            'new' => 'sky',
+            'in_process' => 'amber',
+            'completed' => 'emerald',
+            'cancelled', 'not_attended' => 'rose',
+            'rescheduled' => 'indigo',
+            'pending_follow_up' => 'violet',
+            default => 'zinc',
+        };
     }
 
     protected function doctor(): ?Doctor
@@ -125,6 +161,31 @@ new #[Layout('layouts::doctor')] #[Title('Dashboard')] class extends Component
             ->count();
     }
 
+    #[Computed]
+    public function upcomingNewCount(): int
+    {
+        $doctor = $this->doctor();
+        if ($doctor === null) {
+            return 0;
+        }
+
+        return $doctor->appointments()
+            ->whereIn('status', self::UPCOMING_STATUSES)
+            ->where('is_follow_up', false)
+            ->count();
+    }
+
+    #[Computed]
+    public function upcomingFollowUpCount(): int
+    {
+        $doctor = $this->doctor();
+        if ($doctor === null) {
+            return 0;
+        }
+
+        return $doctor->appointments()->upcomingFollowUp()->count();
+    }
+
     /**
      * @return EloquentCollection<int, Appointment>
      */
@@ -136,13 +197,20 @@ new #[Layout('layouts::doctor')] #[Title('Dashboard')] class extends Component
             return new EloquentCollection;
         }
 
-        return $doctor->appointments()
-            ->whereIn('status', self::UPCOMING_STATUSES)
+        $query = $doctor->appointments()
             ->orderBy('scheduled_at')
             ->orderBy('appointment_date')
-            ->orderBy('start_time')
-            ->limit(10)
-            ->get();
+            ->orderBy('start_time');
+
+        if ($this->upcoming === 'follow_up') {
+            $query->upcomingFollowUp();
+        } else {
+            $query
+                ->whereIn('status', self::UPCOMING_STATUSES)
+                ->where('is_follow_up', false);
+        }
+
+        return $query->limit(10)->get();
     }
 }; ?>
 
@@ -270,27 +338,49 @@ new #[Layout('layouts::doctor')] #[Title('Dashboard')] class extends Component
                 </div>
             </div>
 
-            @if ($this->upcomingAppointments->isEmpty())
-                <div class="rounded-2xl border border-zinc-200/90 bg-white px-4 py-10 text-center shadow-sm">
-                    @include('partials.patient-empty-record-illustration')
-                    <flux:text class="mt-4 text-zinc-600">{{ __('doctor.dashboard.no_new_appointments') }}</flux:text>
+            <div>
+                <div class="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <flux:heading size="lg" class="font-semibold text-zinc-900">{{ __('doctor.dashboard.upcoming_title') }}</flux:heading>
+                    <flux:link :href="route('doctor.appointments')" wire:navigate class="text-sm font-medium text-[#10B981]">
+                        {{ __('doctor.dashboard.view_all') }}
+                        <flux:icon name="chevron-right" variant="mini" class="inline size-4 align-middle rtl:rotate-180" />
+                    </flux:link>
                 </div>
-            @else
-                <div>
-                    <div class="mb-4 flex items-center justify-between gap-3">
-                        <flux:heading size="lg" class="font-semibold text-zinc-900">{{ __('doctor.dashboard.upcoming_title') }}</flux:heading>
-                        <flux:link :href="route('doctor.appointments')" wire:navigate class="text-sm font-medium text-[#10B981]">
-                            {{ __('doctor.dashboard.view_all') }}
-                            <flux:icon name="chevron-right" variant="mini" class="inline size-4 align-middle rtl:rotate-180" />
-                        </flux:link>
+
+                <div class="mb-4 rounded-2xl bg-white p-3 shadow-sm">
+                    <nav class="grid grid-cols-2 gap-2" aria-label="{{ __('doctor.dashboard.upcoming_filter_label') }}">
+                        @foreach (['new' => ['label' => __('doctor.dashboard.tab_upcoming_new'), 'count' => $this->upcomingNewCount], 'follow_up' => ['label' => __('doctor.dashboard.tab_upcoming_follow'), 'count' => $this->upcomingFollowUpCount]] as $key => $meta)
+                            <flux:button
+                                :href="route('doctor.dashboard', ['period' => $this->period, 'upcoming' => $key])"
+                                wire:navigate
+                                size="sm"
+                                :variant="$this->upcoming === $key ? 'primary' : 'outline'"
+                                class="w-full rounded-xl py-2.5 text-sm font-semibold {{ $this->upcoming === $key ? '!bg-[#047857] !text-white shadow-sm' : '!border-0 bg-zinc-50 text-zinc-700 hover:!bg-white' }}"
+                            >
+                                {{ $meta['label'] }}
+                                <span class="ms-1.5 inline-flex min-w-[1.25rem] items-center justify-center rounded-full px-1.5 py-0.5 text-xs font-bold {{ $this->upcoming === $key ? 'bg-white/20 text-white' : 'bg-zinc-200/80 text-zinc-700' }}">
+                                    {{ $meta['count'] }}
+                                </span>
+                            </flux:button>
+                        @endforeach
+                    </nav>
+                </div>
+
+                @if ($this->upcomingAppointments->isEmpty())
+                    <div class="rounded-2xl border border-zinc-200/90 bg-white px-4 py-10 text-center shadow-sm">
+                        @include('partials.patient-empty-record-illustration')
+                        <flux:text class="mt-4 text-zinc-600">
+                            {{ $this->upcoming === 'follow_up' ? __('doctor.dashboard.no_upcoming_follow') : __('doctor.dashboard.no_new_appointments') }}
+                        </flux:text>
                     </div>
+                @else
                     <div class="grid gap-4 sm:grid-cols-2">
                         @foreach ($this->upcomingAppointments as $appointment)
-                            @include('partials.doctor-dashboard-upcoming-card', compact('appointment'))
+                            @include('partials.doctor-dashboard-upcoming-card', ['appointment' => $appointment, 'dashboard' => $this])
                         @endforeach
                     </div>
-                </div>
-            @endif
+                @endif
+            </div>
         </div>
     @endif
 

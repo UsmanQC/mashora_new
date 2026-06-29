@@ -41,6 +41,55 @@ test('authenticated doctor can view dashboard', function () {
     $response->assertOk();
 });
 
+test('doctor dashboard separates upcoming new and follow up appointments', function () {
+    app()->setLocale('en');
+
+    $doctor = Doctor::factory()->create([
+        'phone' => '966511122244',
+        'profile_completed' => true,
+        'status' => 'approved',
+    ]);
+
+    $user = User::factory()->create(['name' => 'Usman']);
+
+    Appointment::factory()->create([
+        'doctor_id' => $doctor->id,
+        'user_id' => $user->id,
+        'status' => 'new',
+        'is_follow_up' => false,
+        'patient_name' => $user->name,
+        'appointment_date' => now()->addDays(7)->format('Y-m-d'),
+        'scheduled_at' => now()->addDays(7),
+    ]);
+
+    Appointment::factory()->create([
+        'doctor_id' => $doctor->id,
+        'user_id' => $user->id,
+        'status' => 'new',
+        'is_follow_up' => true,
+        'patient_name' => $user->name,
+        'appointment_date' => now()->addDays(14)->format('Y-m-d'),
+        'scheduled_at' => now()->addDays(14),
+    ]);
+
+    $this->actingAs($doctor, 'doctor');
+
+    Livewire::test('pages::doctor.dashboard')
+        ->assertSet('upcomingNewCount', 1)
+        ->assertSet('upcomingFollowUpCount', 1)
+        ->assertSee(__('doctor.dashboard.tab_upcoming_new'), false)
+        ->assertSee(__('doctor.dashboard.tab_upcoming_follow'), false)
+        ->assertSee(__('doctor.appointment_status.new'), false)
+        ->assertDontSee(__('doctor.appointment_status.follow_up'), false)
+        ->set('upcoming', 'follow_up')
+        ->assertSee(__('doctor.appointment_status.follow_up'), false)
+        ->tap(function ($component) {
+            $appointments = $component->instance()->upcomingAppointments;
+            expect($appointments)->toHaveCount(1);
+            expect($appointments->first()->is_follow_up)->toBeTrue();
+        });
+});
+
 test('doctor pending approval is redirected to account status from portal pages', function () {
     $doctor = Doctor::factory()->create([
         'profile_completed' => true,
