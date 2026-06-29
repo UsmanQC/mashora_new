@@ -72,10 +72,15 @@
                             return;
                         }
 
+                        window.MashoraRealtimeAlerts?.stopIncomingRing();
+
                         storePendingCall(data);
 
                         const label = data.call_type === 'video' ? incomingVideoLabel : incomingVoiceLabel;
-                        window.MashoraIncomingCall?.notifyPatient(data, incomingCallTitle, label);
+                        window.MashoraIncomingCall?.notifyPatient(data, incomingCallTitle, label, {
+                            showDesktopNotification: false,
+                            showToast: true,
+                        });
 
                         window.dispatchEvent(new CustomEvent('mashora:incoming-call', { detail: data }));
                     }

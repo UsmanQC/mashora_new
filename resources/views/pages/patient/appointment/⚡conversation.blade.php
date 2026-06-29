@@ -1151,10 +1151,12 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
 
             function notifyIncomingCallAlert(message, data = null) {
                 const payload = data || { appointment_id: appointmentId };
+                window.MashoraRealtimeAlerts?.stopIncomingRing();
                 window.MashoraIncomingCall?.notifyPatient(
                     payload,
                     @js(__('patient.appointments.incoming_call_title')),
                     message,
+                    { showDesktopNotification: false },
                 );
             }
 
