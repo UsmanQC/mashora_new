@@ -181,6 +181,40 @@ test('authenticated doctor can view appointments ratings and settings pages', fu
     $this->actingAs($doctor, 'doctor')->get(route('doctor.settings.duration'))->assertOk();
 });
 
+test('doctor profile shows and saves specialities like registration', function () {
+    $doctor = Doctor::factory()->create(['profile_completed' => true]);
+
+    $primary = Speciality::query()->create([
+        'title' => 'Clinical Psychology',
+        'title_ar' => 'علم النفس الإكلينيكي',
+        'status' => true,
+    ]);
+    $additional = Speciality::query()->create([
+        'title' => 'Family Therapy',
+        'title_ar' => 'العلاج الأسري',
+        'status' => true,
+    ]);
+
+    $doctor->specialities()->sync([$primary->id]);
+    $doctor->updateQuietly(['speciality_id' => $primary->id]);
+
+    $this->actingAs($doctor, 'doctor');
+
+    Livewire::test('pages::doctor.settings.profile')
+        ->assertSet('speciality_ids', [$primary->id])
+        ->assertSee('Clinical Psychology')
+        ->set('speciality_ids', [$primary->id, $additional->id])
+        ->call('saveProfile')
+        ->assertHasNoErrors();
+
+    $doctor->refresh();
+    $doctor->load('specialities');
+
+    expect($doctor->specialities->pluck('id')->sort()->values()->all())
+        ->toBe([$primary->id, $additional->id])
+        ->and($doctor->speciality_id)->toBe($primary->id);
+});
+
 test('doctor can save dynamic working hours', function () {
     $doctor = Doctor::factory()->create(['profile_completed' => true]);
 

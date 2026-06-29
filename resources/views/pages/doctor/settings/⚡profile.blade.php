@@ -1,9 +1,12 @@
 <?php
 
 use App\Models\Doctor;
+use App\Models\Speciality;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
+use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
@@ -19,6 +22,9 @@ new #[Layout('layouts::doctor')] #[Title('Personal account')] class extends Comp
     public string $phone = '';
     public string $about = '';
     public string $about_ar = '';
+
+    /** @var list<int> */
+    public array $speciality_ids = [];
 
     public string $current_password = '';
     public string $new_password = '';
@@ -37,9 +43,19 @@ new #[Layout('layouts::doctor')] #[Title('Personal account')] class extends Comp
         return $doctor;
     }
 
+    /**
+     * @return \Illuminate\Database\Eloquent\Collection<int, Speciality>
+     */
+    #[Computed]
+    public function specialities()
+    {
+        return Speciality::query()->where('status', true)->orderBy('title')->get();
+    }
+
     public function mount(): void
     {
         $doctor = $this->doctor();
+        $doctor->loadMissing('specialities');
 
         $this->name = (string) ($doctor->name ?? '');
         $this->name_ar = (string) ($doctor->name_ar ?? '');
@@ -47,11 +63,26 @@ new #[Layout('layouts::doctor')] #[Title('Personal account')] class extends Comp
         $this->phone = (string) ($doctor->phone ?? '');
         $this->about = (string) ($doctor->about ?? '');
         $this->about_ar = (string) ($doctor->about_ar ?? '');
+        $this->speciality_ids = $doctor->specialities
+            ->pluck('id')
+            ->map(static fn (mixed $id): int => (int) $id)
+            ->values()
+            ->all();
+    }
+
+    public function updatedSpecialityIds(): void
+    {
+        $this->resetValidation('speciality_ids');
     }
 
     public function saveProfile(): void
     {
         $doctor = $this->doctor();
+
+        $this->speciality_ids = array_values(array_unique(array_map(
+            static fn (mixed $id): int => (int) $id,
+            $this->speciality_ids,
+        )));
 
         $validated = $this->validate([
             'name' => ['required', 'string', 'max:255'],
@@ -60,6 +91,8 @@ new #[Layout('layouts::doctor')] #[Title('Personal account')] class extends Comp
             'phone' => ['required', 'string', 'max:20', 'unique:doctors,phone,'.$doctor->id],
             'about' => ['nullable', 'string', 'max:2000'],
             'about_ar' => ['nullable', 'string', 'max:2000'],
+            'speciality_ids' => ['required', 'array', 'min:1'],
+            'speciality_ids.*' => ['integer', Rule::exists(Speciality::class, 'id')],
             'profile_photo' => ['nullable', 'image', 'max:2048'],
         ]);
 
@@ -80,7 +113,10 @@ new #[Layout('layouts::doctor')] #[Title('Personal account')] class extends Comp
             'phone' => $validated['phone'],
             'about' => $validated['about'] ?: null,
             'about_ar' => $validated['about_ar'] ?: null,
+            'speciality_id' => $this->speciality_ids[0] ?? null,
         ])->save();
+
+        $doctor->specialities()->sync($this->speciality_ids);
 
         $this->profile_photo = null;
 
@@ -113,6 +149,7 @@ new #[Layout('layouts::doctor')] #[Title('Personal account')] class extends Comp
 
 @php
     $doctor = auth('doctor')->user();
+    $localeIsAr = app()->getLocale() === 'ar';
     $profileFields = collect([
         filled($name),
         filled($email),
@@ -120,6 +157,7 @@ new #[Layout('layouts::doctor')] #[Title('Personal account')] class extends Comp
         filled($about),
         filled($about_ar),
         filled($doctor?->profile_photo_path),
+        count($speciality_ids) > 0,
     ]);
     $profileCompletion = (int) round(($profileFields->filter()->count() / max(1, $profileFields->count())) * 100);
 @endphp
@@ -190,6 +228,36 @@ new #[Layout('layouts::doctor')] #[Title('Personal account')] class extends Comp
                         <flux:error name="phone" />
                     </flux:field>
                 </div>
+            </div>
+
+            <div class="rounded-xl border border-zinc-200/80 bg-white p-4">
+                <flux:heading size="sm" class="font-semibold text-zinc-900">{{ __('doctor.auth.specialities') }}</flux:heading>
+                <flux:text class="mt-1 text-sm text-zinc-600">{{ __('doctor.settings.profile_specialities_hint') }}</flux:text>
+
+                @if ($this->specialities->isEmpty())
+                    <flux:callout variant="warning" icon="exclamation-circle" class="mt-3">
+                        {{ __('doctor.auth.catalog_missing_hint') }}
+                    </flux:callout>
+                @else
+                    <div class="mt-3">
+                        <flux:field>
+                            <flux:checkbox.group
+                                wire:model.live="speciality_ids"
+                                class="doctor-emerald-accent grid max-h-48 gap-2 overflow-y-auto rounded-xl border border-zinc-200 bg-zinc-50/80 p-3 sm:grid-cols-2"
+                            >
+                                @foreach ($this->specialities as $speciality)
+                                    <label class="flex items-start gap-2.5 text-sm font-medium text-zinc-800">
+                                        <flux:checkbox value="{{ $speciality->id }}" class="mt-0.5 shrink-0" />
+                                        <span>
+                                            {{ $localeIsAr && filled($speciality->title_ar) ? $speciality->title_ar : $speciality->title }}
+                                        </span>
+                                    </label>
+                                @endforeach
+                            </flux:checkbox.group>
+                            <flux:error name="speciality_ids" />
+                        </flux:field>
+                    </div>
+                @endif
             </div>
 
             <div class="rounded-xl border border-zinc-200/80 bg-white p-4">

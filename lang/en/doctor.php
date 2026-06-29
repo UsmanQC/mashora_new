@@ -48,6 +48,7 @@ return [
         'title' => 'Menu',
         'subtitle' => 'Account and preferences',
         'personal_profile' => 'Personal profile',
+        'profile_specialities_hint' => 'Select the specialities you practice. You can choose more than one, just like during registration.',
         'placeholder' => 'More settings from production will be wired here as the product grows.',
     ],
 
