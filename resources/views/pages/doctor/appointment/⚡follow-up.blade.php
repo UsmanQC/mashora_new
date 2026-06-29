@@ -91,7 +91,24 @@ new #[Layout('layouts::doctor')] #[Title('Follow Up')] class extends Component
 
     public function minDate(): string
     {
-        return app(FollowUpAppointmentService::class)->windowStart()->format('Y-m-d');
+        return app(FollowUpAppointmentService::class)
+            ->windowStartFor($this->appointment)
+            ->format('Y-m-d');
+    }
+
+    public function sessionDateLabel(): string
+    {
+        if ($this->appointment->appointment_date === null) {
+            return '';
+        }
+
+        try {
+            return Carbon::parse($this->appointment->appointment_date, AppTimezone::name())
+                ->locale(app()->getLocale())
+                ->translatedFormat('d M Y');
+        } catch (\Throwable) {
+            return '';
+        }
     }
 
     public function maxDate(): string
@@ -357,7 +374,12 @@ new #[Layout('layouts::doctor')] #[Title('Follow Up')] class extends Component
             <flux:field>
                 <flux:label>{{ __('doctor.follow_up.date_label') }}</flux:label>
                 <flux:input wire:model.live="newDate" type="date" min="{{ $this->minDate() }}" max="{{ $this->maxDate() }}" required />
-                <flux:description>{{ __('doctor.follow_up.date_window_hint', ['days' => $this->windowDays(), 'max' => $this->maxDate()]) }}</flux:description>
+                <flux:description>{{ __('doctor.follow_up.date_window_hint', [
+                    'min' => $this->minDate(),
+                    'max' => $this->maxDate(),
+                    'days' => $this->windowDays(),
+                    'session' => $this->sessionDateLabel(),
+                ]) }}</flux:description>
                 <flux:error name="newDate" />
             </flux:field>
 

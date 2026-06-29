@@ -358,7 +358,7 @@ return [
         'title' => 'Follow Up',
         'subtitle' => 'Offer one free follow-up per session within :days days. The patient is not charged.',
         'date_label' => 'Follow-up date',
-        'date_window_hint' => 'Choose a date by :max (within :days days of the original session).',
+        'date_window_hint' => 'Session date: :session. Pick a follow-up from :min through :max (within :days days after that session).',
         'time_label' => 'Available time',
         'no_slots' => 'No available slots on this date. Try another day.',
         'no_slots_weekday' => ':day is not in your working schedule, or all times are already booked.',

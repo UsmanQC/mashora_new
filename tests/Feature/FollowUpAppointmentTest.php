@@ -219,7 +219,7 @@ test('follow up is booked immediately when patient confirmation is skipped', fun
         ->and($followUp->patient_confirmed_at)->not->toBeNull();
 });
 
-test('doctor can schedule follow up during in process session when relaxed', function () {
+test('relaxed session limits allow follow-up during in process but still enforce fourteen day window', function () {
     config([
         'appointments.relaxed_session_limits' => true,
         'appointments.follow_up_skip_patient_confirmation' => true,
@@ -228,9 +228,7 @@ test('doctor can schedule follow up during in process session when relaxed', fun
     $doctor = seedDoctorWithSlots(7);
     $user = User::factory()->create(['profile_completed' => true]);
 
-    $followUpDate = now()->addDays(14)->format('Y-m-d');
-
-    $appointment = Appointment::factory()->create([
+    $inProcess = Appointment::factory()->create([
         'doctor_id' => $doctor->id,
         'user_id' => $user->id,
         'status' => 'in_process',
@@ -243,21 +241,30 @@ test('doctor can schedule follow up during in process session when relaxed', fun
         'actual_start_at' => now(),
     ]);
 
-    expect(app(FollowUpAppointmentService::class)->parentCanScheduleFollowUp($appointment))->toBeTrue();
+    $completed = Appointment::factory()->create([
+        'doctor_id' => $doctor->id,
+        'user_id' => $user->id,
+        'status' => 'completed',
+        'duration' => 30,
+        'appointment_date' => now()->format('Y-m-d'),
+        'start_time' => '11:00:00',
+        'end_time' => '11:30:00',
+        'patient_name' => $user->name,
+        'patient_phone' => $user->phone,
+    ]);
 
-    $this->actingAs($doctor, 'doctor');
+    $service = app(FollowUpAppointmentService::class);
 
-    Livewire::test('pages::doctor.appointment.follow-up', ['appointment' => $appointment])
-        ->set('newDate', $followUpDate)
-        ->set('selectedTime', '10:00')
-        ->call('save')
-        ->assertHasNoErrors();
+    expect($service->parentCanScheduleFollowUp($inProcess))->toBeTrue();
 
-    $followUp = Appointment::query()->where('parent_id', $appointment->id)->first();
+    $followUpDate = now()->addDays(7)->format('Y-m-d');
 
-    expect($followUp)->not->toBeNull()
-        ->and($followUp->status)->toBe('new')
-        ->and($followUp->is_follow_up)->toBeTrue();
+    $service->create($doctor, $inProcess, $followUpDate, '10:00');
+
+    expect(Appointment::query()->where('parent_id', $inProcess->id)->exists())->toBeTrue();
+
+    expect(fn () => $service->create($doctor, $completed, now()->addDays(15)->format('Y-m-d'), '10:00'))
+        ->toThrow(ValidationException::class);
 });
 
 test('patient confirms free follow-up without payment', function () {
@@ -409,6 +416,31 @@ test('follow up service rejects scheduling before session is completed', functio
 
     expect(fn () => $service->create($doctor, $parent, now()->addDays(7)->format('Y-m-d'), '10:00'))
         ->toThrow(ValidationException::class);
+});
+
+test('follow up can be scheduled on the last day of the fourteen day window', function () {
+    config(['appointments.follow_up_skip_patient_confirmation' => true]);
+
+    $doctor = seedDoctorWithSlots(14);
+    $user = User::factory()->create(['profile_completed' => true]);
+
+    $parent = Appointment::factory()->create([
+        'doctor_id' => $doctor->id,
+        'user_id' => $user->id,
+        'status' => 'completed',
+        'duration' => 30,
+        'appointment_date' => now()->format('Y-m-d'),
+        'start_time' => '10:00:00',
+        'end_time' => '10:30:00',
+        'patient_name' => $user->name,
+        'patient_phone' => $user->phone,
+    ]);
+
+    $lastDay = now()->addDays(14)->format('Y-m-d');
+
+    app(FollowUpAppointmentService::class)->create($doctor, $parent, $lastDay, '10:00');
+
+    expect(Appointment::query()->where('parent_id', $parent->id)->exists())->toBeTrue();
 });
 
 test('follow up service rejects dates outside the follow-up window', function () {

@@ -37,17 +37,17 @@ return [
     |
     | follow_up_allows_calls: let follow-up appointments use video/voice like new sessions.
     | follow_up_skip_patient_confirmation: book follow-ups immediately after the doctor
-    | schedules them (skip patient confirm / pay step). Defaults match relaxed_session_limits.
+    | schedules them (skip patient confirm / pay step).
     |
     */
 
     'follow_up_allows_calls' => filter_var(
-        env('APPOINTMENT_FOLLOW_UP_ALLOWS_CALLS', env('APPOINTMENT_RELAXED_SESSION_LIMITS', env('APP_ENV') === 'local')),
+        env('APPOINTMENT_FOLLOW_UP_ALLOWS_CALLS', env('APP_ENV') === 'local'),
         FILTER_VALIDATE_BOOL
     ),
 
     'follow_up_skip_patient_confirmation' => filter_var(
-        env('APPOINTMENT_FOLLOW_UP_SKIP_CONFIRMATION', env('APPOINTMENT_RELAXED_SESSION_LIMITS', env('APP_ENV') === 'local')),
+        env('APPOINTMENT_FOLLOW_UP_SKIP_CONFIRMATION', env('APP_ENV') === 'local'),
         FILTER_VALIDATE_BOOL
     ),
 

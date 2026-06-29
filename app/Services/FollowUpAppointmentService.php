@@ -67,14 +67,28 @@ final class FollowUpAppointmentService
         return now(config('app.timezone'))->startOfDay();
     }
 
-    public function maxSelectableDate(Appointment $parent): CarbonInterface
+    public function windowStartFor(Appointment $parent): CarbonInterface
     {
-        if ((bool) config('appointments.relaxed_session_limits', false)) {
-            return now(config('app.timezone'))->addYear()->startOfDay();
+        $timezone = config('app.timezone');
+        $today = $this->windowStart();
+
+        if ($parent->appointment_date !== null) {
+            $sessionDay = $parent->appointment_date instanceof Carbon
+                ? $parent->appointment_date->copy()->timezone($timezone)->startOfDay()
+                : Carbon::parse($parent->appointment_date, $timezone)->startOfDay();
+
+            if ($sessionDay->greaterThan($today)) {
+                return $sessionDay;
+            }
         }
 
+        return $today;
+    }
+
+    public function maxSelectableDate(Appointment $parent): CarbonInterface
+    {
         $end = $this->windowEnd($parent);
-        $start = $this->windowStart();
+        $start = $this->windowStartFor($parent);
 
         if ($end->lessThan($start)) {
             return $start;
@@ -237,7 +251,7 @@ final class FollowUpAppointmentService
             return false;
         }
 
-        return $this->maxSelectableDate($parent)->greaterThanOrEqualTo($this->windowStart());
+        return $this->maxSelectableDate($parent)->greaterThanOrEqualTo($this->windowStartFor($parent));
     }
 
     public function markFollowUpNotNeeded(Doctor $doctor, Appointment $parent): void
@@ -299,10 +313,6 @@ final class FollowUpAppointmentService
 
     public function assertDateWithinWindow(Appointment $parent, string $date): void
     {
-        if ((bool) config('appointments.relaxed_session_limits', false)) {
-            return;
-        }
-
         $timezone = config('app.timezone');
 
         try {
@@ -313,7 +323,7 @@ final class FollowUpAppointmentService
             ]);
         }
 
-        if ($selected->lessThan($this->windowStart())) {
+        if ($selected->lessThan($this->windowStartFor($parent))) {
             throw ValidationException::withMessages([
                 'newDate' => __('doctor.follow_up.date_outside_window', ['days' => self::windowDays()]),
             ]);
