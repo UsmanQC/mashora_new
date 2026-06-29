@@ -548,6 +548,24 @@ select:focus[data-flux-control] {
     isolation: isolate;
 }
 
+@media (min-width: 1024px) {
+    .doctor-workflow-steps > .doctor-workflow-step:not(:last-child) .doctor-workflow-step-connector {
+        top: 1rem;
+        left: calc(50% + 1.25rem);
+        right: -0.5rem;
+        height: 1px;
+        background-color: #e4e4e7;
+    }
+}
+
+.doctor-workspace-tabs {
+    scrollbar-width: none;
+}
+
+.doctor-workspace-tabs::-webkit-scrollbar {
+    display: none;
+}
+
 /* \[:where(&)\]:size-4 {
     @apply size-4;
 } */

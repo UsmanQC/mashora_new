@@ -130,6 +130,6 @@ new #[Layout('layouts::doctor')] #[Title('Medical history')] class extends Compo
             @endforeach
         </div>
     @endif
-</div>
 
-@include('partials.doctor-complete-appointment-modals')
+    @include('partials.doctor-complete-appointment-modals')
+</div>
