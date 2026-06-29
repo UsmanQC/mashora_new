@@ -1149,17 +1149,6 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 return res.json();
             }
 
-            function notifyIncomingCallAlert(message, data = null) {
-                const payload = data || { appointment_id: appointmentId };
-                window.MashoraRealtimeAlerts?.stopIncomingRing();
-                window.MashoraIncomingCall?.notifyPatient(
-                    payload,
-                    @js(__('patient.appointments.incoming_call_title')),
-                    message,
-                    { showDesktopNotification: false },
-                );
-            }
-
             function dismissIncomingAlert() {
                 window.MashoraRealtimeAlerts?.stopIncomingRing();
             }
@@ -1235,13 +1224,6 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                     );
                 } catch (_) {
                     // ignore storage errors
-                }
-
-                if (!options.silent) {
-                    notifyIncomingCallAlert(
-                        incomingLabel?.textContent || @js(__('patient.appointments.incoming_call_title')),
-                        data,
-                    );
                 }
 
                 incomingBanner?.classList.remove('hidden');
@@ -1550,7 +1532,8 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                                 return;
                             }
 
-                            showIncomingCallBanner(data);
+                            window.MashoraRealtimeAlerts?.stopIncomingRing();
+                            showIncomingCallBanner(data, { silent: true });
                         });
                         channel.bind('call.ended', (data) => {
                             handleRemoteCallEnded(data);

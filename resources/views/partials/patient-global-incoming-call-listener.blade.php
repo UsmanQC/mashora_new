@@ -32,9 +32,6 @@
                     const pusherCluster = boot.dataset.pusherCluster || 'mt1';
                     const csrf = boot.dataset.csrf || '';
                     const conversationUrlTemplate = boot.dataset.conversationUrl || '';
-                    const incomingCallTitle = @js(__('patient.appointments.incoming_call_title'));
-                    const incomingVideoLabel = @js(__('patient.appointments.incoming_video'));
-                    const incomingVoiceLabel = @js(__('patient.appointments.incoming_voice'));
                     const sessionStartedTitle = @js(__('patient.notifications.session_started_title'));
                     const sessionStartedBody = @js(__('patient.notifications.session_started_body'));
 
@@ -75,12 +72,6 @@
                         window.MashoraRealtimeAlerts?.stopIncomingRing();
 
                         storePendingCall(data);
-
-                        const label = data.call_type === 'video' ? incomingVideoLabel : incomingVoiceLabel;
-                        window.MashoraIncomingCall?.notifyPatient(data, incomingCallTitle, label, {
-                            showDesktopNotification: false,
-                            showToast: true,
-                        });
 
                         window.dispatchEvent(new CustomEvent('mashora:incoming-call', { detail: data }));
                     }

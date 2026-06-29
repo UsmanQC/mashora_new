@@ -13,6 +13,32 @@
     <body
         class="min-h-svh bg-[#F3F5F9] pb-24 antialiased sm:flex sm:min-h-svh sm:pb-0"
     >
+        <script>
+            (function () {
+                window.MashoraRealtimeAlerts = window.MashoraRealtimeAlerts || {};
+
+                window.MashoraRealtimeAlerts.stopIncomingRing = function () {
+                    if (window.MashoraRealtimeAlerts.ringIntervalId) {
+                        window.clearInterval(window.MashoraRealtimeAlerts.ringIntervalId);
+                        window.MashoraRealtimeAlerts.ringIntervalId = null;
+                    }
+                };
+
+                window.MashoraRealtimeAlerts.playIncomingRing = function () {
+                    window.MashoraRealtimeAlerts.stopIncomingRing();
+                };
+
+                window.MashoraRealtimeAlerts.stopIncomingRing();
+
+                window.addEventListener('mashora:incoming-call', () => {
+                    window.MashoraRealtimeAlerts?.stopIncomingRing();
+                });
+
+                window.addEventListener('mashora:call-ended', () => {
+                    window.MashoraRealtimeAlerts?.stopIncomingRing();
+                });
+            })();
+        </script>
         {{-- Mobile header — same blue chrome as legacy sidebar; guest signup via dock → /patient/phone --}}
         <header
             class="sticky top-0 z-40 flex shrink-0 items-center justify-between gap-3 border-b border-emerald-900/40 bg-[#10B981] px-4 py-3 text-white backdrop-blur-sm sm:hidden"
