@@ -294,7 +294,7 @@ new #[Layout('layouts::doctor')] #[Title('Follow Up')] class extends Component
     }
 }; ?>
 
-<div class="mx-auto w-full max-w-2xl space-y-6">
+<div class="space-y-6">
     @include('partials.doctor-appointment-workspace-header', ['appointment' => $appointment, 'active' => 'follow_up'])
 
     <div class="rounded-2xl border border-zinc-200/90 bg-white p-5 shadow-sm sm:p-6">
@@ -365,8 +365,8 @@ new #[Layout('layouts::doctor')] #[Title('Follow Up')] class extends Component
                 {{ __('doctor.follow_up.complete_session_first') }}
             </flux:callout>
         @else
-        <div class="mt-6 grid gap-5 lg:grid-cols-2">
-            <div class="rounded-2xl border border-emerald-200/80 bg-emerald-50/40 p-5 shadow-sm">
+        <div class="mt-6 grid gap-6 lg:grid-cols-2 xl:grid-cols-12 xl:items-start">
+            <div class="rounded-2xl border border-emerald-200/80 bg-emerald-50/40 p-5 shadow-sm sm:p-6 xl:col-span-7">
                 <flux:heading size="md" class="font-semibold text-emerald-950">{{ __('doctor.follow_up.option_schedule_title') }}</flux:heading>
                 <flux:text class="mt-1 text-sm text-emerald-900/80">{{ __('doctor.follow_up.option_schedule_body') }}</flux:text>
 
@@ -374,7 +374,7 @@ new #[Layout('layouts::doctor')] #[Title('Follow Up')] class extends Component
             <flux:field>
                 <flux:label>{{ __('doctor.follow_up.date_label') }}</flux:label>
                 <flux:input wire:model.live="newDate" type="date" min="{{ $this->minDate() }}" max="{{ $this->maxDate() }}" required />
-                <flux:description>{{ __('doctor.follow_up.date_window_hint', [
+                <flux:description class="text-xs leading-relaxed sm:text-sm">{{ __('doctor.follow_up.date_window_hint', [
                     'min' => $this->minDate(),
                     'max' => $this->maxDate(),
                     'days' => $this->windowDays(),
@@ -405,7 +405,7 @@ new #[Layout('layouts::doctor')] #[Title('Follow Up')] class extends Component
                     <div
                         @if ($this->isSelectedDateToday()) wire:poll.60s="refreshSlotsForToday" @endif
                         wire:key="follow-up-slots-{{ $newDate }}"
-                        class="mt-2 flex flex-wrap gap-2"
+                        class="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
                     >
                         @foreach ($this->availableSlots as $slot)
                             <button
@@ -425,10 +425,8 @@ new #[Layout('layouts::doctor')] #[Title('Follow Up')] class extends Component
                 <flux:error name="selectedTime" />
             </flux:field>
 
-            <flux:text class="text-sm text-zinc-500">
-                {{ config('appointments.follow_up_skip_patient_confirmation')
-                    ? __('doctor.follow_up.patient_flow_hint_direct')
-                    : __('doctor.follow_up.patient_flow_hint') }}
+                <flux:text class="text-sm text-zinc-500">
+                {{ __('doctor.follow_up.patient_flow_hint_direct') }}
             </flux:text>
 
             <flux:callout variant="success" icon="gift" class="text-sm">
@@ -437,15 +435,13 @@ new #[Layout('layouts::doctor')] #[Title('Follow Up')] class extends Component
 
             <div class="flex flex-col gap-3 sm:flex-row sm:justify-end">
                 <flux:button type="submit" variant="primary" class="!bg-[#047857] !text-white hover:!brightness-95">
-                    {{ config('appointments.follow_up_skip_patient_confirmation')
-                        ? __('doctor.follow_up.submit_direct')
-                        : __('doctor.follow_up.submit') }}
+                    {{ __('doctor.follow_up.submit_direct') }}
                 </flux:button>
             </div>
         </form>
             </div>
 
-            <div class="rounded-2xl border border-zinc-200/90 bg-white p-5 shadow-sm">
+            <div class="rounded-2xl border border-zinc-200/90 bg-white p-5 shadow-sm sm:p-6 xl:col-span-5">
                 <flux:heading size="md" class="font-semibold text-zinc-900">{{ __('doctor.follow_up.option_no_need_title') }}</flux:heading>
                 <flux:text class="mt-1 text-sm text-zinc-600">{{ __('doctor.follow_up.option_no_need_body') }}</flux:text>
 

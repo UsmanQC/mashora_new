@@ -36,8 +36,9 @@ return [
     |--------------------------------------------------------------------------
     |
     | follow_up_allows_calls: let follow-up appointments use video/voice like new sessions.
-    | follow_up_skip_patient_confirmation: book follow-ups immediately after the doctor
-    | schedules them (skip patient confirm / pay step).
+    |
+    | follow_up_skip_patient_confirmation: legacy flag (follow-ups are always booked for the
+    | patient when the doctor schedules them; patient confirmation is not required).
     |
     */
 
@@ -46,10 +47,7 @@ return [
         FILTER_VALIDATE_BOOL
     ),
 
-    'follow_up_skip_patient_confirmation' => filter_var(
-        env('APPOINTMENT_FOLLOW_UP_SKIP_CONFIRMATION', env('APP_ENV') === 'local'),
-        FILTER_VALIDATE_BOOL
-    ),
+    'follow_up_skip_patient_confirmation' => true,
 
     /*
     |--------------------------------------------------------------------------

@@ -126,7 +126,7 @@
                             <span @class(['flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-bold', $badgeClass])>
                                 {{ $index + 1 }}
                             </span>
-                            <span @class(['truncate text-xs font-semibold sm:text-sm', $labelClass])>
+                            <span @class(['min-w-0 text-xs font-semibold sm:text-sm xl:overflow-visible xl:whitespace-normal', $labelClass, 'truncate'])>
                                 {{ $step['label'] }}
                             </span>
                         </button>
@@ -146,7 +146,7 @@
                                     {{ $index + 1 }}
                                 @endif
                             </span>
-                            <span @class(['truncate text-xs font-semibold sm:text-sm', $labelClass])>
+                            <span @class(['min-w-0 text-xs font-semibold sm:text-sm xl:overflow-visible xl:whitespace-normal', $labelClass, 'truncate'])>
                                 {{ $step['label'] }}
                             </span>
                         </a>
@@ -162,7 +162,7 @@
                                     {{ $index + 1 }}
                                 @endif
                             </span>
-                            <span @class(['truncate text-xs font-semibold sm:text-sm', $labelClass])>
+                            <span @class(['min-w-0 text-xs font-semibold sm:text-sm xl:overflow-visible xl:whitespace-normal', $labelClass, 'truncate'])>
                                 {{ $step['label'] }}
                             </span>
                         </div>

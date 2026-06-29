@@ -31,7 +31,7 @@ final class FollowUpAppointmentService
 
     public function skipsPatientConfirmation(): bool
     {
-        return (bool) config('appointments.follow_up_skip_patient_confirmation', false);
+        return true;
     }
 
     public function __construct(
@@ -176,15 +176,13 @@ final class FollowUpAppointmentService
 
         $this->clearFollowUpNotNeededSession($parent);
 
-        $this->notifier->notifyFollowUpScheduled($followUp, $doctor, $start);
+        $patient = User::query()->find($parent->user_id);
 
-        if ((bool) config('appointments.follow_up_skip_patient_confirmation', false)) {
-            $patient = User::query()->find($parent->user_id);
-
-            if ($patient instanceof User) {
-                return $this->confirm($followUp->fresh(), $patient);
-            }
+        if ($patient instanceof User) {
+            return $this->confirm($followUp->fresh(), $patient);
         }
+
+        $this->notifier->notifyFollowUpBooked($followUp, $doctor);
 
         return $followUp;
     }

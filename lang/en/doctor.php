@@ -374,7 +374,7 @@ return [
         'patient_missing' => 'This appointment has no linked patient account.',
         'date_outside_window' => 'Follow-up must be within :days days of the original session.',
         'patient_flow_hint' => 'The patient will receive a notification to confirm this free follow-up.',
-        'patient_flow_hint_direct' => 'The follow-up is added to the patient\'s appointments immediately — no confirm step.',
+        'patient_flow_hint_direct' => 'The follow-up is assigned to the patient immediately — no confirmation needed.',
         'free_hint' => 'Follow-up sessions are free for the patient.',
         'complete_session_first' => 'Complete this session first, then you can invite the patient to a follow-up.',
         'session_finished' => 'Your follow-up appointment is finished.',
