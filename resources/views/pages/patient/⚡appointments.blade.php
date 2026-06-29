@@ -819,6 +819,18 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
                 });
             }
 
+            function releaseInlineMediaTracks(micTrack, camTrack = null) {
+                if (camTrack) {
+                    camTrack.stop();
+                    camTrack.close();
+                }
+
+                if (micTrack) {
+                    micTrack.stop();
+                    micTrack.close();
+                }
+            }
+
             async function joinInlineCall(appointmentId, payload = null, shouldNotify = false, callType = 'video') {
                 if (!appointmentId || inlineJoinInProgress) {
                     return;
@@ -826,10 +838,25 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
 
                 inlineJoinInProgress = true;
 
+                const resolvedCallType = (payload?.call_type === 'audio' || callType === 'audio') ? 'audio' : 'video';
+                let micTrack = null;
+                let camTrack = null;
+
                 try {
                     await ensureAgoraSdk();
+
+                    if (resolvedCallType === 'video') {
+                        micTrack = await AgoraRTC.createMicrophoneAudioTrack();
+                        camTrack = await AgoraRTC.createCameraVideoTrack();
+                    } else {
+                        micTrack = await AgoraRTC.createMicrophoneAudioTrack();
+                    }
+
                     const cfg = (payload && payload.agora_app_id) ? payload : await fetchAgoraConfig(appointmentId);
                     if (!cfg) {
+                        releaseInlineMediaTracks(micTrack, camTrack);
+                        micTrack = null;
+                        camTrack = null;
                         window.location.href = joinBase.replace('__ID__', String(appointmentId));
 
                         return;
@@ -838,7 +865,7 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
                     window.MashoraRealtimeAlerts?.stopIncomingRing();
 
                     if (shouldNotify) {
-                        await notifyDoctor(appointmentId, callType, cfg);
+                        await notifyDoctor(appointmentId, resolvedCallType, cfg);
                     }
 
                     await leaveInlineCall();
@@ -855,24 +882,17 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
                         }
                     });
 
-                    const resolvedCallType = (payload?.call_type === 'audio' || callType === 'audio') ? 'audio' : 'video';
-                    if (resolvedCallType === 'video') {
-                        const [, micTrack, camTrack] = await Promise.all([
-                            client.join(cfg.agora_app_id, cfg.agora_channel, cfg.agora_token || null, null),
-                            AgoraRTC.createMicrophoneAudioTrack(),
-                            AgoraRTC.createCameraVideoTrack(),
-                        ]);
-                        localAudio = micTrack;
-                        localVideo = camTrack;
-                        camTrack.play('patient-inline-call-local');
-                        await client.publish([micTrack, camTrack]);
+                    await client.join(cfg.agora_app_id, cfg.agora_channel, cfg.agora_token || null, null);
+                    localAudio = micTrack;
+                    localVideo = camTrack;
+                    micTrack = null;
+                    camTrack = null;
+
+                    if (localVideo) {
+                        localVideo.play('patient-inline-call-local');
+                        await client.publish([localAudio, localVideo]);
                     } else {
-                        const [, micTrack] = await Promise.all([
-                            client.join(cfg.agora_app_id, cfg.agora_channel, cfg.agora_token || null, null),
-                            AgoraRTC.createMicrophoneAudioTrack(),
-                        ]);
-                        localAudio = micTrack;
-                        await client.publish([micTrack]);
+                        await client.publish([localAudio]);
                     }
 
                     if (callState) {
@@ -886,6 +906,9 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
                     if (overlay) {
                         overlay.classList.remove('hidden');
                     }
+                } catch (error) {
+                    console.error(error);
+                    releaseInlineMediaTracks(micTrack, camTrack);
                 } finally {
                     inlineJoinInProgress = false;
                 }

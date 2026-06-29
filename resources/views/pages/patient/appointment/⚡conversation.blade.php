@@ -202,6 +202,8 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
         data-label-connecting="{{ __('patient.appointments.connecting') }}"
         data-label-call-failed="{{ __('patient.appointments.call_failed') }}"
         data-label-camera-permission="{{ __('patient.appointments.camera_permission_required') }}"
+        data-label-mic-permission="{{ __('patient.appointments.mic_permission_required') }}"
+        data-label-system-media-permission="{{ __('patient.appointments.media_permission_denied_system') }}"
         data-label-agora-sdk-missing="{{ __('patient.appointments.agora_sdk_missing') }}"
         data-label-no-active-call="{{ __('patient.appointments.no_active_call') }}"
         data-session-ended="{{ __('patient.appointments.session_time_ended') }}"
@@ -592,23 +594,100 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 console.error(text);
             }
 
-            function callErrorMessage(error, fallback) {
+            function isMediaPermissionError(error) {
+                if (!error) {
+                    return false;
+                }
+
+                const name = String(error?.name || '');
+                const message = String(error?.message || '');
+                const code = String(error?.code || '');
+
+                return name === 'NotAllowedError'
+                    || name === 'PermissionDeniedError'
+                    || name === 'AgoraRTCError'
+                    || code === 'PERMISSION_DENIED'
+                    || message.includes('NotAllowedError')
+                    || message.includes('PERMISSION_DENIED')
+                    || message.includes('Permission denied')
+                    || message.includes('permission dismissed');
+            }
+
+            function callErrorMessage(error, fallback, mode = null) {
                 if (!error) {
                     return fallback;
                 }
 
-                const name = error?.name || '';
-                const message = error?.message || '';
+                if (isMediaPermissionError(error)) {
+                    const message = String(error?.message || '');
 
-                if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
+                    if (message.includes('denied by system')) {
+                        return metrics?.dataset.labelSystemMediaPermission
+                            || metrics?.dataset.labelCameraPermission
+                            || fallback;
+                    }
+
+                    if (mode === 'audio') {
+                        return metrics?.dataset.labelMicPermission
+                            || metrics?.dataset.labelCameraPermission
+                            || fallback;
+                    }
+
                     return metrics?.dataset.labelCameraPermission || fallback;
                 }
+
+                const message = error?.message || '';
 
                 if (message) {
                     return message;
                 }
 
                 return fallback;
+            }
+
+            function resolveEffectiveCallMode(mode, payload = null, cfg = null) {
+                const callType = payload?.call_type || cfg?.call_type;
+
+                if (callType === 'audio') {
+                    return 'audio';
+                }
+
+                if (callType === 'video') {
+                    return 'video';
+                }
+
+                return mode === 'audio' ? 'audio' : 'video';
+            }
+
+            async function createLocalMediaTracks(mode) {
+                const micTrack = await AgoraRTC.createMicrophoneAudioTrack();
+
+                if (mode !== 'video') {
+                    return { micTrack, camTrack: null };
+                }
+
+                try {
+                    const camTrack = await AgoraRTC.createCameraVideoTrack();
+
+                    return { micTrack, camTrack };
+                } catch (error) {
+                    micTrack.stop();
+                    micTrack.close();
+
+                    throw error;
+                }
+            }
+
+            function releaseLocalMediaTracks(micTrack, camTrack = null) {
+                if (camTrack) {
+                    camTrack.stop();
+                    camTrack.close();
+                }
+
+                if (micTrack) {
+                    micTrack.stop();
+                    micTrack.close();
+                }
             }
 
             function mountOverlayToBody() {
@@ -1308,7 +1387,8 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                     return;
                 }
 
-                joinCall('video').catch((error) => console.error(error));
+                showCallToast(labelNoActiveCall, 'warning');
+                refreshCallUiState();
             }
 
             async function joinCall(mode, payload = null) {
@@ -1326,13 +1406,37 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 dismissIncomingAlert();
                 incomingBanner?.classList.add('hidden');
                 showOverlay(true);
-                setOverlayConnecting(mode);
+                let effectiveMode = resolveEffectiveCallMode(mode, payload, null);
+                setOverlayConnecting(effectiveMode);
+                let micTrack = null;
+                let camTrack = null;
 
                 try {
                     await ensureAgoraSdk();
                     await resetPartialAgoraJoin();
 
+                    effectiveMode = resolveEffectiveCallMode(mode, payload, null);
+                    setOverlayConnecting(effectiveMode);
+
+                    const tracks = await createLocalMediaTracks(effectiveMode);
+                    micTrack = tracks.micTrack;
+                    camTrack = tracks.camTrack;
+
                     const cfg = await resolveJoinConfig(payload);
+                    const resolvedMode = resolveEffectiveCallMode(mode, payload, cfg);
+
+                    if (resolvedMode !== effectiveMode) {
+                        if (resolvedMode === 'audio' && camTrack) {
+                            camTrack.stop();
+                            camTrack.close();
+                            camTrack = null;
+                        } else if (resolvedMode === 'video' && !camTrack) {
+                            camTrack = await AgoraRTC.createCameraVideoTrack();
+                        }
+
+                        effectiveMode = resolvedMode;
+                        setOverlayConnecting(effectiveMode);
+                    }
 
                     if (!cfg || !cfg.agora_app_id || !cfg.agora_channel) {
                         throw new Error(labelNoActiveCall);
@@ -1342,32 +1446,32 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
 
                     const client = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
                     agoraClient = client;
-                    registerRemoteUserHandlers(client, mode);
+                    registerRemoteUserHandlers(client, effectiveMode);
 
-                    if (mode === 'video') {
-                        await client.join(cfg.agora_app_id, cfg.agora_channel, cfg.agora_token || null, null);
-                        const micTrack = await AgoraRTC.createMicrophoneAudioTrack();
-                        const camTrack = await AgoraRTC.createCameraVideoTrack();
-                        assignLocalTracks(micTrack, camTrack);
+                    await client.join(cfg.agora_app_id, cfg.agora_channel, cfg.agora_token || null, null);
+                    assignLocalTracks(micTrack, camTrack);
+
+                    if (camTrack) {
                         camTrack.play('patient-agora-local');
                         await client.publish([micTrack, camTrack]);
                     } else {
-                        await client.join(cfg.agora_app_id, cfg.agora_channel, cfg.agora_token || null, null);
-                        const micTrack = await AgoraRTC.createMicrophoneAudioTrack();
-                        assignLocalTracks(micTrack, null);
                         await client.publish([micTrack]);
                     }
 
-                    markCallConnected(mode);
+                    micTrack = null;
+                    camTrack = null;
 
-                    subscribeExistingRemoteUsers(client, mode).catch((error) => {
+                    markCallConnected(effectiveMode);
+
+                    subscribeExistingRemoteUsers(client, effectiveMode).catch((error) => {
                         console.error('Failed to subscribe to existing remote users', error);
                     });
                 } catch (e) {
                     console.error(e);
+                    releaseLocalMediaTracks(micTrack, camTrack);
                     await resetPartialAgoraJoin();
                     showOverlay(false);
-                    showCallToast(callErrorMessage(e, labelCallFailed));
+                    showCallToast(callErrorMessage(e, labelCallFailed, effectiveMode));
                     refreshCallUiState();
                 } finally {
                     callJoinInProgress = false;
@@ -1403,7 +1507,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                     return;
                 }
 
-                const mode = incomingPayload.call_type === 'video' ? 'video' : 'audio';
+                const mode = resolveEffectiveCallMode('audio', incomingPayload, null);
                 joinCall(mode, incomingPayload).catch((error) => console.error(error));
             };
             boot.__dismissIncoming = () => {

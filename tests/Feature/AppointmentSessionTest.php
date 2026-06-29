@@ -188,6 +188,36 @@ test('doctor notify call stores pending incoming call for patient fetch', functi
         ]);
 });
 
+test('pending incoming voice call returns audio call type for patient join', function () {
+    $user = User::factory()->create();
+    $doctor = Doctor::factory()->create(['profile_completed' => true]);
+    $appointment = Appointment::factory()->create([
+        'doctor_id' => $doctor->id,
+        'user_id' => $user->id,
+        'status' => 'in_process',
+        'actual_start_at' => now(),
+        'extend_at' => now()->addMinutes(30),
+    ]);
+
+    $this->actingAs($doctor, 'doctor')
+        ->postJson(route('doctor.appointments.realtime.notify-call', $appointment), [
+            'agora_app_id' => 'test-app-id',
+            'agora_token' => 'test-token',
+            'agora_channel' => 'video_call_'.$appointment->id,
+            'call_type' => 'audio',
+        ])
+        ->assertOk();
+
+    $this->actingAs($user)
+        ->getJson(route('patient.appointments.realtime.pending-call', $appointment))
+        ->assertSuccessful()
+        ->assertJson([
+            'pending' => true,
+            'appointment_id' => $appointment->id,
+            'call_type' => 'audio',
+        ]);
+});
+
 test('doctor end call clears pending incoming call and broadcasts call ended', function () {
     $user = User::factory()->create();
     $doctor = Doctor::factory()->create(['profile_completed' => true]);
