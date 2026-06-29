@@ -375,7 +375,7 @@ return [
         'date_outside_window' => 'Follow-up must be within :days days of the original session.',
         'patient_flow_hint' => 'The patient will receive a notification to confirm this free follow-up.',
         'patient_flow_hint_direct' => 'The follow-up is added to the patient\'s appointments immediately — no confirm step.',
-        'free_hint' => 'Follow-up sessions are complimentary for the patient.',
+        'free_hint' => 'Follow-up sessions are free for the patient.',
         'complete_session_first' => 'Complete this session first, then you can invite the patient to a follow-up.',
         'session_finished' => 'Your follow-up appointment is finished.',
         'pending_title' => 'Follow-up invitation sent',

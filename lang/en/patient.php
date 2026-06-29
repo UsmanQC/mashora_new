@@ -338,7 +338,7 @@ return [
         'amount' => 'Session fee',
         'free' => 'Free',
         'confirm_hint' => 'Confirm this follow-up to proceed to secure payment. The appointment is booked only after payment.',
-        'confirm_hint_free' => 'Confirm this complimentary follow-up to add it to your appointments.',
+        'confirm_hint_free' => 'Confirm this free follow-up to add it to your appointments.',
         'confirm_and_pay' => 'Confirm & pay',
         'confirm_free' => 'Confirm follow-up',
         'later' => 'Maybe later',
