@@ -220,6 +220,18 @@ select:focus[data-flux-control] {
         -webkit-text-fill-color: #ffffff !important;
     }
 
+    .doctor-clinical-form [data-flux-label] {
+        @apply text-sm font-semibold text-zinc-800;
+    }
+
+    .doctor-clinical-form [data-flux-control] {
+        @apply !rounded-xl !border-zinc-200/90 !shadow-none;
+    }
+
+    .doctor-clinical-form [data-flux-control]:focus {
+        @apply !border-[#10B981] !ring-2 !ring-[#10B981]/20;
+    }
+
     .patient-auth-content [data-flux-control]:not([data-flux-otp-input]):not([data-flux-otp]):not([data-flux-radio-pills]) {
         @apply !shadow-none;
         color: #18181b !important;
