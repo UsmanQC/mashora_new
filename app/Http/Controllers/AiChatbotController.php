@@ -27,6 +27,13 @@ class AiChatbotController extends Controller
         $history = session(self::SESSION_MESSAGES_KEY, []);
 
         $userMessage = $request->validated('message');
+        $locale = $request->validated('locale') ?? app()->getLocale();
+
+        if (! in_array($locale, ['ar', 'en'], true)) {
+            $locale = 'ar';
+        }
+
+        app()->setLocale($locale);
 
         $history[] = [
             'role' => 'user',
@@ -41,7 +48,7 @@ class AiChatbotController extends Controller
         $recorder->recordUserMessage($conversation, $userMessage);
 
         try {
-            $reply = $chatbot->reply($history);
+            $reply = $chatbot->reply($history, $locale);
         } catch (Throwable $exception) {
             Log::error('AI chatbot reply failed', [
                 'exception' => $exception->getMessage(),

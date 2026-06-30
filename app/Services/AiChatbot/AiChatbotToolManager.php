@@ -99,6 +99,25 @@ final class AiChatbotToolManager
     }
 
     /**
+     * @return list<array<string, mixed>>
+     */
+    public function responsesDefinitions(): array
+    {
+        return array_map(function (array $tool): array {
+            $function = is_array($tool['function'] ?? null) ? $tool['function'] : [];
+
+            return [
+                'type' => 'function',
+                'name' => (string) ($function['name'] ?? ''),
+                'description' => (string) ($function['description'] ?? ''),
+                'parameters' => is_array($function['parameters'] ?? null)
+                    ? $function['parameters']
+                    : ['type' => 'object', 'properties' => []],
+            ];
+        }, $this->definitions());
+    }
+
+    /**
      * @param  array<string, mixed>  $arguments
      */
     public function execute(string $name, array $arguments): string

@@ -4,9 +4,11 @@ namespace App\Services;
 
 use App\Models\AiSetting;
 use App\Services\AiChatbot\AiChatbotToolManager;
+use App\Services\AiChatbot\OpenAiResponsesApi;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use RuntimeException;
 
 final class AiChatbotService
@@ -15,13 +17,18 @@ final class AiChatbotService
 
     public function __construct(
         private readonly AiChatbotToolManager $tools,
+        private readonly OpenAiResponsesApi $responsesApi,
     ) {}
 
     /**
      * @param  list<array{role: string, content?: string|null, tool_calls?: mixed, tool_call_id?: string, name?: string}>  $conversation
      */
-    public function reply(array $conversation): string
+    public function reply(array $conversation, string $locale = 'ar'): string
     {
+        if (! in_array($locale, ['ar', 'en'], true)) {
+            $locale = 'ar';
+        }
+
         if (! $this->isConfigured()) {
             throw new RuntimeException('AI chatbot is not configured.');
         }
@@ -32,11 +39,28 @@ final class AiChatbotService
             throw new RuntimeException('AI chatbot is disabled.');
         }
 
+        $languageRule = $locale === 'ar'
+            ? 'Always respond in Arabic unless the user explicitly asks for another language.'
+            : 'Always respond in English unless the user explicitly asks for another language.';
+
+        $instructions = $settings->effectiveSystemPrompt()."\n\n".$languageRule;
+
+        return match ((string) config('ai_chatbot.api_driver', 'responses')) {
+            'chat_completions' => $this->replyViaChatCompletions($conversation, $instructions),
+            default => $this->responsesApi->reply($conversation, $instructions, $this->client()),
+        };
+    }
+
+    /**
+     * @param  list<array{role: string, content?: string|null, tool_calls?: mixed, tool_call_id?: string, name?: string}>  $conversation
+     */
+    private function replyViaChatCompletions(array $conversation, string $instructions): string
+    {
         $messages = array_merge(
             [
                 [
                     'role' => 'system',
-                    'content' => $settings->effectiveSystemPrompt(),
+                    'content' => $instructions,
                 ],
             ],
             $conversation,
@@ -56,7 +80,7 @@ final class AiChatbotService
             $response = $this->client()->post((string) config('ai_chatbot.api_url'), $payload);
 
             if (! $response->successful()) {
-                Log::warning('AI chatbot API error', [
+                Log::warning('AI chatbot Chat Completions API error', [
                     'status' => $response->status(),
                     'body' => $response->json() ?? $response->body(),
                 ]);

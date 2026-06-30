@@ -14,4 +14,8 @@ return [
     'not_configured' => 'المساعد غير متاح حالياً.',
     'request_failed' => 'عذراً، لم أتمكن من الرد الآن. حاول مرة أخرى.',
     'network_error' => 'خطأ في الاتصال. تحقق من الشبكة وحاول مجدداً.',
+    'locale_en' => 'EN',
+    'locale_ar' => 'AR',
+    'language' => 'اللغة',
+    'language_aria' => 'تبديل لغة المحادثة',
 ];

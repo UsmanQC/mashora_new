@@ -20,6 +20,7 @@ class AiChatbotMessageRequest extends FormRequest
 
         return [
             'message' => ['required', 'string', 'max:'.$maxLength],
+            'locale' => ['sometimes', 'string', 'in:ar,en'],
         ];
     }
 

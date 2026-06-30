@@ -14,4 +14,8 @@ return [
     'not_configured' => 'The assistant is temporarily unavailable.',
     'request_failed' => 'Sorry, I could not respond right now. Please try again.',
     'network_error' => 'Connection error. Please check your network and try again.',
+    'locale_en' => 'EN',
+    'locale_ar' => 'AR',
+    'language' => 'Language',
+    'language_aria' => 'Switch chat language',
 ];
