@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AiChatbotController;
 use App\Http\Controllers\Patient\FollowUpPaymentController;
 use App\Http\Controllers\Patient\PatientAppointmentRealtimeController;
 use App\Http\Controllers\Patient\PatientPaymentController;
@@ -12,6 +13,23 @@ Route::get('/', function () {
     return view('frontend.home');
 })->name('home');
 
+Route::prefix('api')->group(function () {
+    Route::post('chat', [AiChatbotController::class, 'store'])
+        ->middleware('throttle:ai-chatbot')
+        ->name('api.chat');
+
+    Route::delete('chat/history', [AiChatbotController::class, 'destroy'])
+        ->middleware('throttle:ai-chatbot')
+        ->name('api.chat.reset');
+});
+
+Route::post('ai-chatbot/message', [AiChatbotController::class, 'store'])
+    ->middleware('throttle:ai-chatbot')
+    ->name('ai-chatbot.message');
+
+Route::delete('ai-chatbot/history', [AiChatbotController::class, 'destroy'])
+    ->middleware('throttle:ai-chatbot')
+    ->name('ai-chatbot.reset');
 
 Route::middleware(['patient.redirect'])->group(function () {
     Route::redirect('patient/start', '/patient/phone', 302)

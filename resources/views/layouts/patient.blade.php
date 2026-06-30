@@ -110,5 +110,7 @@
         @endpersist
 
         @fluxScripts
+
+        @include('partials.ai-chatbot-widget')
     </body>
 </html>

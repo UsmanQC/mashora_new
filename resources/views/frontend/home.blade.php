@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Awaan | The Premium Health Platform</title>
 
     <link rel="icon" href="{{ asset('images/favicon-awaan.png') }}" type="image/png">
@@ -179,10 +180,26 @@
                 <a href="#" class="text-sm font-medium text-ink-muted hover:text-ink transition-colors">المختصون</a>
                 <a href="#" class="text-sm font-medium text-ink-muted hover:text-ink transition-colors">المقاييس النفسية</a>
                 <a href="#" class="text-sm font-medium text-ink-muted hover:text-ink transition-colors">للأعمال</a>
+                <button
+                    type="button"
+                    data-open-ai-chatbot
+                    class="inline-flex items-center gap-2 text-sm font-medium text-primary transition-colors hover:text-primary-700"
+                >
+                    <i data-lucide="bot" class="h-4 w-4"></i>
+                    المساعد الذكي
+                </button>
             </nav>
 
             <!-- Actions -->
             <div class="flex items-center gap-6">
+                <button
+                    type="button"
+                    data-open-ai-chatbot
+                    class="inline-flex md:hidden items-center gap-2 rounded-2xl border border-primary/20 bg-primary/5 px-4 py-2 text-sm font-medium text-primary transition hover:bg-primary/10"
+                >
+                    <i data-lucide="bot" class="h-4 w-4"></i>
+                    المساعد
+                </button>
                 <a href="{{ route('patient.phone') }}" class="hidden sm:block text-sm font-medium text-ink-muted hover:text-ink px-2 transition-colors">تسجيل الدخول</a>
                
             </div>
@@ -595,6 +612,8 @@
             </div>
         </div>
     </footer>
+
+    @include('partials.ai-chatbot-widget', ['forceVisible' => true])
 
     <!-- Interactive Logic -->
     <script>
