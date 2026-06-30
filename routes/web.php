@@ -6,7 +6,12 @@ use App\Http\Controllers\Patient\PatientPaymentController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
-Route::redirect('/', '/patient')->name('home');
+Route::get('/', function () {
+    app()->setLocale('en');
+
+    return view('frontend.home');
+})->name('home');
+
 
 Route::middleware(['patient.redirect'])->group(function () {
     Route::redirect('patient/start', '/patient/phone', 302)
