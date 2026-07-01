@@ -112,7 +112,5 @@
         @include('partials.pwa-install-prompt', ['pwaApp' => 'patient'])
 
         @fluxScripts
-
-        @include('partials.ai-chatbot-widget')
     </body>
 </html>

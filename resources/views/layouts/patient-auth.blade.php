@@ -84,7 +84,6 @@
 
         @include('partials.intl-tel-input-patient-scripts')
         @stack('scripts')
-        @include('partials.ai-chatbot-widget')
         @fluxScripts
     </body>
 </html>

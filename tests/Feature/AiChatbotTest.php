@@ -163,8 +163,8 @@ test('chatbot api accepts locale and returns localized errors', function () {
         ]);
 });
 
-test('patient portal hides chatbot widget when disabled', function () {
-    config(['ai_chatbot.enabled' => false]);
+test('patient portal never includes chatbot widget', function () {
+    config(['ai_chatbot.enabled' => true]);
 
     $this->get(route('patient.phone'))
         ->assertSuccessful()
