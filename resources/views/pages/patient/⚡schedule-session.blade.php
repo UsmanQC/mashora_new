@@ -24,6 +24,126 @@ new #[Layout('layouts::patient')] #[Title('Schedule a session')] class extends C
 
     public bool $subspecialtiesExpanded = false;
 
+    public int $mobileStep = 1;
+
+    public function mobileStepsTotal(): int
+    {
+        return 5;
+    }
+
+    public function mobileStepProgressPercent(): int
+    {
+        return (int) round(($this->mobileStep / $this->mobileStepsTotal()) * 100);
+    }
+
+    public function mobileStepTitle(): string
+    {
+        $key = match ($this->mobileStep) {
+            1 => 'degree',
+            2 => 'gender',
+            3 => 'duration',
+            4 => 'language',
+            default => 'subspecialties',
+        };
+
+        return (string) __('session_filter.mobile_steps.'.$key);
+    }
+
+    public function goToNextMobileStep(): void
+    {
+        $this->validateCurrentMobileStep();
+
+        if ($this->mobileStep >= $this->mobileStepsTotal()) {
+            $this->proceedNext();
+
+            return;
+        }
+
+        $this->mobileStep++;
+    }
+
+    public function goToPreviousMobileStep(): void
+    {
+        if ($this->mobileStep > 1) {
+            $this->mobileStep--;
+        }
+    }
+
+    public function goBackMobile(): void
+    {
+        if ($this->mobileStep > 1) {
+            $this->goToPreviousMobileStep();
+
+            return;
+        }
+
+        $url = auth()->check() ? route('patient.home') : route('home');
+
+        $this->redirect(
+            $url,
+            navigate: \App\Support\PatientPageNavigation::usesLivewireNavigate($url),
+        );
+    }
+
+    public function skipSubspecialtiesStep(): void
+    {
+        $this->subspecialties = [];
+        $this->proceedNext();
+    }
+
+    public function selectMobileDegree(string $value): void
+    {
+        $this->degree_id = $value;
+        $this->goToNextMobileStep();
+    }
+
+    public function selectMobileGender(string $value): void
+    {
+        $this->genderPreference = $value;
+        $this->goToNextMobileStep();
+    }
+
+    public function selectMobileDuration(string $minutes): void
+    {
+        $this->durationMinutes = $minutes;
+        $this->goToNextMobileStep();
+    }
+
+    public function selectMobileLanguage(string $value): void
+    {
+        $this->languagePreference = $value;
+        $this->goToNextMobileStep();
+    }
+
+    protected function validateCurrentMobileStep(): void
+    {
+        $availableDegreeIds = array_column($this->specialistKindOptions, 'value');
+
+        match ($this->mobileStep) {
+            1 => $this->validate([
+                'degree_id' => ['required', 'string', 'in:'.implode(',', $availableDegreeIds)],
+            ], [
+                'degree_id.required' => __('session_filter.validation.specialist_required'),
+            ]),
+            2 => $this->validate([
+                'genderPreference' => ['required', 'in:male,female,both'],
+            ], [
+                'genderPreference.required' => __('session_filter.validation.gender_required'),
+            ]),
+            3 => $this->validate([
+                'durationMinutes' => ['required', 'in:15,30,45,60'],
+            ], [
+                'durationMinutes.required' => __('session_filter.validation.duration_required'),
+            ]),
+            4 => $this->validate([
+                'languagePreference' => ['required', 'in:ar,en,both'],
+            ], [
+                'languagePreference.required' => __('session_filter.validation.language_required'),
+            ]),
+            default => null,
+        };
+    }
+
     /**
      * @return list<array{value: string, label: string}>
      */
@@ -190,8 +310,228 @@ new #[Layout('layouts::patient')] #[Title('Schedule a session')] class extends C
     }
 }; ?>
 
-<div class="pb-28 sm:pb-10">
-    <div class="w-full space-y-5 lg:space-y-6">
+<div class="pb-6 sm:pb-10">
+    {{-- Mobile: step-by-step wizard --}}
+    <div
+        class="session-filter-mobile pb-[calc(5.75rem+env(safe-area-inset-bottom))] sm:hidden"
+        id="patient-portal-swipe-surface"
+        data-swipe-livewire-method="goBackMobile"
+        data-swipe-hint-id="patient-portal-swipe-hint"
+    >
+        <header class="session-filter-mobile-hero overflow-hidden rounded-2xl border border-emerald-100/80 bg-white shadow-sm">
+            <div class="bg-gradient-to-br from-emerald-50 to-white px-4 pb-4 pt-5">
+                <div class="flex items-start justify-between gap-3">
+                    <div class="min-w-0 flex-1">
+                        <p class="text-[0.6875rem] font-bold uppercase tracking-[0.14em] text-[#10B981]">
+                            {{ __('session_filter.title') }}
+                        </p>
+                        <h1 class="mt-1 text-xl font-bold tracking-tight text-zinc-900">
+                            {{ $this->mobileStepTitle() }}
+                        </h1>
+                        <p class="mt-1 text-sm leading-relaxed text-zinc-600">
+                            {{ __('session_filter.mobile_hint') }}
+                        </p>
+                    </div>
+                    <span class="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-[#10B981]/10 text-[#10B981]">
+                        @if ($mobileStep === 1)
+                            <flux:icon name="user-circle" class="size-5" />
+                        @elseif ($mobileStep === 2)
+                            <flux:icon name="users" class="size-5" />
+                        @elseif ($mobileStep === 3)
+                            <flux:icon name="clock" class="size-5" />
+                        @elseif ($mobileStep === 4)
+                            <flux:icon name="language" class="size-5" />
+                        @else
+                            <flux:icon name="tag" class="size-5" />
+                        @endif
+                    </span>
+                </div>
+
+                <div class="mt-5 flex items-center gap-1.5" aria-hidden="true">
+                    @for ($stepIndex = 1; $stepIndex <= $this->mobileStepsTotal(); $stepIndex++)
+                        <span @class([
+                            'h-1.5 flex-1 rounded-full transition-all duration-300',
+                            'bg-[#10B981] shadow-sm shadow-[#10B981]/30' => $stepIndex <= $mobileStep,
+                            'bg-zinc-200/90' => $stepIndex > $mobileStep,
+                        ])></span>
+                    @endfor
+                </div>
+                <p class="mt-2 text-xs font-medium text-zinc-500">
+                    {{ __('session_filter.step_of', ['current' => $mobileStep, 'total' => $this->mobileStepsTotal()]) }}
+                </p>
+            </div>
+        </header>
+
+        <div class="session-filter-mobile-body mt-4 space-y-3">
+            @if ($mobileStep === 1)
+                <div class="space-y-2.5" role="radiogroup" aria-label="{{ __('session_filter.sections.specialist') }}">
+                    @foreach ($this->specialistKindOptions as $option)
+                        <button
+                            type="button"
+                            wire:key="mobile-degree-{{ $option['value'] }}"
+                            wire:click="selectMobileDegree('{{ $option['value'] }}')"
+                            wire:loading.attr="disabled"
+                            wire:target="selectMobileDegree"
+                            aria-pressed="{{ $degree_id === $option['value'] ? 'true' : 'false' }}"
+                            @class([
+                                'session-filter-mobile-option',
+                                'session-filter-mobile-option--active' => $degree_id === $option['value'],
+                            ])
+                        >
+                            <span class="session-filter-mobile-option__icon session-filter-mobile-option__icon--specialist">
+                                <flux:icon name="user-circle" class="size-5" />
+                            </span>
+                            <span class="session-filter-mobile-option__label">{{ $option['label'] }}</span>
+                            <span class="session-filter-mobile-option__indicator" aria-hidden="true"></span>
+                        </button>
+                    @endforeach
+                </div>
+                <flux:error name="degree_id" />
+            @elseif ($mobileStep === 2)
+                <div class="grid grid-cols-3 gap-2.5" role="radiogroup" aria-label="{{ __('session_filter.sections.gender_pref') }}">
+                    @foreach (['male' => ['icon' => 'user', 'tone' => 'sky'], 'female' => ['icon' => 'user', 'tone' => 'violet'], 'both' => ['icon' => 'users', 'tone' => 'emerald']] as $value => $meta)
+                        <button
+                            type="button"
+                            wire:key="mobile-gender-{{ $value }}"
+                            wire:click="selectMobileGender('{{ $value }}')"
+                            wire:loading.attr="disabled"
+                            wire:target="selectMobileGender"
+                            aria-pressed="{{ $genderPreference === $value ? 'true' : 'false' }}"
+                            @class([
+                                'session-filter-mobile-tile',
+                                'session-filter-mobile-tile--active' => $genderPreference === $value,
+                            ])
+                        >
+                            <span @class([
+                                'session-filter-mobile-tile__icon',
+                                'session-filter-mobile-tile__icon--'.$meta['tone'] => true,
+                            ])>
+                                <flux:icon :name="$meta['icon']" class="size-5" />
+                            </span>
+                            <span class="session-filter-mobile-tile__label">{{ __('session_filter.sections.gender.'.$value) }}</span>
+                        </button>
+                    @endforeach
+                </div>
+                <flux:error name="genderPreference" />
+            @elseif ($mobileStep === 3)
+                <div class="grid grid-cols-2 gap-2.5" role="radiogroup" aria-label="{{ __('session_filter.sections.duration') }}">
+                    @foreach (['15', '30', '45', '60'] as $minutes)
+                        <button
+                            type="button"
+                            wire:key="mobile-duration-{{ $minutes }}"
+                            wire:click="selectMobileDuration('{{ $minutes }}')"
+                            wire:loading.attr="disabled"
+                            wire:target="selectMobileDuration"
+                            aria-pressed="{{ $durationMinutes === $minutes ? 'true' : 'false' }}"
+                            @class([
+                                'session-filter-mobile-duration',
+                                'session-filter-mobile-duration--active' => $durationMinutes === $minutes,
+                            ])
+                        >
+                            <span class="session-filter-mobile-duration__value">{{ $minutes }}</span>
+                            <span class="session-filter-mobile-duration__unit">{{ app()->getLocale() === 'ar' ? 'دقيقة' : 'min' }}</span>
+                        </button>
+                    @endforeach
+                </div>
+                <flux:error name="durationMinutes" />
+            @elseif ($mobileStep === 4)
+                <div class="space-y-2.5" role="radiogroup" aria-label="{{ __('session_filter.sections.language') }}">
+                    @foreach (['ar' => __('session_filter.sections.lang.ar'), 'en' => __('session_filter.sections.lang.en'), 'both' => __('session_filter.sections.lang.both')] as $value => $label)
+                        <button
+                            type="button"
+                            wire:key="mobile-language-{{ $value }}"
+                            wire:click="selectMobileLanguage('{{ $value }}')"
+                            wire:loading.attr="disabled"
+                            wire:target="selectMobileLanguage"
+                            aria-pressed="{{ $languagePreference === $value ? 'true' : 'false' }}"
+                            @class([
+                                'session-filter-mobile-option',
+                                'session-filter-mobile-option--active' => $languagePreference === $value,
+                            ])
+                        >
+                            <span class="session-filter-mobile-option__icon session-filter-mobile-option__icon--language">
+                                <flux:icon name="language" class="size-5" />
+                            </span>
+                            <span class="session-filter-mobile-option__label">{{ $label }}</span>
+                            <span class="session-filter-mobile-option__indicator" aria-hidden="true"></span>
+                        </button>
+                    @endforeach
+                </div>
+                <flux:error name="languagePreference" />
+            @else
+                <div class="rounded-2xl border border-zinc-200/90 bg-white p-4 shadow-sm">
+                    <div class="mb-3 flex items-center justify-between gap-2">
+                        <p class="text-sm font-semibold text-zinc-900">{{ __('session_filter.sections.subspecialties') }}</p>
+                        <span class="rounded-full bg-[#10B981]/10 px-2.5 py-0.5 text-[0.6875rem] font-bold uppercase tracking-wide text-[#10B981]">
+                            {{ __('session_filter.optional') }}
+                        </span>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        @foreach ($this->visibleSpecialityOptions as $opt)
+                            <button
+                                type="button"
+                                wire:key="mobile-sub-{{ $opt['id'] }}"
+                                wire:click="toggleSubspecialty('{{ $opt['id'] }}')"
+                                aria-pressed="{{ $this->subspecialtyIsSelected($opt['id']) ? 'true' : 'false' }}"
+                                @class([
+                                    'session-filter-chip',
+                                    'session-filter-chip--selected' => $this->subspecialtyIsSelected($opt['id']),
+                                ])
+                            >
+                                {{ $opt['label'] }}
+                            </button>
+                        @endforeach
+                    </div>
+                    @if (count($this->specialityOptions) > (int) config('session_filter.subspecialties_collapsed_count', 7))
+                        <div class="mt-3">
+                            <flux:button variant="ghost" size="sm" wire:click="toggleSubspecialtiesExpanded" type="button" class="!px-0 !text-[#10B981]">
+                                {{ $this->subspecialtiesExpanded ? __('session_filter.show_less') : __('session_filter.show_more') }}
+                            </flux:button>
+                        </div>
+                    @endif
+                </div>
+            @endif
+        </div>
+
+        <div class="session-filter-mobile-actions fixed inset-x-0 bottom-[calc(4.25rem+env(safe-area-inset-bottom))] z-[55] border-t border-zinc-200/90 bg-white/95 px-4 py-3 shadow-[0_-10px_30px_rgb(15_23_42_/_0.08)] backdrop-blur-md">
+            <div class="mx-auto flex max-w-md items-center justify-between gap-3">
+                @if ($mobileStep > 1)
+                    <flux:button variant="ghost" size="sm" wire:click="goToPreviousMobileStep" type="button" class="shrink-0 !px-2" wire:loading.attr="disabled" icon="arrow-left">
+                        {{ __('session_filter.back') }}
+                    </flux:button>
+                @else
+                    <flux:button variant="ghost" size="sm" wire:click="proceedSkip" type="button" class="shrink-0 !px-2" wire:loading.attr="disabled">
+                        {{ __('session_filter.skip_all') }}
+                    </flux:button>
+                @endif
+
+                @if ($mobileStep === $this->mobileStepsTotal())
+                    <div class="flex w-full max-w-[14rem] shrink-0 items-center justify-end gap-2 ms-auto">
+                        <flux:button variant="ghost" size="sm" wire:click="skipSubspecialtiesStep" type="button" class="!px-3" wire:loading.attr="disabled">
+                            {{ __('session_filter.skip') }}
+                        </flux:button>
+                        <flux:button
+                            variant="primary"
+                            size="sm"
+                            wire:click="goToNextMobileStep"
+                            type="button"
+                            class="!min-h-10 flex-1 !rounded-full !px-4 !border-[#10B981] !bg-[#10B981] !text-white shadow-sm shadow-[#10B981]/20 hover:!brightness-[0.97]"
+                            wire:loading.attr="disabled"
+                        >
+                            {{ __('session_filter.finish') }}
+                        </flux:button>
+                    </div>
+                @else
+                    <p class="ms-auto max-w-[11rem] truncate text-end text-xs font-medium text-zinc-500">
+                        {{ __('session_filter.mobile_hint') }}
+                    </p>
+                @endif
+            </div>
+        </div>
+    </div>
+
+    {{-- Desktop / tablet: full filter form --}}
+    <div class="hidden w-full space-y-5 sm:block lg:space-y-6">
         {{-- Hero — soft vertical 50/50 (top + bottom) --}}
         <header class="grid min-h-[11rem] grid-rows-2 overflow-hidden rounded-2xl border border-emerald-100/90 bg-white shadow-sm sm:min-h-[10.5rem]">
             <div class="flex items-center gap-4 bg-emerald-50/70 p-4 sm:p-5">

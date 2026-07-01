@@ -3,13 +3,129 @@
 use App\Models\Doctor;
 use App\Models\Duration;
 use App\Models\User;
+use App\Support\PendingPatientBooking;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Livewire\Livewire;
 
 uses(RefreshDatabase::class);
 
+function createBookableDoctor(): Doctor
+{
+    Duration::query()->create(['duration' => 15, 'title' => '15 min']);
+
+    $doctor = Doctor::query()->create([
+        'name' => 'Nada Alghamdi',
+        'name_ar' => 'ندى الغامدي',
+        'status' => 'approved',
+        'spoken_languages' => 'ar_en',
+        'gender' => 'female',
+    ]);
+
+    $doctor->durations()->attach(15, ['price' => 100.0]);
+
+    return $doctor;
+}
+
+function sampleBookingQuery(): string
+{
+    return http_build_query([
+        'date' => '2026-05-05',
+        'time' => '12:15',
+        'duration' => 15,
+    ]);
+}
+
 test('guest is redirected when visiting book appointments page', function () {
     $this->get('/patient/book-appointments/1?date=2026-05-05&time=12:15&duration=15')
-        ->assertRedirect();
+        ->assertRedirect(route('patient.phone'));
+});
+
+test('guest booking attempt stores pending booking in session', function () {
+    $doctor = createBookableDoctor();
+
+    $this->get(route('patient.book-appointments', ['doctor' => $doctor->id]).'?'.sampleBookingQuery())
+        ->assertRedirect(route('patient.phone'));
+
+    expect(PendingPatientBooking::get())->toMatchArray([
+        'doctor_id' => $doctor->id,
+        'date' => '2026-05-05',
+        'time' => '12:15',
+        'duration' => 15,
+    ]);
+});
+
+test('patient login resumes pending booking after guest slot selection', function () {
+    $doctor = createBookableDoctor();
+
+    $user = User::factory()->create([
+        'phone' => '966500555666',
+        'password' => 'password',
+        'profile_completed' => true,
+    ]);
+
+    $this->get(route('patient.book-appointments', ['doctor' => $doctor->id]).'?'.sampleBookingQuery())
+        ->assertRedirect(route('patient.phone'));
+
+    $this->post(route('login.store'), [
+        'patient_flow' => 1,
+        'email' => $user->phone,
+        'password' => 'password',
+    ])->assertRedirect(
+        route('patient.book-appointments', ['doctor' => $doctor->id]).'?'.sampleBookingQuery()
+    );
+
+    $this->assertAuthenticatedAs($user);
+});
+
+test('patient sign up resumes pending booking after guest slot selection', function () {
+    $doctor = createBookableDoctor();
+    $phone = '966512400099';
+
+    PendingPatientBooking::store($doctor->id, '2026-05-05', '12:15', 15);
+    session(['patient_otp_verified_phone' => $phone]);
+
+    Livewire::withQueryParams(['phone' => $phone])
+        ->test('pages::patient-auth.sign-up')
+        ->set('name', 'Booking Patient')
+        ->set('email', 'booking-patient@example.com')
+        ->set('gender', 'female')
+        ->set('password', 'Password123!')
+        ->set('password_confirmation', 'Password123!')
+        ->call('registerPatient')
+        ->assertHasNoErrors()
+        ->assertRedirect(
+            route('patient.book-appointments', ['doctor' => $doctor->id]).'?'.sampleBookingQuery()
+        );
+});
+
+test('incomplete profile login keeps pending booking until profile is completed', function () {
+    $doctor = createBookableDoctor();
+
+    $user = User::factory()->create([
+        'phone' => '966500777888',
+        'password' => 'password',
+        'profile_completed' => false,
+    ]);
+
+    $this->get(route('patient.book-appointments', ['doctor' => $doctor->id]).'?'.sampleBookingQuery())
+        ->assertRedirect(route('patient.phone'));
+
+    $this->post(route('login.store'), [
+        'patient_flow' => 1,
+        'email' => $user->phone,
+        'password' => 'password',
+    ])->assertRedirect(route('patient.profile.basic'));
+
+    expect(PendingPatientBooking::get()['doctor_id'])->toBe($doctor->id);
+
+    Livewire::actingAs($user)
+        ->test('pages::patient-auth.profile-basic')
+        ->set('gender', 'female')
+        ->call('saveBasics')
+        ->assertHasNoErrors()
+        ->assertRedirect(
+            route('patient.book-appointments', ['doctor' => $doctor->id]).'?'.sampleBookingQuery()
+        );
 });
 
 test('authenticated patient receives 404 when booking query params are incomplete', function () {

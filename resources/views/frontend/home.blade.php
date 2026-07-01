@@ -268,16 +268,13 @@
 
             <!-- Actions -->
             <div class="flex items-center gap-6">
-                <button
-                    type="button"
-                    data-open-ai-chatbot
-                    class="inline-flex md:hidden items-center gap-2 rounded-2xl border border-primary/20 bg-primary/5 px-4 py-2.5 text-sm font-medium leading-none text-primary transition hover:bg-primary/10"
+                <a
+                    href="{{ route('patient.phone') }}"
+                    class="inline-flex items-center gap-2 rounded-2xl border border-primary/20 bg-primary/5 px-4 py-2.5 text-sm font-semibold leading-none text-primary transition hover:bg-primary/10 md:hidden"
                 >
-                    <i data-lucide="bot" class="h-4 w-4"></i>
-                    المساعد
-                </button>
-                <a href="{{ route('patient.phone') }}" class="hidden sm:block text-sm font-medium text-ink-muted hover:text-ink px-2 transition-colors">تسجيل الدخول</a>
-               
+                    تسجيل الدخول
+                </a>
+                <a href="{{ route('patient.phone') }}" class="hidden md:inline-flex text-sm font-medium text-ink-muted transition-colors hover:text-ink px-2">تسجيل الدخول</a>
             </div>
         </div>
     </header>
@@ -316,11 +313,6 @@
                 @include('partials.marketing-emotion-widget')
             </div>
 
-            {{-- Rating stats (4.9 / 24/7) — hidden for now
-            <div class="mt-5 max-w-md mx-auto opacity-0 animate-fade-in-up flex justify-center sm:justify-start sm:max-w-none" style="animation-delay: 0.28s;">
-                @include('partials.marketing-hero-stats')
-            </div>
-            --}}
         </div>
     </main>
 

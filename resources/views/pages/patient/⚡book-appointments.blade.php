@@ -1,5 +1,6 @@
 <?php
 
+use App\Support\PendingPatientBooking;
 use App\Models\Appointment;
 use App\Models\Doctor;
 use App\Models\TemporaryAppointment;
@@ -74,6 +75,8 @@ new #[Layout('layouts::patient')] #[Title('Book an appointment')] class extends 
         $this->sessionPrice = (float) ($durationRow->pivot->price ?? 0);
 
         $this->doctor = $doctor;
+
+        PendingPatientBooking::forget();
 
         /** @var User|null $user */
         $user = auth()->user();

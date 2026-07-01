@@ -116,7 +116,7 @@ select:focus[data-flux-control] {
     }
 
     .patient-auth-primary-btn {
-        @apply min-h-[3.25rem] !rounded-full !border-mashora-brand !bg-mashora-brand !px-8 !text-white !shadow-none hover:!brightness-[0.97] focus-visible:!outline-none focus-visible:!ring-2 focus-visible:!ring-mashora-brand/35 focus-visible:!ring-offset-2;
+        @apply min-h-11 !rounded-full !border-mashora-brand !bg-mashora-brand !px-8 !text-white !shadow-none hover:!brightness-[0.97] focus-visible:!outline-none focus-visible:!ring-2 focus-visible:!ring-mashora-brand/35 focus-visible:!ring-offset-2 sm:min-h-[3.25rem];
     }
 
     .patient-auth-content [data-flux-button].patient-auth-primary-btn {
@@ -456,10 +456,268 @@ select:focus[data-flux-control] {
     color: inherit;
 }
 
+/* Session filter — mobile wizard */
+.session-filter-mobile-body {
+    padding-bottom: 0.5rem;
+}
+
+.session-filter-mobile-option {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    gap: 0.875rem;
+    border-radius: 1rem;
+    border: 1.5px solid rgb(228 228 231 / 0.95);
+    background-color: #ffffff;
+    padding: 0.875rem 1rem;
+    text-align: start;
+    box-shadow: 0 1px 3px rgb(15 23 42 / 0.04);
+    transition:
+        border-color 0.2s ease,
+        background-color 0.2s ease,
+        box-shadow 0.2s ease,
+        transform 0.15s ease;
+}
+
+.session-filter-mobile-option:active {
+    transform: scale(0.985);
+}
+
+.session-filter-mobile-option:disabled,
+.session-filter-mobile-tile:disabled,
+.session-filter-mobile-duration:disabled {
+    opacity: 0.65;
+    cursor: wait;
+}
+
+.session-filter-mobile-option--active {
+    border-color: #10b981;
+    background: linear-gradient(135deg, rgb(16 185 129 / 0.08) 0%, #ffffff 100%);
+    box-shadow:
+        0 4px 16px rgb(16 185 129 / 0.14),
+        inset 0 0 0 1px rgb(16 185 129 / 0.12);
+}
+
+.session-filter-mobile-option__icon {
+    display: flex;
+    width: 2.75rem;
+    height: 2.75rem;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.875rem;
+}
+
+.session-filter-mobile-option__icon--specialist {
+    background-color: rgb(16 185 129 / 0.12);
+    color: #10b981;
+}
+
+.session-filter-mobile-option__icon--language {
+    background-color: rgb(16 185 129 / 0.12);
+    color: #10b981;
+}
+
+.session-filter-mobile-option__label {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    line-height: 1.35;
+    color: #18181b;
+}
+
+.session-filter-mobile-option__indicator {
+    width: 1.25rem;
+    height: 1.25rem;
+    flex-shrink: 0;
+    border-radius: 9999px;
+    border: 2px solid #d4d4d8;
+    background-color: #ffffff;
+    transition:
+        border-color 0.2s ease,
+        background-color 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+.session-filter-mobile-option--active .session-filter-mobile-option__indicator {
+    border-color: #10b981;
+    background-color: #10b981;
+    box-shadow: inset 0 0 0 3px #ffffff;
+}
+
+.session-filter-mobile-tile {
+    display: flex;
+    min-height: 6.75rem;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.625rem;
+    border-radius: 1rem;
+    border: 1.5px solid rgb(228 228 231 / 0.95);
+    background-color: #ffffff;
+    padding: 0.875rem 0.5rem;
+    box-shadow: 0 1px 3px rgb(15 23 42 / 0.04);
+    transition:
+        border-color 0.2s ease,
+        background-color 0.2s ease,
+        box-shadow 0.2s ease,
+        transform 0.15s ease;
+}
+
+.session-filter-mobile-tile:active {
+    transform: scale(0.97);
+}
+
+.session-filter-mobile-tile--active {
+    border-color: #10b981;
+    background: linear-gradient(180deg, rgb(16 185 129 / 0.1) 0%, #ffffff 100%);
+    box-shadow: 0 4px 14px rgb(16 185 129 / 0.16);
+}
+
+.session-filter-mobile-tile__icon {
+    display: flex;
+    width: 2.5rem;
+    height: 2.5rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.75rem;
+}
+
+.session-filter-mobile-tile__icon--sky {
+    background-color: rgb(14 165 233 / 0.12);
+    color: #0284c7;
+}
+
+.session-filter-mobile-tile__icon--violet {
+    background-color: rgb(139 92 246 / 0.12);
+    color: #7c3aed;
+}
+
+.session-filter-mobile-tile__icon--emerald {
+    background-color: rgb(16 185 129 / 0.12);
+    color: #10b981;
+}
+
+.session-filter-mobile-tile__label {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    line-height: 1.2;
+    color: #27272a;
+    text-align: center;
+}
+
+.session-filter-mobile-duration {
+    display: flex;
+    min-height: 5.5rem;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.125rem;
+    border-radius: 1rem;
+    border: 1.5px solid rgb(228 228 231 / 0.95);
+    background-color: #ffffff;
+    padding: 1rem;
+    box-shadow: 0 1px 3px rgb(15 23 42 / 0.04);
+    transition:
+        border-color 0.2s ease,
+        background-color 0.2s ease,
+        box-shadow 0.2s ease,
+        transform 0.15s ease;
+}
+
+.session-filter-mobile-duration:active {
+    transform: scale(0.97);
+}
+
+.session-filter-mobile-duration--active {
+    border-color: #10b981;
+    background: linear-gradient(180deg, rgb(16 185 129 / 0.12) 0%, #ffffff 100%);
+    box-shadow: 0 4px 14px rgb(16 185 129 / 0.16);
+}
+
+.session-filter-mobile-duration__value {
+    font-size: 1.75rem;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -0.03em;
+    color: #18181b;
+}
+
+.session-filter-mobile-duration--active .session-filter-mobile-duration__value {
+    color: #059669;
+}
+
+.session-filter-mobile-duration__unit {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #71717a;
+}
+
+.session-filter-mobile .session-filter-chip {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid #d4d4d8;
+    border-radius: 9999px;
+    background-color: #f4f4f5;
+    padding: 0.625rem 0.875rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: #27272a !important;
+    transition:
+        border-color 0.15s ease,
+        background-color 0.15s ease,
+        color 0.15s ease;
+}
+
+.session-filter-mobile .session-filter-chip--selected {
+    border-color: #10b981 !important;
+    background-color: #10b981 !important;
+    color: #ffffff !important;
+}
+
+.session-filter-mobile-actions {
+    box-shadow: 0 -8px 24px rgb(15 23 42 / 0.06);
+}
+
+.patient-auth-body {
+    overscroll-behavior-x: none;
+    touch-action: manipulation;
+}
+
+.patient-auth-swipe-surface {
+    will-change: transform;
+    backface-visibility: hidden;
+}
+
+.patient-auth-swipe-surface.patient-auth-swipe-active {
+    box-shadow: -12px 0 32px rgb(15 23 42 / 0.08);
+}
+
+.patient-auth-swipe-hint {
+    opacity: 0;
+    transition: opacity 120ms ease;
+}
+
+.patient-auth-swipe-hint.patient-auth-swipe-hint-visible {
+    opacity: 1;
+}
+
 /* Patient auth: always use dark text on light panels (Flux dark utilities otherwise render white). */
+.patient-auth-content {
+    text-align: start;
+}
+
+.patient-auth-content form,
+.patient-auth-content [data-flux-field] {
+    width: 100%;
+}
+
 .patient-auth-content [data-flux-heading],
 .patient-auth-content ui-label[data-flux-label],
 .patient-auth-content .patient-auth-heading {
+    width: 100%;
+    text-align: start !important;
     color: #18181b !important;
 }
 

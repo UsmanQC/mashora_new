@@ -5,6 +5,7 @@ return [
     'cta_register' => 'Create account',
     'cta_join' => 'Join',
     'back_home' => 'Home',
+    'back' => 'Back',
 
     'promo_title' => 'Care for your mind — one step at a time.',
     'promo_body' => 'Your appointments, mood check-ins, and resources in one responsive place: desktop or install as an app on your phone.',

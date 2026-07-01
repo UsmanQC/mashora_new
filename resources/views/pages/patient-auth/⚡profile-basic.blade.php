@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\User;
+use App\Support\PendingPatientBooking;
 use Flux\Flux;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
@@ -24,7 +25,7 @@ new #[Layout('layouts::patient-auth')] #[Title('A few more details')] class exte
         }
 
         if ($user->profile_completed) {
-            $this->redirect(route('patient.home'));
+            $this->redirect(PendingPatientBooking::homeOrBookingUrl());
 
             return;
         }
@@ -61,7 +62,7 @@ new #[Layout('layouts::patient-auth')] #[Title('A few more details')] class exte
 
         Flux::toast(variant: 'success', text: __('patient_auth.congrats_title'));
 
-        $this->redirect(route('patient.register.done'));
+        $this->redirect(PendingPatientBooking::url() ?? route('patient.register.done'));
     }
 }; ?>
 

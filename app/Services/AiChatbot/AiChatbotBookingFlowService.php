@@ -7,6 +7,7 @@ use App\Models\Doctor;
 use App\Models\Speciality;
 use App\Services\DoctorAvailabilityService;
 use App\Support\AppTimezone;
+use App\Support\PendingPatientBooking;
 use App\Support\SpecialistCatalog;
 use Illuminate\Support\Facades\Session;
 
@@ -73,8 +74,9 @@ final class AiChatbotBookingFlowService
         $bookingUrl = route('patient.schedule.specialists');
 
         if ($doctorId > 0) {
-            $bookingUrl = route('patient.book-appointments', ['doctor' => $doctorId]);
             $nearestSlot = $this->findNearestSlot($doctorId, $durationMinutes);
+            $bookingUrl = PendingPatientBooking::remember($doctorId, $nearestSlot, $durationMinutes)
+                ?? route('patient.schedule.specialists');
         }
 
         return [

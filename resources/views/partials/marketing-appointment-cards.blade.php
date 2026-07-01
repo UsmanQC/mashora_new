@@ -1,7 +1,7 @@
 @php
     $isAuthenticated = auth()->check();
-    $scheduledUrl = route('patient.schedule.filter');
-    $instantUrl = $isAuthenticated ? route('patient.schedule.filter') : route('patient.phone');
+    $scheduledUrl = route('patient.phone');
+    $instantUrl = route('patient.schedule.filter');
     $ongoingUrl = $isAuthenticated ? route('patient.appointments') : route('patient.phone');
 
     $cards = [

@@ -10,6 +10,7 @@ use App\Http\Middleware\EnsurePatientPortalProfileComplete;
 use App\Http\Middleware\RedirectAuthenticatedPatientVisitor;
 use App\Http\Middleware\RedirectIfDoctorAuthenticated;
 use App\Http\Middleware\SetLocaleFromSession;
+use App\Support\PendingPatientBooking;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -40,6 +41,8 @@ return Application::configure(basePath: dirname(__DIR__))
             }
 
             if ($request->is('patient', 'patient/*')) {
+                PendingPatientBooking::captureFromRequest($request);
+
                 return route('patient.phone');
             }
 

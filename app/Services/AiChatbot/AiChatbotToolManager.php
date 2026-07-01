@@ -8,6 +8,7 @@ use App\Models\Faq;
 use App\Models\User;
 use App\Services\DoctorAvailabilityService;
 use App\Support\AppTimezone;
+use App\Support\PendingPatientBooking;
 use Illuminate\Support\Facades\Auth;
 
 final class AiChatbotToolManager
@@ -187,13 +188,18 @@ final class AiChatbotToolManager
             $slots = $this->availability->availableSlots($doctor, $date, $durationMinutes);
 
             if ($slots !== []) {
+                $slot = [
+                    'date' => $date,
+                    'time' => $slots[0],
+                ];
+
                 return [
                     'doctor_id' => $doctor->id,
                     'doctor_name' => $doctor->displayName(),
                     'date' => $date,
                     'time' => $slots[0],
                     'duration_minutes' => $durationMinutes,
-                    'booking_url' => route('patient.book-appointments', ['doctor' => $doctor->id]),
+                    'booking_url' => PendingPatientBooking::urlFor($doctor->id, $date, $slots[0], $durationMinutes),
                 ];
             }
         }
@@ -231,12 +237,19 @@ final class AiChatbotToolManager
                 'duration_minutes' => $arguments['duration_minutes'] ?? 30,
             ]);
 
+            $slot = isset($nearest['date'], $nearest['time'])
+                ? ['date' => (string) $nearest['date'], 'time' => (string) $nearest['time']]
+                : null;
+            $durationMinutes = max(15, (int) ($nearest['duration_minutes'] ?? $arguments['duration_minutes'] ?? 30));
+            $bookingUrl = PendingPatientBooking::remember($doctorId, $slot, $durationMinutes);
+
             $user = Auth::user();
 
             if (! $user instanceof User) {
                 return [
                     'requires_login' => true,
                     'login_url' => route('patient.phone'),
+                    'booking_url' => $bookingUrl ?? route('patient.phone'),
                     'suggested_slot' => $nearest,
                     'message' => 'Please sign in to complete booking.',
                 ];
@@ -244,7 +257,7 @@ final class AiChatbotToolManager
 
             return [
                 'requires_login' => false,
-                'booking_url' => route('patient.book-appointments', ['doctor' => $doctorId]),
+                'booking_url' => $bookingUrl ?? route('patient.book-appointments', ['doctor' => $doctorId]),
                 'suggested_slot' => $nearest,
                 'message' => 'Open the booking page to confirm date and payment.',
             ];

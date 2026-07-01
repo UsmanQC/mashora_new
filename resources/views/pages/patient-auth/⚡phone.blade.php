@@ -92,9 +92,9 @@ new #[Layout('layouts::patient-auth')] #[Title('Phone')] class extends Component
     }
 }; ?>
 
-<div class="flex min-h-0 w-full flex-col">
+<div class="flex min-h-0 w-full flex-col text-start">
     @if ($loginPhoneE164)
-        <flux:heading size="lg" class="patient-auth-heading !text-zinc-900 sm:!text-2xl">{{ __('patient_auth.login_title') }}</flux:heading>
+        <flux:heading size="lg" class="patient-auth-heading text-start !text-zinc-900 sm:!text-2xl">{{ __('patient_auth.login_title') }}</flux:heading>
         <flux:text class="mt-1 text-sm sm:mt-2 sm:text-base">{{ __('patient_auth.login_password_lead') }}</flux:text>
 
         <flux:text class="mt-2 text-sm font-medium tabular-nums text-zinc-700 sm:mt-3 sm:text-base" dir="ltr">
@@ -146,9 +146,9 @@ new #[Layout('layouts::patient-auth')] #[Title('Phone')] class extends Component
             </div>
         </form>
     @else
-        <flux:heading size="lg" class="patient-auth-heading !text-zinc-900 sm:!text-2xl">{{ __('patient_auth.phone_heading') }}</flux:heading>
+        <flux:heading size="lg" class="patient-auth-heading text-start !text-zinc-900 sm:!text-2xl">{{ __('patient_auth.phone_heading') }}</flux:heading>
 
-        <form wire:submit="continueGuest" class="mt-5 space-y-4 sm:mt-8 sm:space-y-6">
+        <form wire:submit="continueGuest" class="mt-2 w-full space-y-3 sm:mt-3 sm:space-y-4">
             @include('partials.patient-unified-phone-field')
 
             @error('countryIso')
