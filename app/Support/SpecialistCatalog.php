@@ -132,11 +132,41 @@ final class SpecialistCatalog
     /**
      * @return list<array<string, mixed>>
      */
+    public static function approvedCards(): array
+    {
+        return self::approvedDoctorCards();
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    public static function forMarketingHomepage(int $limit = 12): array
+    {
+        return array_slice(self::approvedDoctorCards(), 0, max(0, $limit));
+    }
+
+    /**
+     * @return array{total: int, online: int}
+     */
+    public static function marketingStats(): array
+    {
+        $baseQuery = Doctor::query()->where('status', 'approved');
+
+        return [
+            'total' => (clone $baseQuery)->count(),
+            'online' => (clone $baseQuery)->where('is_online', true)->count(),
+        ];
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
     private static function approvedDoctorCards(): array
     {
         $doctors = Doctor::query()
             ->where('status', 'approved')
             ->with(['degree', 'specialities', 'durations', 'workingDays.workingHours', 'communications'])
+            ->orderByDesc('is_online')
             ->orderBy('id')
             ->get();
 
@@ -247,10 +277,21 @@ final class SpecialistCatalog
             ->values()
             ->all();
 
+        $degreeTitle = '';
+        if ($doctor->degree) {
+            $degreeTitle = $isAr && filled($doctor->degree->title_ar)
+                ? (string) $doctor->degree->title_ar
+                : (string) (filled($doctor->degree->title) ? $doctor->degree->title : $doctor->degree->title_ar);
+        }
+
         return [
             'id' => 'doctor-'.$doctor->id,
             'name' => $doctor->displayName(),
             'bio' => $doctor->aboutDisplay(),
+            'photo_url' => $doctor->profilePhotoUrl(),
+            'degree_title' => $degreeTitle,
+            'is_online' => (bool) $doctor->is_online,
+            'experience_years' => (int) ($doctor->experience ?? 0),
             'role_kind' => $roleKind,
             'likes' => 0,
             'price_sar' => $price,

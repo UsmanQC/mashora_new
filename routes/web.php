@@ -5,6 +5,7 @@ use App\Http\Controllers\Patient\FollowUpPaymentController;
 use App\Http\Controllers\Patient\PatientAppointmentRealtimeController;
 use App\Http\Controllers\Patient\PatientPaymentController;
 use App\Http\Controllers\WebManifestController;
+use App\Support\SpecialistCatalog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -17,9 +18,12 @@ Route::get('/doctor/manifest.webmanifest', WebManifestController::class)
     ->name('manifest.doctor');
 
 Route::get('/', function () {
-    app()->setLocale('en');
+    app()->setLocale('ar');
 
-    return view('frontend.home');
+    return view('frontend.home', [
+        'featuredDoctors' => SpecialistCatalog::forMarketingHomepage(12),
+        'doctorStats' => SpecialistCatalog::marketingStats(),
+    ]);
 })->name('home');
 
 Route::prefix('api')->group(function () {

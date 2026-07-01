@@ -2,7 +2,7 @@
 <html lang="ar" dir="rtl" class="scroll-smooth">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Awaan | The Premium Health Platform</title>
 
@@ -117,29 +117,86 @@
             border-bottom: 1px solid rgba(15, 23, 42, 0.03);
         }
 
+        .home-site-header {
+            padding-top: env(safe-area-inset-top);
+        }
+
+        .home-site-header__inner {
+            padding-top: 1.125rem;
+            padding-bottom: 1.125rem;
+        }
+
+        .home-main {
+            padding-top: calc(5.625rem + env(safe-area-inset-top));
+        }
+
+        @media (min-width: 640px) {
+            .home-site-header__inner {
+                padding-top: 1.25rem;
+                padding-bottom: 1.25rem;
+            }
+
+            .home-main {
+                padding-top: calc(6rem + env(safe-area-inset-top));
+            }
+        }
+
+        @media (min-width: 768px) {
+            .home-site-header__inner {
+                padding-top: 1.375rem;
+                padding-bottom: 1.375rem;
+            }
+
+            .home-main {
+                padding-top: calc(6.5rem + env(safe-area-inset-top));
+            }
+        }
+
         /* Hide scrollbars for clean horizontal scrolling */
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-        /* Custom Interactive Elements (Softer & More Elegant) */
-        .emotion-card {
-            transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+        /* Auto-moving doctors row — no arrows, no scrollbar */
+        .doctors-marquee {
+            overflow: hidden;
+            -webkit-mask-image: linear-gradient(to right, transparent, #000 4%, #000 96%, transparent);
+            mask-image: linear-gradient(to right, transparent, #000 4%, #000 96%, transparent);
         }
-        .emotion-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.05), 0 0 0 1px rgba(16, 185, 129, 0.1);
-            background-color: #FFFFFF;
+
+        .doctors-marquee-track {
+            display: flex;
+            width: max-content;
+            gap: 2rem;
+            will-change: transform;
+            animation: doctors-marquee 50s linear infinite;
         }
-        .emotion-card.active {
-            background: #10B981;
-            color: white;
-            box-shadow: 0 20px 40px -12px rgba(16, 185, 129, 0.3);
-            border-color: transparent;
+
+        .doctors-marquee:hover .doctors-marquee-track {
+            animation-play-state: paused;
         }
-        .emotion-card.active p { color: rgba(255, 255, 255, 0.9); }
-        .emotion-card.active h3 { color: white; }
-        .emotion-card.active .icon-box { background: rgba(255, 255, 255, 0.2); color: white; border-color: transparent; }
-        .emotion-card.active .icon-box svg { stroke: white; }
+
+        @keyframes doctors-marquee {
+            from { transform: translate3d(0, 0, 0); }
+            to { transform: translate3d(-50%, 0, 0); }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .doctors-marquee {
+                overflow-x: auto;
+                -webkit-mask-image: none;
+                mask-image: none;
+            }
+
+            .doctors-marquee-track {
+                animation: none;
+            }
+
+            .marketing-appt-card,
+            .marketing-appointments > div[class*="animate-fade-in-up"] {
+                animation: none !important;
+                opacity: 1 !important;
+            }
+        }
 
         /* Ambient Background Mesh - Slower and softer */
         .bg-mesh {
@@ -166,8 +223,8 @@
         <div class="bg-mesh-blob bg-emerald-50 w-[700px] h-[700px] top-[60%] right-[10%] animate-blob" style="animation-delay: 6s;"></div>
     </div>
 
-    <header class="fixed top-0 w-full z-50 glass-nav transition-all duration-300">
-        <div class="max-w-[85rem] mx-auto px-6 h-24 flex items-center justify-between">
+    <header class="home-site-header fixed top-0 w-full z-50 glass-nav transition-all duration-300">
+        <div class="home-site-header__inner max-w-[85rem] mx-auto flex items-center justify-between px-5 sm:px-6">
             
             <!-- Logo -->
             <a href="{{ route('home') }}" class="inline-flex items-center cursor-pointer" title="Awaan">
@@ -177,7 +234,7 @@
             <!-- Desktop Menu -->
             <nav class="hidden md:flex items-center gap-12">
                 <a href="#" class="text-sm font-medium text-primary-600 transition-colors">الرئيسية</a>
-                <a href="#" class="text-sm font-medium text-ink-muted hover:text-ink transition-colors">المختصون</a>
+                <a href="{{ route('patient.schedule.specialists') }}" class="text-sm font-medium text-ink-muted hover:text-ink transition-colors">المختصون</a>
                 <a href="#" class="text-sm font-medium text-ink-muted hover:text-ink transition-colors">المقاييس النفسية</a>
                 <a href="#" class="text-sm font-medium text-ink-muted hover:text-ink transition-colors">للأعمال</a>
                 <button
@@ -195,7 +252,7 @@
                 <button
                     type="button"
                     data-open-ai-chatbot
-                    class="inline-flex md:hidden items-center gap-2 rounded-2xl border border-primary/20 bg-primary/5 px-4 py-2 text-sm font-medium text-primary transition hover:bg-primary/10"
+                    class="inline-flex md:hidden items-center gap-2 rounded-2xl border border-primary/20 bg-primary/5 px-4 py-2.5 text-sm font-medium leading-none text-primary transition hover:bg-primary/10"
                 >
                     <i data-lucide="bot" class="h-4 w-4"></i>
                     المساعد
@@ -206,10 +263,10 @@
         </div>
     </header>
 
-    <main class="relative pt-24 pb-32 md:pt-32 md:pb-40 px-6">
+    <main class="home-main relative px-4 pb-16 sm:px-6 md:pb-24">
         <div class="max-w-[85rem] mx-auto">
             
-            <div class="grid lg:grid-cols-12 gap-20 items-center">
+            <div class="grid lg:grid-cols-12 gap-10 lg:gap-20 items-center">
                 
                 <!-- Left Content: Value Proposition -->
                 <div class="lg:col-span-5 text-right opacity-0 animate-fade-in-up">
@@ -217,120 +274,80 @@
                         <i data-lucide="shield-check" class="text-primary w-4 h-4"></i> مساحة آمنة وموثوقة 100%
                     </div> --}}
                     
-                    <button class="bg-ink hover:bg-ink-subtle text-white px-7 py-3 rounded-2xl text-sm font-medium transition-all shadow-float flex items-center gap-3 group">
+                    <a href="{{ route('patient.schedule.filter') }}" class="bg-ink hover:bg-ink-subtle text-white px-7 py-3 rounded-2xl text-sm font-medium transition-all shadow-float inline-flex items-center gap-3 group">
                         <span class="relative flex h-2.5 w-2.5">
                           <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary-400 opacity-75"></span>
                           <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-primary"></span>
                         </span>
                         جلسة فورية
-                    </button>
-                    <h1 class="text-5xl lg:text-[4.5rem] leading-[1.15] font-display font-bold text-ink mb-8 tracking-tight">
+                    </a>
+                    <h1 class="text-4xl sm:text-5xl lg:text-[4.5rem] leading-[1.15] font-display font-bold text-ink mb-6 sm:mb-8 tracking-tight">
                         صحتك النفسية،<br>تبدأ <span class="text-primary">بحديث.</span>
                     </h1>
                     
-                    <p class="text-lg text-ink-muted leading-relaxed mb-12 max-w-lg font-sans">
+                    <p class="text-base sm:text-lg text-ink-muted leading-relaxed mb-0 sm:mb-2 max-w-lg font-sans">
                         نحن لا نقدم مجرد استشارات، بل نوفر ملاذاً آمناً يجمعك بنخبة من المعالجين النفسيين المرخصين. بخصوصية تامة، وفي الوقت الذي تحتاجه.
                     </p>
-
-                    <div class="flex items-center gap-10 border-t border-slate-100 pt-10">
-                        <div>
-                            <p class="text-3xl font-display font-bold text-ink mb-1">4.9</p>
-                            <p class="text-sm text-ink-muted flex items-center gap-1.5"><i data-lucide="star" class="text-amber-400 w-4 h-4 fill-amber-400"></i> تقييم العملاء</p>
-                        </div>
-                        <div class="w-px h-12 bg-slate-100"></div>
-                        <div>
-                            <p class="text-3xl font-display font-bold text-ink mb-1">24/7</p>
-                            <p class="text-sm text-ink-muted flex items-center gap-1.5"><i data-lucide="clock" class="text-primary w-4 h-4"></i> دعم مستمر</p>
-                        </div>
-                    </div>
                 </div>
 
-                <!-- Right Content: The "Active Intake" Interactive Widget -->
-                <!-- Completely redesigned with Lucide icons and soft UI -->
-                <div class="lg:col-span-7 relative opacity-0 animate-fade-in-up" style="animation-delay: 0.2s;">
-                    <div class="bg-white/80 backdrop-blur-3xl border border-white/60 p-10 rounded-[2.5rem] shadow-premium relative z-10">
-                        
-                        <div class="mb-10">
-                            <h2 class="text-3xl font-display font-bold text-ink mb-3 tracking-tight">كيف يمكننا مساعدتك؟</h2>
-                            <p class="text-base text-ink-muted">اختر ما يعبر عنك لنرشدك للرعاية الأنسب فوراً.</p>
-                        </div>
+                <!-- Right: decorative visual (desktop only) -->
+                <div class="hidden lg:block lg:col-span-7 relative opacity-0 animate-fade-in-up" style="animation-delay: 0.15s;">
+                    <div class="relative aspect-[4/3] overflow-hidden rounded-[2.5rem] border border-white/70 bg-gradient-to-br from-primary-50/80 via-white to-surface-subtle p-10 shadow-premium">
+                        <div class="absolute -top-16 -right-16 size-56 rounded-full bg-primary-200/40 blur-3xl" aria-hidden="true"></div>
+                        <div class="absolute -bottom-20 -left-10 size-64 rounded-full bg-amber-100/50 blur-3xl" aria-hidden="true"></div>
 
-                        <!-- Emotion/Condition Grid -->
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-10">
-                            
-                            <!-- Card 1 -->
-                            <button class="emotion-card bg-surface-subtle/50 border border-slate-100 p-6 rounded-[1.5rem] flex items-start gap-5 text-right cursor-pointer group outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
-                                <div class="icon-box w-12 h-12 shrink-0 rounded-2xl bg-white shadow-sm border border-slate-100 flex items-center justify-center text-primary group-hover:scale-105 group-hover:bg-primary/5 transition-all duration-500">
-                                    <i data-lucide="brain" class="w-6 h-6"></i>
+                        <div class="relative flex h-full flex-col justify-between">
+                            <div class="flex items-start justify-between">
+                                <div class="rounded-2xl border border-white/80 bg-white/90 px-5 py-4 shadow-sm backdrop-blur-sm">
+                                    <p class="text-sm font-bold text-ink">مساحة آمنة</p>
+                                    <p class="mt-1 text-xs text-ink-muted">خصوصية تامة · مرخصون</p>
                                 </div>
-                                <div class="pt-0.5">
-                                    <h3 class="font-display font-bold text-ink mb-1.5 group-hover:text-primary transition-colors text-lg">قلق وتوتر</h3>
-                                    <p class="text-sm text-ink-muted leading-relaxed">تفكير مفرط، ضغط عمل، أو نوبات هلع.</p>
-                                </div>
-                            </button>
-
-                            <!-- Card 2 -->
-                            <button class="emotion-card bg-surface-subtle/50 border border-slate-100 p-6 rounded-[1.5rem] flex items-start gap-5 text-right cursor-pointer group outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
-                                <div class="icon-box w-12 h-12 shrink-0 rounded-2xl bg-white shadow-sm border border-slate-100 flex items-center justify-center text-primary group-hover:scale-105 group-hover:bg-primary/5 transition-all duration-500">
-                                    <i data-lucide="cloud-rain" class="w-6 h-6"></i>
-                                </div>
-                                <div class="pt-0.5">
-                                    <h3 class="font-display font-bold text-ink mb-1.5 group-hover:text-primary transition-colors text-lg">اكتئاب وحزن</h3>
-                                    <p class="text-sm text-ink-muted leading-relaxed">فقدان الشغف، طاقة منخفضة، وعزلة.</p>
-                                </div>
-                            </button>
-
-                            <!-- Card 3 -->
-                            <button class="emotion-card bg-surface-subtle/50 border border-slate-100 p-6 rounded-[1.5rem] flex items-start gap-5 text-right cursor-pointer group outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
-                                <div class="icon-box w-12 h-12 shrink-0 rounded-2xl bg-white shadow-sm border border-slate-100 flex items-center justify-center text-primary group-hover:scale-105 group-hover:bg-primary/5 transition-all duration-500">
-                                    <i data-lucide="users" class="w-6 h-6"></i>
-                                </div>
-                                <div class="pt-0.5">
-                                    <h3 class="font-display font-bold text-ink mb-1.5 group-hover:text-primary transition-colors text-lg">علاقات أسرية</h3>
-                                    <p class="text-sm text-ink-muted leading-relaxed">خلافات زوجية، تربية الأبناء، تواصل.</p>
-                                </div>
-                            </button>
-
-                            <!-- Card 4 -->
-                            <button class="emotion-card bg-surface-subtle/50 border border-slate-100 p-6 rounded-[1.5rem] flex items-start gap-5 text-right cursor-pointer group outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
-                                <div class="icon-box w-12 h-12 shrink-0 rounded-2xl bg-white shadow-sm border border-slate-100 flex items-center justify-center text-primary group-hover:scale-105 group-hover:bg-primary/5 transition-all duration-500">
-                                    <i data-lucide="compass" class="w-6 h-6"></i>
-                                </div>
-                                <div class="pt-0.5">
-                                    <h3 class="font-display font-bold text-ink mb-1.5 group-hover:text-primary transition-colors text-lg">تطوير الذات</h3>
-                                    <p class="text-sm text-ink-muted leading-relaxed">بناء العادات، الثقة بالنفس، والأهداف.</p>
-                                </div>
-                            </button>
-
-                        </div>
-
-                        <!-- Dynamic Action Area -->
-                        <div class="bg-primary-50/50 rounded-2xl p-6 flex flex-col sm:flex-row items-center justify-between gap-6 border border-primary-100/50">
-                            <div class="flex items-center gap-5">
-                                <div class="relative flex -space-x-3 rtl:space-x-reverse">
-                                    <img class="w-11 h-11 rounded-full border-2 border-white object-cover shadow-sm" src="https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=100&h=100&fit=crop" alt="Doctor">
-                                    <img class="w-11 h-11 rounded-full border-2 border-white object-cover shadow-sm" src="https://images.unsplash.com/photo-1594824436998-dd40e4f2081f?w=100&h=100&fit=crop" alt="Doctor">
-                                    <div class="w-11 h-11 rounded-full border-2 border-white bg-primary text-white flex items-center justify-center text-xs font-bold shadow-sm">+12</div>
-                                </div>
-                                <div>
-                                    <p class="text-sm font-bold text-ink mb-0.5">متاح 14 مختص الآن</p>
-                                    <p class="text-xs text-primary-700 font-medium">وقت الانتظار: أقل من دقيقة</p>
-                                </div>
+                                @if (($doctorStats['online'] ?? 0) > 0)
+                                    <div class="inline-flex items-center gap-2 rounded-full border border-primary/15 bg-white/90 px-4 py-2 text-xs font-bold text-primary shadow-sm">
+                                        <span class="relative flex size-2">
+                                            <span class="absolute inline-flex size-full animate-ping rounded-full bg-primary/40 opacity-75"></span>
+                                            <span class="relative inline-flex size-2 rounded-full bg-primary"></span>
+                                        </span>
+                                        {{ $doctorStats['online'] }} متصل الآن
+                                    </div>
+                                @endif
                             </div>
-                            <button class="w-full sm:w-auto bg-primary hover:bg-primary-600 text-white px-8 py-3.5 rounded-xl font-bold transition-all shadow-lg shadow-primary-500/20 hover:shadow-primary-500/40 hover:-translate-y-0.5">
-                                ابدأ الجلسة
-                            </button>
+
+                            <div class="mx-auto flex -space-x-4 rtl:space-x-reverse">
+                                @foreach (array_slice($featuredDoctors, 0, 4) as $previewDoctor)
+                                    @php
+                                        $previewPhoto = $previewDoctor['photo_url'] ?? null;
+                                        $previewAvatar = 'https://ui-avatars.com/api/?name='.urlencode((string) ($previewDoctor['name'] ?? 'Awaan')).'&background=10B981&color=fff&size=120';
+                                    @endphp
+                                    <img
+                                        class="size-16 rounded-2xl border-4 border-white object-cover shadow-lg ring-1 ring-slate-100"
+                                        src="{{ filled($previewPhoto) ? $previewPhoto : $previewAvatar }}"
+                                        alt="{{ $previewDoctor['name'] }}"
+                                        loading="lazy"
+                                    >
+                                @endforeach
+                            </div>
+
+                            <blockquote class="text-center">
+                                <p class="font-display text-2xl font-bold leading-snug text-ink">« ابدأ براحة، وتحدث بحرية »</p>
+                                <p class="mt-2 text-sm text-ink-muted">معالجون مرخصون · جلسات فيديو آمنة</p>
+                            </blockquote>
                         </div>
-                    </div>
-                    
-                    <!-- Decorative Soft Elements behind the widget -->
-                    <div class="absolute inset-0 overflow-hidden pointer-events-none z-0" aria-hidden="true">
-                        <div class="absolute -top-10 -right-10 w-32 h-32 bg-amber-100/60 rounded-full blur-3xl"></div>
-                        <div class="absolute -bottom-14 -left-10 w-48 h-48 bg-primary-200/50 rounded-full blur-3xl"></div>
                     </div>
                 </div>
 
             </div>
+
+            <!-- Appointments -->
+            <div class="mt-8 max-w-md mx-auto sm:max-w-none sm:mt-10 lg:mt-14 opacity-0 animate-fade-in-up" style="animation-delay: 0.18s;">
+                @include('partials.marketing-appointment-cards')
+            </div>
+
+            {{-- Rating stats (4.9 / 24/7) — hidden for now
+            <div class="mt-5 max-w-md mx-auto opacity-0 animate-fade-in-up flex justify-center sm:justify-start sm:max-w-none" style="animation-delay: 0.28s;">
+                @include('partials.marketing-hero-stats')
+            </div>
+            --}}
         </div>
     </main>
 
@@ -354,106 +371,39 @@
                     <h2 class="text-4xl lg:text-5xl font-display font-bold text-ink mb-6 tracking-tight">نخبة من المختصين<br>في متناول يدك.</h2>
                     <p class="text-ink-muted text-lg max-w-xl leading-relaxed">تم اختيار معالجينا بعناية فائقة. أطباء وأخصائيون مرخصون بخبرات تتجاوز 10 سنوات، مستعدون للاستماع إليك.</p>
                 </div>
-                <button class="inline-flex items-center gap-2 text-primary font-bold hover:text-primary-700 transition-colors bg-primary-50 px-7 py-3.5 rounded-full">
+                <a href="{{ route('patient.schedule.specialists') }}" class="inline-flex items-center gap-2 text-primary font-bold hover:text-primary-700 transition-colors bg-primary-50 px-7 py-3.5 rounded-full">
                     عرض جميع المختصين <i data-lucide="arrow-left" class="w-4 h-4"></i>
-                </button>
+                </a>
             </div>
 
-            <div class="flex gap-8 overflow-x-auto overflow-y-hidden pb-16 pt-4 no-scrollbar snap-x snap-mandatory">
-                
-                <!-- Specialist Card 1 -->
-                <div class="min-w-[340px] max-w-[340px] bg-surface rounded-[2rem] p-7 border border-slate-100 shadow-sm hover:shadow-card-hover hover:-translate-y-2 transition-all duration-500 snap-center relative group">
-                    <!-- Online Badge -->
-                    <div class="absolute top-7 left-7 flex items-center gap-2 bg-white/90 backdrop-blur-sm px-3.5 py-1.5 rounded-full shadow-sm border border-slate-50 z-10">
-                        <span class="w-2 h-2 bg-primary rounded-full animate-pulse-slow"></span>
-                        <span class="text-xs font-bold text-ink">متاح الآن</span>
-                    </div>
-
-                    <div class="relative mb-8 rounded-2xl overflow-hidden aspect-square bg-slate-50">
-                        <img src="https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=500&h=500&fit=crop" alt="Dr. Sarah" class="object-cover w-full h-full group-hover:scale-105 transition-transform duration-700 ease-out">
-                    </div>
-                    
-                    <div class="mb-5">
-                        <div class="flex justify-between items-start mb-3">
-                            <h3 class="font-display font-bold text-xl text-ink">د. سارة الأحمد</h3>
-                            <div class="flex items-center gap-1.5 text-sm font-bold text-ink bg-surface-subtle px-2.5 py-1 rounded-lg">
-                                <i data-lucide="star" class="w-3.5 h-3.5 text-amber-400 fill-amber-400"></i> 4.9
+            @if (count($featuredDoctors) >= 2)
+                <div class="doctors-marquee pb-16 pt-4" dir="ltr" data-home-doctors-marquee>
+                    <div class="doctors-marquee-track">
+                        @foreach ($featuredDoctors as $doctor)
+                            @include('partials.marketing-doctor-card', ['doctor' => $doctor])
+                        @endforeach
+                        @foreach ($featuredDoctors as $doctor)
+                            <div aria-hidden="true">
+                                @include('partials.marketing-doctor-card', ['doctor' => $doctor])
                             </div>
-                        </div>
-                        <p class="text-sm text-primary font-semibold mb-2">استشاري طب نفسي</p>
-                        <p class="text-sm text-ink-muted line-clamp-2 leading-relaxed">متخصصة في علاج الاكتئاب، اضطرابات القلق، والصدمات النفسية المعقدة.</p>
-                    </div>
-
-                    <div class="flex gap-2 mb-8">
-                        <span class="text-xs bg-surface-subtle text-ink-subtle px-3.5 py-1.5 rounded-lg font-medium">علاج سلوكي</span>
-                        <span class="text-xs bg-surface-subtle text-ink-subtle px-3.5 py-1.5 rounded-lg font-medium">نوبات هلع</span>
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-3">
-                        <button class="bg-surface-subtle hover:bg-slate-100 text-ink py-3.5 rounded-xl text-sm font-bold transition-colors">محادثة</button>
-                        <button class="bg-primary hover:bg-primary-600 text-white py-3.5 rounded-xl text-sm font-bold transition-colors">مكالمة فيديو</button>
+                        @endforeach
                     </div>
                 </div>
-
-                <!-- Specialist Card 2 -->
-                <div class="min-w-[340px] max-w-[340px] bg-surface rounded-[2rem] p-7 border border-slate-100 shadow-sm hover:shadow-card-hover hover:-translate-y-2 transition-all duration-500 snap-center relative group">
-                    <div class="relative mb-8 rounded-2xl overflow-hidden aspect-square bg-slate-50">
-                        <img src="https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=500&h=500&fit=crop" alt="Dr. Fahad" class="object-cover w-full h-full group-hover:scale-105 transition-transform duration-700 ease-out">
-                        <div class="absolute bottom-5 right-5 bg-white/90 backdrop-blur-sm px-4 py-2 rounded-full text-xs font-bold text-ink shadow-sm">أقرب موعد: غداً</div>
-                    </div>
-                    
-                    <div class="mb-5">
-                        <div class="flex justify-between items-start mb-3">
-                            <h3 class="font-display font-bold text-xl text-ink">أ. فهد العتيبي</h3>
-                            <div class="flex items-center gap-1.5 text-sm font-bold text-ink bg-surface-subtle px-2.5 py-1 rounded-lg">
-                                <i data-lucide="star" class="w-3.5 h-3.5 text-amber-400 fill-amber-400"></i> 4.8
-                            </div>
+            @else
+                <div class="flex gap-8 overflow-x-auto overflow-y-hidden pb-16 pt-4 no-scrollbar">
+                    @forelse ($featuredDoctors as $doctor)
+                        @include('partials.marketing-doctor-card', ['doctor' => $doctor])
+                    @empty
+                        <div class="min-w-full rounded-[2rem] border border-dashed border-slate-200 bg-surface-subtle px-8 py-16 text-center">
+                            <p class="text-lg font-bold text-ink mb-2">المختصون قريباً</p>
+                            <p class="text-sm text-ink-muted mb-6">نعمل على إضافة نخبة من المعالجين المرخصين إلى المنصة.</p>
+                            <a href="{{ route('patient.phone') }}" class="inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-bold text-white transition hover:bg-primary-600">
+                                انضم كمريض
+                            </a>
                         </div>
-                        <p class="text-sm text-primary font-semibold mb-2">أخصائي نفسي إكلينيكي</p>
-                        <p class="text-sm text-ink-muted line-clamp-2 leading-relaxed">خبير في العلاج الزوجي، الإرشاد الأسري، والتعامل مع ضغوط بيئة العمل.</p>
-                    </div>
-
-                    <div class="flex gap-2 mb-8">
-                        <span class="text-xs bg-surface-subtle text-ink-subtle px-3.5 py-1.5 rounded-lg font-medium">إرشاد أسري</span>
-                        <span class="text-xs bg-surface-subtle text-ink-subtle px-3.5 py-1.5 rounded-lg font-medium">ضغوط العمل</span>
-                    </div>
-
-                    <button class="w-full bg-ink hover:bg-ink-subtle text-white py-3.5 rounded-xl text-sm font-bold transition-colors">جدولة موعد</button>
+                    @endforelse
                 </div>
-
-                <!-- Specialist Card 3 -->
-                <div class="min-w-[340px] max-w-[340px] bg-surface rounded-[2rem] p-7 border border-slate-100 shadow-sm hover:shadow-card-hover hover:-translate-y-2 transition-all duration-500 snap-center relative group">
-                    <div class="absolute top-7 left-7 flex items-center gap-2 bg-white/90 backdrop-blur-sm px-3.5 py-1.5 rounded-full shadow-sm border border-slate-50 z-10">
-                        <span class="w-2 h-2 bg-primary rounded-full animate-pulse-slow"></span>
-                        <span class="text-xs font-bold text-ink">متاح الآن</span>
-                    </div>
-                    <div class="relative mb-8 rounded-2xl overflow-hidden aspect-square bg-slate-50">
-                        <img src="https://images.unsplash.com/photo-1594824436998-dd40e4f2081f?w=500&h=500&fit=crop" alt="Dr. Reem" class="object-cover w-full h-full group-hover:scale-105 transition-transform duration-700 ease-out">
-                    </div>
-                    
-                    <div class="mb-5">
-                        <div class="flex justify-between items-start mb-3">
-                            <h3 class="font-display font-bold text-xl text-ink">أ. ريم الدوسري</h3>
-                            <div class="flex items-center gap-1.5 text-sm font-bold text-ink bg-surface-subtle px-2.5 py-1 rounded-lg">
-                                <i data-lucide="star" class="w-3.5 h-3.5 text-amber-400 fill-amber-400"></i> 5.0
-                            </div>
-                        </div>
-                        <p class="text-sm text-primary font-semibold mb-2">أخصائية نفسية أطفال</p>
-                        <p class="text-sm text-ink-muted line-clamp-2 leading-relaxed">متخصصة في تعديل السلوك، فرط الحركة، وتنمية مهارات الأطفال والمراهقين.</p>
-                    </div>
-
-                    <div class="flex gap-2 mb-8">
-                        <span class="text-xs bg-surface-subtle text-ink-subtle px-3.5 py-1.5 rounded-lg font-medium">تعديل سلوك</span>
-                        <span class="text-xs bg-surface-subtle text-ink-subtle px-3.5 py-1.5 rounded-lg font-medium">مراهقين</span>
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-3">
-                        <button class="bg-surface-subtle hover:bg-slate-100 text-ink py-3.5 rounded-xl text-sm font-bold transition-colors">محادثة</button>
-                        <button class="bg-primary hover:bg-primary-600 text-white py-3.5 rounded-xl text-sm font-bold transition-colors">مكالمة فيديو</button>
-                    </div>
-                </div>
-
-            </div>
+            @endif
         </div>
     </section>
 
@@ -618,17 +568,7 @@
     <!-- Interactive Logic -->
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // Initialize Lucide Icons
             lucide.createIcons();
-
-            // Emotion Cards Interaction
-            const cards = document.querySelectorAll('.emotion-card');
-            cards.forEach(card => {
-                card.addEventListener('click', () => {
-                    cards.forEach(c => c.classList.remove('active'));
-                    card.classList.add('active');
-                });
-            });
         });
     </script>
 </body>

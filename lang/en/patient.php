@@ -232,6 +232,8 @@ return [
     'instant_note' => 'Instant sessions within 60 minutes.',
     'ongoing_title' => 'In progress',
     'ongoing_note' => 'Tap to view your appointment details.',
+    'home_rating_label' => 'Customer rating',
+    'home_support_label' => 'Continuous support',
 
     'numbers_intro' => 'Crisis and support hotlines and regional protection committees.',
     'numbers_board_alt' => 'Important helplines and protection committee phone numbers',
