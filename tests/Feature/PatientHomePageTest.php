@@ -12,10 +12,13 @@ uses(RefreshDatabase::class);
 test('guest can view patient home', function () {
     $this->get(route('patient.home'))
         ->assertSuccessful()
-        ->assertSee(__('patient.mood_section'), false);
+        ->assertSee(__('patient.mood_section'), false)
+        ->assertSee('data-test="patient-navbar-language-switch"', false)
+        ->assertSee(route('patient.locale', ['locale' => 'ar']), false)
+        ->assertSee(__('patient.menu.locale_ar_short'), false);
 });
 
-test('authenticated patient home shows mood strip above spotlight cards', function () {
+test('authenticated patient home shows mood strip above appointment actions', function () {
     $user = User::factory()->create(['profile_completed' => true]);
 
     $content = $this->actingAs($user)
@@ -24,12 +27,12 @@ test('authenticated patient home shows mood strip above spotlight cards', functi
         ->getContent();
 
     expect(strpos($content, __('patient.mood_section')))
-        ->toBeLessThan(strpos($content, __('patient.daily_balance')));
+        ->toBeLessThan(strpos($content, __('patient.book_title')));
 });
 
 test('guest mood day click redirects to patient phone entry', function () {
     Livewire::test('pages::patient.home')
-        ->call('selectMoodDay')
+        ->call('selectMoodDay', now()->toDateString())
         ->assertRedirect(route('patient.phone'));
 });
 
@@ -49,13 +52,12 @@ test('authenticated patient navbar shows language switch', function () {
     $this->actingAs($user)->get(route('patient.home'))
         ->assertSuccessful()
         ->assertSee('data-test="patient-navbar-language-switch"', false)
-        ->assertSee(route('patient.locale', ['locale' => 'en']), false)
         ->assertSee(route('patient.locale', ['locale' => 'ar']), false)
-        ->assertSee(__('patient.menu.locale_en'), false)
-        ->assertSee(__('patient.menu.locale_ar_short'), false);
+        ->assertSee(__('patient.menu.locale_ar_short'), false)
+        ->assertDontSee(route('patient.locale', ['locale' => 'en']), false);
 });
 
-test('authenticated patient sidebar shows dock navigation links', function () {
+test('authenticated patient sidebar shows grouped navigation links', function () {
     $user = User::factory()->create(['profile_completed' => true]);
 
     $response = $this->actingAs($user)->get(route('patient.home'));
@@ -63,7 +65,8 @@ test('authenticated patient sidebar shows dock navigation links', function () {
     $response->assertSuccessful()
         ->assertSee(__('patient.nav.home'), false)
         ->assertSee(__('patient.nav.appointments'), false)
-        ->assertSee(route('patient.menu'), false);
+        ->assertSee(__('patient.sidebar.group_account'), false)
+        ->assertSee(route('patient.wallet'), false);
 });
 
 test('authenticated patient home renders arabic strings when locale is ar', function () {
@@ -85,7 +88,7 @@ test('mood week strip opens mood picker for authenticated patients', function ()
     $this->actingAs($user)
         ->get(route('patient.home'))
         ->assertSuccessful()
-        ->assertSee('wire:click="selectMoodDay"', false);
+        ->assertSee('wire:click="selectMoodDay', false);
 });
 
 test('clicking mood day on home dispatches open patient mood picker event for authenticated patients', function () {
@@ -93,7 +96,7 @@ test('clicking mood day on home dispatches open patient mood picker event for au
 
     Livewire::actingAs($user)
         ->test('pages::patient.home')
-        ->call('selectMoodDay')
+        ->call('selectMoodDay', now()->toDateString())
         ->assertDispatched('open-patient-mood-picker');
 });
 
@@ -127,7 +130,7 @@ test('signed-in patient navbar exposes account menu with logout', function () {
         ->assertSee('data-test="patient-account-menu-button"', false)
         ->assertSee('data-test="patient-logout-button"', false)
         ->assertSee(route('logout'), false)
-        ->assertSee(route('profile.edit'), false);
+        ->assertDontSee('data-test="patient-account-menu-language-switch"', false);
 });
 
 test('patient ongoing appointment shows countdown timer next to waiting status', function () {
@@ -192,6 +195,46 @@ test('patient appointments ongoing tab shows only new and in process for authent
         ->assertSee('Patient Ongoing In Process', false)
         ->assertDontSee('Patient Completed Hidden', false)
         ->assertDontSee('Other User Ongoing Hidden', false);
+});
+
+test('patient ongoing appointments are ordered by earliest session date first', function () {
+    $user = User::factory()->create(['profile_completed' => true]);
+    $doctor = Doctor::factory()->create();
+
+    Appointment::factory()->create([
+        'user_id' => $user->id,
+        'doctor_id' => $doctor->id,
+        'appointment_date' => '2026-07-11',
+        'start_time' => '09:00:00',
+        'status' => 'new',
+    ]);
+
+    Appointment::factory()->create([
+        'user_id' => $user->id,
+        'doctor_id' => $doctor->id,
+        'appointment_date' => '2026-06-28',
+        'start_time' => '14:00:00',
+        'status' => 'pending_follow_up',
+        'is_follow_up' => true,
+    ]);
+
+    Appointment::factory()->create([
+        'user_id' => $user->id,
+        'doctor_id' => $doctor->id,
+        'appointment_date' => '2026-07-04',
+        'start_time' => '09:00:00',
+        'status' => 'new',
+    ]);
+
+    $dates = Livewire::actingAs($user)
+        ->test('pages::patient.appointments', ['tab' => 'ongoing'])
+        ->instance()
+        ->appointments
+        ->pluck('appointment_date')
+        ->map(fn ($date) => $date?->toDateString())
+        ->all();
+
+    expect($dates)->toBe(['2026-06-28', '2026-07-04', '2026-07-11']);
 });
 
 test('patient appointments rescheduled tab shows only rescheduled for authenticated user', function () {

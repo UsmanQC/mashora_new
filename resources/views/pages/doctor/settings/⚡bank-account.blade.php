@@ -56,7 +56,7 @@ new #[Layout('layouts::doctor')] #[Title('Bank account')] class extends Componen
 <div class="space-y-6">
     <div class="flex items-center justify-between gap-3">
         <flux:heading size="xl" class="font-semibold text-zinc-900">{{ __('Bank account') }}</flux:heading>
-        <flux:button :href="route('doctor.settings')" wire:navigate variant="ghost" size="sm" icon="arrow-left">{{ __('Back') }}</flux:button>
+        <flux:button :href="route('doctor.dashboard')" wire:navigate variant="ghost" size="sm" icon="arrow-left">{{ __('Back') }}</flux:button>
     </div>
 
     <div class="rounded-2xl border border-zinc-200/90 bg-white p-5 shadow-sm">
@@ -82,7 +82,7 @@ new #[Layout('layouts::doctor')] #[Title('Bank account')] class extends Componen
                 <flux:button type="submit" variant="primary" class="!bg-[#047857] !text-white hover:!brightness-95">
                     {{ __('Save') }}
                 </flux:button>
-                <flux:button :href="route('doctor.settings')" wire:navigate variant="ghost">
+                <flux:button :href="route('doctor.dashboard')" wire:navigate variant="ghost">
                     {{ __('Cancel') }}
                 </flux:button>
             </div>

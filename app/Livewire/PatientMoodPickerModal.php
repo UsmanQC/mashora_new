@@ -3,9 +3,11 @@
 namespace App\Livewire;
 
 use App\Models\PatientMood;
+use App\Services\PatientMoodLogService;
 use App\Support\PatientMoodImage;
 use Flux\Flux;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\On;
@@ -15,6 +17,12 @@ class PatientMoodPickerModal extends Component
 {
     public bool $showMoodModal = false;
 
+    public bool $showFutureMoodDialog = false;
+
+    public bool $showAlreadyLoggedMoodDialog = false;
+
+    public bool $showOnlyTodayMoodDialog = false;
+
     public ?string $selectedMoodKey = null;
 
     public string $moodNote = '';
@@ -22,8 +30,40 @@ class PatientMoodPickerModal extends Component
     public bool $shareWithTherapist = false;
 
     #[On('open-patient-mood-picker')]
-    public function listenOpenMoodPicker(): void
+    public function listenOpenMoodPicker(?string $dateIso = null): void
     {
+        $user = Auth::user();
+
+        if ($user === null) {
+            return;
+        }
+
+        /** @var PatientMoodLogService $moodLog */
+        $moodLog = app(PatientMoodLogService::class);
+        $today = $moodLog->todayDate();
+
+        $selected = filled($dateIso)
+            ? Carbon::parse($dateIso)->timezone(config('app.timezone'))->startOfDay()
+            : $today;
+
+        if ($selected->isAfter($today)) {
+            $this->showFutureMoodDialog = true;
+
+            return;
+        }
+
+        if ($selected->isBefore($today)) {
+            $this->showOnlyTodayMoodDialog = true;
+
+            return;
+        }
+
+        if ($moodLog->hasMoodForToday($user)) {
+            $this->showAlreadyLoggedMoodDialog = true;
+
+            return;
+        }
+
         $this->resetMoodForm();
         $this->showMoodModal = true;
     }
@@ -53,6 +93,17 @@ class PatientMoodPickerModal extends Component
             return;
         }
 
+        /** @var PatientMoodLogService $moodLog */
+        $moodLog = app(PatientMoodLogService::class);
+        $loggedOn = $moodLog->todayDate();
+
+        if ($moodLog->hasMoodForToday($user)) {
+            $this->showMoodModal = false;
+            $this->showAlreadyLoggedMoodDialog = true;
+
+            return;
+        }
+
         $validated = $this->validate([
             'selectedMoodKey' => ['required', Rule::in(PatientMoodImage::MOOD_KEYS)],
             'moodNote' => ['nullable', 'string', 'max:5000'],
@@ -61,8 +112,6 @@ class PatientMoodPickerModal extends Component
             'selectedMoodKey.required' => __('patient.mood_tracker_select_mood'),
             'selectedMoodKey.in' => __('patient.mood_tracker_select_mood'),
         ]);
-
-        $loggedOn = now()->timezone(config('app.timezone'))->startOfDay();
 
         $comments = (($validated['moodNote'] ?? '') !== '')
             ? trim((string) $validated['moodNote'])

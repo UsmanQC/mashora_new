@@ -6,19 +6,22 @@
 >
     <head>
         <meta name="application-name" content="{{ config('app.name') }} — {{ __('doctor.portal_name') }}" />
-        <meta name="theme-color" content="#F3F5F9" />
+        @include('partials.pwa', ['themeColor' => '#F3F5F9', 'pwaApp' => 'doctor'])
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         @include('partials.head')
     </head>
     <body class="min-h-svh antialiased">
         <aside
-            class="fixed inset-y-0 start-0 z-50 hidden w-64 flex-col bg-[#10B981] text-white shadow-lg lg:flex"
+            class="portal-chrome-sidebar fixed inset-y-0 start-0 z-50 hidden w-64 min-h-0 flex-col overflow-hidden bg-[#10B981] text-white shadow-lg lg:flex"
             aria-label="{{ __('doctor.sidebar_label') }}"
         >
-            <div class="border-b border-white/10 px-4 pb-5 pt-5">
+            <div class="shrink-0 border-b border-white/10 px-4 pb-5 pt-5">
                 @include('partials.doctor-brand-strip', ['density' => 'sidebar'])
             </div>
-            <nav class="flex flex-1 flex-col gap-1 px-2 py-4">
+            <nav
+                class="portal-sidebar-scroll min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain px-2 py-4"
+                aria-label="{{ __('doctor.sidebar_label') }}"
+            >
                 @include('partials.doctor-sidebar-nav')
             </nav>
         </aside>
@@ -39,8 +42,12 @@
                         ])
                     </a>
                 </div>
-                @include('partials.doctor-language-switch', ['variant' => 'chrome'])
-                @include('partials.doctor-user-account-menu', ['density' => 'chrome'])
+                <div class="flex shrink-0 items-center gap-2">
+                    <div class="hidden sm:block">
+                        @include('partials.doctor-language-switch', ['variant' => 'chrome'])
+                    </div>
+                    @include('partials.doctor-user-account-menu', ['density' => 'chrome'])
+                </div>
             </header>
 
             <header
@@ -71,7 +78,7 @@
                 class="fixed inset-x-0 bottom-0 z-40 flex border-t border-zinc-200 bg-white px-1 py-1.5 pb-[max(0.5rem,env(safe-area-inset-bottom))] lg:hidden"
                 aria-label="{{ __('doctor.mobile_nav_label') }}"
             >
-                <div class="grid w-full grid-cols-4 gap-0.5">
+                <div class="grid w-full grid-cols-3 gap-0.5">
                     <flux:button
                         :href="route('doctor.dashboard')"
                         wire:navigate
@@ -87,7 +94,7 @@
                         wire:navigate
                         variant="ghost"
                         size="sm"
-                        class="min-h-11 px-1 py-1.5 text-[0.65rem] leading-tight sm:text-xs {{ request()->routeIs('doctor.appointments') ? '!bg-[#047857] !text-white' : 'text-zinc-600' }}"
+                        class="min-h-11 px-1 py-1.5 text-[0.65rem] leading-tight sm:text-xs {{ request()->routeIs('doctor.appointments', 'doctor.appointments.*') ? '!bg-[#047857] !text-white' : 'text-zinc-600' }}"
                         icon="calendar-days"
                     >
                         {{ __('doctor.nav.appointments') }}
@@ -102,16 +109,6 @@
                     >
                         {{ __('doctor.nav.ratings') }}
                     </flux:button>
-                    <flux:button
-                        :href="route('doctor.settings')"
-                        wire:navigate
-                        variant="ghost"
-                        size="sm"
-                        class="min-h-11 px-1 py-1.5 text-[0.65rem] leading-tight sm:text-xs {{ request()->routeIs('doctor.settings') ? '!bg-[#047857] !text-white' : 'text-zinc-600' }}"
-                        icon="cog-6-tooth"
-                    >
-                        {{ __('doctor.nav.menu') }}
-                    </flux:button>
                 </div>
             </nav>
         </div>
@@ -122,6 +119,7 @@
             </flux:toast.group>
         @endpersist
         @stack('scripts')
+        @include('partials.pwa-install-prompt', ['pwaApp' => 'doctor'])
         @fluxScripts
     </body>
 </html>

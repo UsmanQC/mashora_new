@@ -2,18 +2,22 @@
 
 namespace App\Support;
 
+use App\Services\HyperpayCheckoutService;
+
 final class PaymentGateway
 {
     public const DRIVER_STRIPE = 'stripe';
 
     public const DRIVER_MYFATOORAH = 'myfatoorah';
 
+    public const DRIVER_HYPERPAY = 'hyperpay';
+
     public static function driver(): string
     {
-        $driver = (string) config('payment.driver', self::DRIVER_MYFATOORAH);
+        $driver = (string) config('payment.driver', self::DRIVER_HYPERPAY);
 
-        if (! in_array($driver, [self::DRIVER_STRIPE, self::DRIVER_MYFATOORAH], true)) {
-            return self::DRIVER_MYFATOORAH;
+        if (! in_array($driver, [self::DRIVER_STRIPE, self::DRIVER_MYFATOORAH, self::DRIVER_HYPERPAY], true)) {
+            return self::DRIVER_HYPERPAY;
         }
 
         return $driver;
@@ -29,10 +33,19 @@ final class PaymentGateway
         return self::driver() === self::DRIVER_MYFATOORAH;
     }
 
+    public static function isHyperPay(): bool
+    {
+        return self::driver() === self::DRIVER_HYPERPAY;
+    }
+
     public static function isConfigured(): bool
     {
         if (self::isStripe()) {
             return filled(config('stripe.secret')) && filled(config('stripe.key'));
+        }
+
+        if (self::isHyperPay()) {
+            return filled(config('hyperpay.token')) && filled(HyperpayCheckoutService::configuredEntityId());
         }
 
         return filled(config('myfatoorah.api_key'));

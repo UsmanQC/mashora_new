@@ -3,12 +3,14 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Support\PatientPhone;
 use Bavix\Wallet\Interfaces\Wallet;
 use Bavix\Wallet\Interfaces\WalletFloat;
 use Bavix\Wallet\Traits\HasWalletFloat;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
@@ -76,6 +78,22 @@ class User extends Authenticatable implements Wallet, WalletFloat
             ->take(2)
             ->map(fn ($word) => Str::substr($word, 0, 1))
             ->implode('');
+    }
+
+    /**
+     * Match stored phone digits against login input (raw or normalized).
+     *
+     * @param  Builder<User>  $query
+     */
+    public function scopeWherePhoneLogin(Builder $query, string $input): void
+    {
+        $login = trim($input);
+        $normalized = PatientPhone::normalize($login);
+
+        $query->where(function (Builder $query) use ($login, $normalized): void {
+            $query->where('phone', $login)
+                ->orWhere('phone', $normalized);
+        });
     }
 
     /**

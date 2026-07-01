@@ -3,6 +3,7 @@
 use App\Livewire\Concerns\InteractsWithPatientWalletPayment;
 use App\Models\Doctor;
 use App\Models\TemporaryAppointment;
+use App\Services\HyperpayCheckoutService;
 use App\Services\PatientPaymentCompletionService;
 use App\Services\StripeCheckoutService;
 use App\Support\PaymentGateway;
@@ -21,6 +22,11 @@ new #[Layout('layouts::patient')] #[Title('Payment')] class extends Component
 
     public string $paymentError = '';
     public bool $embeddedReady = false;
+    public string $hyperpayCheckoutId = '';
+    public string $hyperpayIntegrity = '';
+    public string $hyperpayEntityId = '';
+    public string $hyperpayEnv = '';
+    public string $hyperpayCallbackUrl = '';
     public string $mfSessionId = '';
     public string $mfCountryCode = '';
     public string $mfJsDomain = '';
@@ -35,7 +41,9 @@ new #[Layout('layouts::patient')] #[Title('Payment')] class extends Component
         $this->bootPatientWalletPayment((float) $this->temporaryAppointment->wallet_amount);
         $this->persistWalletAmountOnBooking();
 
-        if ($this->usesMyFatoorah()) {
+        if ($this->usesHyperPay()) {
+            $this->initHyperpayCheckout();
+        } elseif ($this->usesMyFatoorah()) {
             $this->initEmbeddedPaymentSession();
         }
     }
@@ -43,6 +51,11 @@ new #[Layout('layouts::patient')] #[Title('Payment')] class extends Component
     public function usesStripe(): bool
     {
         return PaymentGateway::isStripe();
+    }
+
+    public function usesHyperPay(): bool
+    {
+        return PaymentGateway::isHyperPay();
     }
 
     public function usesMyFatoorah(): bool
@@ -73,6 +86,52 @@ new #[Layout('layouts::patient')] #[Title('Payment')] class extends Component
     public function updatedUseWallet(): void
     {
         $this->persistWalletAmountOnBooking();
+
+        if ($this->usesHyperPay() && $this->amountDue() > 0) {
+            $this->initHyperpayCheckout();
+        }
+    }
+
+    public function initHyperpayCheckout(): void
+    {
+        if (! $this->usesHyperPay() || $this->amountDue() <= 0) {
+            $this->embeddedReady = false;
+
+            return;
+        }
+
+        if (! PaymentGateway::isConfigured()) {
+            $this->paymentError = __('patient_booking.payment_hyperpay_missing');
+            $this->embeddedReady = false;
+
+            return;
+        }
+
+        try {
+            /** @var HyperpayCheckoutService $hyperpay */
+            $hyperpay = app(HyperpayCheckoutService::class);
+            $temp = $this->temporaryAppointment->fresh();
+
+            if ($temp === null) {
+                return;
+            }
+
+            $result = $hyperpay->initBookingCheckout($temp, PatientPaymentCompletionService::amountDue($temp));
+
+            $this->hyperpayCheckoutId = (string) ($result['checkout_id'] ?? '');
+            $this->hyperpayIntegrity = (string) ($result['integrity'] ?? '');
+            $this->hyperpayEntityId = (string) ($result['entity_id'] ?? '');
+            $this->hyperpayEnv = (string) ($result['env'] ?? '');
+            $this->hyperpayCallbackUrl = (string) ($result['callback_url'] ?? '');
+            $this->embeddedReady = $this->hyperpayCheckoutId !== '';
+            $this->paymentError = '';
+        } catch (\Throwable $e) {
+            report($e);
+            $this->embeddedReady = false;
+            $this->paymentError = app()->isLocal()
+                ? __('patient_booking.payment_start_failed')." ({$e->getMessage()})"
+                : __('patient_booking.payment_start_failed');
+        }
     }
 
     private function persistWalletAmountOnBooking(): void
@@ -229,6 +288,12 @@ new #[Layout('layouts::patient')] #[Title('Payment')] class extends Component
     {
         if ($this->usesStripe()) {
             $this->startStripePayment();
+
+            return;
+        }
+
+        if ($this->usesHyperPay()) {
+            $this->initHyperpayCheckout();
 
             return;
         }
@@ -531,8 +596,8 @@ new #[Layout('layouts::patient')] #[Title('Payment')] class extends Component
             </div>
 
             {{-- Payment --}}
-            <div class="flex h-full flex-col lg:col-span-2">
-                <div class="flex h-full flex-col rounded-2xl border border-zinc-200/90 bg-white p-5 shadow-sm">
+            <div class="flex h-full flex-col overflow-visible lg:col-span-2">
+                <div class="flex h-full flex-col overflow-visible rounded-2xl border border-zinc-200/90 bg-white p-5 shadow-sm">
                 <div class="flex items-center gap-2 border-b border-zinc-100 pb-4">
                     <span class="flex size-9 items-center justify-center rounded-lg bg-[#10B981]/10 text-[#10B981]">
                         <flux:icon name="lock-closed" variant="mini" class="size-4" />
@@ -582,8 +647,28 @@ new #[Layout('layouts::patient')] #[Title('Payment')] class extends Component
                             </flux:button>
 
                             <flux:text class="text-center text-xs text-zinc-500">{{ __('patient_booking.payment_stripe_note') }}</flux:text>
-                        @elseif ($embeddedReady)
-                            <div id="mf-form-element" class="min-h-[155px] w-full rounded-xl border border-zinc-200 bg-white p-2"></div>
+                        @elseif ($this->usesHyperPay() && $embeddedReady)
+                            @include('partials.hyperpay-widget', [
+                                'callbackUrl' => $hyperpayCallbackUrl,
+                                'checkoutId' => $hyperpayCheckoutId,
+                                'integrity' => $hyperpayIntegrity,
+                                'env' => $hyperpayEnv,
+                            ])
+
+                            <flux:button
+                                type="button"
+                                variant="ghost"
+                                class="w-full"
+                                wire:click="initHyperpayCheckout"
+                                wire:loading.attr="disabled"
+                            >
+                                <span wire:loading.remove wire:target="initHyperpayCheckout">{{ __('patient_booking.payment_retry') }}</span>
+                                <span wire:loading wire:target="initHyperpayCheckout">{{ __('patient_booking.payment_processing') }}</span>
+                            </flux:button>
+                        @elseif ($this->usesMyFatoorah() && $embeddedReady)
+                            @include('partials.payment-card-field-guide')
+
+                            <div id="mf-form-element" class="min-h-[11rem] w-full overflow-visible rounded-xl border border-zinc-200 bg-white p-3 sm:min-h-[13rem]"></div>
                             <p id="mf-card-error" class="hidden rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
                                 {{ __('patient_booking.payment_embedded_unavailable') }}
                             </p>
@@ -621,10 +706,18 @@ new #[Layout('layouts::patient')] #[Title('Payment')] class extends Component
 
                         @if ($this->usesMyFatoorah())
                             <flux:text class="text-center text-xs text-zinc-500">{{ __('patient_booking.payment_secure_note') }}</flux:text>
+                        @elseif ($this->usesHyperPay())
+                            <flux:text class="text-center text-xs text-zinc-500">{{ __('patient_booking.payment_hyperpay_note') }}</flux:text>
                         @endif
                     @else
                         <p class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-                            {{ $this->usesStripe() ? __('patient_booking.payment_stripe_missing') : __('patient_booking.payment_api_missing') }}
+                            @if ($this->usesStripe())
+                                {{ __('patient_booking.payment_stripe_missing') }}
+                            @elseif ($this->usesHyperPay())
+                                {{ __('patient_booking.payment_hyperpay_missing') }}
+                            @else
+                                {{ __('patient_booking.payment_api_missing') }}
+                            @endif
                         </p>
                     @endif
                     </div>
@@ -665,7 +758,7 @@ new #[Layout('layouts::patient')] #[Title('Payment')] class extends Component
                         cardViewId: "mf-form-element",
                         style: {
                             direction: @js(App::isLocale('ar') ? 'rtl' : 'ltr'),
-                            cardHeight: 130,
+                            cardHeight: 160,
                             input: {
                                 color: "#111827",
                                 fontSize: "14px",
@@ -674,14 +767,18 @@ new #[Layout('layouts::patient')] #[Title('Payment')] class extends Component
                                 borderWidth: "1px",
                                 borderRadius: "8px",
                                 placeHolder: {
-                                    holderName: "Name On Card",
-                                    cardNumber: "Card Number",
-                                    expiryDate: "MM / YY",
-                                    securityCode: "CVV"
-                                }
+                                    holderName: @js(__('patient_booking.payment_placeholder_card_holder')),
+                                    cardNumber: @js(__('patient_booking.payment_placeholder_card_number')),
+                                    expiryDate: @js(__('patient_booking.payment_placeholder_expiry')),
+                                    securityCode: @js(__('patient_booking.payment_placeholder_cvv')),
+                                },
                             },
-                            label: { display: false }
-                        }
+                            label: {
+                                display: true,
+                                color: "#525252",
+                                fontSize: "12px",
+                            },
+                        },
                     };
 
                     window.myFatoorah.init(mfConfig);

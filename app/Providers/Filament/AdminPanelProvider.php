@@ -39,6 +39,7 @@ class AdminPanelProvider extends PanelProvider
             ->sidebarFullyCollapsibleOnDesktop()
             ->navigationGroups([
                 NavigationGroup::make('Clinical & billing'),
+                NavigationGroup::make('AI Manager'),
                 NavigationGroup::make('Catalog & content'),
                 NavigationGroup::make('Privacy'),
                 NavigationGroup::make('Terms'),

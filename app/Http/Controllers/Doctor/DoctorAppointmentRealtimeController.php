@@ -2,11 +2,14 @@
 
 namespace App\Http\Controllers\Doctor;
 
+use App\Events\AppointmentCallEnded;
 use App\Events\AppointmentIncomingCallAnnounced;
 use App\Events\PatientSessionJoinRequested;
+use App\Http\Controllers\Patient\PatientAppointmentRealtimeController;
 use App\Models\Appointment;
 use App\Models\Doctor;
 use App\Services\AppointmentSessionService;
+use App\Services\PatientAppointmentNotifier;
 use App\Support\DoctorAgoraChannel;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -14,7 +17,7 @@ use Illuminate\Support\Facades\Auth;
 
 class DoctorAppointmentRealtimeController
 {
-    public function notifyCall(Request $request, Appointment $appointment, AppointmentSessionService $sessions): JsonResponse
+    public function notifyCall(Request $request, Appointment $appointment, AppointmentSessionService $sessions, PatientAppointmentNotifier $patientNotifier): JsonResponse
     {
         $doctor = Auth::guard('doctor')->user();
         if (! $doctor instanceof Doctor) {
@@ -46,7 +49,23 @@ class DoctorAppointmentRealtimeController
             (int) $appointment->user_id,
             (int) $appointment->id,
             (string) $validated['call_type'],
+            (string) $validated['agora_app_id'],
+            (string) $validated['agora_token'],
+            (string) $validated['agora_channel'],
         ));
+
+        PatientAppointmentRealtimeController::storePendingIncomingCall(
+            (int) $appointment->user_id,
+            (int) $appointment->id,
+            [
+                'call_type' => (string) $validated['call_type'],
+                'agora_app_id' => (string) $validated['agora_app_id'],
+                'agora_token' => (string) $validated['agora_token'],
+                'agora_channel' => (string) $validated['agora_channel'],
+            ],
+        );
+
+        $patientNotifier->notifyIncomingCall($appointment, $doctor, (string) $validated['call_type']);
 
         return response()->json([
             'ok' => true,
@@ -54,6 +73,30 @@ class DoctorAppointmentRealtimeController
             'actual_start_at' => $appointment->actual_start_at?->toIso8601String(),
             'extend_at' => $appointment->extend_at?->toIso8601String(),
         ]);
+    }
+
+    public function endCall(Appointment $appointment): JsonResponse
+    {
+        $doctor = Auth::guard('doctor')->user();
+        if (! $doctor instanceof Doctor) {
+            abort(403);
+        }
+
+        if ((int) $appointment->doctor_id !== (int) $doctor->id) {
+            abort(403);
+        }
+
+        PatientAppointmentRealtimeController::clearPendingIncomingCall(
+            (int) $appointment->user_id,
+            (int) $appointment->id,
+        );
+
+        broadcast(new AppointmentCallEnded(
+            (int) $appointment->id,
+            (int) $appointment->user_id,
+        ));
+
+        return response()->json(['ok' => true]);
     }
 
     public function refreshAgoraToken(Request $request, Appointment $appointment): JsonResponse

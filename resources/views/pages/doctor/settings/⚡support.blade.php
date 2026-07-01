@@ -60,7 +60,7 @@ new #[Layout('layouts::doctor')] #[Title('Support')] class extends Component
             <flux:heading size="xl" class="font-semibold text-zinc-900">{{ __('tickets.title') }}</flux:heading>
             <flux:text class="mt-1 text-zinc-600">{{ __('tickets.subtitle') }}</flux:text>
         </div>
-        <flux:button :href="route('doctor.settings')" wire:navigate variant="ghost" size="sm" icon="arrow-left">{{ __('Back') }}</flux:button>
+        <flux:button :href="route('doctor.dashboard')" wire:navigate variant="ghost" size="sm" icon="arrow-left">{{ __('Back') }}</flux:button>
     </div>
 
     <flux:button :href="route('doctor.settings.support.create')" wire:navigate variant="primary" class="!bg-[#047857] !text-white">

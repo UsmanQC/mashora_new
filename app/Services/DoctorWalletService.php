@@ -27,7 +27,7 @@ final class DoctorWalletService
     }
 
     /**
-     * @return array{earned: float, paid_out: float, balance: float}
+     * @return array{earned: float, paid_out: float, balance: float, completed_appointments: int}
      */
     public function monthlySummary(Doctor $doctor, ?CarbonInterface $month = null): array
     {
@@ -42,7 +42,24 @@ final class DoctorWalletService
             'earned' => $earned,
             'paid_out' => $paidOut,
             'balance' => $this->balance($doctor->fresh() ?? $doctor),
+            'completed_appointments' => $this->completedAppointmentsCount($doctor, $start, $end),
         ];
+    }
+
+    public function completedAppointmentsCount(
+        Doctor $doctor,
+        ?CarbonInterface $start = null,
+        ?CarbonInterface $end = null,
+    ): int {
+        $timezone = config('app.timezone');
+        $start ??= now($timezone)->startOfMonth();
+        $end ??= now($timezone)->endOfMonth();
+
+        return $doctor->appointments()
+            ->where('status', 'completed')
+            ->whereDate('appointment_date', '>=', $start->toDateString())
+            ->whereDate('appointment_date', '<=', $end->toDateString())
+            ->count();
     }
 
     /**
@@ -108,9 +125,10 @@ final class DoctorWalletService
 
             $doctor->refresh();
             $balance = $this->balance($doctor);
+            $payoutAmount = min($balance, round((float) $invoice->doctor_share, 2));
 
-            if ($balance > 0) {
-                $doctor->withdrawFloat($balance, [
+            if ($payoutAmount > 0) {
+                $doctor->withdrawFloat($payoutAmount, [
                     'type' => 'invoice_payout',
                     'invoice_id' => $invoice->id,
                     'invoice_reference' => $invoice->reference,

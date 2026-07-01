@@ -119,6 +119,18 @@ test('stripe payment success confirms booking when session is paid', function ()
             ->once()
             ->with('cs_test_123')
             ->andReturn($session);
+
+        $mock->shouldReceive('sessionBelongsToBooking')
+            ->once()
+            ->andReturn(true);
+
+        $mock->shouldReceive('isSessionPaid')
+            ->once()
+            ->andReturn(true);
+
+        $mock->shouldReceive('paymentReferenceId')
+            ->once()
+            ->andReturn('pi_test_123');
     });
 
     $result = app(PatientPaymentCompletionService::class)->confirmIfPaid(

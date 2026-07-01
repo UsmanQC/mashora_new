@@ -1,6 +1,7 @@
 <?php
 
 use App\Events\AppointmentChatMessageSent;
+use App\Livewire\Concerns\CompletesDoctorAppointment;
 use App\Models\Appointment;
 use App\Models\ChMessage;
 use App\Services\AppointmentSessionService;
@@ -11,6 +12,8 @@ use Livewire\Component;
 
 new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Component
 {
+    use CompletesDoctorAppointment;
+
     public Appointment $appointment;
 
     /**
@@ -125,6 +128,14 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
         data-label-voice="{{ __('doctor.conversation.voice_call') }}"
         data-label-live="{{ __('doctor.conversation.live') }}"
         data-label-connecting="{{ __('doctor.conversation.connecting') }}"
+        data-label-call-failed="{{ __('doctor.conversation.call_failed') }}"
+        data-label-call-already-active="{{ __('doctor.conversation.call_already_active') }}"
+        data-label-call-controls-failed="{{ __('doctor.conversation.call_controls_failed') }}"
+        data-label-patient-notify-failed="{{ __('doctor.conversation.patient_notify_failed') }}"
+        data-label-camera-permission="{{ __('doctor.conversation.camera_permission_required') }}"
+        data-label-agora-sdk-missing="{{ __('doctor.conversation.agora_sdk_missing') }}"
+        data-session-ended="{{ __('doctor.conversation.session_time_ended') }}"
+        data-relaxed-session-limits="{{ config('appointments.relaxed_session_limits') ? '1' : '0' }}"
     ></div>
 
     <div class="relative overflow-hidden rounded-3xl border border-zinc-200/90 bg-white shadow-[0_20px_55px_-32px_rgba(15,23,42,0.35)] ring-1 ring-zinc-100">
@@ -218,6 +229,7 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                                 <button
                                     type="button"
                                     id="btn-agora-video"
+                                    onclick="window.mashoraDoctorStartVideoCall?.(event)"
                                     @class([
                                         'inline-flex min-h-10 items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[#10B981] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-45',
                                         'border-zinc-200 bg-gradient-to-b from-white to-zinc-50 text-zinc-800 shadow-sm hover:border-[#047857]/30 hover:from-zinc-50 hover:to-zinc-100' => true,
@@ -231,6 +243,7 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                                 <button
                                     type="button"
                                     id="btn-agora-audio"
+                                    onclick="window.mashoraDoctorStartAudioCall?.(event)"
                                     @class([
                                         'inline-flex min-h-10 items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[#10B981] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-45',
                                         'border-zinc-200 bg-gradient-to-b from-white to-zinc-50 text-zinc-800 shadow-sm hover:border-[#047857]/30 hover:from-zinc-50 hover:to-zinc-100' => true,
@@ -241,6 +254,15 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                                     <flux:icon name="phone" variant="mini" class="size-5 text-zinc-600" />
                                     <span class="btn-label">{{ __('doctor.conversation.voice') }}</span>
                                 </button>
+                                <flux:button
+                                    type="button"
+                                    size="sm"
+                                    class="min-h-10 !border-0 bg-red-600 text-white hover:bg-red-700"
+                                    wire:click="requestCompleteAppointment"
+                                    wire:loading.attr="disabled"
+                                >
+                                    {{ __('doctor.card.mark_complete') }}
+                                </flux:button>
                             @endif
                         </div>
                     </div>
@@ -260,6 +282,7 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                     id="doctor-chat-panel"
                     data-appointment-id="{{ $appointment->id }}"
                     data-notify-url="{{ route('doctor.appointments.realtime.notify-call', $appointment) }}"
+                    data-end-call-url="{{ route('doctor.appointments.realtime.end-call', $appointment) }}"
                     data-token-url="{{ route('doctor.appointments.realtime.agora-token', $appointment) }}"
                     data-csrf="{{ csrf_token() }}"
                 >
@@ -333,7 +356,7 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                     @if (in_array($appointment->status, ['new', 'rescheduled'], true))
                         <p class="mt-2.5 text-center text-xs text-zinc-500">{{ __('doctor.conversation.chat_locked_until_started') }}</p>
                     @elseif ($appointment->status === 'completed' && $appointment->isChatOpen())
-                        <p class="mt-2.5 text-center text-xs text-emerald-700">
+                        <p class="mt-2.5 text-center text-xs text-zinc-900">
                             {{ __('doctor.conversation.chat_open_after_completed', [
                                 'date' => $appointment->chatOpenUntil()->locale(app()->getLocale())->translatedFormat('d M Y'),
                             ]) }}
@@ -382,52 +405,30 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
         </div>
     </div>
 
-    {{-- Agora floating modal (keeps details/chat visible) --}}
-    <div
-        id="agora-call-overlay"
-        class="fixed bottom-4 end-4 z-[200] hidden w-[min(94vw,28rem)] overflow-hidden rounded-2xl border border-zinc-700/80 bg-zinc-950 text-white shadow-2xl shadow-black/45 ring-1 ring-white/10"
-        aria-hidden="true"
-    >
-        <div class="flex items-center justify-between gap-3 border-b border-white/10 bg-zinc-900/90 px-3 py-2.5">
-            <div class="min-w-0">
-                <p id="agora-call-title" class="truncate text-sm font-semibold">{{ __('doctor.conversation.call_in_progress') }}</p>
-                <p class="mt-0.5 font-mono text-xs tabular-nums text-zinc-400">
-                    {{ __('doctor.conversation.call_duration_label') }}:
-                    <span id="overlay-call-duration">00:00</span>
-                </p>
-            </div>
-            <button
-                type="button"
-                id="agora-leave-btn"
-                class="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-semibold shadow-lg shadow-rose-900/30 transition hover:bg-rose-500"
-            >
-                <flux:icon name="x-mark" variant="mini" class="size-4" />
-                {{ __('doctor.conversation.end_call') }}
-            </button>
-        </div>
-        <div class="relative p-2.5">
-            <div class="relative h-56 overflow-hidden rounded-xl bg-black ring-1 ring-white/10 sm:h-64">
-                <div id="agora-remote-player" class="h-full w-full"></div>
-                <div class="absolute bottom-2 end-2 w-28 overflow-hidden rounded-lg bg-zinc-900/80 ring-1 ring-white/20 sm:w-32">
-                    <div id="agora-local-player" class="aspect-video w-full bg-zinc-800"></div>
-                    <p class="px-2 py-1 text-center text-[10px] font-medium text-zinc-300">{{ __('doctor.conversation.you') }}</p>
-                </div>
-            </div>
-        </div>
-        <div class="flex flex-wrap justify-center gap-2 border-t border-white/10 bg-zinc-900/60 px-3 py-2.5">
-            <button type="button" id="agora-toggle-mic" class="inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-2 text-xs font-medium hover:bg-white/15">
-                <flux:icon name="microphone" variant="mini" class="size-4" />
-                {{ __('doctor.conversation.mic') }}
-            </button>
-            <button type="button" id="agora-toggle-video" class="inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-2 text-xs font-medium hover:bg-white/15">
-                <flux:icon name="video-camera" variant="mini" class="size-4" />
-                {{ __('doctor.conversation.camera') }}
-            </button>
-        </div>
-    </div>
+    @include('partials.video-call-overlay', [
+        'overlayId' => 'agora-call-overlay',
+        'titleId' => 'agora-call-title',
+        'durationId' => 'overlay-call-duration',
+        'durationLabel' => __('doctor.conversation.call_duration_label'),
+        'leaveBtnId' => 'agora-leave-btn',
+        'remoteId' => 'agora-remote-player',
+        'localId' => 'agora-local-player',
+        'toggleMicId' => 'agora-toggle-mic',
+        'toggleVideoId' => 'agora-toggle-video',
+        'title' => __('doctor.conversation.call_in_progress'),
+        'youLabel' => __('doctor.conversation.you'),
+        'endCallLabel' => __('doctor.conversation.end_call'),
+        'micLabel' => __('doctor.conversation.mic'),
+        'cameraLabel' => __('doctor.conversation.camera'),
+        'micMutedLabel' => __('doctor.conversation.mic_muted'),
+        'cameraOffLabel' => __('doctor.conversation.camera_off'),
+    ])
+
+    @include('partials.agora-media-controls')
 
     <div
         id="doctor-conversation-bootstrap"
+        wire:ignore
         class="hidden"
         data-pusher-key="{{ config('broadcasting.connections.pusher.key') }}"
         data-pusher-cluster="{{ config('broadcasting.connections.pusher.options.cluster') }}"
@@ -438,11 +439,13 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
         data-agora-channel="{{ $agoraChannel }}"
         data-agora-ready="{{ $agoraAppId !== '' ? '1' : '0' }}"
     ></div>
+
+    @include('partials.doctor-complete-appointment-modals')
 </div>
 
 @push('scripts')
     <script src="https://js.pusher.com/8.2.0/pusher.min.js"></script>
-    <script src="https://download.agora.io/sdk/release/AgoraRTC_N-4.23.0.js"></script>
+    <script src="https://download.agora.io/sdk/release/AgoraRTC_N-4.23.0.js" data-agora-sdk="1"></script>
     <script>
         function initDoctorConversationRealtime() {
             const boot = document.getElementById('doctor-conversation-bootstrap');
@@ -450,13 +453,26 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                 return;
             }
 
-            if (boot.dataset.initialized === '1') {
+            const appointmentId = Number(boot.dataset.appointmentId);
+
+            if (boot.dataset.initialized === '1' && boot.dataset.boundAppointmentId === String(appointmentId)) {
+                if (!boot.__joinVideoCall) {
+                    delete boot.dataset.initialized;
+                    delete boot.dataset.boundAppointmentId;
+                    initDoctorConversationRealtime();
+
+                    return;
+                }
+
+                boot.__bindCallButtons?.();
+
                 return;
             }
 
-            boot.dataset.initialized = '1';
+            if (boot.dataset.initialized === '1') {
+                boot.__leaveCall?.().catch(() => {});
+            }
 
-            const appointmentId = Number(boot.dataset.appointmentId);
             const pusherKey = boot.dataset.pusherKey || '';
             const pusherCluster = boot.dataset.pusherCluster || 'mt1';
             const csrfToken = document.querySelector('#doctor-chat-panel')?.dataset.csrf || '';
@@ -469,8 +485,35 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
             const callChip = document.getElementById('call-status-chip');
             const callTypeLabel = document.getElementById('call-type-label');
             const callDurationDisplay = document.getElementById('call-duration-display');
-            const overlayCallDuration = document.getElementById('overlay-call-duration');
-            const agoraTitle = document.getElementById('agora-call-title');
+
+            function overlayTitleEl() {
+                return document.getElementById('agora-call-title');
+            }
+
+            function overlayDurationEl() {
+                return document.getElementById('overlay-call-duration');
+            }
+
+            function updateActiveCallOverlayUi() {
+                if (!currentMode) {
+                    return;
+                }
+
+                const labelVideo = metricsEl?.dataset.labelVideo || 'Video call';
+                const labelVoice = metricsEl?.dataset.labelVoice || 'Voice call';
+                const titleEl = overlayTitleEl();
+
+                if (titleEl) {
+                    titleEl.textContent = currentMode === 'video' ? labelVideo : labelVoice;
+                }
+
+                if (callTypeLabel) {
+                    callTypeLabel.textContent = currentMode === 'video' ? labelVideo : labelVoice;
+                }
+
+                tickCallTimer();
+                syncMediaControlUi();
+            }
 
             function btnVideo() {
                 return document.getElementById('btn-agora-video');
@@ -505,6 +548,39 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
             let sessionTimerId = null;
             let callTimerId = null;
             let callStartedAt = null;
+            let sessionEndedDisconnectHandled = false;
+            let agoraClient = null;
+            let localAudio = null;
+            let localVideo = null;
+            let currentMode = null;
+            let callJoinInProgress = false;
+
+            function maybeEndCallWhenSessionExpired(leftSeconds) {
+                if (metricsEl?.dataset.relaxedSessionLimits === '1') {
+                    return;
+                }
+
+                if (leftSeconds > 0) {
+                    sessionEndedDisconnectHandled = false;
+
+                    return;
+                }
+
+                if (!currentMode || sessionEndedDisconnectHandled) {
+                    return;
+                }
+
+                sessionEndedDisconnectHandled = true;
+                const endedMessage = metricsEl?.dataset.sessionEnded || 'Session time has ended.';
+
+                leaveCall()
+                    .then(() => {
+                        if (window.Flux?.toast) {
+                            window.Flux.toast({ text: endedMessage, variant: 'warning' });
+                        }
+                    })
+                    .catch(() => {});
+            }
 
             function tickSessionTimers() {
                 const metrics = document.getElementById('conversation-page-metrics');
@@ -534,6 +610,7 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                     remainingEl.classList.toggle('text-amber-700', left > 0 && left <= 300);
                     remainingEl.classList.toggle('text-rose-600', left <= 0);
                     remainingEl.classList.toggle('text-[#047857]', left > 300);
+                    maybeEndCallWhenSessionExpired(left);
                 }
             }
 
@@ -544,34 +621,67 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
             }
 
             function tickCallTimer() {
-                if (!callStartedAt) return;
-                const sec = (Date.now() - callStartedAt) / 1000;
-                const t = formatDuration(sec);
-                if (callDurationDisplay) callDurationDisplay.textContent = t;
-                if (overlayCallDuration) overlayCallDuration.textContent = t;
+                if (!callStartedAt) {
+                    return;
+                }
+
+                const formatted = formatDuration((Date.now() - callStartedAt) / 1000);
+
+                if (callDurationDisplay) {
+                    callDurationDisplay.textContent = formatted;
+                }
+
+                const durationEl = overlayDurationEl();
+                if (durationEl) {
+                    durationEl.textContent = formatted;
+                }
             }
 
             function startCallTimer(mode, labelVideo, labelVoice) {
-                if (callTimerId) clearInterval(callTimerId);
+                if (callTimerId) {
+                    clearInterval(callTimerId);
+                }
+
                 callStartedAt = Date.now();
                 tickCallTimer();
                 callTimerId = setInterval(tickCallTimer, 1000);
-                if (callChip) callChip.classList.remove('hidden');
-                if (callChip) callChip.classList.add('flex');
-                if (callTypeLabel) callTypeLabel.textContent = mode === 'video' ? labelVideo : labelVoice;
-                if (agoraTitle) agoraTitle.textContent = mode === 'video' ? labelVideo : labelVoice;
+
+                if (callChip) {
+                    callChip.classList.remove('hidden');
+                    callChip.classList.add('flex');
+                }
+
+                if (callTypeLabel) {
+                    callTypeLabel.textContent = mode === 'video' ? labelVideo : labelVoice;
+                }
+
+                const titleEl = overlayTitleEl();
+                if (titleEl) {
+                    titleEl.textContent = mode === 'video' ? labelVideo : labelVoice;
+                }
             }
 
             function stopCallTimer() {
-                if (callTimerId) clearInterval(callTimerId);
+                if (callTimerId) {
+                    clearInterval(callTimerId);
+                }
+
                 callTimerId = null;
                 callStartedAt = null;
+
                 if (callChip) {
                     callChip.classList.add('hidden');
                     callChip.classList.remove('flex');
                 }
-                if (callDurationDisplay) callDurationDisplay.textContent = '00:00';
-                if (overlayCallDuration) overlayCallDuration.textContent = '00:00';
+
+                if (callDurationDisplay) {
+                    callDurationDisplay.textContent = '00:00';
+                }
+
+                const durationEl = overlayDurationEl();
+                if (durationEl) {
+                    durationEl.textContent = '00:00';
+                }
             }
 
             function setCallButtonsIdle() {
@@ -599,6 +709,14 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                 const connecting = document.getElementById('conversation-page-metrics')?.dataset.labelConnecting || '…';
                 if (label) label.textContent = connecting;
                 btn.disabled = true;
+            }
+
+            function setCallButtonActive(btn, labelText) {
+                if (!btn) return;
+                btn.className = btnActiveClass;
+                btn.disabled = true;
+                const label = btn.querySelector('.btn-label');
+                if (label) label.textContent = labelText;
             }
 
             function restoreCallButtonsAfterError() {
@@ -677,16 +795,15 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
 
                 const channel = pusher.subscribe('private-appointment.' + appointmentId);
                 channel.bind('message.created', (data) => appendMessageRow(data));
+                channel.bind('call.ended', (data) => {
+                    handleRemoteCallEnded(data);
+                });
             }
 
             const panel = document.getElementById('doctor-chat-panel');
             const notifyUrl = panel?.dataset.notifyUrl || '';
+            const endCallUrl = panel?.dataset.endCallUrl || '';
             const tokenUrl = panel?.dataset.tokenUrl || '';
-
-            let agoraClient = null;
-            let localAudio = null;
-            let localVideo = null;
-            let currentMode = null;
 
             async function refreshAgoraConfig() {
                 if (!tokenUrl) return null;
@@ -708,7 +825,41 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                 el.setAttribute('aria-hidden', show ? 'false' : 'true');
             }
 
-            async function leaveCall() {
+            function assignLocalTracks(audio, video = null) {
+                localAudio = audio;
+                localVideo = video;
+                boot.__localAudio = audio;
+                boot.__localVideo = video;
+            }
+
+            function clearLocalTracks() {
+                assignLocalTracks(null, null);
+            }
+
+            function mediaControlOptions(mode = currentMode) {
+                return {
+                    micBtnId: 'agora-toggle-mic',
+                    videoBtnId: 'agora-toggle-video',
+                    localPreviewId: 'agora-local-player',
+                    localAudio: boot.__localAudio || localAudio,
+                    localVideo: boot.__localVideo || localVideo,
+                    mode,
+                };
+            }
+
+            function syncMediaControlUi(mode = currentMode) {
+                window.MashoraAgoraMediaControls?.sync(mediaControlOptions(mode));
+            }
+
+            function showMediaControlsForMode(mode) {
+                window.MashoraAgoraMediaControls?.showControlsForMode(
+                    'agora-toggle-mic',
+                    'agora-toggle-video',
+                    mode,
+                );
+            }
+
+            async function leaveCallLocal() {
                 stopCallTimer();
                 setCallButtonsIdle();
                 const videoBtn = btnVideo();
@@ -722,29 +873,121 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                 if (localVideo) {
                     localVideo.stop();
                     localVideo.close();
-                    localVideo = null;
                 }
                 if (localAudio) {
                     localAudio.stop();
                     localAudio.close();
-                    localAudio = null;
                 }
+                clearLocalTracks();
                 if (agoraClient) {
-                    await agoraClient.leave();
+                    try {
+                        await agoraClient.leave();
+                    } catch {
+                        // ignore cleanup errors
+                    }
+
                     agoraClient = null;
                 }
                 currentMode = null;
                 const rp = document.getElementById('agora-remote-player');
                 const lp = document.getElementById('agora-local-player');
-                if (rp) rp.innerHTML = '';
-                if (lp) lp.innerHTML = '';
+                if (rp) {
+                    rp.innerHTML = '';
+                }
+                if (lp) {
+                    lp.innerHTML = '';
+                }
                 showOverlay(false);
-                const tv = document.getElementById('agora-toggle-video');
-                if (tv) tv.classList.remove('hidden');
+                syncMediaControlUi(null);
+                document.getElementById('agora-toggle-mic')?.classList.add('hidden');
+                document.getElementById('agora-toggle-video')?.classList.add('hidden');
+            }
+
+            async function postEndCall() {
+                if (!endCallUrl) {
+                    return;
+                }
+
+                try {
+                    await fetch(endCallUrl, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': csrfToken,
+                            Accept: 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest',
+                        },
+                    });
+                } catch (_) {
+                    // ignore network errors
+                }
+            }
+
+            async function leaveCall(notifyRemote = true) {
+                const wasActive = currentMode;
+
+                await leaveCallLocal();
+
+                if (notifyRemote && wasActive) {
+                    await postEndCall();
+                }
+            }
+
+            async function handleRemoteCallEnded(data) {
+                if (Number(data?.appointment_id || 0) !== appointmentId) {
+                    return;
+                }
+
+                if (!currentMode) {
+                    return;
+                }
+
+                await leaveCallLocal();
+            }
+
+            function registerRemoteUserHandlers(client, mode) {
+                client.on('user-published', async (user, mediaType) => {
+                    await client.subscribe(user, mediaType);
+                    if (mediaType === 'video') {
+                        user.videoTrack?.play('agora-remote-player');
+                    }
+                    if (mediaType === 'audio') {
+                        user.audioTrack?.play();
+                    }
+                });
+
+                client.on('user-unpublished', (user, mediaType) => {
+                    if (mediaType === 'video') {
+                        const rp = document.getElementById('agora-remote-player');
+                        if (rp) {
+                            rp.innerHTML = '';
+                        }
+                    }
+                });
+
+                client.on('user-left', () => {
+                    const rp = document.getElementById('agora-remote-player');
+                    if (rp) {
+                        rp.innerHTML = '';
+                    }
+                });
+            }
+
+            async function subscribeExistingRemoteUsers(client, mode) {
+                for (const user of client.remoteUsers) {
+                    if (user.hasAudio) {
+                        await client.subscribe(user, 'audio');
+                        user.audioTrack?.play();
+                    }
+
+                    if (user.hasVideo && mode === 'video') {
+                        await client.subscribe(user, 'video');
+                        user.videoTrack?.play('agora-remote-player');
+                    }
+                }
             }
 
             async function postNotify(callType, cfg) {
-                if (!notifyUrl) return;
+                if (!notifyUrl) return null;
                 const res = await fetch(notifyUrl, {
                     method: 'POST',
                     headers: {
@@ -760,24 +1003,177 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                     }),
                 });
 
-                if (!res.ok) return null;
+                if (!res.ok) {
+                    let message = metricsEl?.dataset.labelPatientNotifyFailed || 'Could not notify the patient.';
+                    try {
+                        const body = await res.json();
+                        if (body?.message) {
+                            message = body.message;
+                        }
+                    } catch (_) {
+                        // ignore json parse errors
+                    }
+
+                    showCallToast(message, 'warning');
+
+                    return null;
+                }
+
                 return res.json();
+            }
+
+            function showCallToast(text, variant = 'danger') {
+                if (window.Flux?.toast) {
+                    window.Flux.toast({ text, variant });
+
+                    return;
+                }
+
+                console.error(text);
+            }
+
+            function callErrorMessage(error, fallback) {
+                if (!error) {
+                    return fallback;
+                }
+
+                const name = error?.name || '';
+                const message = error?.message || '';
+
+                if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
+                    return metricsEl?.dataset.labelCameraPermission || fallback;
+                }
+
+                if (message) {
+                    return message;
+                }
+
+                return fallback;
+            }
+
+            function mountOverlayToBody() {
+                const overlayEl = document.getElementById('agora-call-overlay');
+                if (overlayEl && overlayEl.parentElement !== document.body) {
+                    document.body.appendChild(overlayEl);
+                }
+            }
+
+            mountOverlayToBody();
+
+            function ensureAgoraSdk(timeoutMs = 12000) {
+                if (window.AgoraRTC) {
+                    return Promise.resolve(window.AgoraRTC);
+                }
+
+                const existing = document.querySelector('script[data-agora-sdk="1"]');
+                if (!existing) {
+                    return Promise.reject(new Error(metricsEl?.dataset.labelAgoraSdkMissing || 'Agora SDK missing'));
+                }
+
+                return new Promise((resolve, reject) => {
+                    const startedAt = Date.now();
+
+                    const tick = () => {
+                        if (window.AgoraRTC) {
+                            resolve(window.AgoraRTC);
+
+                            return;
+                        }
+
+                        if (Date.now() - startedAt >= timeoutMs) {
+                            reject(new Error(metricsEl?.dataset.labelAgoraSdkMissing || 'Agora SDK missing'));
+
+                            return;
+                        }
+
+                        window.setTimeout(tick, 50);
+                    };
+
+                    tick();
+                });
+            }
+
+            async function resetPartialAgoraJoin() {
+                if (localVideo) {
+                    localVideo.stop();
+                    localVideo.close();
+                }
+
+                if (localAudio) {
+                    localAudio.stop();
+                    localAudio.close();
+                }
+
+                clearLocalTracks();
+
+                if (agoraClient) {
+                    try {
+                        await agoraClient.leave();
+                    } catch {
+                        // ignore cleanup errors
+                    }
+
+                    agoraClient = null;
+                }
+
+                currentMode = null;
+                const rp = document.getElementById('agora-remote-player');
+                const lp = document.getElementById('agora-local-player');
+                if (rp) {
+                    rp.innerHTML = '';
+                }
+                if (lp) {
+                    lp.innerHTML = '';
+                }
+            }
+
+            function setOverlayConnecting(mode, labelConnecting) {
+                const titleEl = overlayTitleEl();
+                if (titleEl) {
+                    titleEl.textContent = labelConnecting;
+                }
+
+                if (callTypeLabel) {
+                    callTypeLabel.textContent = mode === 'video' ? labelVideo : labelVoice;
+                }
+
+                const durationEl = overlayDurationEl();
+                if (durationEl) {
+                    durationEl.textContent = '00:00';
+                }
+
+                showMediaControlsForMode(mode);
             }
 
             const labelVideo = metricsEl?.dataset.labelVideo || 'Video call';
             const labelVoice = metricsEl?.dataset.labelVoice || 'Voice call';
+            const labelLive = metricsEl?.dataset.labelLive || 'Live';
+            const labelConnecting = metricsEl?.dataset.labelConnecting || 'Connecting…';
+            const labelCallFailed = metricsEl?.dataset.labelCallFailed || 'Could not start the call.';
 
             async function joinVideoCall() {
-                if (currentMode) {
+                if (currentMode || callJoinInProgress) {
+                    if (currentMode) {
+                        showCallToast(metricsEl?.dataset.labelCallAlreadyActive || 'A call is already in progress. End it first.', 'warning');
+                    }
+
                     return;
                 }
+
+                callJoinInProgress = true;
                 setCallButtonConnecting(btnVideo());
+                showOverlay(true);
+                setOverlayConnecting('video', labelConnecting);
+
                 try {
+                    await ensureAgoraSdk();
+                    await resetPartialAgoraJoin();
+
                     const cfg = await refreshAgoraConfig();
-                    if (!cfg || !window.AgoraRTC) {
-                        restoreCallButtonsAfterError();
-                        return;
+                    if (!cfg) {
+                        throw new Error(labelCallFailed);
                     }
+
                     const notify = await postNotify('video', cfg);
                     if (metricsEl && notify) {
                         metricsEl.dataset.status = notify.status || 'in_process';
@@ -785,56 +1181,57 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                         metricsEl.dataset.sessionEnd = notify.extend_at || '';
                     }
 
-                    agoraClient = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
-                    agoraClient.on('user-published', async (user, mediaType) => {
-                        await agoraClient.subscribe(user, mediaType);
-                        if (mediaType === 'video') {
-                            user.videoTrack.play('agora-remote-player');
-                        }
-                        if (mediaType === 'audio') {
-                            user.audioTrack.play();
-                        }
-                    });
+                    const client = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
+                    agoraClient = client;
+                    registerRemoteUserHandlers(client, 'video');
 
-                    const [, audioTrack, videoTrack] = await Promise.all([
-                        agoraClient.join(cfg.agora_app_id, cfg.agora_channel, cfg.agora_token || null, null),
-                        AgoraRTC.createMicrophoneAudioTrack(),
-                        AgoraRTC.createCameraVideoTrack(),
-                    ]);
-                    localAudio = audioTrack;
-                    localVideo = videoTrack;
+                    await client.join(cfg.agora_app_id, cfg.agora_channel, cfg.agora_token || null, null);
+                    const audioTrack = await AgoraRTC.createMicrophoneAudioTrack();
+                    const videoTrack = await AgoraRTC.createCameraVideoTrack();
+                    assignLocalTracks(audioTrack, videoTrack);
                     videoTrack.play('agora-local-player');
-                    await agoraClient.publish([audioTrack, videoTrack]);
+                    await client.publish([audioTrack, videoTrack]);
+                    await subscribeExistingRemoteUsers(client, 'video');
                     currentMode = 'video';
                     const videoBtn = btnVideo();
                     const audioBtn = btnAudio();
-                    if (videoBtn) {
-                        videoBtn.className = btnActiveClass;
-                        videoBtn.disabled = true;
-                    }
+                    setCallButtonActive(videoBtn, labelLive + ' · ' + labelVideo);
                     if (audioBtn) {
                         audioBtn.disabled = true;
                     }
-                    document.getElementById('agora-toggle-video')?.classList.remove('hidden');
+                    showMediaControlsForMode('video');
                     startCallTimer('video', labelVideo, labelVoice);
-                    showOverlay(true);
+                    syncMediaControlUi('video');
                 } catch (e) {
                     console.error(e);
+                    await resetPartialAgoraJoin();
+                    showOverlay(false);
+                    showCallToast(callErrorMessage(e, labelCallFailed));
                     restoreCallButtonsAfterError();
+                } finally {
+                    callJoinInProgress = false;
                 }
             }
 
             async function joinAudioCall() {
-                if (currentMode) {
+                if (currentMode || callJoinInProgress) {
                     return;
                 }
+
+                callJoinInProgress = true;
                 setCallButtonConnecting(btnAudio());
+                showOverlay(true);
+                setOverlayConnecting('audio', labelConnecting);
+
                 try {
+                    await ensureAgoraSdk();
+                    await resetPartialAgoraJoin();
+
                     const cfg = await refreshAgoraConfig();
-                    if (!cfg || !window.AgoraRTC) {
-                        restoreCallButtonsAfterError();
-                        return;
+                    if (!cfg) {
+                        throw new Error(labelCallFailed);
                     }
+
                     const notify = await postNotify('audio', cfg);
                     if (metricsEl && notify) {
                         metricsEl.dataset.status = notify.status || 'in_process';
@@ -842,52 +1239,87 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                         metricsEl.dataset.sessionEnd = notify.extend_at || '';
                     }
 
-                    agoraClient = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
-                    agoraClient.on('user-published', async (user, mediaType) => {
-                        await agoraClient.subscribe(user, mediaType);
-                        if (mediaType === 'audio') {
-                            user.audioTrack.play();
-                        }
-                    });
+                    const client = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
+                    agoraClient = client;
+                    registerRemoteUserHandlers(client, 'audio');
 
-                    const [, audioTrack] = await Promise.all([
-                        agoraClient.join(cfg.agora_app_id, cfg.agora_channel, cfg.agora_token || null, null),
-                        AgoraRTC.createMicrophoneAudioTrack(),
-                    ]);
-                    localAudio = audioTrack;
-                    await agoraClient.publish([audioTrack]);
+                    await client.join(cfg.agora_app_id, cfg.agora_channel, cfg.agora_token || null, null);
+                    const audioTrack = await AgoraRTC.createMicrophoneAudioTrack();
+                    assignLocalTracks(audioTrack, null);
+                    await client.publish([audioTrack]);
+                    await subscribeExistingRemoteUsers(client, 'audio');
                     currentMode = 'audio';
                     const videoBtn = btnVideo();
                     const audioBtn = btnAudio();
-                    if (audioBtn) {
-                        audioBtn.className = btnActiveClass;
-                        audioBtn.disabled = true;
-                    }
+                    setCallButtonActive(audioBtn, labelLive + ' · ' + labelVoice);
                     if (videoBtn) {
                         videoBtn.disabled = true;
                     }
-                    document.getElementById('agora-toggle-video')?.classList.add('hidden');
+                    showMediaControlsForMode('audio');
                     startCallTimer('audio', labelVideo, labelVoice);
-                    showOverlay(true);
+                    syncMediaControlUi('audio');
                 } catch (e) {
                     console.error(e);
+                    await resetPartialAgoraJoin();
+                    showOverlay(false);
+                    showCallToast(callErrorMessage(e, labelCallFailed));
                     restoreCallButtonsAfterError();
+                } finally {
+                    callJoinInProgress = false;
                 }
             }
 
+            boot.__syncCallOverlay = () => {
+                if (currentMode) {
+                    showOverlay(true);
+                    updateActiveCallOverlayUi();
+                }
+            };
+
+            function registerDoctorConversationMorphHook() {
+                if (window.__doctorConversationMorphHook) {
+                    return;
+                }
+
+                window.__doctorConversationMorphHook = true;
+
+                const registerHook = () => {
+                    Livewire.hook('commit', ({ succeed }) => {
+                        succeed(() => {
+                            const bootEl = document.getElementById('doctor-conversation-bootstrap');
+                            bootEl?.__bindCallButtons?.();
+                            bootEl?.__syncCallOverlay?.();
+                        });
+                    });
+                };
+
+                if (window.Livewire) {
+                    registerHook();
+                } else {
+                    document.addEventListener('livewire:init', registerHook);
+                }
+            }
+
+            registerDoctorConversationMorphHook();
+
             boot.__joinVideoCall = () => joinVideoCall();
             boot.__joinAudioCall = () => joinAudioCall();
-            boot.__leaveCall = () => leaveCall();
+            boot.__leaveCall = (notifyRemote = true) => leaveCall(notifyRemote);
             boot.__toggleMic = () => {
-                if (localAudio) {
-                    localAudio.setEnabled(!localAudio.enabled);
-                }
+                window.MashoraAgoraMediaControls?.toggleMic(mediaControlOptions())
+                    .catch((error) => console.error(error));
             };
             boot.__toggleVideo = () => {
-                if (localVideo) {
-                    localVideo.setEnabled(!localVideo.enabled);
-                }
+                window.MashoraAgoraMediaControls?.toggleVideo(mediaControlOptions())
+                    .catch((error) => console.error(error));
             };
+
+            function bindCallControlButtons() {
+                // Call controls use document-level delegation to avoid duplicate handlers after Livewire morphs.
+            }
+
+            bindCallControlButtons();
+            boot.__bindCallButtons = bindCallControlButtons;
 
             if (!window.__doctorConversationClickBound) {
                 window.__doctorConversationClickBound = true;
@@ -898,30 +1330,42 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                         return;
                     }
 
-                    if (event.target.closest('#btn-agora-video')) {
-                        bootEl.__joinVideoCall?.().catch((error) => console.error(error));
-                    }
-
-                    if (event.target.closest('#btn-agora-audio')) {
-                        bootEl.__joinAudioCall?.().catch((error) => console.error(error));
-                    }
-
                     if (event.target.closest('#agora-leave-btn')) {
+                        event.preventDefault();
                         bootEl.__leaveCall?.().catch((error) => console.error(error));
                     }
 
                     if (event.target.closest('#agora-toggle-mic')) {
+                        event.preventDefault();
                         bootEl.__toggleMic?.();
                     }
 
                     if (event.target.closest('#agora-toggle-video')) {
+                        event.preventDefault();
                         bootEl.__toggleVideo?.();
                     }
                 });
+            }
+
+            if (!window.__doctorConversationNavigateHook) {
+                window.__doctorConversationNavigateHook = true;
 
                 document.addEventListener('livewire:navigating', () => {
                     const bootEl = document.getElementById('doctor-conversation-bootstrap');
-                    bootEl?.__leaveCall?.().catch(() => {});
+                    bootEl?.__leaveCall?.(true).catch(() => {});
+
+                    if (bootEl) {
+                        delete bootEl.dataset.initialized;
+                        delete bootEl.dataset.boundAppointmentId;
+                    }
+                });
+            }
+
+            if (!window.__doctorConversationCallEndedHook) {
+                window.__doctorConversationCallEndedHook = true;
+
+                window.addEventListener('mashora:call-ended', (event) => {
+                    handleRemoteCallEnded(event.detail || {});
                 });
             }
 
@@ -934,12 +1378,47 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                     attributeFilter: ['data-status', 'data-session-start', 'data-session-end'],
                 });
             }
+
+            boot.dataset.initialized = '1';
+            boot.dataset.boundAppointmentId = String(appointmentId);
         }
 
+        function mashoraDoctorInvokeCall(method) {
+            const boot = document.getElementById('doctor-conversation-bootstrap');
+            if (!boot?.__joinVideoCall && !boot?.__joinAudioCall) {
+                initDoctorConversationRealtime();
+            }
+
+            const bootEl = document.getElementById('doctor-conversation-bootstrap');
+            const fn = bootEl?.[method];
+            if (typeof fn !== 'function') {
+                const message = document.getElementById('conversation-page-metrics')?.dataset.labelCallControlsFailed
+                    || 'Call controls failed to load. Please refresh the page.';
+                if (window.Flux?.toast) {
+                    window.Flux.toast({ text: message, variant: 'danger' });
+                } else {
+                    console.error(message);
+                }
+
+                return;
+            }
+
+            fn().catch((error) => console.error(error));
+        }
+
+        window.mashoraDoctorStartVideoCall = (event) => {
+            event?.preventDefault?.();
+            mashoraDoctorInvokeCall('__joinVideoCall');
+        };
+
+        window.mashoraDoctorStartAudioCall = (event) => {
+            event?.preventDefault?.();
+            mashoraDoctorInvokeCall('__joinAudioCall');
+        };
+
         document.addEventListener('DOMContentLoaded', initDoctorConversationRealtime);
-        document.addEventListener('livewire:navigated', () => {
-            initDoctorConversationRealtime();
-        });
+        document.addEventListener('livewire:navigated', initDoctorConversationRealtime);
+        initDoctorConversationRealtime();
     </script>
 @endpush
 

@@ -1,5 +1,6 @@
 <?php
 
+use App\Livewire\Concerns\CompletesDoctorAppointment;
 use App\Models\Appointment;
 use App\Models\Diagnosis;
 use Flux\Flux;
@@ -10,6 +11,8 @@ use Livewire\Component;
 
 new #[Layout('layouts::doctor')] #[Title('Diagnosis')] class extends Component
 {
+    use CompletesDoctorAppointment;
+
     public Appointment $appointment;
 
     public ?string $marital_status = 'unmarried';
@@ -56,24 +59,37 @@ new #[Layout('layouts::doctor')] #[Title('Diagnosis')] class extends Component
     }
 }; ?>
 
-<div class="space-y-8">
+<div class="space-y-6">
     @include('partials.doctor-appointment-workspace-header', ['appointment' => $appointment, 'active' => 'diagnosis'])
 
-    <div>
-        <flux:heading size="xl" class="font-semibold text-zinc-900">{{ __('doctor.diagnosis_form.title') }}</flux:heading>
-        <flux:text class="mt-1 text-zinc-600">{{ __('doctor.diagnosis_form.subtitle') }}</flux:text>
+    <div class="flex items-start gap-3">
+        <span class="flex size-11 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-[#10B981] ring-1 ring-emerald-100">
+            <flux:icon name="document-text" variant="mini" class="size-5" />
+        </span>
+        <div class="min-w-0">
+            <flux:heading size="xl" class="font-semibold tracking-tight text-zinc-900">{{ __('doctor.diagnosis_form.title') }}</flux:heading>
+            <flux:text class="mt-1 text-sm text-zinc-600">{{ __('doctor.diagnosis_form.subtitle') }}</flux:text>
+        </div>
     </div>
 
-    <form wire:submit="save" class="space-y-6">
-        <div class="rounded-2xl border border-zinc-200/90 bg-white p-5 shadow-sm sm:p-6">
-            <flux:radio.group wire:model="marital_status" :label="__('doctor.diagnosis_form.is_patient_married')" variant="segmented">
-                <flux:radio value="married" :label="__('doctor.diagnosis_form.yes')" />
-                <flux:radio value="unmarried" :label="__('doctor.diagnosis_form.no')" />
-            </flux:radio.group>
-        </div>
+    <form wire:submit="save" class="space-y-5">
+        <div class="overflow-hidden rounded-2xl border border-zinc-200/90 bg-white shadow-sm ring-1 ring-zinc-900/[0.03]">
+            <div class="border-b border-zinc-100 bg-gradient-to-b from-zinc-50/80 to-white px-5 py-5 sm:px-6">
+                <flux:field>
+                    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                        <flux:label class="!mb-0 text-sm font-semibold text-zinc-900">{{ __('doctor.diagnosis_form.is_patient_married') }}</flux:label>
+                        <div class="doctor-emerald-pill-radios mx-auto w-full max-w-xs sm:mx-0 sm:shrink-0 sm:justify-self-end">
+                            <flux:radio.group variant="pills" wire:model.live="marital_status" class="w-full">
+                                <flux:radio value="married" :label="__('doctor.diagnosis_form.yes')" />
+                                <flux:radio value="unmarried" :label="__('doctor.diagnosis_form.no')" />
+                            </flux:radio.group>
+                        </div>
+                    </div>
+                    <flux:error name="marital_status" class="mt-2 text-center sm:text-end" />
+                </flux:field>
+            </div>
 
-        <div class="rounded-2xl border border-zinc-200/90 bg-white p-5 shadow-sm sm:p-6">
-            <div class="grid gap-5">
+            <div class="doctor-clinical-form space-y-5 px-5 py-5 sm:px-6 sm:py-6">
                 <flux:input
                     wire:model="diagnosis_name"
                     :label="__('doctor.diagnosis_form.diagnosis_name')"
@@ -84,7 +100,7 @@ new #[Layout('layouts::doctor')] #[Title('Diagnosis')] class extends Component
                     wire:model="medical_history"
                     :label="__('doctor.diagnosis_form.medical_history')"
                     :placeholder="__('doctor.diagnosis_form.medical_history_placeholder')"
-                    rows="3"
+                    rows="4"
                 />
 
                 <div class="grid gap-5 lg:grid-cols-2">
@@ -93,35 +109,39 @@ new #[Layout('layouts::doctor')] #[Title('Diagnosis')] class extends Component
                         :label="__('doctor.diagnosis_form.special_notes')"
                         :placeholder="__('doctor.diagnosis_form.special_notes_placeholder')"
                         :description="__('doctor.diagnosis_form.special_notes_help')"
-                        rows="3"
+                        rows="4"
                     />
 
                     <flux:textarea
                         wire:model="treatment_plan"
                         :label="__('doctor.diagnosis_form.treatment_plan')"
                         :placeholder="__('doctor.diagnosis_form.treatment_plan_placeholder')"
-                        rows="3"
+                        rows="4"
                     />
                 </div>
             </div>
         </div>
 
-        <div class="flex flex-col gap-3 sm:flex-row sm:justify-end">
+        <div class="flex flex-col-reverse gap-3 rounded-2xl border border-zinc-200/90 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-end sm:px-5">
             <flux:button
                 type="button"
                 variant="ghost"
-                :href="route('doctor.dashboard')"
+                :href="route('doctor.appointments.medical-history', $appointment)"
                 wire:navigate
+                class="w-full sm:w-auto"
             >
-                {{ __('doctor.diagnosis_form.cancel') }}
+                {{ __('doctor.workflow.back_to_history') }}
             </flux:button>
             <flux:button
                 type="submit"
                 variant="primary"
-                class="!bg-[#10B981] hover:!brightness-95"
+                icon="arrow-right"
+                class="w-full !rounded-full !bg-[#10B981] !px-6 !shadow-md !shadow-emerald-900/10 hover:!brightness-95 sm:w-auto"
             >
-                {{ __('doctor.diagnosis_form.save') }}
+                {{ __('doctor.workflow.save_and_prescription') }}
             </flux:button>
         </div>
     </form>
+
+    @include('partials.doctor-complete-appointment-modals')
 </div>

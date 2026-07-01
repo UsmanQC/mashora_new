@@ -1,6 +1,8 @@
 <?php
 
+use App\Livewire\Concerns\CompletesDoctorAppointment;
 use App\Models\Appointment;
+use App\Support\DoctorAppointmentWorkflow;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
@@ -9,7 +11,14 @@ use Livewire\Component;
 
 new #[Layout('layouts::doctor')] #[Title('Medical history')] class extends Component
 {
+    use CompletesDoctorAppointment;
+
     public Appointment $appointment;
+
+    public function mount(): void
+    {
+        app(DoctorAppointmentWorkflow::class)->markHistoryReviewed($this->appointment);
+    }
 
     /**
      * @return EloquentCollection<int, Appointment>
@@ -121,4 +130,6 @@ new #[Layout('layouts::doctor')] #[Title('Medical history')] class extends Compo
             @endforeach
         </div>
     @endif
+
+    @include('partials.doctor-complete-appointment-modals')
 </div>

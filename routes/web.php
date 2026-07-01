@@ -1,12 +1,48 @@
 <?php
 
+use App\Http\Controllers\AiChatbotController;
 use App\Http\Controllers\Patient\FollowUpPaymentController;
 use App\Http\Controllers\Patient\PatientAppointmentRealtimeController;
 use App\Http\Controllers\Patient\PatientPaymentController;
+use App\Http\Controllers\WebManifestController;
+use App\Support\SpecialistCatalog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
-Route::redirect('/', '/patient')->name('home');
+Route::get('/manifest.webmanifest', WebManifestController::class)
+    ->defaults('app', 'patient')
+    ->name('manifest');
+
+Route::get('/doctor/manifest.webmanifest', WebManifestController::class)
+    ->defaults('app', 'doctor')
+    ->name('manifest.doctor');
+
+Route::get('/', function () {
+    app()->setLocale('ar');
+
+    return view('frontend.home', [
+        'featuredDoctors' => SpecialistCatalog::forMarketingHomepage(12),
+        'doctorStats' => SpecialistCatalog::marketingStats(),
+    ]);
+})->name('home');
+
+Route::prefix('api')->group(function () {
+    Route::post('chat', [AiChatbotController::class, 'store'])
+        ->middleware('throttle:ai-chatbot')
+        ->name('api.chat');
+
+    Route::delete('chat/history', [AiChatbotController::class, 'destroy'])
+        ->middleware('throttle:ai-chatbot')
+        ->name('api.chat.reset');
+});
+
+Route::post('ai-chatbot/message', [AiChatbotController::class, 'store'])
+    ->middleware('throttle:ai-chatbot')
+    ->name('ai-chatbot.message');
+
+Route::delete('ai-chatbot/history', [AiChatbotController::class, 'destroy'])
+    ->middleware('throttle:ai-chatbot')
+    ->name('ai-chatbot.reset');
 
 Route::middleware(['patient.redirect'])->group(function () {
     Route::redirect('patient/start', '/patient/phone', 302)
@@ -156,6 +192,14 @@ Route::post('patient/payment/execute/{temporaryAppointment}', [PatientPaymentCon
 Route::post('patient/appointments/{appointment}/realtime/notify-call', [PatientAppointmentRealtimeController::class, 'notifyCall'])
     ->middleware(['auth', 'patient.profile'])
     ->name('patient.appointments.realtime.notify-call');
+
+Route::get('patient/appointments/{appointment}/realtime/pending-call', [PatientAppointmentRealtimeController::class, 'pendingIncomingCall'])
+    ->middleware(['auth', 'patient.profile'])
+    ->name('patient.appointments.realtime.pending-call');
+
+Route::post('patient/appointments/{appointment}/realtime/end-call', [PatientAppointmentRealtimeController::class, 'endCall'])
+    ->middleware(['auth', 'patient.profile'])
+    ->name('patient.appointments.realtime.end-call');
 
 Route::post('patient/appointments/{appointment}/realtime/agora-token', [PatientAppointmentRealtimeController::class, 'refreshAgoraToken'])
     ->middleware(['auth', 'patient.profile'])

@@ -62,6 +62,7 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withSchedule(function (Schedule $schedule): void {
         $schedule->command('appointments:mark-missed')->everyFiveMinutes();
+        $schedule->command('invoices:generate-monthly')->monthlyOn(1, '01:00');
     })
     ->withBroadcasting(
         channels: __DIR__.'/../routes/channels.php',

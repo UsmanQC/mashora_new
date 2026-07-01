@@ -1,9 +1,8 @@
 <?php
 
+use App\Livewire\Concerns\CompletesDoctorAppointment;
 use App\Models\Appointment;
 use App\Models\Doctor;
-use Carbon\Carbon;
-use Flux\Flux;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Facades\Auth;
@@ -15,6 +14,8 @@ use Livewire\Component;
 
 new #[Layout('layouts::doctor')] #[Title('Dashboard')] class extends Component
 {
+    use CompletesDoctorAppointment;
+
     /** @var list<string> */
     private const PERIODS = ['today', 'week', 'month', 'year', 'all'];
 
@@ -24,22 +25,50 @@ new #[Layout('layouts::doctor')] #[Title('Dashboard')] class extends Component
     /** @var list<string> */
     private const UPCOMING_STATUSES = ['new', 'in_process'];
 
+    /** @var list<string> */
+    private const UPCOMING_FILTERS = ['new', 'follow_up'];
+
     #[Url]
     public string $period = 'today';
 
-    public bool $showCompleteAppointmentModal = false;
-
-    public bool $showDiagnosisRequiredModal = false;
-
-    public bool $showPrescriptionRequiredModal = false;
-
-    public ?int $appointmentPendingCompleteId = null;
+    #[Url]
+    public string $upcoming = 'new';
 
     public function mount(): void
     {
         if (! in_array($this->period, self::PERIODS, true)) {
             $this->period = 'today';
         }
+
+        if (! in_array($this->upcoming, self::UPCOMING_FILTERS, true)) {
+            $this->upcoming = 'new';
+        }
+    }
+
+    public function statusLabelFor(Appointment $appointment): string
+    {
+        if ($appointment->is_follow_up && $appointment->status !== 'pending_follow_up') {
+            return __('doctor.appointment_status.follow_up');
+        }
+
+        return __('doctor.appointment_status.'.$appointment->status);
+    }
+
+    public function statusBadgeColorFor(Appointment $appointment): string
+    {
+        if ($appointment->is_follow_up && $appointment->status !== 'pending_follow_up') {
+            return 'violet';
+        }
+
+        return match ($appointment->status) {
+            'new' => 'sky',
+            'in_process' => 'amber',
+            'completed' => 'emerald',
+            'cancelled', 'not_attended' => 'rose',
+            'rescheduled' => 'indigo',
+            'pending_follow_up' => 'violet',
+            default => 'zinc',
+        };
     }
 
     protected function doctor(): ?Doctor
@@ -64,7 +93,7 @@ new #[Layout('layouts::doctor')] #[Title('Dashboard')] class extends Component
             return;
         }
 
-        $now = Carbon::now();
+        $now = \Illuminate\Support\Carbon::now();
 
         match ($this->period) {
             'today' => $query->whereDate('appointment_date', $now->toDateString()),
@@ -88,7 +117,7 @@ new #[Layout('layouts::doctor')] #[Title('Dashboard')] class extends Component
             return;
         }
 
-        $now = Carbon::now();
+        $now = \Illuminate\Support\Carbon::now();
 
         match ($this->period) {
             'today' => $query->whereDate('created_at', $now->toDateString()),
@@ -132,6 +161,31 @@ new #[Layout('layouts::doctor')] #[Title('Dashboard')] class extends Component
             ->count();
     }
 
+    #[Computed]
+    public function upcomingNewCount(): int
+    {
+        $doctor = $this->doctor();
+        if ($doctor === null) {
+            return 0;
+        }
+
+        return $doctor->appointments()
+            ->whereIn('status', self::UPCOMING_STATUSES)
+            ->where('is_follow_up', false)
+            ->count();
+    }
+
+    #[Computed]
+    public function upcomingFollowUpCount(): int
+    {
+        $doctor = $this->doctor();
+        if ($doctor === null) {
+            return 0;
+        }
+
+        return $doctor->appointments()->upcomingFollowUp()->count();
+    }
+
     /**
      * @return EloquentCollection<int, Appointment>
      */
@@ -143,107 +197,20 @@ new #[Layout('layouts::doctor')] #[Title('Dashboard')] class extends Component
             return new EloquentCollection;
         }
 
-        return $doctor->appointments()
-            ->whereIn('status', self::UPCOMING_STATUSES)
+        $query = $doctor->appointments()
             ->orderBy('scheduled_at')
             ->orderBy('appointment_date')
-            ->orderBy('start_time')
-            ->limit(10)
-            ->get();
-    }
+            ->orderBy('start_time');
 
-    public function requestCompleteAppointment(int $appointmentId): void
-    {
-        $doctor = $this->doctor();
-        if ($doctor === null) {
-            abort(403);
+        if ($this->upcoming === 'follow_up') {
+            $query->upcomingFollowUp();
+        } else {
+            $query
+                ->whereIn('status', self::UPCOMING_STATUSES)
+                ->where('is_follow_up', false);
         }
 
-        $appointment = Appointment::query()
-            ->where('doctor_id', $doctor->id)
-            ->whereKey($appointmentId)
-            ->first();
-
-        if ($appointment === null || $appointment->status !== 'in_process') {
-            return;
-        }
-
-        $this->appointmentPendingCompleteId = $appointmentId;
-        $this->showCompleteAppointmentModal = true;
-    }
-
-    public function dismissCompleteAppointmentModal(): void
-    {
-        $this->showCompleteAppointmentModal = false;
-        $this->appointmentPendingCompleteId = null;
-    }
-
-    public function updatedShowCompleteAppointmentModal(bool $value): void
-    {
-        if (! $value) {
-            $this->appointmentPendingCompleteId = null;
-        }
-    }
-
-    public function confirmCompleteAppointment(): void
-    {
-        $id = $this->appointmentPendingCompleteId;
-        $this->dismissCompleteAppointmentModal();
-
-        if ($id === null) {
-            return;
-        }
-
-        $doctor = $this->doctor();
-        if ($doctor === null) {
-            abort(403);
-        }
-
-        $appointment = Appointment::query()
-            ->where('doctor_id', $doctor->id)
-            ->whereKey($id)
-            ->with(['diagnosis', 'medications'])
-            ->first();
-
-        if ($appointment === null || $appointment->status !== 'in_process') {
-            return;
-        }
-
-        if ($appointment->diagnosis === null) {
-            $this->showDiagnosisRequiredModal = true;
-
-            return;
-        }
-
-        if (! $appointment->prescription_not_needed && $appointment->medications->isEmpty()) {
-            $this->showPrescriptionRequiredModal = true;
-
-            return;
-        }
-
-        $this->finalizeInProcessAppointmentCompletion($appointment);
-    }
-
-    public function dismissDiagnosisRequiredModal(): void
-    {
-        $this->showDiagnosisRequiredModal = false;
-    }
-
-    public function dismissPrescriptionRequiredModal(): void
-    {
-        $this->showPrescriptionRequiredModal = false;
-    }
-
-    private function finalizeInProcessAppointmentCompletion(Appointment $appointment): void
-    {
-        $appointment->forceFill([
-            'status' => 'completed',
-            'actual_end_at' => Carbon::now()->format('Y-m-d H:i:s'),
-        ])->save();
-
-        Flux::toast(variant: 'success', text: __('doctor.complete_flow.success'));
-
-        $this->redirect(route('doctor.appointments.follow-up', $appointment), navigate: true);
+        return $query->limit(10)->get();
     }
 }; ?>
 
@@ -305,7 +272,7 @@ new #[Layout('layouts::doctor')] #[Title('Dashboard')] class extends Component
                 {{ $doc->status === 'rejected' ? __('doctor.dashboard.verification_rejected_title') : __('doctor.dashboard.verification_pending_title') }}
             </flux:heading>
             <flux:text class="mx-auto mt-3 max-w-lg text-zinc-600">
-                {!! __('doctor.dashboard.verification_body_html', ['email' => 'contact@mashora.co']) !!}
+                {!! __('doctor.dashboard.verification_body_html', ['email' => 'contact@awaan.io']) !!}
             </flux:text>
         </div>
     @elseif ($doc && $doc->status === 'approved')
@@ -371,125 +338,51 @@ new #[Layout('layouts::doctor')] #[Title('Dashboard')] class extends Component
                 </div>
             </div>
 
-            @if ($this->upcomingAppointments->isEmpty())
-                <div class="rounded-2xl border border-zinc-200/90 bg-white px-4 py-10 text-center shadow-sm">
-                    @include('partials.patient-empty-record-illustration')
-                    <flux:text class="mt-4 text-zinc-600">{{ __('doctor.dashboard.no_new_appointments') }}</flux:text>
+            <div>
+                <div class="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <flux:heading size="lg" class="font-semibold text-zinc-900">{{ __('doctor.dashboard.upcoming_title') }}</flux:heading>
+                    <flux:link :href="route('doctor.appointments')" wire:navigate class="text-sm font-medium text-[#10B981]">
+                        {{ __('doctor.dashboard.view_all') }}
+                        <flux:icon name="chevron-right" variant="mini" class="inline size-4 align-middle rtl:rotate-180" />
+                    </flux:link>
                 </div>
-            @else
-                <div>
-                    <div class="mb-4 flex items-center justify-between gap-3">
-                        <flux:heading size="lg" class="font-semibold text-zinc-900">{{ __('doctor.dashboard.upcoming_title') }}</flux:heading>
-                        <flux:link :href="route('doctor.appointments')" wire:navigate class="text-sm font-medium text-[#10B981]">
-                            {{ __('doctor.dashboard.view_all') }}
-                            <flux:icon name="chevron-right" variant="mini" class="inline size-4 align-middle rtl:rotate-180" />
-                        </flux:link>
+
+                <div class="mb-4 rounded-2xl bg-white p-3 shadow-sm">
+                    <nav class="grid grid-cols-2 gap-2" aria-label="{{ __('doctor.dashboard.upcoming_filter_label') }}">
+                        @foreach (['new' => ['label' => __('doctor.dashboard.tab_upcoming_new'), 'count' => $this->upcomingNewCount], 'follow_up' => ['label' => __('doctor.dashboard.tab_upcoming_follow'), 'count' => $this->upcomingFollowUpCount]] as $key => $meta)
+                            <flux:button
+                                :href="route('doctor.dashboard', ['period' => $this->period, 'upcoming' => $key])"
+                                wire:navigate
+                                size="sm"
+                                :variant="$this->upcoming === $key ? 'primary' : 'outline'"
+                                class="w-full rounded-xl py-2.5 text-sm font-semibold {{ $this->upcoming === $key ? '!bg-[#047857] !text-white shadow-sm' : '!border-0 bg-zinc-50 text-zinc-700 hover:!bg-white' }}"
+                            >
+                                {{ $meta['label'] }}
+                                <span class="ms-1.5 inline-flex min-w-[1.25rem] items-center justify-center rounded-full px-1.5 py-0.5 text-xs font-bold {{ $this->upcoming === $key ? 'bg-white/20 text-white' : 'bg-zinc-200/80 text-zinc-700' }}">
+                                    {{ $meta['count'] }}
+                                </span>
+                            </flux:button>
+                        @endforeach
+                    </nav>
+                </div>
+
+                @if ($this->upcomingAppointments->isEmpty())
+                    <div class="rounded-2xl border border-zinc-200/90 bg-white px-4 py-10 text-center shadow-sm">
+                        @include('partials.patient-empty-record-illustration')
+                        <flux:text class="mt-4 text-zinc-600">
+                            {{ $this->upcoming === 'follow_up' ? __('doctor.dashboard.no_upcoming_follow') : __('doctor.dashboard.no_new_appointments') }}
+                        </flux:text>
                     </div>
+                @else
                     <div class="grid gap-4 sm:grid-cols-2">
                         @foreach ($this->upcomingAppointments as $appointment)
-                            @include('partials.doctor-dashboard-upcoming-card', compact('appointment'))
+                            @include('partials.doctor-dashboard-upcoming-card', ['appointment' => $appointment, 'dashboard' => $this])
                         @endforeach
                     </div>
-                </div>
-            @endif
+                @endif
+            </div>
         </div>
     @endif
 
-    <flux:modal wire:model.self="showCompleteAppointmentModal" class="max-w-md rounded-2xl shadow-xl" :closable="true">
-        <div class="flex flex-col items-center px-6 py-8 text-center sm:px-10 sm:py-10">
-            <div
-                class="mb-6 flex size-24 shrink-0 items-center justify-center rounded-full border-[3px] border-[#f8bb86] bg-amber-50/60"
-                aria-hidden="true"
-            >
-                <span class="text-5xl font-bold leading-none text-[#f8bb86]">!</span>
-            </div>
-
-            <flux:heading size="xl" class="font-bold text-[#545454]">
-                {{ __('doctor.complete_modal.title') }}
-            </flux:heading>
-
-            <flux:text class="mt-3 max-w-[20rem] leading-relaxed text-[#595959]">
-                {{ __('doctor.complete_modal.body') }}
-            </flux:text>
-
-            <div class="mt-8 flex w-full max-w-sm flex-row gap-3 sm:justify-center">
-                <flux:button
-                    type="button"
-                    class="flex-1 !border-0 bg-[#7066e0] text-white shadow-sm hover:brightness-105 sm:min-h-11"
-                    variant="primary"
-                    wire:click="confirmCompleteAppointment"
-                >
-                    {{ __('doctor.complete_modal.confirm') }}
-                </flux:button>
-                <flux:button
-                    type="button"
-                    class="flex-1 !border-0 bg-[#6e7881] text-white shadow-sm hover:bg-[#5d656c] sm:min-h-11"
-                    variant="ghost"
-                    wire:click="dismissCompleteAppointmentModal"
-                >
-                    {{ __('doctor.complete_modal.cancel') }}
-                </flux:button>
-            </div>
-        </div>
-    </flux:modal>
-
-    <flux:modal wire:model.self="showDiagnosisRequiredModal" class="max-w-md rounded-2xl shadow-xl" :closable="true">
-        <div class="flex flex-col items-center px-6 py-8 text-center sm:px-10 sm:py-10">
-            <div
-                class="mb-6 flex size-24 shrink-0 items-center justify-center rounded-full border-[3px] border-[#f8bb86] bg-amber-50/60"
-                aria-hidden="true"
-            >
-                <span class="text-5xl font-bold leading-none text-[#f8bb86]">!</span>
-            </div>
-
-            <flux:heading size="xl" class="font-bold text-[#545454]">
-                {{ __('doctor.complete_flow.diagnosis_title') }}
-            </flux:heading>
-
-            <flux:text class="mt-3 max-w-[20rem] leading-relaxed text-[#595959]">
-                {{ __('doctor.complete_flow.diagnosis_body') }}
-            </flux:text>
-
-            <div class="mt-8 flex w-full max-w-sm justify-center">
-                <flux:button
-                    type="button"
-                    class="w-full !border-0 bg-[#7066e0] text-white shadow-sm hover:brightness-105 sm:max-w-xs sm:min-h-11"
-                    variant="primary"
-                    wire:click="dismissDiagnosisRequiredModal"
-                >
-                    {{ __('doctor.complete_flow.ok') }}
-                </flux:button>
-            </div>
-        </div>
-    </flux:modal>
-
-    <flux:modal wire:model.self="showPrescriptionRequiredModal" class="max-w-md rounded-2xl shadow-xl" :closable="true">
-        <div class="flex flex-col items-center px-6 py-8 text-center sm:px-10 sm:py-10">
-            <div
-                class="mb-6 flex size-24 shrink-0 items-center justify-center rounded-full border-[3px] border-[#f8bb86] bg-amber-50/60"
-                aria-hidden="true"
-            >
-                <span class="text-5xl font-bold leading-none text-[#f8bb86]">!</span>
-            </div>
-
-            <flux:heading size="xl" class="font-bold text-[#545454]">
-                {{ __('doctor.complete_flow.prescription_title') }}
-            </flux:heading>
-
-            <flux:text class="mt-3 max-w-[20rem] leading-relaxed text-[#595959]">
-                {{ __('doctor.complete_flow.prescription_body') }}
-            </flux:text>
-
-            <div class="mt-8 flex w-full max-w-sm justify-center">
-                <flux:button
-                    type="button"
-                    class="w-full !border-0 bg-[#7066e0] text-white shadow-sm hover:brightness-105 sm:max-w-xs sm:min-h-11"
-                    variant="primary"
-                    wire:click="dismissPrescriptionRequiredModal"
-                >
-                    {{ __('doctor.complete_flow.ok') }}
-                </flux:button>
-            </div>
-        </div>
-    </flux:modal>
+    @include('partials.doctor-complete-appointment-modals')
 </div>

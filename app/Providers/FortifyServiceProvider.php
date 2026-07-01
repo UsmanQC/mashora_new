@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Actions\Fortify\CreateNewUser;
+use App\Actions\Fortify\PatientAwareAttemptToAuthenticate;
 use App\Actions\Fortify\ResetUserPassword;
 use App\Http\Responses\PatientAwareLoginResponse;
 use App\Http\Responses\PatientAwareLogoutResponse;
@@ -14,8 +15,13 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
+use Laravel\Fortify\Actions\CanonicalizeUsername;
+use Laravel\Fortify\Actions\EnsureLoginIsNotThrottled;
+use Laravel\Fortify\Actions\PrepareAuthenticatedSession;
+use Laravel\Fortify\Actions\RedirectIfTwoFactorAuthenticatable;
 use Laravel\Fortify\Contracts\LoginResponse as LoginResponseContract;
 use Laravel\Fortify\Contracts\LogoutResponse as LogoutResponseContract;
+use Laravel\Fortify\Features;
 use Laravel\Fortify\Fortify;
 
 class FortifyServiceProvider extends ServiceProvider
@@ -35,6 +41,7 @@ class FortifyServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureActions();
+        $this->configureAuthenticationPipeline();
         $this->configureViews();
         $this->configureRateLimiting();
     }
@@ -54,9 +61,12 @@ class FortifyServiceProvider extends ServiceProvider
 
             $user = User::query()
                 ->where(function ($query) use ($login, $normalized): void {
-                    $query->where('email', $login)
-                        ->orWhere('phone', $login)
-                        ->orWhere('phone', $normalized);
+                    $query->where('email', $login);
+
+                    if ($normalized !== '') {
+                        $query->orWhere('phone', $login)
+                            ->orWhere('phone', $normalized);
+                    }
                 })
                 ->first();
 
@@ -65,6 +75,22 @@ class FortifyServiceProvider extends ServiceProvider
             }
 
             return $user;
+        });
+    }
+
+    /**
+     * Configure Fortify login pipeline (patient-aware failed login redirect).
+     */
+    private function configureAuthenticationPipeline(): void
+    {
+        Fortify::authenticateThrough(function (Request $request) {
+            return array_filter([
+                config('fortify.limiters.login') ? null : EnsureLoginIsNotThrottled::class,
+                config('fortify.lowercase_usernames') ? CanonicalizeUsername::class : null,
+                Features::enabled(Features::twoFactorAuthentication()) ? RedirectIfTwoFactorAuthenticatable::class : null,
+                PatientAwareAttemptToAuthenticate::class,
+                PrepareAuthenticatedSession::class,
+            ]);
         });
     }
 

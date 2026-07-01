@@ -47,6 +47,10 @@
         display: none !important;
     }
 
+    .scheme-light {
+        color-scheme: light;
+    }
+
     *,
     ::after,
     ::before,
@@ -131,8 +135,158 @@ select:focus[data-flux-control] {
         @apply !bg-mashora-brand !text-white !shadow-none hover:!bg-mashora-brand hover:!text-white;
     }
 
-    .patient-auth-content [data-flux-control] {
+    /** Doctor onboarding: Mashora green accent for pills and checkboxes. */
+    .doctor-emerald-accent,
+    .doctor-emerald-pill-radios {
+        --color-accent: #10b981;
+        --color-accent-content: #10b981;
+        --color-accent-foreground: #ffffff;
+    }
+
+    .doctor-emerald-accent ui-checkbox {
+        --color-accent: #10b981;
+        --color-accent-foreground: #ffffff;
+    }
+
+    .doctor-emerald-accent ui-checkbox[data-checked] [data-flux-checkbox-indicator] {
+        @apply !border-mashora-brand !bg-mashora-brand !shadow-none;
+    }
+
+    .doctor-emerald-accent ui-checkbox[data-checked] [data-flux-checkbox-indicator] svg {
+        @apply !text-white;
+    }
+
+    .doctor-emerald-accent label:has(ui-checkbox[data-checked]) .doctor-working-day-label {
+        @apply text-mashora-brand;
+    }
+
+    /** Patient booking: Myself / Another pills — equal columns on mobile. */
+    .patient-booking-pill-radios {
+        --color-accent: #10b981;
+        --color-accent-foreground: #ffffff;
+    }
+
+    .patient-booking-pill-radios ui-radio-group[data-flux-radio-group-pills] {
+        @apply grid w-full grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:gap-3;
+    }
+
+    .patient-booking-pill-radios ui-radio[data-flux-radio-pills] {
+        @apply min-w-0 justify-center border border-zinc-200/90 bg-white text-zinc-900 shadow-none;
+        -webkit-text-fill-color: #18181b !important;
+    }
+
+    .patient-booking-pill-radios ui-radio[data-flux-radio-pills][data-checked] {
+        @apply border-mashora-brand bg-mashora-brand text-white;
+        -webkit-text-fill-color: #ffffff !important;
+    }
+
+    /** Patient portal: keep Flux menus and modals light on mobile. */
+    .scheme-light ui-modal dialog {
+        background-color: #ffffff !important;
+        color: #18181b !important;
+    }
+
+    .scheme-light ui-menu[data-flux-menu] {
+        background-color: #ffffff !important;
+        border-color: #e5e5e5 !important;
+        color: #18181b !important;
+    }
+
+    .scheme-light ui-menu[data-flux-menu] [data-flux-menu-item] {
+        color: #18181b !important;
+    }
+
+    .scheme-light ui-menu[data-flux-menu] [data-flux-menu-item][data-active] {
+        background-color: #f4f4f5 !important;
+    }
+
+    .doctor-emerald-pill-radios ui-radio-group[data-flux-radio-group-pills] {
+        @apply grid w-full grid-cols-2 gap-2;
+    }
+
+    .doctor-emerald-pill-radios ui-radio[data-flux-radio-pills] {
+        @apply min-h-11 min-w-0 flex-1 justify-center !rounded-full !border !border-zinc-200/90 !bg-white !px-4 !py-2.5 text-sm font-semibold !text-zinc-900 !shadow-none hover:!border-zinc-300;
+        -webkit-text-fill-color: #18181b !important;
+    }
+
+    .doctor-emerald-pill-radios ui-radio[data-flux-radio-pills][data-checked] {
+        @apply !border-mashora-brand !bg-mashora-brand !text-white !shadow-none hover:!border-mashora-brand hover:!bg-mashora-brand hover:!text-white;
+        -webkit-text-fill-color: #ffffff !important;
+        caret-color: #ffffff !important;
+    }
+
+    .doctor-emerald-pill-radios ui-radio[data-flux-radio-pills][data-checked] * {
+        @apply !text-white;
+        -webkit-text-fill-color: #ffffff !important;
+    }
+
+    .doctor-clinical-form [data-flux-label] {
+        @apply text-sm font-semibold text-zinc-800;
+    }
+
+    .doctor-clinical-form [data-flux-control] {
+        @apply !rounded-xl !border-zinc-200/90 !shadow-none;
+    }
+
+    .doctor-clinical-form [data-flux-control]:focus {
+        @apply !border-[#10B981] !ring-2 !ring-[#10B981]/20;
+    }
+
+    .patient-auth-content [data-flux-control]:not([data-flux-otp-input]):not([data-flux-otp]):not([data-flux-radio-pills]) {
         @apply !shadow-none;
+        color: #18181b !important;
+        background-color: #ffffff !important;
+        border: 1px solid #d4d4d8 !important;
+        -webkit-text-fill-color: #18181b !important;
+        caret-color: #18181b !important;
+    }
+
+    .patient-auth-content [data-flux-control]:not([data-flux-otp-input]):not([data-flux-otp]):not([data-flux-radio-pills]):focus {
+        border-color: #10b981 !important;
+        box-shadow: 0 0 0 2px rgb(16 185 129 / 0.2) !important;
+    }
+
+    .patient-auth-content [data-flux-control]:not([data-flux-otp-input]):not([data-flux-otp]):not([data-flux-radio-pills])::placeholder {
+        color: #a1a1aa !important;
+        opacity: 1;
+    }
+
+    .patient-auth-content [data-flux-otp],
+    .patient-auth-content ui-otp[data-flux-otp] {
+        border: none !important;
+        background: transparent !important;
+        box-shadow: none !important;
+    }
+
+    .scheme-light [data-flux-label],
+    .scheme-light ui-label[data-flux-label] {
+        color: #18181b !important;
+    }
+
+    .scheme-light [data-flux-control]:not([data-flux-otp-input]):not([data-flux-otp]):not([data-flux-switch]):not([data-flux-checkbox]):not([data-flux-radio-pills]),
+    .scheme-light input[data-flux-control]:not([data-flux-otp-input]),
+    .scheme-light textarea[data-flux-control],
+    .scheme-light select[data-flux-control] {
+        color: #18181b !important;
+        background-color: #ffffff !important;
+        border: 1px solid #d4d4d8 !important;
+        -webkit-text-fill-color: #18181b !important;
+        caret-color: #18181b !important;
+    }
+
+    .scheme-light [data-flux-control]:not([data-flux-otp-input]):not([data-flux-otp]):not([data-flux-switch]):not([data-flux-checkbox]):not([data-flux-radio-pills]):focus,
+    .scheme-light input[data-flux-control]:not([data-flux-otp-input]):focus,
+    .scheme-light textarea[data-flux-control]:focus,
+    .scheme-light select[data-flux-control]:focus {
+        border-color: #10b981 !important;
+        box-shadow: 0 0 0 2px rgb(16 185 129 / 0.2) !important;
+    }
+
+    .scheme-light [data-flux-control]:not([data-flux-otp-input]):not([data-flux-otp]):not([data-flux-switch]):not([data-flux-checkbox]):not([data-flux-radio-pills])::placeholder,
+    .scheme-light input[data-flux-control]:not([data-flux-otp-input])::placeholder,
+    .scheme-light textarea[data-flux-control]::placeholder {
+        color: #a1a1aa !important;
+        opacity: 1;
     }
 
     .patient-auth-density-compact .patient-auth-content [data-flux-field] {
@@ -144,7 +298,7 @@ select:focus[data-flux-control] {
         @apply !text-sm;
     }
 
-    .patient-auth-density-compact .patient-auth-content [data-flux-control] {
+    .patient-auth-density-compact .patient-auth-content [data-flux-control]:not([data-flux-otp-input]):not([data-flux-otp]):not([data-flux-radio-pills]) {
         @apply !min-h-10 !py-2 !text-sm sm:!min-h-11 sm:!text-base;
     }
 
@@ -161,7 +315,7 @@ select:focus[data-flux-control] {
             @apply !text-xl sm:!text-2xl;
         }
 
-        .patient-auth-density-compact .patient-auth-content [data-flux-control] {
+        .patient-auth-density-compact .patient-auth-content [data-flux-control]:not([data-flux-otp-input]):not([data-flux-otp]):not([data-flux-radio-pills]) {
             @apply !min-h-9 !py-1.5;
         }
 
@@ -208,6 +362,17 @@ select:focus[data-flux-control] {
 
     .patient-mood-detail-panel {
         animation: patient-mood-detail-open 0.28s ease-out forwards;
+    }
+
+    /** Mood week strip: equal columns, rounded cards (not global pill buttons). */
+    .patient-mood-week-grid button {
+        border-radius: 0.75rem !important;
+    }
+
+    @media (min-width: 640px) {
+        .patient-mood-week-grid button {
+            border-radius: 1rem !important;
+        }
     }
 
     .session-filter-shell {
@@ -307,6 +472,9 @@ select:focus[data-flux-control] {
     gap: 0.875rem !important;
     width: 100% !important;
     isolation: auto !important;
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
 }
 
 .patient-auth-content .patient-auth-otp ui-otp [data-flux-input] {
@@ -347,6 +515,110 @@ select:focus[data-flux-control] {
 
 .patient-auth-content [data-flux-button].bg-transparent:hover {
     color: #18181b !important;
+}
+
+/* Video call overlay — Agora tracks fill the stage */
+.video-call-overlay .video-call-stage > div[id] video,
+.video-call-overlay .video-call-stage > div[id] > div {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover;
+}
+
+.video-call-overlay .video-call-stage > div[id] {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.video-call-control--off [data-control-ring] {
+    border-color: rgb(244 63 94 / 0.65) !important;
+    background-color: rgb(127 29 29 / 0.75) !important;
+    color: rgb(254 205 211) !important;
+}
+
+.video-call-control--off [data-control-label] {
+    color: rgb(251 113 133) !important;
+}
+
+.portal-sidebar-scroll {
+    scrollbar-gutter: stable;
+    scrollbar-width: thin;
+    scrollbar-color: rgb(255 255 255 / 0.38) transparent;
+}
+
+.portal-sidebar-scroll::-webkit-scrollbar {
+    width: 0.375rem;
+}
+
+.portal-sidebar-scroll::-webkit-scrollbar-track {
+    margin-block: 0.25rem;
+    background: transparent;
+}
+
+.portal-sidebar-scroll::-webkit-scrollbar-thumb {
+    border-radius: 9999px;
+    background-color: rgb(255 255 255 / 0.28);
+}
+
+.portal-sidebar-scroll::-webkit-scrollbar-thumb:hover {
+    background-color: rgb(255 255 255 / 0.45);
+}
+
+.portal-chrome-sidebar {
+    isolation: isolate;
+}
+
+.doctor-workflow-step-pill {
+    min-height: 2.75rem;
+}
+
+.doctor-workflow-progress-track {
+    display: block;
+    width: 100%;
+    height: 0.875rem;
+    overflow: hidden;
+    border-radius: 9999px;
+    background-color: #e4e4e7;
+    padding: 3px;
+    box-shadow: inset 0 1px 2px rgb(0 0 0 / 0.06);
+}
+
+.doctor-workflow-progress-fill {
+    height: 100%;
+    min-width: 0.5rem;
+    border-radius: 9999px;
+    background: linear-gradient(90deg, #10b981 0%, #047857 100%);
+    box-shadow:
+        0 1px 2px rgb(16 185 129 / 0.35),
+        inset 0 1px 0 rgb(255 255 255 / 0.25);
+    transition: width 500ms ease;
+}
+
+@media (min-width: 640px) {
+    .doctor-workflow-steps {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (min-width: 1024px) {
+    .doctor-workflow-steps {
+        display: flex;
+        flex-wrap: nowrap;
+    }
+
+    .doctor-workflow-steps > li {
+        flex: 1 1 0;
+    }
+}
+
+.doctor-workspace-tabs {
+    scrollbar-width: none;
+}
+
+.doctor-workspace-tabs::-webkit-scrollbar {
+    display: none;
 }
 
 /* \[:where(&)\]:size-4 {

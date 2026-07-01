@@ -211,7 +211,7 @@ new #[Layout('layouts::patient')] #[Title('Schedule a session')] class extends C
                         {{ __('session_filter.progress', ['current' => $this->requiredFiltersCompleted, 'total' => 4]) }}
                     </span>
                 </div>
-                <div class="mt-3 h-2 overflow-hidden rounded-full bg-blue-100/60">
+                <div class="mt-3 h-2 overflow-hidden rounded-full bg-[#10B981]/15">
                     <div
                         class="h-full rounded-full bg-[#34d399] transition-all duration-300 ease-out"
                         style="width: {{ $this->requiredFilterProgressPercent() }}%"

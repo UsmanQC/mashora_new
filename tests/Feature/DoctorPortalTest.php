@@ -1,5 +1,7 @@
 <?php
 
+use App\Events\AppointmentIncomingCallAnnounced;
+use App\Events\PatientSessionJoinRequested;
 use App\Livewire\Doctor\Components\Notifications;
 use App\Models\Appointment;
 use App\Models\BankAccount;
@@ -17,6 +19,7 @@ use App\Models\WorkingDay;
 use App\Models\WorkingHour;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 
@@ -36,6 +39,55 @@ test('authenticated doctor can view dashboard', function () {
     $response = $this->actingAs($doctor, 'doctor')->get(route('doctor.dashboard'));
 
     $response->assertOk();
+});
+
+test('doctor dashboard separates upcoming new and follow up appointments', function () {
+    app()->setLocale('en');
+
+    $doctor = Doctor::factory()->create([
+        'phone' => '966511122244',
+        'profile_completed' => true,
+        'status' => 'approved',
+    ]);
+
+    $user = User::factory()->create(['name' => 'Usman']);
+
+    Appointment::factory()->create([
+        'doctor_id' => $doctor->id,
+        'user_id' => $user->id,
+        'status' => 'new',
+        'is_follow_up' => false,
+        'patient_name' => $user->name,
+        'appointment_date' => now()->addDays(7)->format('Y-m-d'),
+        'scheduled_at' => now()->addDays(7),
+    ]);
+
+    Appointment::factory()->create([
+        'doctor_id' => $doctor->id,
+        'user_id' => $user->id,
+        'status' => 'new',
+        'is_follow_up' => true,
+        'patient_name' => $user->name,
+        'appointment_date' => now()->addDays(14)->format('Y-m-d'),
+        'scheduled_at' => now()->addDays(14),
+    ]);
+
+    $this->actingAs($doctor, 'doctor');
+
+    Livewire::test('pages::doctor.dashboard')
+        ->assertSet('upcomingNewCount', 1)
+        ->assertSet('upcomingFollowUpCount', 1)
+        ->assertSee(__('doctor.dashboard.tab_upcoming_new'), false)
+        ->assertSee(__('doctor.dashboard.tab_upcoming_follow'), false)
+        ->assertSee(__('doctor.appointment_status.new'), false)
+        ->assertDontSee(__('doctor.appointment_status.follow_up'), false)
+        ->set('upcoming', 'follow_up')
+        ->assertSee(__('doctor.appointment_status.follow_up'), false)
+        ->tap(function ($component) {
+            $appointments = $component->instance()->upcomingAppointments;
+            expect($appointments)->toHaveCount(1);
+            expect($appointments->first()->is_follow_up)->toBeTrue();
+        });
 });
 
 test('doctor pending approval is redirected to account status from portal pages', function () {
@@ -67,7 +119,7 @@ test('rejected doctor is blocked from the portal and sees the rejected message',
     ]);
 
     $this->actingAs($doctor, 'doctor')
-        ->get(route('doctor.settings'))
+        ->get(route('doctor.settings.wallet'))
         ->assertRedirect(route('doctor.account-status'));
 
     $this->actingAs($doctor, 'doctor')
@@ -112,13 +164,13 @@ test('approved doctor dashboard includes formatted revenue total for revenue-eli
         ->assertSee('2,500');
 });
 
-test('authenticated doctor can view appointments ratings and settings', function () {
+test('authenticated doctor can view appointments ratings and settings pages', function () {
     $doctor = Doctor::factory()->create(['profile_completed' => true]);
 
     $this->actingAs($doctor, 'doctor')->get(route('doctor.appointments'))->assertOk();
     $this->actingAs($doctor, 'doctor')->get(route('doctor.appointments', ['status' => 'completed']))->assertOk();
     $this->actingAs($doctor, 'doctor')->get(route('doctor.ratings'))->assertOk();
-    $this->actingAs($doctor, 'doctor')->get(route('doctor.settings'))->assertOk();
+    $this->actingAs($doctor, 'doctor')->get(route('doctor.settings'))->assertRedirect(route('doctor.dashboard'));
     $this->actingAs($doctor, 'doctor')->get(route('doctor.settings.profile'))->assertOk();
     $this->actingAs($doctor, 'doctor')->get(route('doctor.settings.notifications'))->assertOk();
     $this->actingAs($doctor, 'doctor')->get(route('doctor.settings.bank-account'))->assertOk();
@@ -127,6 +179,46 @@ test('authenticated doctor can view appointments ratings and settings', function
     $this->actingAs($doctor, 'doctor')->get(route('doctor.settings.invoices'))->assertOk();
     $this->actingAs($doctor, 'doctor')->get(route('doctor.settings.working-hours'))->assertOk();
     $this->actingAs($doctor, 'doctor')->get(route('doctor.settings.duration'))->assertOk();
+});
+
+test('doctor profile shows and saves specialities like registration', function () {
+    $doctor = Doctor::factory()->create([
+        'profile_completed' => true,
+        'registration_number' => 'LIC-12345',
+    ]);
+
+    $primary = Speciality::query()->create([
+        'title' => 'Clinical Psychology',
+        'title_ar' => 'علم النفس الإكلينيكي',
+        'status' => true,
+    ]);
+    $additional = Speciality::query()->create([
+        'title' => 'Family Therapy',
+        'title_ar' => 'العلاج الأسري',
+        'status' => true,
+    ]);
+
+    $doctor->specialities()->sync([$primary->id]);
+    $doctor->updateQuietly(['speciality_id' => $primary->id]);
+
+    $this->actingAs($doctor, 'doctor');
+
+    Livewire::test('pages::doctor.settings.profile')
+        ->assertSet('speciality_ids', [$primary->id])
+        ->assertSet('registration_number', 'LIC-12345')
+        ->assertSee('Clinical Psychology')
+        ->set('speciality_ids', [$primary->id, $additional->id])
+        ->set('registration_number', 'LIC-67890')
+        ->call('saveProfile')
+        ->assertHasNoErrors();
+
+    $doctor->refresh();
+    $doctor->load('specialities');
+
+    expect($doctor->specialities->pluck('id')->sort()->values()->all())
+        ->toBe([$primary->id, $additional->id])
+        ->and($doctor->speciality_id)->toBe($primary->id)
+        ->and($doctor->registration_number)->toBe('LIC-67890');
 });
 
 test('doctor can save dynamic working hours', function () {
@@ -233,30 +325,29 @@ test('authenticated doctor navbar shows language switch', function () {
         ->get(route('doctor.dashboard'))
         ->assertSuccessful()
         ->assertSee('data-test="doctor-navbar-language-switch"', false)
-        ->assertSee(route('doctor.locale', ['locale' => 'en']), false)
         ->assertSee(route('doctor.locale', ['locale' => 'ar']), false)
-        ->assertSee(__('doctor.language.locale_en'), false)
-        ->assertSee(__('doctor.language.locale_ar_short'), false);
+        ->assertSee(__('doctor.language.locale_ar_short'), false)
+        ->assertDontSee(route('doctor.locale', ['locale' => 'en']), false);
 });
 
-test('authenticated doctor account menu shows personal profile link', function () {
+test('authenticated doctor account menu shows sign out only', function () {
     $doctor = Doctor::factory()->create(['profile_completed' => true]);
 
     $this->actingAs($doctor, 'doctor')
         ->get(route('doctor.dashboard'))
         ->assertSuccessful()
         ->assertSee('data-test="doctor-account-menu-button"', false)
-        ->assertSee('data-test="doctor-personal-profile-link"', false)
-        ->assertSee(route('doctor.settings.profile'), false)
-        ->assertSee(__('doctor.settings.personal_profile'), false);
+        ->assertSee('data-test="doctor-logout-button"', false)
+        ->assertDontSee('data-test="doctor-personal-profile-link"', false)
+        ->assertDontSee('data-test="doctor-account-menu-language-switch"', false);
 });
 
 test('doctor guest welcome page shows language switch', function () {
     $this->get(route('doctor.welcome'))
         ->assertSuccessful()
         ->assertSee(__('doctor.auth.phone_heading'), false)
-        ->assertSee(route('doctor.locale', ['locale' => 'en']), false)
-        ->assertSee(route('doctor.locale', ['locale' => 'ar']), false);
+        ->assertSee(route('doctor.locale', ['locale' => 'ar']), false)
+        ->assertSee(__('doctor.language.locale_ar_short'), false);
 });
 
 test('doctor with incomplete profile is redirected to basic info from dashboard', function () {
@@ -292,6 +383,53 @@ test('doctor register page accepts phone email password in onboarding flow', fun
     expect($doctor)->not->toBeNull()
         ->and($doctor->email)->toBe('new-doctor@example.com')
         ->and($doctor->profile_completed)->toBeFalse();
+});
+
+test('doctor basic info step requires name, arabic name, bios, and profile photo', function () {
+    $doctor = Doctor::factory()->pendingOnboarding()->create([
+        'phone' => '966511123488',
+        'name' => null,
+        'name_ar' => null,
+        'about' => null,
+        'about_ar' => null,
+    ]);
+
+    $this->actingAs($doctor, 'doctor');
+
+    Livewire::test('pages::doctor.register-basic-info')
+        ->call('nextFromBasic')
+        ->assertHasErrors(['name', 'name_ar', 'about', 'about_ar', 'profile_photo']);
+});
+
+test('doctor basic info step accepts an already saved profile photo without re-upload', function () {
+    Storage::fake('public');
+
+    $existingPhotoPath = 'doctors/existing-headshot.webp';
+    Storage::disk('public')->put($existingPhotoPath, 'fake-image');
+
+    $doctor = Doctor::factory()->pendingOnboarding()->create([
+        'phone' => '966511123489',
+        'name' => null,
+        'name_ar' => null,
+        'about' => null,
+        'about_ar' => null,
+        'profile_photo_path' => $existingPhotoPath,
+    ]);
+
+    $this->actingAs($doctor, 'doctor');
+
+    Livewire::test('pages::doctor.register-basic-info')
+        ->set('name', 'Dr. Saved Photo')
+        ->set('name_ar', 'د. صورة محفوظة')
+        ->set('about', 'About text in English.')
+        ->set('about_ar', 'نبذة بالعربية.')
+        ->call('nextFromBasic')
+        ->assertHasNoErrors()
+        ->assertSet('step', 2);
+
+    $doctor->refresh();
+
+    expect($doctor->profile_photo_path)->toBe($existingPhotoPath);
 });
 
 test('doctor completes multi-step onboarding with professional details and certificate', function () {
@@ -487,7 +625,7 @@ test('dashboard can mark in process appointment completed when diagnosis and pre
         ->assertSet('showCompleteAppointmentModal', true)
         ->assertSet('appointmentPendingCompleteId', $appointment->id)
         ->call('confirmCompleteAppointment')
-        ->assertRedirect(route('doctor.dashboard'));
+        ->assertRedirect(route('doctor.appointments.follow-up', $appointment));
 
     $fresh = $appointment->fresh();
     expect($fresh->status)->toBe('completed')
@@ -572,7 +710,7 @@ test('dashboard can complete without medications when prescription is marked not
         ->test('pages::doctor.dashboard')
         ->call('requestCompleteAppointment', $appointment->id)
         ->call('confirmCompleteAppointment')
-        ->assertRedirect(route('doctor.dashboard'));
+        ->assertRedirect(route('doctor.appointments.follow-up', $appointment));
 
     expect($appointment->fresh()->status)->toBe('completed');
 });
@@ -671,12 +809,12 @@ test('doctor can add and remove a medication via the prescription page', functio
         ->test('pages::doctor.appointment.prescription', ['appointment' => $appointment])
         ->call('openCreateMedication')
         ->assertSet('showMedicationModal', true)
+        ->assertSet('duration_measurement', 'days')
         ->set('name', 'Amoxicillin')
         ->set('dosage', '500mg')
         ->set('usage', 'Oral')
         ->set('frequency', 'Twice daily')
         ->set('duration', '7')
-        ->set('duration_measurement', 'days')
         ->call('saveMedication')
         ->assertSet('showMedicationModal', false);
 
@@ -752,6 +890,26 @@ test('doctor can start session from conversation tab', function () {
         ->and($fresh->extend_at)->not->toBeNull();
 });
 
+test('doctor conversation page includes resilient video call client bootstrap', function () {
+    $user = User::factory()->create();
+    $doctor = Doctor::factory()->create(['profile_completed' => true]);
+    $appointment = Appointment::factory()->create([
+        'doctor_id' => $doctor->id,
+        'user_id' => $user->id,
+        'status' => 'in_process',
+        'actual_start_at' => now(),
+        'extend_at' => now()->addMinutes(30),
+    ]);
+
+    Livewire::actingAs($doctor, 'doctor')
+        ->test('pages::doctor.appointment.conversation', ['appointment' => $appointment])
+        ->assertSee('data-label-call-failed', false)
+        ->assertSee('data-label-agora-sdk-missing', false)
+        ->assertSee('id="btn-agora-video"', false)
+        ->assertSee('id="agora-toggle-mic"', false)
+        ->assertSee('id="agora-toggle-video"', false);
+});
+
 test('doctor can send a session chat message after starting session', function () {
     $user = User::factory()->create();
     $doctor = Doctor::factory()->create([
@@ -777,6 +935,58 @@ test('doctor can send a session chat message after starting session', function (
     expect($message)->not->toBeNull()
         ->and($message->body)->toBe('Hello from the doctor')
         ->and($message->send_by)->toBe('doctor');
+});
+
+test('doctor notify call broadcasts incoming call events to patient', function () {
+    config([
+        'broadcasting.default' => 'pusher',
+        'agora.AGORA_APP_ID' => 'test-app-id',
+        'agora.AGORA_APP_CERTIFICATE' => str_repeat('a', 32),
+    ]);
+
+    Event::fake([
+        AppointmentIncomingCallAnnounced::class,
+        PatientSessionJoinRequested::class,
+    ]);
+
+    $user = User::factory()->create();
+    $doctor = Doctor::factory()->create(['profile_completed' => true]);
+    $appointment = Appointment::factory()->create([
+        'doctor_id' => $doctor->id,
+        'user_id' => $user->id,
+        'status' => 'in_process',
+        'actual_start_at' => now(),
+        'extend_at' => now()->addMinutes(30),
+    ]);
+
+    $this->actingAs($doctor, 'doctor')
+        ->postJson(route('doctor.appointments.realtime.notify-call', $appointment), [
+            'agora_app_id' => 'test-app-id',
+            'agora_token' => 'test-token',
+            'agora_channel' => 'video_call_'.$appointment->id,
+            'call_type' => 'video',
+        ])
+        ->assertOk()
+        ->assertJsonPath('ok', true);
+
+    expect(Notification::query()
+        ->where('userable_id', $user->id)
+        ->where('type', 'incoming_call')
+        ->exists())->toBeTrue();
+
+    Event::assertDispatched(
+        AppointmentIncomingCallAnnounced::class,
+        fn (AppointmentIncomingCallAnnounced $event): bool => $event->appointmentId === $appointment->id
+            && $event->callType === 'video',
+    );
+
+    Event::assertDispatched(
+        PatientSessionJoinRequested::class,
+        fn (PatientSessionJoinRequested $event): bool => $event->userId === $user->id
+            && $event->appointmentId === $appointment->id
+            && $event->callType === 'video'
+            && $event->agoraAppId === 'test-app-id',
+    );
 });
 
 test('doctor can refresh agora token for an appointment', function () {

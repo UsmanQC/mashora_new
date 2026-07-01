@@ -9,10 +9,13 @@ use Illuminate\Support\Carbon;
 
 uses(RefreshDatabase::class);
 
-test('payment success redirects to checkout when myfatoorah is not configured', function () {
+test('payment success redirects to checkout when hyperpay is not configured', function () {
     config([
-        'payment.driver' => 'myfatoorah',
-        'myfatoorah.api_key' => '',
+        'payment.driver' => 'hyperpay',
+        'hyperpay.token' => '',
+        'hyperpay.entity_mode' => 'b2b',
+        'hyperpay.entity_id_b2b' => '',
+        'hyperpay.entity_id_b2c' => '',
         'stripe.key' => '',
         'stripe.secret' => '',
     ]);

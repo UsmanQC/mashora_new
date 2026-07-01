@@ -27,7 +27,7 @@ new #[Layout('layouts::doctor')] #[Title('Wallet')] class extends Component
     }
 
     /**
-     * @return array{earned: float, paid_out: float, balance: float}
+     * @return array{earned: float, paid_out: float, balance: float, completed_appointments: int}
      */
     public function getMonthlySummaryProperty(): array
     {
@@ -59,9 +59,14 @@ new #[Layout('layouts::doctor')] #[Title('Wallet')] class extends Component
             <flux:heading size="xl" class="font-semibold text-zinc-900">{{ __('doctor.wallet.title') }}</flux:heading>
             <flux:text class="mt-1 text-zinc-600">{{ __('doctor.wallet.subtitle') }}</flux:text>
         </div>
-        <flux:button :href="route('doctor.settings')" wire:navigate variant="ghost" size="sm" icon="arrow-left">
-            {{ __('doctor.auth.back') }}
-        </flux:button>
+        <div class="flex flex-wrap items-center gap-2">
+            <flux:button :href="route('doctor.settings.invoices')" wire:navigate variant="outline" size="sm">
+                {{ __('doctor.wallet.view_invoices') }}
+            </flux:button>
+            <flux:button :href="route('doctor.dashboard')" wire:navigate variant="ghost" size="sm" icon="arrow-left">
+                {{ __('doctor.auth.back') }}
+            </flux:button>
+        </div>
     </div>
 
     <div class="rounded-2xl border border-[#10B981]/25 bg-gradient-to-br from-[#10B981]/10 to-white p-6 shadow-sm">
@@ -73,24 +78,50 @@ new #[Layout('layouts::doctor')] #[Title('Wallet')] class extends Component
         <flux:text class="mt-3 text-sm text-zinc-600">{{ __('doctor.wallet.balance_hint') }}</flux:text>
     </div>
 
-    <div class="grid gap-3 sm:grid-cols-3">
-        <div class="rounded-2xl border border-zinc-200/90 bg-white p-4 shadow-sm">
-            <p class="text-xs font-semibold uppercase text-zinc-500">{{ __('doctor.wallet.month_earned') }}</p>
-            <p class="mt-2 text-2xl font-bold tabular-nums text-emerald-600">
-                +{{ number_format($this->monthlySummary['earned'], 2) }} {{ config('currency.sa_riyal_symbol') }}
-            </p>
+    <div class="grid gap-4 lg:grid-cols-3">
+        <div class="rounded-2xl border border-[#10B981]/20 bg-gradient-to-br from-[#eef2ff] via-white to-white p-5 shadow-sm transition hover:shadow-md">
+            <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                    <p class="text-sm font-semibold text-zinc-500">{{ __('doctor.wallet.month_earned') }}</p>
+                    <p class="mt-2 text-3xl font-bold tabular-nums tracking-tight text-zinc-900">
+                        +{{ number_format($this->monthlySummary['earned'], 2) }}
+                        <span class="text-base font-semibold text-[#10B981]">{{ config('currency.sa_riyal_symbol') }}</span>
+                    </p>
+                </div>
+                <span class="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-[#10B981]/10 text-[#10B981]" aria-hidden="true">
+                    <flux:icon name="banknotes" variant="outline" class="size-6" />
+                </span>
+            </div>
         </div>
-        <div class="rounded-2xl border border-zinc-200/90 bg-white p-4 shadow-sm">
-            <p class="text-xs font-semibold uppercase text-zinc-500">{{ __('doctor.wallet.month_paid_out') }}</p>
-            <p class="mt-2 text-2xl font-bold tabular-nums text-zinc-700">
-                {{ number_format($this->monthlySummary['paid_out'], 2) }} {{ config('currency.sa_riyal_symbol') }}
-            </p>
+
+        <div class="rounded-2xl border border-zinc-200/70 bg-gradient-to-br from-zinc-50 via-white to-white p-5 shadow-sm transition hover:shadow-md">
+            <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                    <p class="text-sm font-semibold text-zinc-500">{{ __('doctor.wallet.month_paid_out') }}</p>
+                    <p class="mt-2 text-3xl font-bold tabular-nums tracking-tight text-zinc-900">
+                        {{ number_format($this->monthlySummary['paid_out'], 2) }}
+                        <span class="text-base font-semibold text-zinc-500">{{ config('currency.sa_riyal_symbol') }}</span>
+                    </p>
+                </div>
+                <span class="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-zinc-100 text-zinc-600" aria-hidden="true">
+                    <flux:icon name="arrow-down-tray" variant="outline" class="size-6" />
+                </span>
+            </div>
         </div>
-        <div class="rounded-2xl border border-zinc-200/90 bg-white p-4 shadow-sm">
-            <p class="text-xs font-semibold uppercase text-zinc-500">{{ __('doctor.wallet.invoices_link') }}</p>
-            <flux:button :href="route('doctor.settings.invoices')" wire:navigate variant="outline" size="sm" class="mt-2">
-                {{ __('doctor.wallet.view_invoices') }}
-            </flux:button>
+
+        <div class="rounded-2xl border border-sky-200/70 bg-gradient-to-br from-sky-50 via-white to-white p-5 shadow-sm transition hover:shadow-md">
+            <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                    <p class="text-sm font-semibold text-zinc-500">{{ __('doctor.wallet.month_completed') }}</p>
+                    <p class="mt-2 text-3xl font-bold tabular-nums tracking-tight text-zinc-900">
+                        {{ $this->monthlySummary['completed_appointments'] }}
+                        <span class="text-base font-semibold normal-case text-sky-600">{{ __('doctor.wallet.completed_suffix') }}</span>
+                    </p>
+                </div>
+                <span class="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-sky-100 text-sky-600" aria-hidden="true">
+                    <flux:icon name="calendar-days" variant="outline" class="size-6" />
+                </span>
+            </div>
         </div>
     </div>
 

@@ -3,11 +3,16 @@
 namespace App\Services;
 
 use App\Events\AppointmentSessionStarted;
+use App\Events\PatientAppointmentSessionStarted;
 use App\Models\Appointment;
 use App\Models\Doctor;
 
 final class AppointmentSessionService
 {
+    public function __construct(
+        private readonly PatientAppointmentNotifier $patientNotifier,
+    ) {}
+
     /**
      * @var list<string>
      */
@@ -19,12 +24,16 @@ final class AppointmentSessionService
             return false;
         }
 
+        if ((bool) config('appointments.relaxed_session_limits', false)) {
+            return true;
+        }
+
         return $appointment->isSessionStartDue();
     }
 
     public function canPatientJoin(Appointment $appointment): bool
     {
-        if ($appointment->is_follow_up) {
+        if ($appointment->is_follow_up && ! (bool) config('appointments.follow_up_allows_calls', false)) {
             return false;
         }
 
@@ -50,6 +59,8 @@ final class AppointmentSessionService
         $appointment->refresh();
 
         $this->broadcastStarted($appointment);
+        $this->patientNotifier->notifySessionStarted($appointment, $doctor);
+        $this->broadcastPatientSessionStarted($appointment);
 
         return true;
     }
@@ -74,6 +85,21 @@ final class AppointmentSessionService
     public function broadcastStarted(Appointment $appointment): void
     {
         broadcast(new AppointmentSessionStarted(
+            (int) $appointment->id,
+            (string) $appointment->status,
+            $appointment->actual_start_at?->toIso8601String(),
+            $appointment->extend_at?->toIso8601String(),
+        ));
+    }
+
+    public function broadcastPatientSessionStarted(Appointment $appointment): void
+    {
+        if ($appointment->user_id === null) {
+            return;
+        }
+
+        broadcast(new PatientAppointmentSessionStarted(
+            (int) $appointment->user_id,
             (int) $appointment->id,
             (string) $appointment->status,
             $appointment->actual_start_at?->toIso8601String(),

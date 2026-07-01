@@ -189,4 +189,17 @@ class Doctor extends Authenticatable implements Wallet, WalletFloat
 
         return Storage::disk('public')->url($this->profile_photo_path);
     }
+
+    public function profileDetailUrl(): ?string
+    {
+        if (! filled($this->profile_detail_path)) {
+            return null;
+        }
+
+        if (str_starts_with((string) $this->profile_detail_path, 'http://') || str_starts_with((string) $this->profile_detail_path, 'https://')) {
+            return (string) $this->profile_detail_path;
+        }
+
+        return Storage::disk('public')->url($this->profile_detail_path);
+    }
 }

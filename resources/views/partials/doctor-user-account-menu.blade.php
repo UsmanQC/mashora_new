@@ -44,12 +44,6 @@
     @endif
 
     <flux:menu @class(['min-w-[12rem]' => $density === 'chrome'])>
-        <flux:menu.item :href="route('doctor.settings.profile')" icon="user" wire:navigate data-test="doctor-personal-profile-link">
-            {{ __('doctor.settings.personal_profile') }}
-        </flux:menu.item>
-
-        <flux:menu.separator />
-
         <form method="POST" action="{{ route('doctor.logout') }}" class="w-full">
             @csrf
             <flux:menu.item

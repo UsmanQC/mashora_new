@@ -17,6 +17,23 @@ final class FollowUpAppointmentService
      */
     public const SCHEDULABLE_PARENT_STATUSES = ['completed'];
 
+    /**
+     * @return list<string>
+     */
+    public function schedulableParentStatuses(): array
+    {
+        if ((bool) config('appointments.relaxed_session_limits', false)) {
+            return ['completed', 'in_process'];
+        }
+
+        return self::SCHEDULABLE_PARENT_STATUSES;
+    }
+
+    public function skipsPatientConfirmation(): bool
+    {
+        return true;
+    }
+
     public function __construct(
         private readonly DoctorAvailabilityService $availability,
         private readonly PatientAppointmentNotifier $notifier,
@@ -50,10 +67,28 @@ final class FollowUpAppointmentService
         return now(config('app.timezone'))->startOfDay();
     }
 
+    public function windowStartFor(Appointment $parent): CarbonInterface
+    {
+        $timezone = config('app.timezone');
+        $today = $this->windowStart();
+
+        if ($parent->appointment_date !== null) {
+            $sessionDay = $parent->appointment_date instanceof Carbon
+                ? $parent->appointment_date->copy()->timezone($timezone)->startOfDay()
+                : Carbon::parse($parent->appointment_date, $timezone)->startOfDay();
+
+            if ($sessionDay->greaterThan($today)) {
+                return $sessionDay;
+            }
+        }
+
+        return $today;
+    }
+
     public function maxSelectableDate(Appointment $parent): CarbonInterface
     {
         $end = $this->windowEnd($parent);
-        $start = $this->windowStart();
+        $start = $this->windowStartFor($parent);
 
         if ($end->lessThan($start)) {
             return $start;
@@ -68,7 +103,7 @@ final class FollowUpAppointmentService
             abort(403);
         }
 
-        if (! in_array((string) $parent->status, self::SCHEDULABLE_PARENT_STATUSES, true)) {
+        if (! in_array((string) $parent->status, $this->schedulableParentStatuses(), true)) {
             throw ValidationException::withMessages([
                 'selectedTime' => __('doctor.follow_up.parent_not_eligible'),
             ]);
@@ -94,6 +129,12 @@ final class FollowUpAppointmentService
         if ($this->existingFollowUpFor($parent) !== null) {
             throw ValidationException::withMessages([
                 'selectedTime' => __('doctor.follow_up.already_scheduled'),
+            ]);
+        }
+
+        if ($this->parentDeclinedFollowUp($parent)) {
+            throw ValidationException::withMessages([
+                'selectedTime' => __('doctor.follow_up.no_need_already_marked'),
             ]);
         }
 
@@ -133,7 +174,15 @@ final class FollowUpAppointmentService
             return $appointment;
         });
 
-        $this->notifier->notifyFollowUpScheduled($followUp, $doctor, $start);
+        $this->clearFollowUpNotNeededSession($parent);
+
+        $patient = User::query()->find($parent->user_id);
+
+        if ($patient instanceof User) {
+            return $this->confirm($followUp->fresh(), $patient);
+        }
+
+        $this->notifier->notifyFollowUpBooked($followUp, $doctor);
 
         return $followUp;
     }
@@ -184,7 +233,7 @@ final class FollowUpAppointmentService
 
     public function parentCanScheduleFollowUp(Appointment $parent): bool
     {
-        if (! in_array((string) $parent->status, self::SCHEDULABLE_PARENT_STATUSES, true)) {
+        if (! in_array((string) $parent->status, $this->schedulableParentStatuses(), true)) {
             return false;
         }
 
@@ -196,7 +245,68 @@ final class FollowUpAppointmentService
             return false;
         }
 
-        return $this->maxSelectableDate($parent)->greaterThanOrEqualTo($this->windowStart());
+        if ($this->parentDeclinedFollowUp($parent)) {
+            return false;
+        }
+
+        return $this->maxSelectableDate($parent)->greaterThanOrEqualTo($this->windowStartFor($parent));
+    }
+
+    public function markFollowUpNotNeeded(Doctor $doctor, Appointment $parent): void
+    {
+        if ((int) $parent->doctor_id !== (int) $doctor->id) {
+            abort(403);
+        }
+
+        if ($parent->parent_id !== null || $parent->is_follow_up) {
+            throw ValidationException::withMessages([
+                'followUpNotNeeded' => __('doctor.follow_up.not_eligible_decline'),
+            ]);
+        }
+
+        if (! in_array((string) $parent->status, $this->schedulableParentStatuses(), true)) {
+            throw ValidationException::withMessages([
+                'followUpNotNeeded' => __('doctor.follow_up.complete_session_first'),
+            ]);
+        }
+
+        if ($this->existingFollowUpFor($parent) !== null || $this->pendingFollowUpFor($parent) !== null) {
+            throw ValidationException::withMessages([
+                'followUpNotNeeded' => __('doctor.follow_up.already_scheduled'),
+            ]);
+        }
+
+        session()->put($this->followUpNotNeededSessionKey($parent), true);
+    }
+
+    public function clearFollowUpNotNeeded(Doctor $doctor, Appointment $parent): void
+    {
+        if ((int) $parent->doctor_id !== (int) $doctor->id) {
+            abort(403);
+        }
+
+        if ($this->existingFollowUpFor($parent) !== null || $this->pendingFollowUpFor($parent) !== null) {
+            throw ValidationException::withMessages([
+                'followUpNotNeeded' => __('doctor.follow_up.already_scheduled'),
+            ]);
+        }
+
+        $this->clearFollowUpNotNeededSession($parent);
+    }
+
+    public function parentDeclinedFollowUp(Appointment $parent): bool
+    {
+        return (bool) session()->get($this->followUpNotNeededSessionKey($parent), false);
+    }
+
+    private function followUpNotNeededSessionKey(Appointment $parent): string
+    {
+        return "doctor.workflow.follow_up_not_needed.{$parent->id}";
+    }
+
+    private function clearFollowUpNotNeededSession(Appointment $parent): void
+    {
+        session()->forget($this->followUpNotNeededSessionKey($parent));
     }
 
     public function assertDateWithinWindow(Appointment $parent, string $date): void
@@ -211,7 +321,7 @@ final class FollowUpAppointmentService
             ]);
         }
 
-        if ($selected->lessThan($this->windowStart())) {
+        if ($selected->lessThan($this->windowStartFor($parent))) {
             throw ValidationException::withMessages([
                 'newDate' => __('doctor.follow_up.date_outside_window', ['days' => self::windowDays()]),
             ]);

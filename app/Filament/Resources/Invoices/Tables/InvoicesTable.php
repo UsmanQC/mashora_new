@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Invoices\Tables;
 
+use App\Filament\Resources\Invoices\Pages\ViewInvoice;
 use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
@@ -34,25 +35,36 @@ class InvoicesTable
                     ->label('Appointments')
                     ->sortable(),
                 TextColumn::make('total_amount')
-                    ->label('Amount')
+                    ->label('Session total')
                     ->formatStateUsing(fn ($state): string => Number::format((float) $state, 2).' <img src="'.asset('images/saudi_riyal.svg').'" alt="Saudi Riyal" style="height:14px;display:inline-block;vertical-align:middle;">')
                     ->html()
                     ->sortable(),
                 TextColumn::make('doctor_share')
+                    ->label('Doctor share')
                     ->formatStateUsing(fn ($state): string => Number::format((float) $state, 2).' <img src="'.asset('images/saudi_riyal.svg').'" alt="Saudi Riyal" style="height:14px;display:inline-block;vertical-align:middle;">')
                     ->html()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->sortable(),
                 TextColumn::make('mashora_share')
                     ->formatStateUsing(fn ($state): string => Number::format((float) $state, 2).' <img src="'.asset('images/saudi_riyal.svg').'" alt="Saudi Riyal" style="height:14px;display:inline-block;vertical-align:middle;">')
                     ->html()
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('payment_status')
                     ->badge()
+                    ->color(fn (string $state): string => $state === 'paid' ? 'success' : 'warning')
+                    ->formatStateUsing(fn (string $state): string => ucfirst($state))
                     ->sortable(),
                 TextColumn::make('paid_at')
                     ->dateTime()
                     ->placeholder('—')
                     ->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('from_date')
+                    ->label('Period from')
+                    ->date()
+                    ->toggleable(),
+                TextColumn::make('to_date')
+                    ->label('Period to')
+                    ->date()
+                    ->toggleable(),
                 TextColumn::make('issue_date')
                     ->date()
                     ->toggleable(isToggledHiddenByDefault: true),
@@ -67,6 +79,8 @@ class InvoicesTable
                 TrashedFilter::make(),
             ])
             ->recordActions([
+                ViewInvoice::downloadPdfAction(),
+                ViewInvoice::markPaidAction(),
                 ViewAction::make(),
             ])
             ->toolbarActions([]);

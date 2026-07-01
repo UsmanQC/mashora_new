@@ -18,29 +18,34 @@
                     role="toolbar"
                     aria-label="{{ __('patient.portal_toolbar_aria') }}"
                 >
-                    @include('partials.patient-language-switch', ['variant' => 'chrome'])
+                    <div class="hidden sm:block">
+                        @include('partials.patient-language-switch', ['variant' => 'chrome'])
+                    </div>
 
                     <flux:button
                         type="button"
                         variant="ghost"
                         size="sm"
-                        icon="heart"
                         wire:click="openMoodPicker"
-                        :aria-label="__('patient.mood_check_in_aria')"
-                        class="hidden rounded-full! border border-zinc-200/90! bg-zinc-50! px-3! py-2! text-zinc-700! shadow-none! hover:bg-zinc-100! md:inline-flex"
+                        :aria-label="$this->todayMoodKey
+                            ? __('patient.mood_selector_options.'.$this->todayMoodKey)
+                            : __('patient.mood_check_in_aria')"
+                        :title="$this->todayMoodKey
+                            ? __('patient.mood_selector_options.'.$this->todayMoodKey)
+                            : __('patient.mood_check_in_aria')"
+                        class="inline-flex size-9! shrink-0 rounded-full! border border-zinc-200/90! bg-zinc-50! p-0! text-zinc-700! shadow-none! hover:bg-zinc-100!"
                     >
-                        <span class="hidden lg:inline">{{ __('patient.mood_feeling_cta') }}</span>
+                        @if ($this->todayMoodImageUrl)
+                            <img
+                                src="{{ $this->todayMoodImageUrl }}"
+                                alt=""
+                                class="size-6 object-contain"
+                                decoding="async"
+                            />
+                        @else
+                            <flux:icon name="face-smile" variant="mini" class="size-5 text-[#10B981]" />
+                        @endif
                     </flux:button>
-
-                    <flux:button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        icon="heart"
-                        wire:click="openMoodPicker"
-                        :aria-label="__('patient.mood_check_in_aria')"
-                        class="inline-flex size-9! rounded-full! border border-zinc-200/90! bg-zinc-50! p-0! text-zinc-700! shadow-none! hover:bg-zinc-100! md:hidden"
-                    ></flux:button>
 
                     <flux:dropdown position="bottom" align="end">
                         <div class="relative">
@@ -62,7 +67,7 @@
                             @endif
                         </div>
 
-                        <flux:menu class="min-w-[18rem] max-w-sm">
+                        <flux:menu class="min-w-[18rem] max-w-sm !border-zinc-200 !bg-white">
                             <div class="border-b border-zinc-100 px-3 py-2.5">
                                 <p class="text-sm font-semibold text-zinc-900">{{ __('patient.menu.notifications') }}</p>
                                 @if ($this->unreadNotificationCount > 0)
@@ -104,7 +109,9 @@
                         </flux:menu>
                     </flux:dropdown>
 
-                    @include('partials.patient-user-account-menu', ['density' => 'chrome'])
+                    <div class="hidden sm:block">
+                        @include('partials.patient-user-account-menu', ['density' => 'chrome'])
+                    </div>
                 </div>
             </div>
         </header>

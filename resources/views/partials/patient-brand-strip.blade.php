@@ -4,12 +4,12 @@
     $density ??= 'sidebar';
 
     $logoImgClass = match ($density) {
-        'compact' => 'h-9 w-auto max-w-[min(100%,10rem)] object-contain object-center',
+        'compact' => 'h-9 w-auto max-w-[min(100%,10rem)] object-contain object-start',
         default => 'h-12 w-auto max-w-[min(100%,11rem)] object-contain object-center',
     };
 
     $linkClass = match ($density) {
-        'compact' => 'flex w-full min-w-0 justify-center px-1 text-white no-underline',
+        'compact' => 'inline-flex min-w-0 items-center justify-start text-white no-underline',
         default => 'flex w-full min-w-0 justify-center px-1 text-white no-underline',
     };
 @endphp

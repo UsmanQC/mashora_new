@@ -21,20 +21,29 @@ new #[Layout('layouts::patient-auth')] #[Title('Phone')] class extends Component
     public function mount(Request $request): void
     {
         $raw = $request->query('phone');
+
+        if (! is_string($raw) || $raw === '') {
+            $raw = old('email');
+        }
+
         if (! is_string($raw) || $raw === '') {
             return;
         }
 
-        $digits = preg_replace('/\D/', '', $raw) ?? '';
+        $this->loginPhoneE164 = $this->resolveExistingLoginPhone($raw);
+    }
+
+    private function resolveExistingLoginPhone(string $raw): ?string
+    {
+        $digits = PatientPhone::normalize($raw);
+
         if (strlen($digits) < 10 || strlen($digits) > 15) {
-            return;
+            return null;
         }
 
-        if (! User::query()->where('phone', $digits)->exists()) {
-            return;
-        }
+        $user = User::query()->wherePhoneLogin($digits)->first();
 
-        $this->loginPhoneE164 = $digits;
+        return $user?->phone;
     }
 
     public function backToPhoneEntry(): void
@@ -69,8 +78,8 @@ new #[Layout('layouts::patient-auth')] #[Title('Phone')] class extends Component
             return;
         }
 
-        if (User::query()->where('phone', $normalized)->exists()) {
-            $this->loginPhoneE164 = $normalized;
+        if (User::query()->wherePhoneLogin($normalized)->exists()) {
+            $this->redirect(route('patient.phone', ['phone' => $normalized]), navigate: true);
 
             return;
         }
@@ -93,6 +102,10 @@ new #[Layout('layouts::patient-auth')] #[Title('Phone')] class extends Component
         </flux:text>
 
         <x-auth-session-status class="my-4 text-center sm:my-6" :status="session('status')" />
+
+        @error('email')
+            <flux:text class="text-sm text-red-600">{{ $message }}</flux:text>
+        @enderror
 
         <form method="POST" action="{{ route('login.store') }}" class="space-y-4 sm:space-y-6">
             @csrf

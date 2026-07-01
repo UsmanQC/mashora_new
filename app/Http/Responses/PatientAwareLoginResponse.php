@@ -22,14 +22,14 @@ class PatientAwareLoginResponse implements LoginResponse
 
         $intended = $request->session()->pull('url.intended');
 
-        if (is_string($intended) && $this->isPatientPortalUrl($intended)) {
+        if (is_string($intended) && $this->isGuestAccessiblePatientUrl($intended)) {
             return redirect()->to($intended);
         }
 
         return redirect()->route('patient.home');
     }
 
-    private function isPatientPortalUrl(string $url): bool
+    private function isGuestAccessiblePatientUrl(string $url): bool
     {
         $path = parse_url($url, PHP_URL_PATH);
 
@@ -37,6 +37,22 @@ class PatientAwareLoginResponse implements LoginResponse
             return false;
         }
 
-        return $path === '/patient' || str_starts_with($path, '/patient/');
+        if ($path === '/patient') {
+            return true;
+        }
+
+        $guestAccessiblePrefixes = [
+            '/patient/filter',
+            '/patient/specialists',
+            '/patient/important-numbers',
+        ];
+
+        foreach ($guestAccessiblePrefixes as $prefix) {
+            if ($path === $prefix || str_starts_with($path, $prefix.'/')) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

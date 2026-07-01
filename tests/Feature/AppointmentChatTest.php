@@ -5,6 +5,7 @@ use App\Models\ChMessage;
 use App\Models\Doctor;
 use App\Models\Notification;
 use App\Models\User;
+use App\Services\AppointmentSessionService;
 use App\Services\FollowUpAppointmentService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
@@ -119,6 +120,37 @@ test('confirmed follow up appointment keeps chat open within parent follow up wi
 
     expect($followUp->isChatOpen())->toBeTrue()
         ->and($followUp->allowsPatientCalls())->toBeFalse();
+});
+
+test('follow up appointments allow calls when configured', function () {
+    config(['appointments.follow_up_allows_calls' => true]);
+
+    $user = User::factory()->create();
+    $doctor = Doctor::factory()->create();
+
+    $parent = Appointment::factory()->create([
+        'doctor_id' => $doctor->id,
+        'user_id' => $user->id,
+        'status' => 'completed',
+        'appointment_date' => now()->subDays(2)->toDateString(),
+        'start_time' => '10:00:00',
+        'end_time' => '10:30:00',
+    ]);
+
+    $followUp = Appointment::factory()->create([
+        'doctor_id' => $doctor->id,
+        'user_id' => $user->id,
+        'parent_id' => $parent->id,
+        'is_follow_up' => true,
+        'status' => 'in_process',
+        'appointment_date' => now()->toDateString(),
+        'start_time' => '12:00:00',
+        'end_time' => '12:30:00',
+        'patient_confirmed_at' => now(),
+    ]);
+
+    expect($followUp->allowsPatientCalls())->toBeTrue()
+        ->and(app(AppointmentSessionService::class)->canPatientJoin($followUp))->toBeTrue();
 });
 
 test('patient ongoing tab shows follow up label and open chat for confirmed follow up', function () {

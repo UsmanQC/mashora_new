@@ -21,6 +21,16 @@ class Appointment extends Model
 
     use SoftDeletes;
 
+    /**
+     * @var list<string>
+     */
+    public const UPCOMING_FOLLOW_UP_STATUSES = [
+        'pending_follow_up',
+        'new',
+        'rescheduled',
+        'in_process',
+    ];
+
     protected function casts(): array
     {
         return [
@@ -80,6 +90,7 @@ class Appointment extends Model
         'actual_end_at',
         'extend_at',
         'extend_duration',
+        'invoice_id',
     ];
 
     /**
@@ -193,6 +204,23 @@ class Appointment extends Model
         return $this->status === 'pending_follow_up';
     }
 
+    public function isUpcomingFollowUp(): bool
+    {
+        return $this->is_follow_up
+            && in_array((string) $this->status, self::UPCOMING_FOLLOW_UP_STATUSES, true);
+    }
+
+    /**
+     * @param  Builder<Appointment>  $query
+     * @return Builder<Appointment>
+     */
+    public function scopeUpcomingFollowUp(Builder $query): Builder
+    {
+        return $query
+            ->where('is_follow_up', true)
+            ->whereIn('status', self::UPCOMING_FOLLOW_UP_STATUSES);
+    }
+
     public function chatOpenUntil(): CarbonInterface
     {
         $reference = $this;
@@ -236,7 +264,11 @@ class Appointment extends Model
 
     public function allowsPatientCalls(): bool
     {
-        return ! $this->is_follow_up;
+        if ($this->is_follow_up) {
+            return (bool) config('appointments.follow_up_allows_calls', false);
+        }
+
+        return true;
     }
 
     /**
@@ -280,6 +312,14 @@ class Appointment extends Model
     }
 
     /**
+     * @return BelongsTo<Invoice, $this>
+     */
+    public function invoice(): BelongsTo
+    {
+        return $this->belongsTo(Invoice::class);
+    }
+
+    /**
      * @return BelongsTo<User, $this>
      */
     public function user(): BelongsTo
@@ -301,5 +341,11 @@ class Appointment extends Model
     {
         return $this->status === 'not_attended'
             && $this->cancel_status === 'doctor_missed';
+    }
+
+    public function isPatientRefunded(): bool
+    {
+        return $this->status === 'cancelled'
+            && $this->cancel_status === 'patient_refunded';
     }
 }

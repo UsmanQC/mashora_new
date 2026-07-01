@@ -4,11 +4,14 @@ namespace App\Livewire;
 
 use App\Models\Notification;
 use App\Models\User;
+use App\Services\PatientMoodLogService;
+use App\Support\PatientMoodImage;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
+use Livewire\Attributes\On;
 use Livewire\Component;
 
 class PatientPortalChromeBar extends Component
@@ -16,6 +19,32 @@ class PatientPortalChromeBar extends Component
     public function openMoodPicker(): void
     {
         $this->dispatch('open-patient-mood-picker');
+    }
+
+    #[On('patient-mood-saved')]
+    public function refreshTodayMood(): void
+    {
+        unset($this->todayMoodKey);
+    }
+
+    #[Computed]
+    public function todayMoodKey(): ?string
+    {
+        $user = Auth::user();
+
+        if (! $user instanceof User) {
+            return null;
+        }
+
+        return app(PatientMoodLogService::class)->moodKeyForToday($user);
+    }
+
+    #[Computed]
+    public function todayMoodImageUrl(): ?string
+    {
+        $key = $this->todayMoodKey;
+
+        return $key !== null ? PatientMoodImage::url($key) : null;
     }
 
     #[Computed]

@@ -30,7 +30,7 @@ final class PatientPaymentCompletionService
         }
 
         try {
-            return DB::transaction(function () use ($temporaryAppointment): Appointment {
+            $appointment = DB::transaction(function () use ($temporaryAppointment): Appointment {
                 $temporaryAppointment->refresh();
 
                 if ($temporaryAppointment->appointment_id !== null) {
@@ -43,7 +43,6 @@ final class PatientPaymentCompletionService
                 $appointment = self::createAppointmentRecord($temporaryAppointment);
                 self::syncCommunications($appointment, $temporaryAppointment);
                 self::finalizeWallet($appointment, $temporaryAppointment);
-
                 $temporaryAppointment->appointment_id = $appointment->id;
                 $temporaryAppointment->payment_status = 'paid';
                 $temporaryAppointment->payment_response = json_encode([
@@ -56,6 +55,10 @@ final class PatientPaymentCompletionService
 
                 return $appointment;
             });
+
+            self::notifyDoctorAfterBooking($appointment);
+
+            return $appointment;
         } catch (Throwable $e) {
             report($e);
 
@@ -92,6 +95,10 @@ final class PatientPaymentCompletionService
 
         if (PaymentGateway::isStripe()) {
             return $this->confirmStripeIfPaid($temporaryAppointment, $request);
+        }
+
+        if (PaymentGateway::isHyperPay()) {
+            return $this->confirmHyperpayIfPaid($temporaryAppointment, $request);
         }
 
         try {
@@ -131,7 +138,6 @@ final class PatientPaymentCompletionService
                 $appointment = self::createAppointmentRecord($temporaryAppointment);
                 self::syncCommunications($appointment, $temporaryAppointment);
                 self::finalizeWallet($appointment, $temporaryAppointment);
-
                 $temporaryAppointment->appointment_id = $appointment->id;
                 $temporaryAppointment->payment_status = 'paid';
                 $temporaryAppointment->payment_response = json_encode($data);
@@ -144,6 +150,111 @@ final class PatientPaymentCompletionService
 
             return ['appointment' => null, 'state' => 'failed'];
         }
+
+        self::notifyDoctorAfterBooking($appointment);
+
+        return ['appointment' => $appointment, 'state' => 'paid'];
+    }
+
+    /**
+     * @return array{appointment: ?Appointment, state: 'paid'|'needs_config'|'pending'|'failed'}
+     */
+    private function confirmHyperpayIfPaid(TemporaryAppointment $temporaryAppointment, Request $request): array
+    {
+        $resourcePath = $request->string('resourcePath')->toString();
+        $checkoutId = $request->string('checkoutId')->toString();
+
+        if ($checkoutId === '' && $resourcePath === '') {
+            $checkoutId = (string) ($temporaryAppointment->payment_session_id ?? '');
+        }
+
+        if ($checkoutId === '' && $resourcePath === '') {
+            return ['appointment' => null, 'state' => 'failed'];
+        }
+
+        $entityId = $request->string('entityId')->toString();
+
+        if ($entityId === '') {
+            $entityId = HyperpayCheckoutService::configuredEntityId();
+        }
+
+        /** @var HyperpayCheckoutService $hyperpay */
+        $hyperpay = App::make(HyperpayCheckoutService::class);
+
+        try {
+            $responseData = $hyperpay->fetchPaymentResult(
+                checkoutId: filled($resourcePath) ? null : $checkoutId,
+                entityId: $entityId,
+                resourcePath: filled($resourcePath) ? $resourcePath : null,
+            );
+        } catch (Throwable $e) {
+            report($e);
+
+            return ['appointment' => null, 'state' => 'failed'];
+        }
+
+        if (! $hyperpay->responseBelongsToBooking($responseData, $temporaryAppointment)) {
+            return ['appointment' => null, 'state' => 'failed'];
+        }
+
+        $status = $hyperpay->getPaymentStatus((string) data_get($responseData, 'result.code'));
+
+        if (in_array($status, ['processing', 'pending'], true)) {
+            return ['appointment' => null, 'state' => 'pending'];
+        }
+
+        if ($status !== 'success') {
+            return ['appointment' => null, 'state' => 'failed'];
+        }
+
+        try {
+            $paymentReferenceId = $hyperpay->paymentReferenceId($responseData);
+
+            $appointment = DB::transaction(function () use ($temporaryAppointment, $responseData, $paymentReferenceId): Appointment {
+                $temporaryAppointment->refresh();
+
+                if ($temporaryAppointment->appointment_id !== null) {
+                    $found = Appointment::query()->find($temporaryAppointment->appointment_id);
+                    if ($found !== null) {
+                        return $found;
+                    }
+                }
+
+                $appointment = self::createAppointmentRecord($temporaryAppointment);
+                self::syncCommunications($appointment, $temporaryAppointment);
+                self::finalizeWallet($appointment, $temporaryAppointment);
+                $temporaryAppointment->appointment_id = $appointment->id;
+                $temporaryAppointment->payment_status = 'paid';
+                $temporaryAppointment->payment_session_id = (string) data_get($responseData, 'ndc', $temporaryAppointment->payment_session_id);
+                $temporaryAppointment->payment_invoice_id = $paymentReferenceId !== ''
+                    ? $paymentReferenceId
+                    : $temporaryAppointment->payment_invoice_id;
+                $temporaryAppointment->payment_response = json_encode([
+                    'provider' => PaymentGateway::DRIVER_HYPERPAY,
+                    'checkout_id' => data_get($responseData, 'ndc'),
+                    'payment_id' => data_get($responseData, 'id'),
+                    'merchant_transaction_id' => data_get($responseData, 'merchantTransactionId'),
+                    'result_code' => data_get($responseData, 'result.code'),
+                    'result_description' => data_get($responseData, 'result.description'),
+                    'payment_brand' => data_get($responseData, 'paymentBrand'),
+                    'amount' => data_get($responseData, 'amount'),
+                    'currency' => data_get($responseData, 'currency'),
+                ]);
+                $temporaryAppointment->save();
+
+                if ($paymentReferenceId !== '') {
+                    $appointment->forceFill(['payment_invoice_id' => $paymentReferenceId])->save();
+                }
+
+                return $appointment;
+            });
+        } catch (Throwable $e) {
+            report($e);
+
+            return ['appointment' => null, 'state' => 'failed'];
+        }
+
+        self::notifyDoctorAfterBooking($appointment);
 
         return ['appointment' => $appointment, 'state' => 'paid'];
     }
@@ -199,7 +310,6 @@ final class PatientPaymentCompletionService
                 $appointment = self::createAppointmentRecord($temporaryAppointment);
                 self::syncCommunications($appointment, $temporaryAppointment);
                 self::finalizeWallet($appointment, $temporaryAppointment);
-
                 $temporaryAppointment->appointment_id = $appointment->id;
                 $temporaryAppointment->payment_status = 'paid';
                 $temporaryAppointment->payment_session_id = (string) $session->id;
@@ -220,6 +330,8 @@ final class PatientPaymentCompletionService
 
             return ['appointment' => null, 'state' => 'failed'];
         }
+
+        self::notifyDoctorAfterBooking($appointment);
 
         return ['appointment' => $appointment, 'state' => 'paid'];
     }
@@ -314,7 +426,7 @@ final class PatientPaymentCompletionService
         }
 
         try {
-            return DB::transaction(function () use ($temporaryAppointment): Appointment {
+            $appointment = DB::transaction(function () use ($temporaryAppointment): Appointment {
                 $temporaryAppointment->refresh();
 
                 if ($temporaryAppointment->appointment_id !== null) {
@@ -327,7 +439,6 @@ final class PatientPaymentCompletionService
                 $appointment = self::createAppointmentRecord($temporaryAppointment);
                 self::syncCommunications($appointment, $temporaryAppointment);
                 self::finalizeWallet($appointment, $temporaryAppointment);
-
                 $temporaryAppointment->appointment_id = $appointment->id;
                 $temporaryAppointment->payment_status = 'paid';
                 $temporaryAppointment->payment_response = json_encode([
@@ -339,6 +450,10 @@ final class PatientPaymentCompletionService
 
                 return $appointment;
             });
+
+            self::notifyDoctorAfterBooking($appointment);
+
+            return $appointment;
         } catch (Throwable $e) {
             report($e);
 
@@ -356,6 +471,15 @@ final class PatientPaymentCompletionService
         $wallet = App::make(AppointmentWalletService::class);
         $wallet->chargePatientWallet($appointment, (float) $temporaryAppointment->wallet_amount);
         $wallet->creditDoctorEarning($appointment);
+    }
+
+    private static function notifyDoctorAfterBooking(Appointment $appointment): void
+    {
+        if (! $appointment->wasRecentlyCreated) {
+            return;
+        }
+
+        App::make(DoctorAppointmentNotifier::class)->notifyNewBooking($appointment->fresh());
     }
 
     public static function generateAppointmentNumber(): string

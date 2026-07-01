@@ -457,14 +457,14 @@ new #[Layout('layouts::patient')] #[Title('Specialists')] class extends Componen
                     type="text"
                     wire:model.live.debounce.300ms="searchDoctor"
                     placeholder="{{ __('specialist_results.search_placeholder') }}"
-                    class="h-12 w-full rounded-2xl border border-zinc-200/90 bg-zinc-50/70 ps-4 pe-11 text-sm font-medium text-zinc-800 placeholder:font-normal placeholder:text-zinc-400 transition focus:border-[#3d63ff] focus:bg-white focus:outline-none focus:ring-4 focus:ring-[#3d63ff]/15"
+                    class="h-12 w-full rounded-2xl border border-zinc-200/90 bg-zinc-50/70 ps-4 pe-11 text-sm font-medium text-zinc-800 placeholder:font-normal placeholder:text-zinc-400 transition focus:border-[#10B981] focus:bg-white focus:outline-none focus:ring-4 focus:ring-[#10B981]/15"
                 />
                 <flux:icon name="magnifying-glass" class="pointer-events-none absolute end-3 top-1/2 size-5 -translate-y-1/2 text-zinc-400" />
             </div>
             <button
                 type="button"
                 wire:click="toggleFilterPanel"
-                class="inline-flex size-12 shrink-0 items-center justify-center rounded-2xl border border-zinc-200/90 bg-zinc-50/70 text-zinc-500 transition hover:border-[#3d63ff]/35 hover:bg-[#3d63ff]/5 hover:text-[#3d63ff]"
+                class="inline-flex size-12 shrink-0 items-center justify-center rounded-2xl border border-zinc-200/90 bg-zinc-50/70 text-zinc-500 transition hover:border-[#10B981]/35 hover:bg-[#10B981]/5 hover:text-[#10B981]"
                 aria-label="{{ __('specialist_results.filters') }}"
             >
                 <flux:icon name="adjustments-horizontal" class="size-5" />
@@ -480,8 +480,8 @@ new #[Layout('layouts::patient')] #[Title('Specialists')] class extends Componen
                     @class([
                         'w-full rounded-2xl border px-2.5 py-2.5 text-center text-sm font-semibold transition',
                         $this->selectedDate === $day['date']
-                            ? 'border-[#335CFF] bg-[#335CFF] text-white shadow-[0_10px_20px_-12px_rgba(51,92,255,0.9)]'
-                            : 'border-zinc-200/80 bg-zinc-50/70 text-[#335CFF] hover:border-[#335CFF]/35 hover:bg-[#335CFF]/5',
+                            ? 'border-[#10B981] bg-[#10B981] text-white shadow-[0_10px_20px_-12px_rgb(16_185_129/0.45)]'
+                            : 'border-zinc-200/80 bg-zinc-50/70 text-[#10B981] hover:border-[#10B981]/35 hover:bg-[#10B981]/5',
                     ])
                 >
                     <div>{{ $day['day'] }}</div>
@@ -499,8 +499,8 @@ new #[Layout('layouts::patient')] #[Title('Specialists')] class extends Componen
                     @class([
                         'rounded-xl border px-3.5 py-2 text-sm font-semibold transition',
                         $this->selectedDuration === $minutes
-                            ? 'border-[#335CFF] bg-[#335CFF] text-white shadow-[0_10px_20px_-12px_rgba(51,92,255,0.9)]'
-                            : 'border-zinc-200/80 bg-zinc-50/70 text-[#335CFF] hover:border-[#335CFF]/35 hover:bg-[#335CFF]/5',
+                            ? 'border-[#10B981] bg-[#10B981] text-white shadow-[0_10px_20px_-12px_rgb(16_185_129/0.45)]'
+                            : 'border-zinc-200/80 bg-zinc-50/70 text-[#10B981] hover:border-[#10B981]/35 hover:bg-[#10B981]/5',
                     ])
                 >
                     {{ __('specialist_results.duration_minutes', ['minutes' => $minutes]) }}
@@ -524,7 +524,7 @@ new #[Layout('layouts::patient')] #[Title('Specialists')] class extends Componen
                 <div class="mt-5 space-y-5">
                     <div class="space-y-2">
                         <label class="text-sm font-semibold text-zinc-700">{{ __('session_filter.sections.gender_pref') }}</label>
-                        <select wire:model="filterGender" class="h-11 w-full rounded-xl border border-zinc-200 bg-white px-3 text-sm focus:border-[#3d63ff] focus:outline-none focus:ring-2 focus:ring-[#3d63ff]/20">
+                        <select wire:model="filterGender" class="h-11 w-full rounded-xl border border-zinc-200 bg-white px-3 text-sm focus:border-[#10B981] focus:outline-none focus:ring-2 focus:ring-[#10B981]/20">
                             <option value="both">{{ __('session_filter.sections.gender.both') }}</option>
                             <option value="male">{{ __('session_filter.sections.gender.male') }}</option>
                             <option value="female">{{ __('session_filter.sections.gender.female') }}</option>
@@ -533,7 +533,7 @@ new #[Layout('layouts::patient')] #[Title('Specialists')] class extends Componen
 
                     <div class="space-y-2">
                         <label class="text-sm font-semibold text-zinc-700">{{ __('session_filter.sections.language') }}</label>
-                        <select wire:model="filterLanguage" class="h-11 w-full rounded-xl border border-zinc-200 bg-white px-3 text-sm focus:border-[#3d63ff] focus:outline-none focus:ring-2 focus:ring-[#3d63ff]/20">
+                        <select wire:model="filterLanguage" class="h-11 w-full rounded-xl border border-zinc-200 bg-white px-3 text-sm focus:border-[#10B981] focus:outline-none focus:ring-2 focus:ring-[#10B981]/20">
                             <option value="both">{{ __('session_filter.sections.lang.both') }}</option>
                             <option value="ar">{{ __('session_filter.sections.lang.ar') }}</option>
                             <option value="en">{{ __('session_filter.sections.lang.en') }}</option>
@@ -542,7 +542,7 @@ new #[Layout('layouts::patient')] #[Title('Specialists')] class extends Componen
 
                     <div class="space-y-2">
                         <label class="text-sm font-semibold text-zinc-700">{{ __('session_filter.sections.specialist') }}</label>
-                        <select wire:model="filterDegree" class="h-11 w-full rounded-xl border border-zinc-200 bg-white px-3 text-sm focus:border-[#3d63ff] focus:outline-none focus:ring-2 focus:ring-[#3d63ff]/20">
+                        <select wire:model="filterDegree" class="h-11 w-full rounded-xl border border-zinc-200 bg-white px-3 text-sm focus:border-[#10B981] focus:outline-none focus:ring-2 focus:ring-[#10B981]/20">
                             <option value="">{{ __('specialist_results.all_option') }}</option>
                             @foreach ($this->degreeOptions as $degree)
                                 <option value="{{ $degree['id'] }}">{{ $degree['label'] }}</option>
@@ -559,7 +559,7 @@ new #[Layout('layouts::patient')] #[Title('Specialists')] class extends Componen
                                         type="checkbox"
                                         value="{{ $speciality['id'] }}"
                                         wire:model.live="filterSubspecialties"
-                                        class="size-3.5 rounded border-zinc-300 text-[#3d63ff] focus:ring-[#3d63ff]/30"
+                                        class="size-3.5 rounded border-zinc-300 text-[#10B981] focus:ring-[#10B981]/30"
                                     />
                                     <span>{{ $speciality['label'] }}</span>
                                 </label>
@@ -572,7 +572,7 @@ new #[Layout('layouts::patient')] #[Title('Specialists')] class extends Componen
                     <button type="button" wire:click="clearFilterPanel" class="rounded-xl border border-zinc-200 px-4 py-2 text-sm font-semibold text-zinc-600 hover:bg-zinc-100">
                         {{ __('specialist_results.clear') }}
                     </button>
-                    <button type="button" wire:click="applyFilterPanel" class="rounded-xl bg-[#335CFF] px-4 py-2 text-sm font-semibold text-white shadow hover:brightness-95">
+                    <button type="button" wire:click="applyFilterPanel" class="rounded-xl bg-[#10B981] px-4 py-2 text-sm font-semibold text-white shadow hover:brightness-95">
                         {{ __('specialist_results.apply') }}
                     </button>
                 </div>

@@ -73,17 +73,30 @@ new #[Layout('layouts::doctor')] #[Title('Appointments')] class extends Componen
 
     public function getAppointmentsProperty(): LengthAwarePaginator
     {
-        return $this->baseAppointmentsQuery()
+        $query = $this->baseAppointmentsQuery()
             ->with([
                 'followUps' => fn ($query) => $query
                     ->where('status', 'pending_follow_up')
                     ->latest('id'),
                 'parentAppointment',
             ])
-            ->when($this->status !== 'all', fn (Builder $query) => $query->where('status', $this->status))
-            ->orderByDesc('appointment_date')
-            ->orderByDesc('start_time')
-            ->paginate(12);
+            ->when($this->status !== 'all', function (Builder $query): void {
+                if ($this->status === 'pending_follow_up') {
+                    $query->upcomingFollowUp();
+                } elseif ($this->status === 'new') {
+                    $query->where('status', 'new')->where('is_follow_up', false);
+                } else {
+                    $query->where('status', $this->status);
+                }
+            });
+
+        if (in_array($this->status, ['new', 'in_process', 'pending_follow_up', 'rescheduled'], true)) {
+            $query->orderBy('appointment_date')->orderBy('start_time');
+        } else {
+            $query->orderByDesc('appointment_date')->orderByDesc('start_time');
+        }
+
+        return $query->paginate(12);
     }
 
     public function canScheduleFollowUp(Appointment $appointment): bool
@@ -121,6 +134,10 @@ new #[Layout('layouts::doctor')] #[Title('Appointments')] class extends Componen
 
     public function statusLabelFor(Appointment $appointment): string
     {
+        if ($appointment->isPatientRefunded()) {
+            return __('doctor.appointment_status.refunded');
+        }
+
         if ($appointment->is_follow_up && $appointment->status !== 'pending_follow_up') {
             return __('doctor.appointment_status.follow_up');
         }
@@ -130,6 +147,10 @@ new #[Layout('layouts::doctor')] #[Title('Appointments')] class extends Componen
 
     public function statusBadgeClassesFor(Appointment $appointment): string
     {
+        if ($appointment->isPatientRefunded()) {
+            return 'bg-emerald-100 text-emerald-800';
+        }
+
         if ($appointment->is_follow_up && $appointment->status !== 'pending_follow_up') {
             return 'bg-violet-100 text-violet-700';
         }
@@ -178,7 +199,21 @@ new #[Layout('layouts::doctor')] #[Title('Appointments')] class extends Componen
 
         return collect($this->statusOptions())
             ->except('all')
-            ->mapWithKeys(fn ($_label, $status): array => [$status => (int) ($counts[$status] ?? 0)]);
+            ->mapWithKeys(fn ($_label, $status): array => [$status => (int) ($counts[$status] ?? 0)])
+            ->map(function (int $count, string $status): int {
+                if ($status === 'pending_follow_up') {
+                    return $this->baseAppointmentsQuery()->upcomingFollowUp()->count();
+                }
+
+                if ($status === 'new') {
+                    return $this->baseAppointmentsQuery()
+                        ->where('status', 'new')
+                        ->where('is_follow_up', false)
+                        ->count();
+                }
+
+                return $count;
+            });
     }
 
     public function filterCount(string $key): int

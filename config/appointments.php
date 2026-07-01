@@ -16,6 +16,41 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Relaxed session limits (testing)
+    |--------------------------------------------------------------------------
+    |
+    | When true: doctors may start sessions before the scheduled time, overdue
+    | sessions are not auto-marked as missed, and calls are not auto-disconnected
+    | when extend_at passes.
+    |
+    */
+
+    'relaxed_session_limits' => filter_var(
+        env('APPOINTMENT_RELAXED_SESSION_LIMITS', env('APP_ENV') === 'local'),
+        FILTER_VALIDATE_BOOL
+    ),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Follow-up session options
+    |--------------------------------------------------------------------------
+    |
+    | follow_up_allows_calls: let follow-up appointments use video/voice like new sessions.
+    |
+    | follow_up_skip_patient_confirmation: legacy flag (follow-ups are always booked for the
+    | patient when the doctor schedules them; patient confirmation is not required).
+    |
+    */
+
+    'follow_up_allows_calls' => filter_var(
+        env('APPOINTMENT_FOLLOW_UP_ALLOWS_CALLS', env('APP_ENV') === 'local'),
+        FILTER_VALIDATE_BOOL
+    ),
+
+    'follow_up_skip_patient_confirmation' => true,
+
+    /*
+    |--------------------------------------------------------------------------
     | Follow-up appointment window
     |--------------------------------------------------------------------------
     |
