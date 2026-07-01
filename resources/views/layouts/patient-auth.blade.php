@@ -28,19 +28,23 @@
             };
         @endphp
         <div class="flex h-svh max-h-svh min-h-0 w-full flex-col overflow-hidden bg-[#F6FFFC]">
-            <header class="grid shrink-0 grid-cols-[auto_1fr_auto] items-center gap-2 px-5 pb-3.5 pt-[max(0.875rem,env(safe-area-inset-top))] sm:px-8 sm:pb-4 lg:px-10">
-                @include('partials.patient-auth-header-back', ['authBack' => $authBack])
+            <header class="relative flex shrink-0 items-center justify-end gap-2 px-5 pb-3.5 pt-[max(0.875rem,env(safe-area-inset-top))] sm:px-8 sm:pb-4 lg:px-10">
+                <div class="absolute inset-y-0 left-5 flex items-center gap-1 sm:left-8 sm:gap-2 lg:left-10" dir="ltr">
+                    @if ($authBack !== null)
+                        @include('partials.patient-auth-header-back', ['authBack' => $authBack])
+                    @endif
 
-                <a
-                    href="{{ route('patient.home') }}"
-                    wire:navigate
-                    class="inline-flex min-w-0 items-center justify-center justify-self-center"
-                    title="{{ __('patient.brand') }}"
-                >
-                    @include('partials.patient-brand-logo', [
-                        'imgClass' => 'h-9 w-auto max-w-[min(100%,11rem)] object-contain object-center',
-                    ])
-                </a>
+                    <a
+                        href="{{ route('patient.home') }}"
+                        wire:navigate
+                        class="inline-flex min-w-0 items-center"
+                        title="{{ __('patient.brand') }}"
+                    >
+                        @include('partials.patient-brand-logo', [
+                            'imgClass' => 'h-9 w-auto max-w-[min(100%,11rem)] object-contain object-start',
+                        ])
+                    </a>
+                </div>
 
                 @include('partials.patient-language-switch', ['variant' => 'guest'])
             </header>

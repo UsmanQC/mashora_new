@@ -5,7 +5,7 @@
     $align ??= $density === 'compact' ? 'start' : 'center';
 
     $logoImgClass = match ($density) {
-        'compact' => 'h-9 w-auto max-w-[min(100%,10rem)] object-contain object-center',
+        'compact' => 'h-9 w-auto max-w-[min(100%,10rem)] object-contain object-start',
         default => 'h-12 w-auto max-w-[min(100%,11rem)] object-contain object-center',
     };
 
