@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AiChatbotBookingController;
 use App\Http\Controllers\AiChatbotController;
 use App\Http\Controllers\Patient\FollowUpPaymentController;
 use App\Http\Controllers\Patient\PatientAppointmentRealtimeController;
@@ -34,6 +35,14 @@ Route::prefix('api')->group(function () {
     Route::delete('chat/history', [AiChatbotController::class, 'destroy'])
         ->middleware('throttle:ai-chatbot')
         ->name('api.chat.reset');
+
+    Route::post('chat/booking/step', [AiChatbotBookingController::class, 'step'])
+        ->middleware('throttle:ai-chatbot')
+        ->name('api.chat.booking.step');
+
+    Route::post('chat/booking/complete', [AiChatbotBookingController::class, 'complete'])
+        ->middleware('throttle:ai-chatbot')
+        ->name('api.chat.booking.complete');
 });
 
 Route::post('ai-chatbot/message', [AiChatbotController::class, 'store'])

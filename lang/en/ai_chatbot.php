@@ -24,4 +24,22 @@ return [
     'locale_ar' => 'AR',
     'language' => 'Language',
     'language_aria' => 'Switch chat language',
+    'booking' => [
+        'continue' => 'Continue',
+        'skip_step' => 'Skip',
+        'continue_booking' => 'Continue booking',
+        'view_all_specialists' => 'View all specialists',
+        'online_now' => 'Online now',
+        'complete_message' => 'Great! We found a suitable specialist. Complete your booking using the link below.',
+        'nearest_slot' => 'Nearest slot: :date at :time',
+        'no_doctors' => 'No exact matches found. Try adjusting your preferences or browse all specialists.',
+        'steps' => [
+            'degree' => 'What type of specialist are you looking for?',
+            'speciality' => 'Choose the specialty or subspecialties that fit your needs (you can pick more than one):',
+            'duration' => 'What session duration do you prefer?',
+            'gender' => 'Do you prefer a male or female specialist?',
+            'language' => 'What language do you prefer for the session?',
+            'doctors' => 'Here are :count specialists matching your choices. Pick the one that suits you:',
+        ],
+    ],
 ];
