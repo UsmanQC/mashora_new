@@ -29,27 +29,6 @@
                     <p id="awaan-ai-chatbot-subtitle" class="truncate text-xs text-primary-50">{{ __('ai_chatbot.subtitle', [], $initialChatbotLocale) }}</p>
                 </div>
                 <div class="flex shrink-0 items-center gap-2">
-                    <div
-                        id="awaan-ai-chatbot-locale-switch"
-                        class="inline-flex rounded-lg border border-white/20 bg-white/10 p-0.5"
-                        role="group"
-                        aria-label="{{ __('ai_chatbot.language_aria', [], $initialChatbotLocale) }}"
-                    >
-                        <button
-                            type="button"
-                            data-chatbot-locale="ar"
-                            class="rounded-md px-2 py-1 text-xs font-bold uppercase tracking-wide transition"
-                        >
-                            {{ __('ai_chatbot.locale_ar', [], $initialChatbotLocale) }}
-                        </button>
-                        <button
-                            type="button"
-                            data-chatbot-locale="en"
-                            class="rounded-md px-2 py-1 text-xs font-bold uppercase tracking-wide transition"
-                        >
-                            {{ __('ai_chatbot.locale_en', [], $initialChatbotLocale) }}
-                        </button>
-                    </div>
                     <button
                         type="button"
                         id="awaan-ai-chatbot-reset"
@@ -72,6 +51,30 @@
             <div id="awaan-ai-chatbot-messages" class="flex max-h-80 flex-col gap-3 overflow-y-auto bg-surface-subtle p-4"></div>
 
             <form id="awaan-ai-chatbot-form" class="border-t border-slate-100 bg-white p-4">
+                <div class="mb-3 flex items-center justify-between gap-2">
+                    <span id="awaan-ai-chatbot-language-label" class="text-xs font-medium text-ink-muted">{{ __('ai_chatbot.language', [], $initialChatbotLocale) }}</span>
+                    <div
+                        id="awaan-ai-chatbot-locale-switch"
+                        class="inline-flex rounded-lg border border-slate-200 bg-surface-subtle p-0.5"
+                        role="group"
+                        aria-label="{{ __('ai_chatbot.language_aria', [], $initialChatbotLocale) }}"
+                    >
+                        <button
+                            type="button"
+                            data-chatbot-locale="ar"
+                            class="rounded-md px-2.5 py-1 text-xs font-bold uppercase tracking-wide transition"
+                        >
+                            {{ __('ai_chatbot.locale_ar', [], $initialChatbotLocale) }}
+                        </button>
+                        <button
+                            type="button"
+                            data-chatbot-locale="en"
+                            class="rounded-md px-2.5 py-1 text-xs font-bold uppercase tracking-wide transition"
+                        >
+                            {{ __('ai_chatbot.locale_en', [], $initialChatbotLocale) }}
+                        </button>
+                    </div>
+                </div>
                 <div class="flex items-end gap-2">
                     <textarea
                         id="awaan-ai-chatbot-input"
@@ -118,6 +121,7 @@
             const sendBtn = document.getElementById('awaan-ai-chatbot-send');
             const messagesEl = document.getElementById('awaan-ai-chatbot-messages');
             const localeSwitch = document.getElementById('awaan-ai-chatbot-locale-switch');
+            const languageLabel = document.getElementById('awaan-ai-chatbot-language-label');
             const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
 
             const copy = {
@@ -130,9 +134,11 @@
                     open: @json(__('ai_chatbot.open', [], 'ar')),
                     send: @json(__('ai_chatbot.send', [], 'ar')),
                     welcome: @json(__('ai_chatbot.welcome', [], 'ar')),
+                    quickActions: @json(array_values(__('ai_chatbot.quick_actions', [], 'ar'))),
                     typing: @json(__('ai_chatbot.typing', [], 'ar')),
                     requestFailed: @json(__('ai_chatbot.request_failed', [], 'ar')),
                     networkError: @json(__('ai_chatbot.network_error', [], 'ar')),
+                    language: @json(__('ai_chatbot.language', [], 'ar')),
                     languageAria: @json(__('ai_chatbot.language_aria', [], 'ar')),
                 },
                 en: {
@@ -144,9 +150,11 @@
                     open: @json(__('ai_chatbot.open', [], 'en')),
                     send: @json(__('ai_chatbot.send', [], 'en')),
                     welcome: @json(__('ai_chatbot.welcome', [], 'en')),
+                    quickActions: @json(array_values(__('ai_chatbot.quick_actions', [], 'en'))),
                     typing: @json(__('ai_chatbot.typing', [], 'en')),
                     requestFailed: @json(__('ai_chatbot.request_failed', [], 'en')),
                     networkError: @json(__('ai_chatbot.network_error', [], 'en')),
+                    language: @json(__('ai_chatbot.language', [], 'en')),
                     languageAria: @json(__('ai_chatbot.language_aria', [], 'en')),
                 },
             };
@@ -164,6 +172,7 @@
             }
 
             let loading = false;
+            let quickActionsVisible = false;
 
             const labels = () => copy[locale];
 
@@ -183,6 +192,12 @@
                 ? 'mr-8 rounded-2xl rounded-br-md border border-slate-200 bg-white px-4 py-3 text-sm text-ink-muted'
                 : 'ml-8 rounded-2xl rounded-bl-md border border-slate-200 bg-white px-4 py-3 text-sm text-ink-muted';
 
+            const quickActionsClasses = () => locale === 'ar'
+                ? 'mr-8 flex flex-col gap-2'
+                : 'ml-8 flex flex-col gap-2';
+
+            const chipClasses = () => 'rounded-xl border border-primary/20 bg-white px-3 py-2.5 text-start text-sm font-medium text-primary transition hover:border-primary hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-60';
+
             const applyLocale = (nextLocale, { resetWelcome = false } = {}) => {
                 locale = nextLocale;
                 localStorage.setItem(localeStorageKey, locale);
@@ -198,14 +213,15 @@
                 toggle.setAttribute('aria-label', labels().open);
                 sendBtn.setAttribute('aria-label', labels().send);
                 input.placeholder = labels().placeholder;
+                languageLabel.textContent = labels().language;
                 localeSwitch.setAttribute('aria-label', labels().languageAria);
 
                 localeSwitch.querySelectorAll('[data-chatbot-locale]').forEach((button) => {
                     const isActive = button.dataset.chatbotLocale === locale;
-                    button.classList.toggle('bg-white', isActive);
-                    button.classList.toggle('text-primary', isActive);
-                    button.classList.toggle('text-primary-50', !isActive);
-                    button.classList.toggle('hover:bg-white/10', !isActive);
+                    button.classList.toggle('bg-primary', isActive);
+                    button.classList.toggle('text-white', isActive);
+                    button.classList.toggle('text-ink-muted', !isActive);
+                    button.classList.toggle('hover:bg-slate-100', !isActive);
                 });
 
                 messagesEl.querySelectorAll('[data-chatbot-role]').forEach((bubble) => {
@@ -218,11 +234,8 @@
                     typing.textContent = labels().typing;
                 }
 
-                if (resetWelcome && messagesEl.childElementCount === 1) {
-                    const firstBubble = messagesEl.querySelector('[data-chatbot-role="assistant"]');
-                    if (firstBubble) {
-                        firstBubble.textContent = labels().welcome;
-                    }
+                if (resetWelcome && quickActionsVisible) {
+                    showWelcomeState({ replace: true });
                 }
             };
 
@@ -239,10 +252,51 @@
                 scrollMessages();
             };
 
+            const removeQuickActions = () => {
+                document.getElementById('awaan-ai-chatbot-quick-actions')?.remove();
+                quickActionsVisible = false;
+            };
+
+            const renderQuickActions = () => {
+                removeQuickActions();
+
+                const container = document.createElement('div');
+                container.id = 'awaan-ai-chatbot-quick-actions';
+                container.className = quickActionsClasses();
+                container.setAttribute('role', 'group');
+                container.setAttribute('aria-label', labels().subtitle);
+
+                labels().quickActions.forEach((label) => {
+                    const chip = document.createElement('button');
+                    chip.type = 'button';
+                    chip.className = chipClasses();
+                    chip.textContent = label;
+                    chip.addEventListener('click', () => handleQuickAction(label));
+                    container.appendChild(chip);
+                });
+
+                messagesEl.appendChild(container);
+                quickActionsVisible = true;
+                scrollMessages();
+            };
+
+            const showWelcomeState = ({ replace = false } = {}) => {
+                if (replace) {
+                    messagesEl.innerHTML = '';
+                }
+
+                appendBubble('assistant', labels().welcome);
+                renderQuickActions();
+            };
+
             const setLoading = (isLoading) => {
                 loading = isLoading;
                 sendBtn.disabled = isLoading;
                 input.disabled = isLoading;
+
+                document.querySelectorAll('#awaan-ai-chatbot-quick-actions button').forEach((chip) => {
+                    chip.disabled = isLoading;
+                });
             };
 
             const showTyping = () => {
@@ -258,10 +312,58 @@
                 document.getElementById('awaan-ai-chatbot-typing')?.remove();
             };
 
+            const sendUserMessage = async (message) => {
+                if (message === '' || loading) {
+                    return;
+                }
+
+                appendBubble('user', message);
+                setLoading(true);
+                showTyping();
+
+                try {
+                    const response = await fetch(routes.message, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': csrf,
+                            'Accept': 'application/json',
+                        },
+                        body: JSON.stringify({ message, locale }),
+                    });
+
+                    hideTyping();
+
+                    const data = await response.json().catch(() => ({}));
+
+                    if (!response.ok) {
+                        appendBubble('assistant', data.message ?? labels().requestFailed);
+                        return;
+                    }
+
+                    appendBubble('assistant', data.reply ?? labels().requestFailed);
+                } catch (error) {
+                    hideTyping();
+                    appendBubble('assistant', labels().networkError);
+                } finally {
+                    setLoading(false);
+                    input.focus();
+                }
+            };
+
+            const handleQuickAction = async (label) => {
+                if (loading) {
+                    return;
+                }
+
+                removeQuickActions();
+                await sendUserMessage(label);
+            };
+
             const openPanel = () => {
                 panel.classList.remove('hidden');
                 if (messagesEl.childElementCount === 0) {
-                    appendBubble('assistant', labels().welcome);
+                    showWelcomeState();
                 }
                 input.focus();
                 if (window.lucide) {
@@ -302,8 +404,7 @@
             closeBtn.addEventListener('click', () => panel.classList.add('hidden'));
 
             resetBtn.addEventListener('click', async () => {
-                messagesEl.innerHTML = '';
-                appendBubble('assistant', labels().welcome);
+                showWelcomeState({ replace: true });
 
                 try {
                     await fetch(routes.reset, {
@@ -326,39 +427,9 @@
                     return;
                 }
 
-                appendBubble('user', message);
+                removeQuickActions();
                 input.value = '';
-                setLoading(true);
-                showTyping();
-
-                try {
-                    const response = await fetch(routes.message, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN': csrf,
-                            'Accept': 'application/json',
-                        },
-                        body: JSON.stringify({ message, locale }),
-                    });
-
-                    hideTyping();
-
-                    const data = await response.json().catch(() => ({}));
-
-                    if (!response.ok) {
-                        appendBubble('assistant', data.message ?? labels().requestFailed);
-                        return;
-                    }
-
-                    appendBubble('assistant', data.reply ?? labels().requestFailed);
-                } catch (error) {
-                    hideTyping();
-                    appendBubble('assistant', labels().networkError);
-                } finally {
-                    setLoading(false);
-                    input.focus();
-                }
+                await sendUserMessage(message);
             });
         });
     </script>
