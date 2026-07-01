@@ -337,14 +337,31 @@ final class AiChatbotBookingFlowService
             ->values()
             ->all();
 
-        return [
-            'degree_id' => isset($preferences['degree_id']) ? (string) $preferences['degree_id'] : '',
-            'gender_preference' => isset($preferences['gender_preference']) ? (string) $preferences['gender_preference'] : '',
-            'duration_minutes' => isset($preferences['duration_minutes']) ? (string) $preferences['duration_minutes'] : '',
-            'language_preference' => isset($preferences['language_preference']) ? (string) $preferences['language_preference'] : '',
+        $normalized = [
             'subspecialties' => $subspecialties,
-            'doctor_id' => isset($preferences['doctor_id']) ? (int) $preferences['doctor_id'] : null,
         ];
+
+        if (filled($preferences['degree_id'] ?? null)) {
+            $normalized['degree_id'] = (string) $preferences['degree_id'];
+        }
+
+        if (filled($preferences['gender_preference'] ?? null)) {
+            $normalized['gender_preference'] = (string) $preferences['gender_preference'];
+        }
+
+        if (filled($preferences['duration_minutes'] ?? null)) {
+            $normalized['duration_minutes'] = (string) $preferences['duration_minutes'];
+        }
+
+        if (filled($preferences['language_preference'] ?? null)) {
+            $normalized['language_preference'] = (string) $preferences['language_preference'];
+        }
+
+        if (isset($preferences['doctor_id']) && (int) $preferences['doctor_id'] > 0) {
+            $normalized['doctor_id'] = (int) $preferences['doctor_id'];
+        }
+
+        return $normalized;
     }
 
     /**

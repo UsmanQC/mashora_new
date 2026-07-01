@@ -105,6 +105,23 @@ test('booking complete stores session preferences and returns booking url', func
     ]);
 });
 
+test('booking step accepts preferences with empty string fields from client', function () {
+    $this->postJson(route('api.chat.booking.step'), [
+        'step' => 'duration',
+        'locale' => 'ar',
+        'preferences' => [
+            'degree_id' => '1',
+            'gender_preference' => '',
+            'duration_minutes' => '',
+            'language_preference' => '',
+            'doctor_id' => null,
+            'subspecialties' => [],
+        ],
+    ])
+        ->assertSuccessful()
+        ->assertJsonPath('step', 'duration');
+});
+
 test('booking flow service exposes ordered steps', function () {
     expect(AiChatbotBookingFlowService::STEPS)->toBe([
         'degree',
