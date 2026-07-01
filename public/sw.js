@@ -1,10 +1,11 @@
-const CACHE_VERSION = 'awaan-v1';
+const CACHE_VERSION = 'awaan-v2';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const OFFLINE_URL = '/offline.html';
 
 const PRECACHE_URLS = [
     OFFLINE_URL,
     '/manifest.webmanifest',
+    '/doctor/manifest.webmanifest',
     '/images/pwa/icon-192.png',
     '/images/pwa/icon-512.png',
     '/images/favicon-awaan.png',
@@ -71,7 +72,7 @@ self.addEventListener('fetch', (event) => {
                 }
 
                 return fetch(request).then((response) => {
-                    if (! response.ok) {
+                    if (!response.ok) {
                         return response;
                     }
 

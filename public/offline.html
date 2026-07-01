@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ar" dir="rtl">
     <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="theme-color" content="#10B981" />
-        <title>Offline — Awaan</title>
+        <title>غير متصل — أوان</title>
         <style>
             body {
                 margin: 0;
@@ -30,23 +30,44 @@
             p {
                 margin: 0;
                 color: #52525b;
-                line-height: 1.5;
+                line-height: 1.6;
+            }
+
+            .links {
+                display: flex;
+                flex-wrap: wrap;
+                justify-content: center;
+                gap: 0.75rem;
+                margin-top: 1.25rem;
             }
 
             a {
                 display: inline-block;
-                margin-top: 1.25rem;
-                color: #047857;
+                padding: 0.5rem 1rem;
+                border-radius: 9999px;
+                background: #10b981;
+                color: #fff;
                 font-weight: 600;
                 text-decoration: none;
+                font-size: 0.875rem;
+            }
+
+            a.secondary {
+                background: #fff;
+                color: #047857;
+                border: 1px solid #d4d4d8;
             }
         </style>
     </head>
     <body>
         <main>
-            <h1>You are offline</h1>
-            <p>Check your connection, then reopen Awaan.</p>
-            <a href="/patient">Try again</a>
+            <h1>أنت غير متصل</h1>
+            <p>تحقق من اتصال الإنترنت ثم أعد فتح أوان.</p>
+            <p lang="en" dir="ltr" style="margin-top: 0.75rem; font-size: 0.875rem;">You are offline. Check your connection and try again.</p>
+            <div class="links">
+                <a href="/patient">المريض</a>
+                <a href="/doctor" class="secondary">الطبيب</a>
+            </div>
         </main>
     </body>
 </html>

@@ -7,7 +7,7 @@
     <head>
         <meta name="application-name" content="{{ config('app.name') }}" />
         <meta name="color-scheme" content="light" />
-        @include('partials.pwa', ['themeColor' => '#F6FFFC'])
+        @include('partials.pwa', ['themeColor' => '#F6FFFC', 'pwaApp' => 'patient'])
         @include('partials.head')
         @include('partials.intl-tel-input-patient-styles')
         @stack('styles')

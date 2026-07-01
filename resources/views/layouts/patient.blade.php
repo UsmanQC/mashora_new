@@ -7,7 +7,7 @@
     <head>
         <meta name="application-name" content="{{ config('app.name') }}" />
         {{-- Patient portal emerald chrome --}}
-        @include('partials.pwa', ['themeColor' => '#10B981'])
+        @include('partials.pwa', ['themeColor' => '#10B981', 'pwaApp' => 'patient'])
         @include('partials.head')
     </head>
     <body
@@ -108,6 +108,8 @@
         @persist('patient-portal-nav-loader')
             @include('partials.patient-portal-nav-loader')
         @endpersist
+
+        @include('partials.pwa-install-prompt', ['pwaApp' => 'patient'])
 
         @fluxScripts
 

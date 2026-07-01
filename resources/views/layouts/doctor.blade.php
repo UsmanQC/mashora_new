@@ -6,7 +6,7 @@
 >
     <head>
         <meta name="application-name" content="{{ config('app.name') }} — {{ __('doctor.portal_name') }}" />
-        @include('partials.pwa', ['themeColor' => '#F3F5F9'])
+        @include('partials.pwa', ['themeColor' => '#F3F5F9', 'pwaApp' => 'doctor'])
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         @include('partials.head')
     </head>
@@ -119,6 +119,7 @@
             </flux:toast.group>
         @endpersist
         @stack('scripts')
+        @include('partials.pwa-install-prompt', ['pwaApp' => 'doctor'])
         @fluxScripts
     </body>
 </html>

@@ -4,8 +4,17 @@ use App\Http\Controllers\AiChatbotController;
 use App\Http\Controllers\Patient\FollowUpPaymentController;
 use App\Http\Controllers\Patient\PatientAppointmentRealtimeController;
 use App\Http\Controllers\Patient\PatientPaymentController;
+use App\Http\Controllers\WebManifestController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+
+Route::get('/manifest.webmanifest', WebManifestController::class)
+    ->defaults('app', 'patient')
+    ->name('manifest');
+
+Route::get('/doctor/manifest.webmanifest', WebManifestController::class)
+    ->defaults('app', 'doctor')
+    ->name('manifest.doctor');
 
 Route::get('/', function () {
     app()->setLocale('en');
