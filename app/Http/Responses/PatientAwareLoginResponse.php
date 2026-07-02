@@ -2,6 +2,7 @@
 
 namespace App\Http\Responses;
 
+use App\Support\PendingPatientBooking;
 use Illuminate\Http\Request;
 use Laravel\Fortify\Contracts\LoginResponse;
 use Symfony\Component\HttpFoundation\Response;
@@ -16,11 +17,19 @@ class PatientAwareLoginResponse implements LoginResponse
         /** @var Request $request */
         $user = $request->user();
 
+        $intended = $request->session()->pull('url.intended');
+
+        if (is_string($intended)) {
+            PendingPatientBooking::captureFromUrl($intended);
+        }
+
         if ($user && ! $user->profile_completed) {
             return redirect()->route('patient.profile.basic');
         }
 
-        $intended = $request->session()->pull('url.intended');
+        if ($bookingUrl = PendingPatientBooking::url()) {
+            return redirect()->to($bookingUrl);
+        }
 
         if (is_string($intended) && $this->isGuestAccessiblePatientUrl($intended)) {
             return redirect()->to($intended);

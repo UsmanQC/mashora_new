@@ -94,6 +94,74 @@ test('doctor wallet page shows completed appointments count for current month', 
         ->assertSee(__('doctor.wallet.completed_suffix'), false);
 });
 
+test('doctor wallet page shows previous month earning', function (): void {
+    app()->setLocale('en');
+
+    $doctor = Doctor::factory()->create(['status' => 'approved', 'commission' => 25]);
+    $patient = User::factory()->create();
+
+    $this->travelTo(now(config('app.timezone'))->subMonth()->day(15));
+
+    $previousMonthAppointment = Appointment::factory()->create([
+        'doctor_id' => $doctor->id,
+        'user_id' => $patient->id,
+        'total' => 200.00,
+        'status' => 'new',
+    ]);
+
+    app(AppointmentWalletService::class)->creditDoctorEarning($previousMonthAppointment->fresh());
+
+    $this->travelTo(now(config('app.timezone'))->startOfMonth()->addDays(2));
+
+    $currentMonthAppointment = Appointment::factory()->create([
+        'doctor_id' => $doctor->id,
+        'user_id' => $patient->id,
+        'total' => 400.00,
+        'status' => 'new',
+    ]);
+
+    app(AppointmentWalletService::class)->creditDoctorEarning($currentMonthAppointment->fresh());
+
+    $this->travelBack();
+
+    $this->actingAs($doctor, 'doctor')
+        ->get(route('doctor.settings.wallet'))
+        ->assertSuccessful()
+        ->assertSee(__('doctor.wallet.previous_month_earned'), false)
+        ->assertSee('150.00', false)
+        ->assertSee('300.00', false);
+});
+
+test('doctor wallet page shows net previous month earning after refund reversal', function (): void {
+    app()->setLocale('en');
+
+    $doctor = Doctor::factory()->create(['status' => 'approved', 'commission' => 30]);
+    $patient = User::factory()->create();
+
+    $this->travelTo(now(config('app.timezone'))->subMonth()->day(15));
+
+    $appointment = Appointment::factory()->create([
+        'doctor_id' => $doctor->id,
+        'user_id' => $patient->id,
+        'total' => 20.00,
+        'status' => 'new',
+    ]);
+
+    app(AppointmentWalletService::class)->creditDoctorEarning($appointment->fresh());
+    app(AppointmentWalletService::class)->refundToPatient($appointment->fresh());
+
+    $this->travelBack();
+
+    $this->actingAs($doctor, 'doctor')
+        ->get(route('doctor.settings.wallet'))
+        ->assertSuccessful()
+        ->assertSee(__('doctor.wallet.how_it_works_title'), false)
+        ->assertSee(__('doctor.wallet.net_previous_month'), false)
+        ->assertSee(__('doctor.wallet.previous_month_refunded'), false)
+        ->assertSee('20.00', false)
+        ->assertSee('14.00', false);
+});
+
 test('patient wallet page tolerates transactions linked to soft deleted wallets', function (): void {
     app()->setLocale('en');
 

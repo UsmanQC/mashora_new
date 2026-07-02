@@ -82,7 +82,8 @@
         font-weight: 600;
     }
     .iti-phone-field {
-        padding-left: 4.25rem !important;
+        padding-inline-start: 4.25rem !important;
+        padding-inline-end: 0.75rem !important;
     }
     .iti__selected-dial-code {
         display: none !important;

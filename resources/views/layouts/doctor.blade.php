@@ -26,9 +26,22 @@
             </nav>
         </aside>
 
-        <div class="flex min-h-svh min-w-0 flex-col lg:ps-64">
+        <div
+            class="flex min-h-svh min-w-0 flex-col lg:ps-64"
+            x-data="{ doctorMenuOpen: false }"
+            @keydown.escape.window="doctorMenuOpen = false"
+        >
+            @php
+                $doctorMenuRouteActive = ! request()->routeIs(
+                    'doctor.dashboard',
+                    'doctor.appointments',
+                    'doctor.appointments.*',
+                    'doctor.ratings',
+                );
+            @endphp
+
             <header
-                class="sticky top-0 z-40 flex items-center justify-between gap-3 border-b border-zinc-200/80 bg-white/95 px-4 py-3 backdrop-blur lg:hidden"
+                class="sticky top-0 z-40 flex items-center justify-between gap-3 border-b border-zinc-200/80 bg-white/95 px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur lg:hidden"
             >
                 <div class="min-w-0 flex-1">
                     <a
@@ -42,6 +55,7 @@
                         ])
                     </a>
                 </div>
+
                 <div class="flex shrink-0 items-center gap-2">
                     <div class="hidden sm:block">
                         @include('partials.doctor-language-switch', ['variant' => 'chrome'])
@@ -78,7 +92,7 @@
                 class="fixed inset-x-0 bottom-0 z-40 flex border-t border-zinc-200 bg-white px-1 py-1.5 pb-[max(0.5rem,env(safe-area-inset-bottom))] lg:hidden"
                 aria-label="{{ __('doctor.mobile_nav_label') }}"
             >
-                <div class="grid w-full grid-cols-3 gap-0.5">
+                <div class="grid w-full grid-cols-4 gap-0.5">
                     <flux:button
                         :href="route('doctor.dashboard')"
                         wire:navigate
@@ -109,8 +123,23 @@
                     >
                         {{ __('doctor.nav.ratings') }}
                     </flux:button>
+                    <button
+                        type="button"
+                        data-test="doctor-mobile-menu-open"
+                        class="inline-flex min-h-11 flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-1.5 text-[0.65rem] font-medium leading-tight transition sm:text-xs {{ $doctorMenuRouteActive ? 'bg-[#047857] text-white' : 'text-zinc-600 hover:bg-zinc-50' }}"
+                        :class="doctorMenuOpen ? '!bg-[#047857] !text-white' : ''"
+                        :aria-expanded="doctorMenuOpen"
+                        aria-controls="doctor-mobile-menu-drawer"
+                        :aria-label="doctorMenuOpen ? @js(__('doctor.menu.close')) : @js(__('doctor.menu.open'))"
+                        @click="doctorMenuOpen = true"
+                    >
+                        <flux:icon name="bars-3" variant="outline" class="size-5 shrink-0" />
+                        <span>{{ __('doctor.nav.menu') }}</span>
+                    </button>
                 </div>
             </nav>
+
+            @include('partials.doctor-mobile-menu-drawer')
         </div>
 
         @persist('toast')

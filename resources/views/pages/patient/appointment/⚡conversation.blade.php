@@ -430,17 +430,6 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
 @push('scripts')
     @include('partials.realtime-call-alerts')
     <script>
-        function hidePatientPortalNavLoader() {
-            const loader = document.querySelector('[data-patient-portal-loader]');
-            if (!loader) {
-                return;
-            }
-
-            loader.classList.add('hidden');
-            loader.classList.remove('flex');
-            loader.setAttribute('aria-busy', 'false');
-        }
-
         function schedulePatientConversationInit() {
             if (window.__patientConversationInitScheduled) {
                 return;
@@ -450,12 +439,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
 
             window.setTimeout(() => {
                 window.__patientConversationInitScheduled = false;
-
-                try {
-                    initPatientConversationRealtime();
-                } finally {
-                    hidePatientPortalNavLoader();
-                }
+                initPatientConversationRealtime();
             }, 0);
         }
 
@@ -470,8 +454,6 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
             const boot = document.getElementById('patient-conversation-bootstrap');
             const panel = document.getElementById('patient-chat-panel');
             if (!boot || !panel) {
-                hidePatientPortalNavLoader();
-
                 return;
             }
 
@@ -486,7 +468,6 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 boot.__bindCallControlButtons?.();
                 boot.__restorePendingCall?.();
                 boot.__syncCallOverlay?.();
-                hidePatientPortalNavLoader();
 
                 return;
             }

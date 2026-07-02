@@ -140,7 +140,7 @@ final class SpecialistCatalog
     /**
      * @return list<array<string, mixed>>
      */
-    public static function forMarketingHomepage(int $limit = 12): array
+    public static function forMarketingHomepage(int $limit = 20): array
     {
         return array_slice(self::approvedDoctorCards(), 0, max(0, $limit));
     }

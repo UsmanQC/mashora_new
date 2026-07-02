@@ -40,19 +40,45 @@
             })();
         </script>
         {{-- Mobile header — same blue chrome as legacy sidebar; guest signup via dock → /patient/phone --}}
+        @php
+            $portalBack = \App\Support\PatientPortalBackNavigation::resolve();
+        @endphp
         <header
-            class="sticky top-0 z-40 flex shrink-0 items-center justify-between gap-3 border-b border-emerald-900/40 bg-[#10B981] px-4 py-3 text-white backdrop-blur-sm sm:hidden"
+            class="sticky top-0 z-40 grid shrink-0 grid-cols-[auto_1fr_auto] items-center gap-2 border-b border-emerald-900/40 bg-[#10B981] px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] text-white backdrop-blur-sm sm:hidden"
         >
-            <div class="min-w-0 flex-1">
-                @include('partials.patient-brand-strip', ['density' => 'compact'])
+            <div class="flex shrink-0 items-center justify-self-start">
+                @if ($portalBack !== null)
+                    @include('partials.patient-portal-header-back', ['portalBack' => $portalBack])
+                @else
+                    <span class="min-w-10 shrink-0" aria-hidden="true"></span>
+                @endif
             </div>
-            <div class="flex shrink-0 items-center gap-2">
+
+            <div class="min-w-0 justify-self-center">
+                @include('partials.patient-brand-strip', ['density' => 'compact', 'align' => 'center'])
+            </div>
+
+            <div class="flex shrink-0 items-center justify-end justify-self-end gap-2">
                 @include('partials.patient-language-switch', ['variant' => 'header'])
                 @auth
                     @include('partials.patient-user-account-menu', ['density' => 'header'])
                 @endauth
             </div>
         </header>
+
+        @if ($portalBack !== null && request()->routeIs('patient.schedule.filter'))
+            <div
+                id="patient-portal-swipe-hint"
+                class="patient-auth-swipe-hint pointer-events-none fixed inset-y-0 start-0 z-50 flex w-14 items-center justify-center sm:hidden"
+                aria-hidden="true"
+            >
+                <span class="flex size-9 items-center justify-center rounded-full bg-white/95 text-[#10B981] shadow-md ring-1 ring-[#10B981]/15">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-5 rtl:rotate-180" aria-hidden="true">
+                        <path fill-rule="evenodd" d="M11.78 5.22a.75.75 0 0 1 0 1.06L8.06 10l3.72 3.72a.75.75 0 1 1-1.06 1.06l-4.25-4.25a.75.75 0 0 1 0-1.06l4.25-4.25a.75.75 0 0 1 1.06 0Z" clip-rule="evenodd" />
+                    </svg>
+                </span>
+            </div>
+        @endif
 
         {{-- Desktop / tablet sidebar — same width as doctor portal --}}
         <aside
@@ -105,14 +131,8 @@
         @include('partials.patient-global-join-call-banner')
         @stack('scripts')
 
-        @persist('patient-portal-nav-loader')
-            @include('partials.patient-portal-nav-loader')
-        @endpersist
-
         @include('partials.pwa-install-prompt', ['pwaApp' => 'patient'])
 
         @fluxScripts
-
-        @include('partials.ai-chatbot-widget')
     </body>
 </html>

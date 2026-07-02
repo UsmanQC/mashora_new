@@ -3,6 +3,7 @@
 use App\Concerns\PasswordValidationRules;
 use App\Models\User;
 use App\Support\PatientPhone;
+use App\Support\PendingPatientBooking;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
@@ -75,24 +76,11 @@ new #[Layout('layouts::patient-auth')] #[Title('Your details')] class extends Co
 
         session()->forget('patient_otp_verified_phone');
 
-        $this->redirect(route('patient.home'), navigate: true);
+        $this->redirect(PendingPatientBooking::homeOrBookingUrl(), navigate: true);
     }
 }; ?>
 
 <div class="flex min-h-0 w-full flex-col text-start">
-    <div class="mb-2 sm:mb-3">
-        <flux:button
-            :href="route('patient.phone', ['phone' => $phone])"
-            wire:navigate
-            variant="ghost"
-            size="sm"
-            icon="arrow-left"
-            aria-label="{{ __('pagination.previous') }}"
-            title="{{ __('pagination.previous') }}"
-            class="px-0 text-zinc-600 hover:text-zinc-900"
-        />
-    </div>
-
     <flux:heading size="lg" class="patient-auth-heading !text-zinc-900 text-balance sm:!text-2xl">{{ __('patient_auth.register_title') }}</flux:heading>
     <flux:text class="mt-1 text-sm leading-snug text-balance text-zinc-600 sm:mt-2 sm:text-base">{{ __('patient_auth.register_sub') }}</flux:text>
 

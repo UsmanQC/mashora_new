@@ -27,7 +27,7 @@ final class DoctorWalletService
     }
 
     /**
-     * @return array{earned: float, paid_out: float, balance: float, completed_appointments: int}
+     * @return array{earned: float, reversed: float, net_earned: float, paid_out: float, balance: float, completed_appointments: int}
      */
     public function monthlySummary(Doctor $doctor, ?CarbonInterface $month = null): array
     {
@@ -35,11 +35,14 @@ final class DoctorWalletService
         $start = $month->copy()->startOfMonth();
         $end = $month->copy()->endOfMonth();
 
-        $earned = $this->sumTransactions($doctor, TransactionType::Deposit, $start, $end);
-        $paidOut = $this->sumTransactions($doctor, TransactionType::Withdraw, $start, $end);
+        $earned = $this->sumTransactionsByMetaType($doctor, TransactionType::Deposit, 'appointment_earning', $start, $end);
+        $reversed = $this->sumTransactionsByMetaType($doctor, TransactionType::Withdraw, 'appointment_refund_reversal', $start, $end);
+        $paidOut = $this->sumTransactionsByMetaType($doctor, TransactionType::Withdraw, 'invoice_payout', $start, $end);
 
         return [
             'earned' => $earned,
+            'reversed' => $reversed,
+            'net_earned' => round($earned - $reversed, 2),
             'paid_out' => $paidOut,
             'balance' => $this->balance($doctor->fresh() ?? $doctor),
             'completed_appointments' => $this->completedAppointmentsCount($doctor, $start, $end),
@@ -148,6 +151,33 @@ final class DoctorWalletService
     public function ensureWallet(Doctor $doctor): void
     {
         app(CastServiceInterface::class)->getWallet($doctor, save: true);
+    }
+
+    private function sumTransactionsByMetaType(
+        Doctor $doctor,
+        TransactionType $type,
+        string $metaType,
+        CarbonInterface $start,
+        CarbonInterface $end,
+    ): float {
+        $this->ensureWallet($doctor);
+
+        $decimalPlaces = (int) ($doctor->wallet?->decimal_places ?? 2);
+
+        return round((float) $this->transactionsQuery($doctor)
+            ->where('type', $type)
+            ->where('confirmed', true)
+            ->whereBetween('created_at', [$start, $end])
+            ->get()
+            ->filter(function (Transaction $transaction) use ($metaType): bool {
+                $meta = is_array($transaction->meta) ? $transaction->meta : [];
+
+                return ($meta['type'] ?? null) === $metaType;
+            })
+            ->sum(fn (Transaction $transaction): float => WalletTransactionAmount::absoluteFloat(
+                $transaction,
+                $decimalPlaces,
+            )), 2);
     }
 
     private function sumTransactions(

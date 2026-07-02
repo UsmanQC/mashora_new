@@ -25,6 +25,27 @@ use Livewire\Livewire;
 
 uses(RefreshDatabase::class);
 
+test('doctor mobile header exposes hamburger menu with wallet and settings links', function () {
+    app()->setLocale('en');
+
+    $doctor = Doctor::factory()->create([
+        'phone' => '966511122255',
+        'profile_completed' => true,
+        'status' => 'approved',
+    ]);
+
+    $this->actingAs($doctor, 'doctor')
+        ->get(route('doctor.dashboard'))
+        ->assertSuccessful()
+        ->assertSee('data-test="doctor-mobile-menu-open"', false)
+        ->assertSee(__('doctor.nav.menu'), false)
+        ->assertSee('data-test="doctor-mobile-menu-close"', false)
+        ->assertSee(__('doctor.menu.wallet'), false)
+        ->assertSee(route('doctor.settings.wallet'), false)
+        ->assertSee(__('doctor.menu.working_hours'), false)
+        ->assertSee(route('doctor.settings.profile'), false);
+});
+
 test('doctor guest is redirected to doctor login when accessing dashboard', function () {
     $this->get(route('doctor.dashboard'))
         ->assertRedirect(route('doctor.login'));

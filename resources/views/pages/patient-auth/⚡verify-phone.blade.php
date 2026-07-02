@@ -96,19 +96,6 @@ new #[Layout('layouts::patient-auth')] #[Title('Verify mobile number')] class ex
 }; ?>
 
 <div class="flex min-h-0 w-full flex-col">
-    <div class="mb-2 text-start sm:mb-4">
-        <flux:button
-            :href="route('patient.phone', ['phone' => $phone])"
-            wire:navigate
-            variant="ghost"
-            size="sm"
-            icon="arrow-left"
-            aria-label="{{ __('pagination.previous') }}"
-            title="{{ __('pagination.previous') }}"
-            class="px-0 text-zinc-600 hover:text-zinc-900"
-        />
-    </div>
-
     <flux:heading size="lg" class="patient-auth-heading !text-zinc-900 text-balance sm:!text-2xl">{{ __('patient_auth.otp_heading') }}</flux:heading>
     <flux:text class="mx-auto mt-1 max-w-sm text-sm text-balance text-zinc-600 sm:mt-2 sm:text-base">{{ __('patient_auth.otp_lead') }}</flux:text>
     <flux:text class="mt-2 text-sm font-medium tabular-nums text-zinc-800 sm:mt-3 sm:text-base" dir="ltr">+{{ $phone }}</flux:text>

@@ -1,5 +1,6 @@
 <?php
 
+use App\Support\PendingPatientBooking;
 use App\Support\SpecialistCatalog;
 use App\Models\Duration;
 use App\Models\Degree;
@@ -292,12 +293,15 @@ new #[Layout('layouts::patient')] #[Title('Specialists')] class extends Componen
         $doctorId = $specialist['doctor_database_id'] ?? null;
         if (is_int($doctorId) && $doctorId > 0) {
             $date = $this->selectedDate;
+            $duration = (int) ($specialist['session_minutes'] ?? 15);
+
+            PendingPatientBooking::store($doctorId, $date, $slot, $duration);
 
             $this->redirect(
                 route('patient.book-appointments', ['doctor' => $doctorId], false)
                     . '?'.http_build_query([
                         'date' => $date,
-                        'duration' => (int) ($specialist['session_minutes'] ?? 15),
+                        'duration' => $duration,
                         'time' => $slot,
                     ])
             );

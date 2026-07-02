@@ -13,13 +13,11 @@
     aria-label="{{ $isAr ? 'تثبيت التطبيق' : 'Install app' }}"
 >
     <div class="flex items-start gap-3">
-        <img
-            src="{{ asset('images/pwa/icon-192.png') }}"
-            alt=""
-            class="h-12 w-12 shrink-0 rounded-xl"
-            width="48"
-            height="48"
-        />
+        <div class="flex h-12 shrink-0 items-center justify-start">
+            @include('partials.patient-brand-logo', [
+                'svgClass' => 'h-9 w-auto max-w-[5.5rem] object-contain object-start',
+            ])
+        </div>
         <div class="min-w-0 flex-1">
             <p class="text-sm font-bold text-zinc-900">
                 {{ $isAr ? 'ثبّت تطبيق '.$appConfig['short_name'] : 'Install '.$appConfig['name'] }}

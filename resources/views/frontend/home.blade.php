@@ -9,10 +9,7 @@
     <link rel="icon" href="{{ asset('images/favicon-awaan.png') }}" type="image/png">
     <link rel="apple-touch-icon" href="{{ asset('images/favicon-awaan.png') }}">
     
-    <!-- Typography: Alexandria for Headers, Tajawal for Body (Premium Arabic Pair) -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Alexandria:wght@300;400;500;600;700;800&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ asset('fonts/thmanyah/thmanyah.css') }}">
     
     <!-- Premium Icons: Lucide -->
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -24,8 +21,9 @@
             theme: {
                 extend: {
                     fontFamily: {
-                        sans: ['Tajawal', 'sans-serif'],
-                        display: ['Alexandria', 'sans-serif'],
+                        sans: ['Thmanyah Sans', 'sans-serif'],
+                        display: ['Thmanyah Sans', 'sans-serif'],
+                        thamanyah: ['Thmanyah Sans', 'sans-serif'],
                     },
                     colors: {
                         primary: {
@@ -94,12 +92,13 @@
         body {
             background-color: #FFFFFF;
             color: #0F172A;
+            font-family: 'Thmanyah Sans', sans-serif;
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
         }
 
         h1, h2, h3, h4, h5, h6 {
-            font-family: 'Alexandria', sans-serif;
+            font-family: 'Thmanyah Sans', sans-serif;
             letter-spacing: -0.015em;
         }
 
@@ -151,6 +150,26 @@
                 padding-top: calc(6.5rem + env(safe-area-inset-top));
             }
         }
+
+        /* Emotion intake cards */
+        .emotion-card {
+            transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .emotion-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.05), 0 0 0 1px rgba(16, 185, 129, 0.1);
+            background-color: #FFFFFF;
+        }
+        .emotion-card.active {
+            background: #10B981;
+            color: white;
+            box-shadow: 0 20px 40px -12px rgba(16, 185, 129, 0.3);
+            border-color: transparent;
+        }
+        .emotion-card.active p { color: rgba(255, 255, 255, 0.9); }
+        .emotion-card.active h3 { color: white; }
+        .emotion-card.active .icon-box { background: rgba(255, 255, 255, 0.2); color: white; border-color: transparent; }
+        .emotion-card.active .icon-box svg { stroke: white; }
 
         /* Hide scrollbars for clean horizontal scrolling */
         .no-scrollbar::-webkit-scrollbar { display: none; }
@@ -249,16 +268,13 @@
 
             <!-- Actions -->
             <div class="flex items-center gap-6">
-                <button
-                    type="button"
-                    data-open-ai-chatbot
-                    class="inline-flex md:hidden items-center gap-2 rounded-2xl border border-primary/20 bg-primary/5 px-4 py-2.5 text-sm font-medium leading-none text-primary transition hover:bg-primary/10"
+                <a
+                    href="{{ route('patient.phone') }}"
+                    class="inline-flex items-center gap-2 rounded-2xl border border-primary/20 bg-primary/5 px-4 py-2.5 text-sm font-semibold leading-none text-primary transition hover:bg-primary/10 md:hidden"
                 >
-                    <i data-lucide="bot" class="h-4 w-4"></i>
-                    المساعد
-                </button>
-                <a href="{{ route('patient.phone') }}" class="hidden sm:block text-sm font-medium text-ink-muted hover:text-ink px-2 transition-colors">تسجيل الدخول</a>
-               
+                    تسجيل الدخول
+                </a>
+                <a href="{{ route('patient.phone') }}" class="hidden md:inline-flex text-sm font-medium text-ink-muted transition-colors hover:text-ink px-2">تسجيل الدخول</a>
             </div>
         </div>
     </header>
@@ -270,17 +286,7 @@
                 
                 <!-- Left Content: Value Proposition -->
                 <div class="lg:col-span-5 text-right opacity-0 animate-fade-in-up">
-                    {{-- <div class="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-surface-subtle border border-slate-100 text-ink-subtle text-xs font-bold mb-10 shadow-sm">
-                        <i data-lucide="shield-check" class="text-primary w-4 h-4"></i> مساحة آمنة وموثوقة 100%
-                    </div> --}}
-                    
-                    <a href="{{ route('patient.schedule.filter') }}" class="bg-ink hover:bg-ink-subtle text-white px-7 py-3 rounded-2xl text-sm font-medium transition-all shadow-float inline-flex items-center gap-3 group">
-                        <span class="relative flex h-2.5 w-2.5">
-                          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary-400 opacity-75"></span>
-                          <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-primary"></span>
-                        </span>
-                        جلسة فورية
-                    </a>
+    
                     <h1 class="text-4xl sm:text-5xl lg:text-[4.5rem] leading-[1.15] font-display font-bold text-ink mb-6 sm:mb-8 tracking-tight">
                         صحتك النفسية،<br>تبدأ <span class="text-primary">بحديث.</span>
                     </h1>
@@ -290,50 +296,9 @@
                     </p>
                 </div>
 
-                <!-- Right: decorative visual (desktop only) -->
+                <!-- Right: emotion intake widget (desktop) -->
                 <div class="hidden lg:block lg:col-span-7 relative opacity-0 animate-fade-in-up" style="animation-delay: 0.15s;">
-                    <div class="relative aspect-[4/3] overflow-hidden rounded-[2.5rem] border border-white/70 bg-gradient-to-br from-primary-50/80 via-white to-surface-subtle p-10 shadow-premium">
-                        <div class="absolute -top-16 -right-16 size-56 rounded-full bg-primary-200/40 blur-3xl" aria-hidden="true"></div>
-                        <div class="absolute -bottom-20 -left-10 size-64 rounded-full bg-amber-100/50 blur-3xl" aria-hidden="true"></div>
-
-                        <div class="relative flex h-full flex-col justify-between">
-                            <div class="flex items-start justify-between">
-                                <div class="rounded-2xl border border-white/80 bg-white/90 px-5 py-4 shadow-sm backdrop-blur-sm">
-                                    <p class="text-sm font-bold text-ink">مساحة آمنة</p>
-                                    <p class="mt-1 text-xs text-ink-muted">خصوصية تامة · مرخصون</p>
-                                </div>
-                                @if (($doctorStats['online'] ?? 0) > 0)
-                                    <div class="inline-flex items-center gap-2 rounded-full border border-primary/15 bg-white/90 px-4 py-2 text-xs font-bold text-primary shadow-sm">
-                                        <span class="relative flex size-2">
-                                            <span class="absolute inline-flex size-full animate-ping rounded-full bg-primary/40 opacity-75"></span>
-                                            <span class="relative inline-flex size-2 rounded-full bg-primary"></span>
-                                        </span>
-                                        {{ $doctorStats['online'] }} متصل الآن
-                                    </div>
-                                @endif
-                            </div>
-
-                            <div class="mx-auto flex -space-x-4 rtl:space-x-reverse">
-                                @foreach (array_slice($featuredDoctors, 0, 4) as $previewDoctor)
-                                    @php
-                                        $previewPhoto = $previewDoctor['photo_url'] ?? null;
-                                        $previewAvatar = 'https://ui-avatars.com/api/?name='.urlencode((string) ($previewDoctor['name'] ?? 'Awaan')).'&background=10B981&color=fff&size=120';
-                                    @endphp
-                                    <img
-                                        class="size-16 rounded-2xl border-4 border-white object-cover shadow-lg ring-1 ring-slate-100"
-                                        src="{{ filled($previewPhoto) ? $previewPhoto : $previewAvatar }}"
-                                        alt="{{ $previewDoctor['name'] }}"
-                                        loading="lazy"
-                                    >
-                                @endforeach
-                            </div>
-
-                            <blockquote class="text-center">
-                                <p class="font-display text-2xl font-bold leading-snug text-ink">« ابدأ براحة، وتحدث بحرية »</p>
-                                <p class="mt-2 text-sm text-ink-muted">معالجون مرخصون · جلسات فيديو آمنة</p>
-                            </blockquote>
-                        </div>
-                    </div>
+                    @include('partials.marketing-emotion-widget')
                 </div>
 
             </div>
@@ -343,11 +308,11 @@
                 @include('partials.marketing-appointment-cards')
             </div>
 
-            {{-- Rating stats (4.9 / 24/7) — hidden for now
-            <div class="mt-5 max-w-md mx-auto opacity-0 animate-fade-in-up flex justify-center sm:justify-start sm:max-w-none" style="animation-delay: 0.28s;">
-                @include('partials.marketing-hero-stats')
+            <!-- Emotion intake widget (mobile & tablet) -->
+            <div class="mt-8 max-w-md mx-auto sm:max-w-none lg:hidden opacity-0 animate-fade-in-up" style="animation-delay: 0.24s;">
+                @include('partials.marketing-emotion-widget')
             </div>
-            --}}
+
         </div>
     </main>
 
@@ -569,6 +534,15 @@
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             lucide.createIcons();
+
+            document.querySelectorAll('.emotion-card').forEach((card) => {
+                card.addEventListener('click', () => {
+                    card.closest('.marketing-emotion-widget')?.querySelectorAll('.emotion-card').forEach((item) => {
+                        item.classList.remove('active');
+                    });
+                    card.classList.add('active');
+                });
+            });
         });
     </script>
 </body>

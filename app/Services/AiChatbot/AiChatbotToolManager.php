@@ -8,6 +8,7 @@ use App\Models\Faq;
 use App\Models\User;
 use App\Services\DoctorAvailabilityService;
 use App\Support\AppTimezone;
+use App\Support\PendingPatientBooking;
 use Illuminate\Support\Facades\Auth;
 
 final class AiChatbotToolManager
@@ -56,15 +57,21 @@ final class AiChatbotToolManager
                 'type' => 'function',
                 'function' => [
                     'name' => 'bookAppointment',
-                    'description' => 'Guide the user to book an appointment with a therapist.',
+                    'description' => 'Book or prepare a new appointment after collecting consultation type, specialty, and preferred date/time from the user.',
                     'parameters' => [
                         'type' => 'object',
                         'properties' => [
-                            'doctor_id' => ['type' => 'integer'],
-                            'date' => ['type' => 'string', 'description' => 'YYYY-MM-DD'],
-                            'time' => ['type' => 'string', 'description' => 'HH:MM'],
+                            'doctor_id' => ['type' => 'integer', 'description' => 'Therapist ID when already selected'],
+                            'specialty' => ['type' => 'string', 'description' => 'Specialty or subspecialty focus'],
+                            'consultation_type' => [
+                                'type' => 'string',
+                                'description' => 'Consultation category: psychological, legal, or accounting',
+                                'enum' => ['psychological', 'legal', 'accounting'],
+                            ],
+                            'preferred_date' => ['type' => 'string', 'description' => 'Preferred date YYYY-MM-DD or relative like tomorrow'],
+                            'preferred_time' => ['type' => 'string', 'description' => 'Preferred time such as afternoon or HH:MM'],
+                            'query' => ['type' => 'string', 'description' => 'User description of their need'],
                         ],
-                        'required' => ['doctor_id'],
                     ],
                 ],
             ],
@@ -125,7 +132,7 @@ final class AiChatbotToolManager
         $result = match ($name) {
             'searchTherapists' => $this->searchTherapists($arguments),
             'findNearestAppointment' => $this->findNearestAppointment($arguments),
-            'bookAppointment' => $this->bookAppointment($arguments),
+            'bookAppointment', 'book_appointment' => $this->bookAppointment($arguments),
             'cancelAppointment' => $this->cancelAppointment($arguments),
             'searchFAQ' => $this->searchFAQ($arguments),
             default => ['error' => 'Unknown tool'],
@@ -181,13 +188,18 @@ final class AiChatbotToolManager
             $slots = $this->availability->availableSlots($doctor, $date, $durationMinutes);
 
             if ($slots !== []) {
+                $slot = [
+                    'date' => $date,
+                    'time' => $slots[0],
+                ];
+
                 return [
                     'doctor_id' => $doctor->id,
                     'doctor_name' => $doctor->displayName(),
                     'date' => $date,
                     'time' => $slots[0],
                     'duration_minutes' => $durationMinutes,
-                    'booking_url' => route('patient.book-appointments', ['doctor' => $doctor->id]),
+                    'booking_url' => PendingPatientBooking::urlFor($doctor->id, $date, $slots[0], $durationMinutes),
                 ];
             }
         }
@@ -207,16 +219,56 @@ final class AiChatbotToolManager
     private function bookAppointment(array $arguments): array
     {
         $doctorId = (int) ($arguments['doctor_id'] ?? 0);
-        $doctor = Doctor::query()->where('status', 'approved')->find($doctorId);
+        $specialty = isset($arguments['specialty']) ? trim((string) $arguments['specialty']) : null;
+        $consultationType = isset($arguments['consultation_type']) ? trim((string) $arguments['consultation_type']) : null;
+        $preferredDate = isset($arguments['preferred_date']) ? trim((string) $arguments['preferred_date']) : null;
+        $preferredTime = isset($arguments['preferred_time']) ? trim((string) $arguments['preferred_time']) : null;
+        $query = isset($arguments['query']) ? trim((string) $arguments['query']) : null;
 
-        if (! $doctor instanceof Doctor) {
-            return ['error' => 'Therapist not found'];
+        if ($doctorId > 0) {
+            $doctor = Doctor::query()->where('status', 'approved')->find($doctorId);
+
+            if (! $doctor instanceof Doctor) {
+                return ['error' => 'Therapist not found'];
+            }
+
+            $nearest = $this->findNearestAppointment([
+                'doctor_id' => $doctorId,
+                'duration_minutes' => $arguments['duration_minutes'] ?? 30,
+            ]);
+
+            $slot = isset($nearest['date'], $nearest['time'])
+                ? ['date' => (string) $nearest['date'], 'time' => (string) $nearest['time']]
+                : null;
+            $durationMinutes = max(15, (int) ($nearest['duration_minutes'] ?? $arguments['duration_minutes'] ?? 30));
+            $bookingUrl = PendingPatientBooking::remember($doctorId, $slot, $durationMinutes);
+
+            $user = Auth::user();
+
+            if (! $user instanceof User) {
+                return [
+                    'requires_login' => true,
+                    'login_url' => route('patient.phone'),
+                    'booking_url' => $bookingUrl ?? route('patient.phone'),
+                    'suggested_slot' => $nearest,
+                    'message' => 'Please sign in to complete booking.',
+                ];
+            }
+
+            return [
+                'requires_login' => false,
+                'booking_url' => $bookingUrl ?? route('patient.book-appointments', ['doctor' => $doctorId]),
+                'suggested_slot' => $nearest,
+                'message' => 'Open the booking page to confirm date and payment.',
+            ];
         }
 
-        $nearest = $this->findNearestAppointment([
-            'doctor_id' => $doctorId,
-            'duration_minutes' => $arguments['duration_minutes'] ?? 30,
-        ]);
+        $recommendations = $this->recommendations->searchTherapists(
+            query: $query,
+            specialty: $specialty ?? $consultationType,
+        );
+
+        $filterUrl = route('patient.schedule.filter');
 
         $user = Auth::user();
 
@@ -224,16 +276,28 @@ final class AiChatbotToolManager
             return [
                 'requires_login' => true,
                 'login_url' => route('patient.phone'),
-                'suggested_slot' => $nearest,
-                'message' => 'Please sign in to complete booking.',
+                'filter_url' => $filterUrl,
+                'consultation_type' => $consultationType,
+                'preferred_date' => $preferredDate,
+                'preferred_time' => $preferredTime,
+                'recommended_therapists' => array_slice($recommendations, 0, 3),
+                'message' => 'Sign in to complete booking, or browse specialists using the filter page.',
             ];
         }
 
+        $topMatch = $recommendations[0] ?? null;
+
         return [
             'requires_login' => false,
-            'booking_url' => route('patient.book-appointments', ['doctor' => $doctorId]),
-            'suggested_slot' => $nearest,
-            'message' => 'Open the booking page to confirm date and payment.',
+            'filter_url' => $filterUrl,
+            'consultation_type' => $consultationType,
+            'preferred_date' => $preferredDate,
+            'preferred_time' => $preferredTime,
+            'recommended_therapists' => array_slice($recommendations, 0, 3),
+            'booking_url' => is_array($topMatch) && isset($topMatch['id'])
+                ? route('patient.book-appointments', ['doctor' => $topMatch['id']])
+                : $filterUrl,
+            'message' => 'Use the booking link to confirm your appointment.',
         ];
     }
 

@@ -1,7 +1,7 @@
 @php
     $isAuthenticated = auth()->check();
-    $scheduledUrl = route('patient.schedule.filter');
-    $instantUrl = $isAuthenticated ? route('patient.schedule.filter') : route('patient.phone');
+    $scheduledUrl = route('patient.phone');
+    $instantUrl = route('patient.schedule.filter');
     $ongoingUrl = $isAuthenticated ? route('patient.appointments') : route('patient.phone');
 
     $cards = [
@@ -83,6 +83,7 @@
         @endforeach
     </div>
 
+    {{-- Online specialists strip — hidden for now
     @if (($doctorStats['online'] ?? 0) > 0)
         <div
             class="mt-4 flex items-center justify-between gap-3 rounded-2xl border border-primary/10 bg-gradient-to-l from-primary-50/70 to-white px-4 py-3 opacity-0 animate-fade-in-up sm:mt-5 sm:px-5 sm:py-4"
@@ -116,4 +117,5 @@
             </a>
         </div>
     @endif
+    --}}
 </section>

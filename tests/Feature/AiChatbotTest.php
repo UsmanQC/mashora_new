@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\AiSetting;
 use App\Models\Faq;
 use App\Services\AiChatbot\AiChatbotToolManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -147,7 +148,10 @@ test('homepage always includes chatbot widget and nav option', function () {
         ->assertSee('المساعد الذكي', false)
         ->assertSee('data-open-ai-chatbot', false)
         ->assertSee('id="awaan-ai-chatbot-locale-switch"', false)
-        ->assertSee('data-chatbot-locale="en"', false);
+        ->assertSee('data-chatbot-locale="en"', false)
+        ->assertSee('renderQuickActions', false)
+        ->assertSee('showWelcomeState', false)
+        ->assertSee('quickActions', false);
 });
 
 test('chatbot api accepts locale and returns localized errors', function () {
@@ -163,8 +167,8 @@ test('chatbot api accepts locale and returns localized errors', function () {
         ]);
 });
 
-test('patient portal hides chatbot widget when disabled', function () {
-    config(['ai_chatbot.enabled' => false]);
+test('patient portal never includes chatbot widget', function () {
+    config(['ai_chatbot.enabled' => true]);
 
     $this->get(route('patient.phone'))
         ->assertSuccessful()
@@ -203,4 +207,26 @@ test('tool manager exposes responses api tool definitions', function () {
         ->and($definitions[0])->toHaveKeys(['type', 'name', 'description', 'parameters'])
         ->and($definitions[0]['type'])->toBe('function')
         ->and($definitions[0])->not->toHaveKey('function');
+});
+
+test('book appointment alias executes booking flow', function () {
+    $manager = app(AiChatbotToolManager::class);
+
+    $result = json_decode($manager->execute('book_appointment', [
+        'consultation_type' => 'psychological',
+        'preferred_date' => 'tomorrow',
+        'preferred_time' => 'afternoon',
+        'query' => 'anxiety',
+    ]), true);
+
+    expect($result)->toHaveKeys(['filter_url', 'message', 'consultation_type'])
+        ->and($result['consultation_type'])->toBe('psychological');
+});
+
+test('effective system prompt includes b2c conversation flow rules', function () {
+    $prompt = AiSetting::current()->effectiveSystemPrompt();
+
+    expect($prompt)
+        ->toContain('bookAppointment')
+        ->toContain('searchTherapists');
 });

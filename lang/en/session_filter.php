@@ -65,6 +65,18 @@ return [
     'show_less' => 'Show less',
     'next' => 'Next',
     'skip' => 'Skip',
+    'back' => 'Back',
+    'skip_all' => 'Skip all',
+    'step_of' => 'Step :current of :total',
+    'mobile_hint' => 'Tap an option to continue automatically',
+    'finish' => 'View specialists',
+    'mobile_steps' => [
+        'degree' => 'Specialist type',
+        'gender' => 'Gender preference',
+        'duration' => 'Session length',
+        'language' => 'Session language',
+        'subspecialties' => 'Sub-specialties',
+    ],
     'next_toast' => 'Preferences saved. Booking will use them when sessions go live.',
     'skip_toast' => 'You can start a session anytime from Appointments.',
     'validation' => [
