@@ -14,7 +14,13 @@
         $portalBack = \App\Support\PatientPortalBackNavigation::resolve();
         $patientLuxuryMobileNav = true;
         $patientLuxuryHome = request()->routeIs('patient.home');
-        $patientLuxuryMobileShell = request()->routeIs(['patient.home', 'patient.appointments']);
+        $patientLuxuryMobileShell = request()->routeIs([
+            'patient.home',
+            'patient.appointments',
+            'patient.schedule.filter',
+            'patient.schedule.specialists',
+            'patient.book-appointments',
+        ]);
     @endphp
     <body
         @class([

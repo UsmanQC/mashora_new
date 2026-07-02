@@ -19,8 +19,21 @@ test('guest can open schedule session filter page', function () {
     $this->get(route('patient.schedule.filter'))
         ->assertSuccessful()
         ->assertSee('session-filter-mobile', false)
-        ->assertSee('data-test="patient-portal-back"', false)
-        ->assertSee(route('home'), false);
+        ->assertSee('data-test="patient-schedule-filter-header"', false)
+        ->assertSee(__('session_filter.mobile_steps.degree'), false)
+        ->assertSee(__('session_filter.step_of', ['current' => 1, 'total' => 5]), false);
+});
+
+test('mobile filter header updates when step changes', function () {
+    $user = User::factory()->create(['profile_completed' => true]);
+
+    Livewire::actingAs($user)
+        ->test('pages::patient.schedule-session')
+        ->assertSee(__('session_filter.mobile_steps.degree'), false)
+        ->set('mobileStep', 3)
+        ->assertSee(__('session_filter.mobile_steps.duration'), false)
+        ->assertSee(__('session_filter.step_of', ['current' => 3, 'total' => 5]), false)
+        ->assertDontSee(__('session_filter.mobile_steps.degree'), false);
 });
 
 test('mobile filter swipe back goes to previous step before leaving', function () {
@@ -53,7 +66,9 @@ test('authenticated patient can open schedule session filter page', function () 
 
     $this->actingAs($user)->get(route('patient.schedule.filter'))
         ->assertSuccessful()
-        ->assertSee(__('session_filter.title'), false)
+        ->assertSee('data-test="patient-schedule-filter-header"', false)
+        ->assertSee('data-test="patient-navbar-language-switch"', false)
+        ->assertSee(__('session_filter.mobile_steps.degree'), false)
         ->assertSee(__('session_filter.subtitle'), false)
         ->assertSee(__('session_filter.filter_heading'), false)
         ->assertSee('session-filter-chip', false)

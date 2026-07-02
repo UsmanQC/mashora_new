@@ -115,4 +115,22 @@ return [
     'payment_failed_body' => 'You can go back to specialists to choose another time, or try paying again from checkout.',
 
     'saved_toast' => 'Booking details saved. Payment will be added in the next step.',
+
+    'luxury' => [
+        'intake_title' => 'Booking details',
+        'summary_title' => 'Payment summary',
+        'who_title' => 'Who is this booking for?',
+        'who_hint' => 'Choose who will attend this session.',
+        'method_title' => 'Preferred communication',
+        'method_hint' => 'How would you like to speak with the specialist?',
+        'notes_label' => 'Brief notes (optional)',
+        'notes_placeholder' => 'Share a short note for the specialist to review before your session…',
+        'continue' => 'Continue',
+        'confirm_pay' => 'Confirm & pay :amount :currency',
+        'trust_badge' => '100% encrypted and secure payment',
+        'duration_minutes' => ':minutes min',
+        'total_due' => 'Amount due',
+        'vat_included' => 'Including VAT',
+        'discount_placeholder' => 'Discount code',
+    ],
 ];

@@ -5,6 +5,8 @@
     'profilePhotoUrl' => null,
     'userName' => null,
     'testId' => null,
+    'progressStep' => null,
+    'progressTotal' => null,
 ])
 
 @php
@@ -18,9 +20,15 @@
 >
     <div class="flex items-center justify-between gap-4">
         <div class="min-w-0 flex-1">
-            <h1 class="text-2xl font-bold tracking-tight text-slate-900">{{ $title }}</h1>
+            <h1
+                class="text-2xl font-bold tracking-tight text-slate-900"
+                @if ($testId) data-test="{{ $testId }}-title" @endif
+            >{{ $title }}</h1>
             @if (filled($subtitle))
-                <p class="mt-0.5 text-xs font-medium text-slate-500">{{ $subtitle }}</p>
+                <p
+                    class="mt-0.5 text-xs font-medium text-slate-500"
+                    @if ($testId) data-test="{{ $testId }}-subtitle" @endif
+                >{{ $subtitle }}</p>
             @endif
         </div>
 
@@ -42,4 +50,16 @@
             </a>
         </div>
     </div>
+
+    @if (is_int($progressStep) && is_int($progressTotal) && $progressTotal > 0)
+        <div class="mt-4 flex items-center gap-1.5" aria-hidden="true">
+            @for ($stepIndex = 1; $stepIndex <= $progressTotal; $stepIndex++)
+                <span @class([
+                    'h-1.5 flex-1 rounded-full transition-all duration-300',
+                    'bg-[#10B981] shadow-sm shadow-[#10B981]/30' => $stepIndex <= $progressStep,
+                    'bg-zinc-200/90' => $stepIndex > $progressStep,
+                ])></span>
+            @endfor
+        </div>
+    @endif
 </header>

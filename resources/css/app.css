@@ -698,8 +698,41 @@ select:focus[data-flux-control] {
     color: #ffffff !important;
 }
 
-.session-filter-mobile-actions {
-    box-shadow: 0 -8px 24px rgb(15 23 42 / 0.06);
+.session-filter-skip-all {
+    -webkit-tap-highlight-color: transparent;
+}
+
+.session-filter-mobile-footer {
+    padding-bottom: 0.75rem;
+}
+
+.patient-booking-mobile-actions {
+    padding-bottom: 0.75rem;
+}
+
+.patient-luxury-booking-option {
+    transition: all 0.2s ease;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.patient-luxury-booking-option--active {
+    border-color: #10b981;
+    background-color: #ecfdf5;
+}
+
+.patient-luxury-booking-receipt-divider {
+    background-image: linear-gradient(to right, #cbd5e1 50%, rgba(255, 255, 255, 0) 0%);
+    background-position: bottom;
+    background-size: 8px 1px;
+    background-repeat: repeat-x;
+    height: 1px;
+}
+
+.patient-luxury-booking-glass-bar {
+    background: rgb(255 255 255 / 0.9);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-top: 1px solid rgb(0 0 0 / 0.05);
 }
 
 .patient-auth-body {

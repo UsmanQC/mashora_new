@@ -8,7 +8,9 @@ use App\Models\Doctor;
 use App\Models\Speciality;
 use Flux\Flux;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
@@ -442,18 +444,36 @@ new #[Layout('layouts::patient')] #[Title('Specialists')] class extends Componen
     {
         return Session::has('session_filter_preferences');
     }
+
+    public function pageSubtitle(): string
+    {
+        return $this->hasSavedFilters
+            ? (string) __('specialist_results.page_sub_with_filters')
+            : (string) __('specialist_results.page_sub_default');
+    }
+
+    public function profilePhotoUrl(): ?string
+    {
+        $user = Auth::user();
+
+        if ($user === null || ! filled($user->profile_photo_path)) {
+            return null;
+        }
+
+        return Storage::disk('public')->url((string) $user->profile_photo_path);
+    }
 }; ?>
 
-<div class="relative mx-auto w-full max-w-7xl space-y-6 px-3 py-5 pb-28 sm:px-5 sm:py-6 sm:pb-14">
-    <header class="space-y-2">
-        <flux:heading size="xl" class="font-semibold text-zinc-900">
-            {{ __('specialist_results.page_heading') }}
-        </flux:heading>
-        <flux:text class="text-zinc-600">
-            {{ $this->hasSavedFilters ? __('specialist_results.page_sub_with_filters') : __('specialist_results.page_sub_default') }}
-        </flux:text>
-    </header>
+<div class="patient-luxury-specialists bg-slate-50 pb-[calc(4.75rem+env(safe-area-inset-bottom))] sm:bg-transparent sm:pb-14" data-test="patient-luxury-specialists">
+    @include('partials.patient-luxury-page-header', [
+        'title' => __('specialist_results.page_heading'),
+        'subtitle' => $this->pageSubtitle(),
+        'profilePhotoUrl' => $this->profilePhotoUrl(),
+        'userName' => auth()->user()?->name,
+        'testId' => 'patient-specialists-header',
+    ])
 
+    <div class="relative mx-auto w-full max-w-7xl space-y-6 px-6 py-4 sm:px-5 sm:py-6">
     <section class="space-y-4 rounded-3xl border border-zinc-200/80 bg-white/95 p-4 shadow-[0_12px_28px_-20px_rgba(2,6,23,0.35)] backdrop-blur sm:p-5">
         <div class="flex items-center gap-2.5 sm:gap-3">
             <div class="relative flex-1">

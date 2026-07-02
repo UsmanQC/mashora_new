@@ -3,7 +3,9 @@
 use App\Models\Degree;
 use App\Models\Speciality;
 use Flux\Flux;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
@@ -47,6 +49,19 @@ new #[Layout('layouts::patient')] #[Title('Schedule a session')] class extends C
         };
 
         return (string) __('session_filter.mobile_steps.'.$key);
+    }
+
+    public function mobileHeaderTitle(): string
+    {
+        return $this->mobileStepTitle();
+    }
+
+    public function mobileHeaderSubtitle(): string
+    {
+        return (string) __('session_filter.step_of', [
+            'current' => $this->mobileStep,
+            'total' => $this->mobileStepsTotal(),
+        ]);
     }
 
     public function goToNextMobileStep(): void
@@ -308,61 +323,38 @@ new #[Layout('layouts::patient')] #[Title('Schedule a session')] class extends C
     {
         return (int) round(($this->requiredFiltersCompleted / 4) * 100);
     }
+
+    public function profilePhotoUrl(): ?string
+    {
+        $user = Auth::user();
+
+        if ($user === null || ! filled($user->profile_photo_path)) {
+            return null;
+        }
+
+        return Storage::disk('public')->url((string) $user->profile_photo_path);
+    }
 }; ?>
 
 <div class="pb-6 sm:pb-10">
     {{-- Mobile: step-by-step wizard --}}
     <div
-        class="session-filter-mobile pb-[calc(5.75rem+env(safe-area-inset-bottom))] sm:hidden"
+        class="session-filter-mobile bg-slate-50 pb-[calc(7.5rem+env(safe-area-inset-bottom))] sm:hidden"
         id="patient-portal-swipe-surface"
         data-swipe-livewire-method="goBackMobile"
         data-swipe-hint-id="patient-portal-swipe-hint"
     >
-        <header class="session-filter-mobile-hero overflow-hidden rounded-2xl border border-emerald-100/80 bg-white shadow-sm">
-            <div class="bg-gradient-to-br from-emerald-50 to-white px-4 pb-4 pt-5">
-                <div class="flex items-start justify-between gap-3">
-                    <div class="min-w-0 flex-1">
-                        <p class="text-[0.6875rem] font-bold uppercase tracking-[0.14em] text-[#10B981]">
-                            {{ __('session_filter.title') }}
-                        </p>
-                        <h1 class="mt-1 text-xl font-bold tracking-tight text-zinc-900">
-                            {{ $this->mobileStepTitle() }}
-                        </h1>
-                        <p class="mt-1 text-sm leading-relaxed text-zinc-600">
-                            {{ __('session_filter.mobile_hint') }}
-                        </p>
-                    </div>
-                    <span class="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-[#10B981]/10 text-[#10B981]">
-                        @if ($mobileStep === 1)
-                            <flux:icon name="user-circle" class="size-5" />
-                        @elseif ($mobileStep === 2)
-                            <flux:icon name="users" class="size-5" />
-                        @elseif ($mobileStep === 3)
-                            <flux:icon name="clock" class="size-5" />
-                        @elseif ($mobileStep === 4)
-                            <flux:icon name="language" class="size-5" />
-                        @else
-                            <flux:icon name="tag" class="size-5" />
-                        @endif
-                    </span>
-                </div>
+        @include('partials.patient-luxury-page-header', [
+            'title' => $this->mobileHeaderTitle(),
+            'subtitle' => $this->mobileHeaderSubtitle(),
+            'profilePhotoUrl' => $this->profilePhotoUrl(),
+            'userName' => auth()->user()?->name,
+            'testId' => 'patient-schedule-filter-header',
+            'progressStep' => $mobileStep,
+            'progressTotal' => $this->mobileStepsTotal(),
+        ])
 
-                <div class="mt-5 flex items-center gap-1.5" aria-hidden="true">
-                    @for ($stepIndex = 1; $stepIndex <= $this->mobileStepsTotal(); $stepIndex++)
-                        <span @class([
-                            'h-1.5 flex-1 rounded-full transition-all duration-300',
-                            'bg-[#10B981] shadow-sm shadow-[#10B981]/30' => $stepIndex <= $mobileStep,
-                            'bg-zinc-200/90' => $stepIndex > $mobileStep,
-                        ])></span>
-                    @endfor
-                </div>
-                <p class="mt-2 text-xs font-medium text-zinc-500">
-                    {{ __('session_filter.step_of', ['current' => $mobileStep, 'total' => $this->mobileStepsTotal()]) }}
-                </p>
-            </div>
-        </header>
-
-        <div class="session-filter-mobile-body mt-4 space-y-3">
+        <div class="session-filter-mobile-body mt-4 space-y-3 px-6">
             @if ($mobileStep === 1)
                 <div class="space-y-2.5" role="radiogroup" aria-label="{{ __('session_filter.sections.specialist') }}">
                     @foreach ($this->specialistKindOptions as $option)
@@ -493,20 +485,22 @@ new #[Layout('layouts::patient')] #[Title('Schedule a session')] class extends C
             @endif
         </div>
 
-        <div class="session-filter-mobile-actions fixed inset-x-0 bottom-[calc(4.25rem+env(safe-area-inset-bottom))] z-[55] border-t border-zinc-200/90 bg-white/95 px-4 py-3 shadow-[0_-10px_30px_rgb(15_23_42_/_0.08)] backdrop-blur-md">
-            <div class="mx-auto flex max-w-md items-center justify-between gap-3">
-                @if ($mobileStep > 1)
+        <div class="session-filter-mobile-footer pointer-events-none fixed inset-x-0 bottom-[calc(6.25rem+env(safe-area-inset-bottom))] z-40 px-6">
+            @if ($mobileStep === 1)
+                <button
+                    type="button"
+                    wire:click="proceedSkip"
+                    wire:loading.attr="disabled"
+                    class="session-filter-skip-all pointer-events-auto mx-auto flex w-full max-w-md items-center justify-center rounded-full bg-[#10B981] px-5 py-3 text-sm font-bold text-black shadow-sm shadow-[#10B981]/25 transition hover:bg-[#0ea271] active:scale-[0.98] disabled:opacity-70"
+                >
+                    {{ __('session_filter.skip_all') }}
+                </button>
+            @elseif ($mobileStep === $this->mobileStepsTotal())
+                <div class="pointer-events-auto mx-auto flex w-full max-w-md items-center gap-2">
                     <flux:button variant="ghost" size="sm" wire:click="goToPreviousMobileStep" type="button" class="shrink-0 !px-2" wire:loading.attr="disabled" icon="arrow-left">
                         {{ __('session_filter.back') }}
                     </flux:button>
-                @else
-                    <flux:button variant="ghost" size="sm" wire:click="proceedSkip" type="button" class="shrink-0 !px-2" wire:loading.attr="disabled">
-                        {{ __('session_filter.skip_all') }}
-                    </flux:button>
-                @endif
-
-                @if ($mobileStep === $this->mobileStepsTotal())
-                    <div class="flex w-full max-w-[14rem] shrink-0 items-center justify-end gap-2 ms-auto">
+                    <div class="ms-auto flex items-center gap-2">
                         <flux:button variant="ghost" size="sm" wire:click="skipSubspecialtiesStep" type="button" class="!px-3" wire:loading.attr="disabled">
                             {{ __('session_filter.skip') }}
                         </flux:button>
@@ -515,18 +509,20 @@ new #[Layout('layouts::patient')] #[Title('Schedule a session')] class extends C
                             size="sm"
                             wire:click="goToNextMobileStep"
                             type="button"
-                            class="!min-h-10 flex-1 !rounded-full !px-4 !border-[#10B981] !bg-[#10B981] !text-white shadow-sm shadow-[#10B981]/20 hover:!brightness-[0.97]"
+                            class="!min-h-10 !rounded-full !border-[#10B981] !bg-[#10B981] !px-4 !text-black shadow-sm shadow-[#10B981]/20 hover:!brightness-[0.97]"
                             wire:loading.attr="disabled"
                         >
                             {{ __('session_filter.finish') }}
                         </flux:button>
                     </div>
-                @else
-                    <p class="ms-auto max-w-[11rem] truncate text-end text-xs font-medium text-zinc-500">
-                        {{ __('session_filter.mobile_hint') }}
-                    </p>
-                @endif
-            </div>
+                </div>
+            @else
+                <div class="pointer-events-auto mx-auto flex w-full max-w-md">
+                    <flux:button variant="ghost" size="sm" wire:click="goToPreviousMobileStep" type="button" class="!px-2" wire:loading.attr="disabled" icon="arrow-left">
+                        {{ __('session_filter.back') }}
+                    </flux:button>
+                </div>
+            @endif
         </div>
     </div>
 

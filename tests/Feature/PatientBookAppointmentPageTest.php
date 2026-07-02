@@ -199,8 +199,45 @@ test('authenticated patient can load book appointments page with valid query', f
     $this->actingAs($user)
         ->get(route('patient.book-appointments', ['doctor' => $doctor->id]).'?'.$query)
         ->assertSuccessful()
-        ->assertSee(__('patient_booking.title'), false)
+        ->assertSee('data-test="patient-luxury-booking"', false)
+        ->assertSee('data-test="patient-booking-header"', false)
+        ->assertSee('data-test="patient-booking-step-intake"', false)
+        ->assertSee('data-test="patient-navbar-language-switch"', false)
+        ->assertSee(__('patient_booking.luxury.intake_title'), false)
         ->assertSee(__('patient_booking.for_self'), false)
         ->assertSee(__('patient_booking.for_other'), false)
-        ->assertSee(__('patient_booking.cancel'), false);
+        ->assertSee('data-test="patient-booking-continue"', false);
+});
+
+test('authenticated patient can advance booking to payment summary step on mobile', function () {
+    $user = User::factory()->create([
+        'profile_completed' => true,
+        'name' => 'Patient Test',
+        'phone' => '966500111222',
+    ]);
+
+    Duration::query()->create(['duration' => 15, 'title' => '15 min']);
+
+    $doctor = Doctor::query()->create([
+        'name' => 'Nada Alghamdi',
+        'name_ar' => 'ندى الغامدي',
+        'status' => 'approved',
+        'spoken_languages' => 'ar_en',
+        'gender' => 'female',
+    ]);
+
+    $doctor->durations()->attach(15, ['price' => 200.0]);
+
+    Livewire::actingAs($user)
+        ->withQueryParams([
+            'date' => '2026-05-05',
+            'time' => '12:15',
+            'duration' => 15,
+        ])
+        ->test('pages::patient.book-appointments', ['doctor' => $doctor])
+        ->call('goToSummaryStep')
+        ->assertSet('mobileStep', 2)
+        ->assertSee(__('patient_booking.luxury.summary_title'), false)
+        ->assertSee('data-test="patient-booking-step-summary"', false)
+        ->assertSee('data-test="patient-booking-confirm-pay"', false);
 });

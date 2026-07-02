@@ -66,7 +66,7 @@ return [
     'next' => 'Next',
     'skip' => 'Skip',
     'back' => 'Back',
-    'skip_all' => 'Skip all',
+    'skip_all' => 'Skip All',
     'step_of' => 'Step :current of :total',
     'mobile_hint' => 'Tap an option to continue automatically',
     'finish' => 'View specialists',

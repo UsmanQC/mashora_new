@@ -30,7 +30,11 @@ test('patient with completed profile sees catalog specialists when no session fi
     $this->actingAs($user)
         ->get(route('patient.schedule.specialists'))
         ->assertSuccessful()
+        ->assertSee('data-test="patient-luxury-specialists"', false)
+        ->assertSee('data-test="patient-specialists-header"', false)
+        ->assertSee('data-test="patient-navbar-language-switch"', false)
         ->assertSee(__('specialist_results.page_heading'), false)
+        ->assertSee(__('specialist_results.page_sub_default'), false)
         ->assertSee('Nada Alghamdi', false)
         ->assertSee('Dr. Khalid Mohammed', false);
 });
