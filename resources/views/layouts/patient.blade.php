@@ -18,7 +18,7 @@
     <body
         @class([
             'min-h-svh antialiased sm:flex sm:min-h-svh sm:pb-0',
-            'bg-slate-50 pb-0' => $patientLuxuryHome,
+            'bg-slate-50 max-sm:h-svh max-sm:overflow-hidden pb-0' => $patientLuxuryHome,
             'bg-[#F3F5F9] pb-24' => ! $patientLuxuryHome,
         ])
     >
@@ -113,7 +113,11 @@
             </div>
         </aside>
 
-        <main class="relative flex min-h-svh min-w-0 flex-1 flex-col">
+        <main @class([
+            'relative flex min-w-0 flex-1 flex-col',
+            'min-h-0 max-sm:overflow-hidden' => $patientLuxuryHome,
+            'min-h-svh' => ! $patientLuxuryHome,
+        ])>
             @auth
                 @unless ($patientLuxuryHome)
                     <livewire:patient-portal-chrome-bar />
@@ -122,7 +126,7 @@
             @endauth
             <div @class([
                 'mx-auto w-full max-w-6xl flex-1',
-                'px-0 py-0 pb-32 sm:px-6 sm:py-6 sm:pb-8 lg:pb-8' => $patientLuxuryHome,
+                'px-0 py-0 max-sm:h-full max-sm:overflow-hidden sm:px-6 sm:py-6 sm:pb-8 lg:pb-8' => $patientLuxuryHome,
                 'px-4 py-6 pb-28 sm:px-6 lg:pb-8' => ! $patientLuxuryHome,
             ])>
                 {{ $slot }}

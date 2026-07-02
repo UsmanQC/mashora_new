@@ -39,11 +39,11 @@
 @endphp
 
 <div
-    class="pointer-events-none fixed inset-x-0 bottom-0 z-50 px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:hidden"
+    class="pointer-events-none fixed inset-x-0 bottom-0 z-50 px-5 pb-[max(1rem,env(safe-area-inset-bottom))] sm:hidden"
     data-test="patient-luxury-dock"
 >
     <nav
-        class="patient-glass-nav pointer-events-auto mx-auto flex max-w-md items-center justify-between rounded-full px-2 py-2 shadow-[0_8px_30px_rgb(0,0,0,0.08)]"
+        class="patient-glass-nav pointer-events-auto mx-auto flex max-w-md items-end justify-between gap-0 rounded-full px-1 py-1 shadow-[0_8px_30px_rgb(0,0,0,0.08)]"
         aria-label="{{ __('patient.nav.label') }}"
     >
         <a
@@ -72,15 +72,15 @@
             <span class="patient-luxury-dock-btn__label">{{ __('patient.nav.my_appointments') }}</span>
         </a>
 
-        <div class="relative -top-5 shrink-0">
+        <div class="relative -top-3.5 w-14 shrink-0">
             <button
                 type="button"
                 data-open-ai-chatbot
-                class="patient-luxury-dock-fab"
+                class="patient-luxury-dock-fab mx-auto"
                 aria-label="{{ __('patient.nav.ai_assistant') }}"
                 data-test="patient-luxury-dock-chatbot"
             >
-                <flux:icon name="sparkles" variant="outline" class="size-6 shrink-0" />
+                <flux:icon name="sparkles" variant="outline" class="size-5 shrink-0" />
             </button>
         </div>
 

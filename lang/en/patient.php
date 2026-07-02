@@ -115,7 +115,7 @@ return [
         'label' => 'Patient navigation',
         'home' => 'Home',
         'appointments' => 'Appointments',
-        'my_appointments' => 'My appointments',
+        'my_appointments' => 'Appointment',
         'messages' => 'Messages',
         'my_account' => 'My account',
         'ai_assistant' => 'AI assistant',
