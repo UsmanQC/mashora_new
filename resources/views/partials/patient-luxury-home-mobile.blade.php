@@ -49,27 +49,31 @@
                 @endif
             </div>
 
-            @if ($isAuthenticated)
-                <a
-                    href="{{ $notificationsUrl }}"
-                    wire:navigate
-                    class="relative flex size-9 shrink-0 items-center justify-center rounded-full border border-slate-100 bg-white text-slate-600 shadow-[0_4px_20px_-2px_rgba(0,0,0,0.03)] transition-colors hover:text-[#059669]"
-                    aria-label="{{ __('patient.home_luxury.notifications_aria') }}"
-                >
-                    <flux:icon name="bell" variant="outline" class="size-[1.125rem]" />
-                    @if ($this->unreadNotificationCount > 0)
-                        <span class="absolute top-2 end-2 size-1.5 rounded-full border-2 border-white bg-red-500" aria-hidden="true"></span>
-                    @endif
-                </a>
-            @else
-                <a
-                    href="{{ $phoneEntry }}"
-                    wire:navigate
-                    class="shrink-0 rounded-full bg-[#10B981] px-3.5 py-1.5 text-[0.6875rem] font-bold text-white shadow-sm transition-colors hover:bg-[#059669]"
-                >
-                    {{ __('patient.home_luxury.sign_in') }}
-                </a>
-            @endif
+            <div class="flex shrink-0 items-center gap-2">
+                @include('partials.patient-language-switch', ['variant' => 'luxury'])
+
+                @if ($isAuthenticated)
+                    <a
+                        href="{{ $notificationsUrl }}"
+                        wire:navigate
+                        class="relative flex size-9 shrink-0 items-center justify-center rounded-full border border-slate-100 bg-white text-slate-600 shadow-[0_4px_20px_-2px_rgba(0,0,0,0.03)] transition-colors hover:text-[#059669]"
+                        aria-label="{{ __('patient.home_luxury.notifications_aria') }}"
+                    >
+                        <flux:icon name="bell" variant="outline" class="size-[1.125rem]" />
+                        @if ($this->unreadNotificationCount > 0)
+                            <span class="absolute top-2 end-2 size-1.5 rounded-full border-2 border-white bg-red-500" aria-hidden="true"></span>
+                        @endif
+                    </a>
+                @else
+                    <a
+                        href="{{ $phoneEntry }}"
+                        wire:navigate
+                        class="shrink-0 rounded-full bg-[#10B981] px-3.5 py-1.5 text-[0.6875rem] font-bold text-white shadow-sm transition-colors hover:bg-[#059669]"
+                    >
+                        {{ __('patient.home_luxury.sign_in') }}
+                    </a>
+                @endif
+            </div>
         </div>
     </header>
 

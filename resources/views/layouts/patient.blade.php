@@ -14,12 +14,14 @@
         $portalBack = \App\Support\PatientPortalBackNavigation::resolve();
         $patientLuxuryMobileNav = true;
         $patientLuxuryHome = request()->routeIs('patient.home');
+        $patientLuxuryMobileShell = request()->routeIs(['patient.home', 'patient.appointments']);
     @endphp
     <body
         @class([
             'min-h-svh antialiased sm:flex sm:min-h-svh sm:pb-0',
             'bg-slate-50 max-sm:h-svh max-sm:overflow-hidden pb-0' => $patientLuxuryHome,
-            'bg-[#F3F5F9] pb-24' => ! $patientLuxuryHome,
+            'bg-slate-50 pb-0' => $patientLuxuryMobileShell && ! $patientLuxuryHome,
+            'bg-[#F3F5F9] pb-24' => ! $patientLuxuryMobileShell,
         ])
     >
         <script>
@@ -52,7 +54,7 @@
         <header
             @class([
                 'sticky top-0 z-40 grid shrink-0 grid-cols-[auto_1fr_auto] items-center gap-2 border-b border-emerald-900/40 bg-[#10B981] px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] text-white backdrop-blur-sm sm:hidden',
-                'hidden' => $patientLuxuryHome,
+                'hidden' => $patientLuxuryMobileShell,
             ])
         >
             <div class="flex shrink-0 items-center justify-self-start">
@@ -119,7 +121,7 @@
             'min-h-svh' => ! $patientLuxuryHome,
         ])>
             @auth
-                @unless ($patientLuxuryHome)
+                @unless ($patientLuxuryMobileShell)
                     <livewire:patient-portal-chrome-bar />
                 @endunless
                 <livewire:patient-mood-picker-modal />
@@ -127,7 +129,8 @@
             <div @class([
                 'mx-auto w-full max-w-6xl flex-1',
                 'px-0 py-0 max-sm:h-full max-sm:overflow-hidden sm:px-6 sm:py-6 sm:pb-8 lg:pb-8' => $patientLuxuryHome,
-                'px-4 py-6 pb-28 sm:px-6 lg:pb-8' => ! $patientLuxuryHome,
+                'px-0 py-0 sm:px-6 sm:py-6 sm:pb-8 lg:pb-8' => $patientLuxuryMobileShell && ! $patientLuxuryHome,
+                'px-4 py-6 pb-28 sm:px-6 lg:pb-8' => ! $patientLuxuryMobileShell,
             ])>
                 {{ $slot }}
             </div>

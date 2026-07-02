@@ -1078,6 +1078,16 @@ select:focus[data-flux-control] {
     transform: scale(0.985);
 }
 
+.patient-luxury-appointments .active-scale:active {
+    transform: scale(0.98);
+}
+
+.patient-luxury-page-header__avatar,
+.patient-luxury-appointments__avatar {
+    display: block;
+    -webkit-tap-highlight-color: transparent;
+}
+
 .patient-chatbot-dock-host #awaan-ai-chatbot-panel:not(.hidden) {
     box-shadow: 0 20px 50px -12px rgb(15 23 42 / 0.28);
 }

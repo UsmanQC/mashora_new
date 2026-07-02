@@ -141,7 +141,8 @@ test('authenticated patient luxury mobile home is rendered', function () {
         ->assertSee('data-test="patient-luxury-dock-chatbot"', false)
         ->assertSee('data-open-ai-chatbot', false)
         ->assertSee(route('profile.edit'), false)
-        ->assertSee('data-test="patient-luxury-home-avatar"', false);
+        ->assertSee('data-test="patient-luxury-home-avatar"', false)
+        ->assertSee('data-test="patient-navbar-language-switch"', false);
 });
 
 test('authenticated patient luxury home shows active session card when in process', function () {
@@ -362,6 +363,32 @@ test('patient appointments show join session link after doctor starts', function
         ->assertSuccessful()
         ->assertSee(route('patient.appointments.conversation', ['appointment' => $appointment->id]), false)
         ->assertSee(__('patient.appointments.join_session'), false);
+});
+
+test('patient appointments luxury mobile shell is rendered', function () {
+    $user = User::factory()->create(['profile_completed' => true]);
+    $doctor = Doctor::factory()->create(['name' => 'Fahad Specialist']);
+    $startsAt = now()->addDay();
+
+    Appointment::factory()->create([
+        'user_id' => $user->id,
+        'doctor_id' => $doctor->id,
+        'status' => 'new',
+        'appointment_date' => $startsAt->toDateString(),
+        'start_time' => $startsAt->format('H:i:s'),
+        'scheduled_at' => $startsAt,
+    ]);
+
+    $this->actingAs($user)->get(route('patient.appointments'))
+        ->assertSuccessful()
+        ->assertSee('data-test="patient-luxury-appointments"', false)
+        ->assertSee('data-test="patient-luxury-appointments-header"', false)
+        ->assertSee('data-test="patient-luxury-page-header-avatar"', false)
+        ->assertSee('data-test="patient-navbar-language-switch"', false)
+        ->assertDontSee('data-test="patient-brand-strip"', false)
+        ->assertSee(__('patient.appointments.luxury.tab_upcoming'), false)
+        ->assertSee(__('patient.appointments.luxury.instant_title'), false)
+        ->assertSee('Fahad Specialist', false);
 });
 
 test('patient appointments renders realtime notification scripts', function () {

@@ -25,6 +25,29 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
     #[Url]
     public string $tab = 'ongoing';
 
+    public string $mobileSegment = 'upcoming';
+
+    /**
+     * @return array<string, list<string>>
+     */
+    protected function mobileSegmentStatuses(): array
+    {
+        return [
+            'upcoming' => ['new', 'in_process', 'pending_follow_up', 'rescheduled'],
+            'previous' => ['completed', 'not_attended', 'cancelled'],
+        ];
+    }
+
+    public function selectMobileSegment(string $segment): void
+    {
+        if (! array_key_exists($segment, $this->mobileSegmentStatuses())) {
+            return;
+        }
+
+        $this->mobileSegment = $segment;
+        $this->resetPage();
+    }
+
     /**
      * @return array<string, list<string>>
      */
@@ -67,7 +90,10 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
         abort_unless(is_int($userId), 403);
 
         return Appointment::query()
-            ->with('doctor:id,name,name_ar')
+            ->with([
+                'doctor:id,name,name_ar,profile_photo_path',
+                'doctor.specialities:id,title,title_ar',
+            ])
             ->where('user_id', $userId);
     }
 
@@ -83,6 +109,159 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
         }
 
         return $query->paginate(10);
+    }
+
+    public function getMobileAppointmentsProperty(): LengthAwarePaginator
+    {
+        $query = $this->baseQuery()
+            ->whereIn('status', $this->mobileSegmentStatuses()[$this->mobileSegment]);
+
+        if ($this->mobileSegment === 'upcoming') {
+            $query->orderBy('appointment_date')->orderBy('start_time');
+        } else {
+            $query->orderByDesc('appointment_date')->orderByDesc('start_time');
+        }
+
+        return $query->paginate(10);
+    }
+
+    /**
+     * @return Collection<string, int>
+     */
+    public function getMobileSegmentCountsProperty(): Collection
+    {
+        $counts = $this->baseQuery()
+            ->whereIn('status', array_merge(...array_values($this->mobileSegmentStatuses())))
+            ->selectRaw('status, COUNT(*) as aggregate')
+            ->groupBy('status')
+            ->pluck('aggregate', 'status')
+            ->map(fn ($count): int => (int) $count);
+
+        return collect([
+            'upcoming' => collect($this->mobileSegmentStatuses()['upcoming'])
+                ->sum(fn (string $status): int => (int) ($counts[$status] ?? 0)),
+            'previous' => collect($this->mobileSegmentStatuses()['previous'])
+                ->sum(fn (string $status): int => (int) ($counts[$status] ?? 0)),
+        ]);
+    }
+
+    public function headerDateLabel(): string
+    {
+        return now()->locale(app()->getLocale())->translatedFormat('j F Y');
+    }
+
+    public function profilePhotoUrl(): ?string
+    {
+        $user = Auth::user();
+
+        if ($user === null || ! filled($user->profile_photo_path)) {
+            return null;
+        }
+
+        return \Illuminate\Support\Facades\Storage::disk('public')->url((string) $user->profile_photo_path);
+    }
+
+    public function doctorSpecialtyLabel(Appointment $appointment): string
+    {
+        $speciality = $appointment->doctor?->specialities?->first();
+
+        if ($speciality === null) {
+            return __('patient.appointments.specialist_label');
+        }
+
+        if (app()->getLocale() === 'ar' && filled($speciality->title_ar)) {
+            return (string) $speciality->title_ar;
+        }
+
+        return (string) ($speciality->title ?? $speciality->title_ar ?? __('patient.appointments.specialist_label'));
+    }
+
+    public function doctorPhotoUrl(Appointment $appointment): ?string
+    {
+        return $appointment->doctor?->profilePhotoUrl();
+    }
+
+    public function luxuryStatusLabel(Appointment $appointment): string
+    {
+        if (in_array($appointment->status, ['new', 'rescheduled'], true) && ! $appointment->is_follow_up) {
+            return __('patient.appointments.luxury.status_confirmed');
+        }
+
+        return $this->statusLabelFor($appointment);
+    }
+
+    public function luxuryStatusBadgeClasses(Appointment $appointment): string
+    {
+        if (in_array($appointment->status, ['new', 'rescheduled'], true) && ! $appointment->is_follow_up) {
+            return 'bg-emerald-50 text-emerald-600';
+        }
+
+        return match ((string) $appointment->status) {
+            'in_process' => 'bg-amber-50 text-amber-600',
+            'pending_follow_up' => 'bg-violet-50 text-violet-600',
+            'completed' => 'bg-slate-100 text-slate-600',
+            'not_attended' => 'bg-orange-50 text-orange-600',
+            'cancelled' => 'bg-rose-50 text-rose-600',
+            default => 'bg-emerald-50 text-emerald-600',
+        };
+    }
+
+    public function sessionTypeLabel(Appointment $appointment): string
+    {
+        if ($appointment->appointment_type === 'instant') {
+            return __('patient.appointments.luxury.session_instant');
+        }
+
+        return __('patient.appointments.luxury.session_video');
+    }
+
+    public function formattedLuxurySessionSchedule(Appointment $appointment): string
+    {
+        $startsAt = $appointment->sessionStartsAt();
+
+        if ($startsAt === null) {
+            return trim($this->formattedSessionDate($appointment).'، '.$this->formattedSessionTime($appointment), ' ،');
+        }
+
+        $startsAt = $startsAt->locale(app()->getLocale());
+
+        $dayLabel = $startsAt->isToday()
+            ? __('patient.today')
+            : ($startsAt->isTomorrow()
+                ? __('patient.appointments.luxury.tomorrow')
+                : $startsAt->translatedFormat('d M'));
+
+        return $dayLabel.(app()->getLocale() === 'ar' ? '، ' : ', ').$startsAt->translatedFormat('g:i A');
+    }
+
+    public function appointmentCardUrl(Appointment $appointment): ?string
+    {
+        if ($appointment->status === 'in_process' && $appointment->allowsPatientCalls()) {
+            return route('patient.appointments.conversation', ['appointment' => $appointment->id]);
+        }
+
+        if ($this->canOpenChat($appointment)) {
+            return route('patient.appointments.conversation', ['appointment' => $appointment->id]);
+        }
+
+        if ($this->canResolveMissed($appointment)) {
+            return route('patient.appointments.missed-reschedule', ['appointment' => $appointment->id]);
+        }
+
+        return null;
+    }
+
+    public function mobileEmptyMessage(): string
+    {
+        return $this->mobileSegment === 'upcoming'
+            ? __('patient.appointments.luxury.empty_upcoming')
+            : __('patient.appointments.luxury.empty_previous');
+    }
+
+    #[On('patient-appointment-session-started')]
+    public function onPatientAppointmentSessionStarted(): void
+    {
+        unset($this->appointments, $this->tabCounts, $this->mobileAppointments, $this->mobileSegmentCounts);
     }
 
     /**
@@ -311,15 +490,12 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
             ]),
         );
     }
-
-    #[On('patient-appointment-session-started')]
-    public function onPatientAppointmentSessionStarted(): void
-    {
-        unset($this->appointments, $this->tabCounts);
-    }
 }; ?>
 
-<div id="patient-appointments-root" class="space-y-5">
+<div>
+    @include('partials.patient-luxury-appointments-mobile')
+
+    <div id="patient-appointments-root" class="hidden space-y-5 sm:block">
     @if (filled(config('broadcasting.connections.pusher.key')) && config('broadcasting.default') !== 'pusher')
         <flux:callout variant="warning" icon="exclamation-triangle" class="border-amber-200">
             {{ __('patient.appointments.realtime_misconfigured') }}
@@ -458,6 +634,7 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
                 @endif
             @endif
         </section>
+    </div>
     </div>
 
     <flux:modal wire:model.self="showRefundModal" class="max-w-md rounded-2xl shadow-xl" :closable="true">
