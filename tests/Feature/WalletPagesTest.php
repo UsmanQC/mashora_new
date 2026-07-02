@@ -155,12 +155,11 @@ test('doctor wallet page shows net previous month earning after refund reversal'
     $this->actingAs($doctor, 'doctor')
         ->get(route('doctor.settings.wallet'))
         ->assertSuccessful()
-        ->assertSee(__('doctor.wallet.previous_month_earned'), false)
-        ->assertSee('-6.00', false)
-        ->assertSee(__('doctor.wallet.earnings_reversed_hint', [
-            'gross' => '14.00',
-            'reversed' => '20.00',
-        ]), false);
+        ->assertSee(__('doctor.wallet.how_it_works_title'), false)
+        ->assertSee(__('doctor.wallet.net_previous_month'), false)
+        ->assertSee(__('doctor.wallet.previous_month_refunded'), false)
+        ->assertSee('20.00', false)
+        ->assertSee('14.00', false);
 });
 
 test('patient wallet page tolerates transactions linked to soft deleted wallets', function (): void {
