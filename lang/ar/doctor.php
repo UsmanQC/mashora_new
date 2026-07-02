@@ -477,6 +477,7 @@ return [
         'available_balance' => 'الرصيد المتاح',
         'balance_hint' => 'يُصرف هذا الرصيد عندما تعتمد أوان فاتورتك الشهرية كمدفوعة.',
         'month_earned' => 'أُضيف هذا الشهر',
+        'previous_month_earned' => 'أرباح الشهر السابق',
         'month_paid_out' => 'صُرف هذا الشهر',
         'month_completed' => 'مكتملة هذا الشهر',
         'completed_suffix' => 'جلسات',

@@ -35,6 +35,17 @@ new #[Layout('layouts::doctor')] #[Title('Wallet')] class extends Component
     }
 
     /**
+     * @return array{earned: float, paid_out: float, balance: float, completed_appointments: int}
+     */
+    public function getPreviousMonthSummaryProperty(): array
+    {
+        return app(DoctorWalletService::class)->monthlySummary(
+            $this->doctor(),
+            now(config('app.timezone'))->subMonth(),
+        );
+    }
+
+    /**
      * @return Collection<int, Transaction>
      */
     public function getTransactionsProperty(): Collection
@@ -78,7 +89,7 @@ new #[Layout('layouts::doctor')] #[Title('Wallet')] class extends Component
         <flux:text class="mt-3 text-sm text-zinc-600">{{ __('doctor.wallet.balance_hint') }}</flux:text>
     </div>
 
-    <div class="grid gap-4 lg:grid-cols-3">
+    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div class="rounded-2xl border border-[#10B981]/20 bg-gradient-to-br from-[#eef2ff] via-white to-white p-5 shadow-sm transition hover:shadow-md">
             <div class="flex items-start justify-between gap-3">
                 <div class="min-w-0">
@@ -90,6 +101,21 @@ new #[Layout('layouts::doctor')] #[Title('Wallet')] class extends Component
                 </div>
                 <span class="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-[#10B981]/10 text-[#10B981]" aria-hidden="true">
                     <flux:icon name="banknotes" variant="outline" class="size-6" />
+                </span>
+            </div>
+        </div>
+
+        <div class="rounded-2xl border border-violet-200/70 bg-gradient-to-br from-violet-50 via-white to-white p-5 shadow-sm transition hover:shadow-md">
+            <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                    <p class="text-sm font-semibold text-zinc-500">{{ __('doctor.wallet.previous_month_earned') }}</p>
+                    <p class="mt-2 text-3xl font-bold tabular-nums tracking-tight text-zinc-900">
+                        +{{ number_format($this->previousMonthSummary['earned'], 2) }}
+                        <span class="text-base font-semibold text-violet-600">{{ config('currency.sa_riyal_symbol') }}</span>
+                    </p>
+                </div>
+                <span class="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-violet-100 text-violet-600" aria-hidden="true">
+                    <flux:icon name="clock" variant="outline" class="size-6" />
                 </span>
             </div>
         </div>

@@ -476,6 +476,7 @@ return [
         'available_balance' => 'Available balance',
         'balance_hint' => 'This balance is paid out when Awaan marks your monthly invoice as paid.',
         'month_earned' => 'Earned this month',
+        'previous_month_earned' => 'Previous month earning',
         'month_paid_out' => 'Paid out this month',
         'month_completed' => 'Completed this month',
         'completed_suffix' => 'sessions',
