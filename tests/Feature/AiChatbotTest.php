@@ -147,6 +147,7 @@ test('homepage always includes chatbot widget and nav option', function () {
         ->assertSee('id="awaan-ai-chatbot"', false)
         ->assertSee('المساعد الذكي', false)
         ->assertSee('data-open-ai-chatbot', false)
+        ->assertSee('id="awaan-ai-chatbot-toggle"', false)
         ->assertSee('id="awaan-ai-chatbot-locale-switch"', false)
         ->assertSee('data-chatbot-locale="en"', false)
         ->assertSee('renderQuickActions', false)

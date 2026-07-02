@@ -30,7 +30,7 @@ class PatientMoodPickerModal extends Component
     public bool $shareWithTherapist = false;
 
     #[On('open-patient-mood-picker')]
-    public function listenOpenMoodPicker(?string $dateIso = null): void
+    public function listenOpenMoodPicker(?string $dateIso = null, ?string $moodKey = null): void
     {
         $user = Auth::user();
 
@@ -65,6 +65,11 @@ class PatientMoodPickerModal extends Component
         }
 
         $this->resetMoodForm();
+
+        if (filled($moodKey) && in_array($moodKey, PatientMoodImage::MOOD_KEYS, true)) {
+            $this->selectedMoodKey = $moodKey;
+        }
+
         $this->showMoodModal = true;
     }
 
@@ -138,17 +143,7 @@ class PatientMoodPickerModal extends Component
      */
     public function moodEmoji(string $key): string
     {
-        return match ($key) {
-            'satisfied' => '😌',
-            'neutral' => '😐',
-            'disappointed' => '😕',
-            'anxiety' => '😰',
-            'happy' => '😄',
-            'sad' => '😔',
-            'tired' => '🥱',
-            'angry' => '😠',
-            default => '•',
-        };
+        return PatientMoodImage::emoji($key);
     }
 
     public function moodImageUrl(string $key): ?string

@@ -267,7 +267,7 @@
             </nav>
 
             <!-- Actions -->
-            <div class="flex items-center gap-6">
+            <div class="flex items-center gap-3 sm:gap-6">
                 <a
                     href="{{ route('patient.phone') }}"
                     class="inline-flex items-center gap-2 rounded-2xl border border-primary/20 bg-primary/5 px-4 py-2.5 text-sm font-semibold leading-none text-primary transition hover:bg-primary/10 md:hidden"
@@ -528,7 +528,12 @@
         </div>
     </footer>
 
-    @include('partials.ai-chatbot-widget', ['forceVisible' => true])
+    @include('partials.ai-chatbot-widget', [
+        'forceVisible' => true,
+        'hideToggle' => false,
+        'toggleAnchor' => 'left',
+        'layout' => 'corner',
+    ])
 
     <!-- Interactive Logic -->
     <script>

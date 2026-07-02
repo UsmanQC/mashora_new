@@ -14,17 +14,36 @@
         $initialChatbotLocale = in_array(session('patient_locale'), ['ar', 'en'], true)
             ? session('patient_locale')
             : 'ar';
+        $hideToggleOnMobile = (bool) ($hideToggle ?? false);
+        $toggleAnchor = ($toggleAnchor ?? 'left') === 'right' ? 'right' : 'left';
+        $layout = $layout ?? ($hideToggleOnMobile ? 'patient-dock' : 'corner');
+        $isPatientDock = $layout === 'patient-dock';
+        $abovePatientDock = (bool) ($abovePatientDock ?? false);
     @endphp
 
     <div
         id="awaan-ai-chatbot"
-        class="fixed bottom-6 left-6 z-[60] font-sans"
+        @class([
+            'font-sans',
+            'patient-chatbot-dock-host pointer-events-none fixed inset-x-0 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-[70] flex justify-center px-4' => $isPatientDock,
+            'z-50' => ! $isPatientDock,
+            'fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] !left-6 !right-auto sm:bottom-6' => ! $isPatientDock && $toggleAnchor === 'left' && $abovePatientDock,
+            'fixed bottom-6 !left-6 !right-auto' => ! $isPatientDock && $toggleAnchor === 'left' && ! $abovePatientDock,
+            'fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] !right-6 !left-auto sm:bottom-6' => ! $isPatientDock && $toggleAnchor === 'right' && $abovePatientDock,
+            'fixed bottom-6 !right-6 !left-auto' => ! $isPatientDock && $toggleAnchor === 'right' && ! $abovePatientDock,
+        ])
         dir="{{ $initialChatbotLocale === 'ar' ? 'rtl' : 'ltr' }}"
         data-initial-locale="{{ $initialChatbotLocale }}"
+        data-hide-toggle-mobile="{{ $hideToggleOnMobile ? '1' : '0' }}"
+        data-layout="{{ $layout }}"
     >
         <div
             id="awaan-ai-chatbot-panel"
-            class="hidden mb-4 w-[min(100vw-3rem,24rem)] overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl"
+            @class([
+                'pointer-events-auto hidden overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl w-[min(100vw-3rem,24rem)]',
+                'mx-auto mb-0' => $isPatientDock,
+                'mb-4' => ! $isPatientDock,
+            ])
             role="dialog"
             aria-label="{{ __('ai_chatbot.title', [], $initialChatbotLocale) }}"
         >
@@ -100,14 +119,25 @@
             </form>
         </div>
 
-        <button
-            type="button"
-            id="awaan-ai-chatbot-toggle"
-            class="inline-flex h-14 w-14 items-center justify-center rounded-full bg-primary text-white shadow-lg shadow-primary/30 transition hover:bg-primary-600 hover:shadow-xl"
-            aria-label="{{ __('ai_chatbot.open', [], $initialChatbotLocale) }}"
-        >
-            <i data-lucide="message-circle" class="h-6 w-6"></i>
-        </button>
+        @if ($hideToggleOnMobile)
+            <button
+                type="button"
+                id="awaan-ai-chatbot-toggle"
+                class="pointer-events-auto hidden h-14 w-14 items-center justify-center rounded-full bg-primary text-white shadow-lg shadow-primary/30 transition hover:bg-primary-600 hover:shadow-xl sm:inline-flex"
+                aria-label="{{ __('ai_chatbot.open', [], $initialChatbotLocale) }}"
+            >
+                <i data-lucide="message-circle" class="h-6 w-6"></i>
+            </button>
+        @else
+            <button
+                type="button"
+                id="awaan-ai-chatbot-toggle"
+                class="inline-flex h-14 w-14 items-center justify-center rounded-full bg-primary text-white shadow-lg shadow-primary/30 transition hover:bg-primary-600 hover:shadow-xl"
+                aria-label="{{ __('ai_chatbot.open', [], $initialChatbotLocale) }}"
+            >
+                <i data-lucide="message-circle" class="h-6 w-6"></i>
+            </button>
+        @endif
     </div>
 
     <script>
@@ -270,7 +300,7 @@
                 document.getElementById('awaan-ai-chatbot-reset-label').textContent = labels().reset;
                 resetBtn.title = labels().reset;
                 closeBtn.setAttribute('aria-label', labels().close);
-                toggle.setAttribute('aria-label', labels().open);
+                toggle?.setAttribute('aria-label', labels().open);
                 sendBtn.setAttribute('aria-label', labels().send);
                 input.placeholder = labels().placeholder;
                 languageLabel.textContent = labels().language;
@@ -738,14 +768,17 @@
 
             window.openAwaanAiChatbot = openPanel;
 
-            document.querySelectorAll('[data-open-ai-chatbot]').forEach((trigger) => {
-                trigger.addEventListener('click', (event) => {
-                    event.preventDefault();
-                    openPanel();
-                });
+            document.addEventListener('click', (event) => {
+                const trigger = event.target.closest('[data-open-ai-chatbot]');
+                if (!trigger) {
+                    return;
+                }
+
+                event.preventDefault();
+                openPanel();
             });
 
-            toggle.addEventListener('click', () => {
+            toggle?.addEventListener('click', () => {
                 if (panel.classList.contains('hidden')) {
                     openPanel();
                 } else {

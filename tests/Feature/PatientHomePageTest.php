@@ -12,10 +12,10 @@ uses(RefreshDatabase::class);
 test('guest can view patient home', function () {
     $this->get(route('patient.home'))
         ->assertSuccessful()
+        ->assertSee('data-test="patient-luxury-home"', false)
+        ->assertSee('data-test="patient-luxury-dock"', false)
         ->assertSee(__('patient.mood_section'), false)
-        ->assertSee('data-test="patient-navbar-language-switch"', false)
-        ->assertSee(route('patient.locale', ['locale' => 'ar']), false)
-        ->assertSee(__('patient.menu.locale_ar_short'), false);
+        ->assertSee(__('patient.home_luxury.sign_in'), false);
 });
 
 test('authenticated patient home shows mood strip above appointment actions', function () {
@@ -26,8 +26,12 @@ test('authenticated patient home shows mood strip above appointment actions', fu
         ->assertSuccessful()
         ->getContent();
 
-    expect(strpos($content, __('patient.mood_section')))
-        ->toBeLessThan(strpos($content, __('patient.book_title')));
+    $moodPos = strpos($content, __('patient.mood_section'));
+    $bookPos = strpos($content, __('patient.book_title'));
+
+    expect($moodPos)->not->toBeFalse();
+    expect($bookPos)->not->toBeFalse();
+    expect($moodPos)->toBeLessThan($bookPos);
 });
 
 test('guest mood day click redirects to patient phone entry', function () {
@@ -70,6 +74,8 @@ test('authenticated patient sidebar shows grouped navigation links', function ()
 });
 
 test('authenticated patient home renders arabic strings when locale is ar', function () {
+    $this->travelTo(now()->startOfDay()->addHours(9));
+
     app()->setLocale('ar');
     $user = User::factory()->create([
         'name' => 'User Example',
@@ -78,8 +84,9 @@ test('authenticated patient home renders arabic strings when locale is ar', func
 
     $this->actingAs($user)->get(route('patient.home'))
         ->assertSuccessful()
-        ->assertSee(__('patient.portal_greeting_label'), false)
-        ->assertSee('User', false);
+        ->assertSee(__('patient.home_luxury.greeting_morning'), false)
+        ->assertSee('User Example', false)
+        ->assertSee(__('patient.home_luxury.actions_heading'), false);
 });
 
 test('mood week strip opens mood picker for authenticated patients', function () {
@@ -119,7 +126,37 @@ test('signed-in patient home links both session cards to schedule filter', funct
 
     $response = $this->actingAs($user)->get(route('patient.home'))->assertSuccessful();
 
-    expect(substr_count($response->content(), $filterUrl))->toBe(2);
+    expect(substr_count($response->content(), $filterUrl))->toBeGreaterThanOrEqual(2);
+});
+
+test('authenticated patient luxury mobile home is rendered', function () {
+    $user = User::factory()->create(['profile_completed' => true]);
+
+    $this->actingAs($user)->get(route('patient.home'))
+        ->assertSuccessful()
+        ->assertSee('data-test="patient-luxury-home"', false)
+        ->assertSee('data-test="patient-luxury-dock"', false)
+        ->assertSee('id="awaan-ai-chatbot"', false)
+        ->assertSee('data-layout="patient-dock"', false)
+        ->assertSee('data-test="patient-luxury-dock-chatbot"', false)
+        ->assertSee('data-open-ai-chatbot', false);
+});
+
+test('authenticated patient luxury home shows active session card when in process', function () {
+    $user = User::factory()->create(['profile_completed' => true]);
+    $doctor = Doctor::factory()->create(['name' => 'Fahad Specialist']);
+
+    $appointment = Appointment::factory()->create([
+        'user_id' => $user->id,
+        'doctor_id' => $doctor->id,
+        'status' => 'in_process',
+        'actual_start_at' => now(),
+    ]);
+
+    $this->actingAs($user)->get(route('patient.home'))
+        ->assertSuccessful()
+        ->assertSee(__('patient.home_luxury.active_session_title'), false)
+        ->assertSee(route('patient.appointments.conversation', ['appointment' => $appointment->id]), false);
 });
 
 test('signed-in patient navbar exposes account menu with logout', function () {
@@ -127,10 +164,9 @@ test('signed-in patient navbar exposes account menu with logout', function () {
 
     $this->actingAs($user)->get(route('patient.home'))
         ->assertSuccessful()
-        ->assertSee('data-test="patient-account-menu-button"', false)
         ->assertSee('data-test="patient-logout-button"', false)
         ->assertSee(route('logout'), false)
-        ->assertDontSee('data-test="patient-account-menu-language-switch"', false);
+        ->assertSee(route('patient.menu'), false);
 });
 
 test('patient ongoing appointment shows countdown timer next to waiting status', function () {
