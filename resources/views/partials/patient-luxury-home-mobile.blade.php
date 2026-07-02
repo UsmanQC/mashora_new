@@ -5,6 +5,7 @@
     $appointmentsUrl = $isAuthenticated ? route('patient.appointments') : $phoneEntry;
     $recordsUrl = $isAuthenticated ? route('patient.appointments', ['tab' => 'completed']) : $phoneEntry;
     $notificationsUrl = $isAuthenticated ? route('patient.notifications') : $phoneEntry;
+    $profileUrl = $isAuthenticated ? route('profile.edit') : $phoneEntry;
 @endphp
 
 <div class="patient-luxury-home relative flex h-[100dvh] flex-col overflow-hidden bg-slate-50 sm:hidden" data-test="patient-luxury-home">
@@ -12,7 +13,13 @@
         <div class="flex items-center justify-between gap-3">
             <div class="flex min-w-0 items-center gap-3">
                 @if ($isAuthenticated)
-                    <div class="relative shrink-0">
+                    <a
+                        href="{{ $profileUrl }}"
+                        wire:navigate
+                        class="relative shrink-0"
+                        aria-label="{{ __('patient.nav.my_account') }}"
+                        data-test="patient-luxury-home-avatar"
+                    >
                         @if ($this->profilePhotoUrl !== null)
                             <img
                                 src="{{ $this->profilePhotoUrl }}"
@@ -23,7 +30,7 @@
                             <flux:avatar :name="Auth::user()?->name ?? ''" circle class="size-11 ring-2 ring-white" />
                         @endif
                         <span class="absolute bottom-0 end-0 size-3 rounded-full border-2 border-white bg-[#10B981]" aria-hidden="true"></span>
-                    </div>
+                    </a>
                     <div class="min-w-0">
                         <p class="mb-0.5 text-[0.6875rem] font-medium text-slate-500">{{ $this->greetingLabel }}</p>
                         <h1 class="truncate text-base font-bold tracking-tight text-slate-900">{{ Auth::user()?->name }}</h1>
@@ -76,7 +83,7 @@
                 <flux:icon name="chart-bar" variant="outline" class="size-4 shrink-0 text-[#10B981] opacity-50" />
             </div>
 
-            <div class="patient-luxury-mood-row flex items-start justify-between gap-1.5">
+            <div class="patient-luxury-mood-row -mx-1 flex items-start gap-2 overflow-x-auto overscroll-x-contain pb-1">
                 @foreach ($this->moodOptions as $mood)
                     @php
                         $isSelected = $isAuthenticated && $this->todayMoodKey === $mood['key'];

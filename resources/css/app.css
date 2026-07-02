@@ -985,10 +985,8 @@ select:focus[data-flux-control] {
 .patient-luxury-mood-row {
     scrollbar-width: none;
     -ms-overflow-style: none;
-}
-
-.patient-luxury-home .patient-luxury-mood-row {
-    overflow: hidden;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x;
 }
 
 .patient-luxury-mood-row::-webkit-scrollbar {

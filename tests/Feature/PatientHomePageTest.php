@@ -139,7 +139,9 @@ test('authenticated patient luxury mobile home is rendered', function () {
         ->assertSee('id="awaan-ai-chatbot"', false)
         ->assertSee('data-layout="patient-dock"', false)
         ->assertSee('data-test="patient-luxury-dock-chatbot"', false)
-        ->assertSee('data-open-ai-chatbot', false);
+        ->assertSee('data-open-ai-chatbot', false)
+        ->assertSee(route('profile.edit'), false)
+        ->assertSee('data-test="patient-luxury-home-avatar"', false);
 });
 
 test('authenticated patient luxury home shows active session card when in process', function () {
