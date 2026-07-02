@@ -234,25 +234,6 @@ new #[Layout('layouts::patient')] #[Title('Book an appointment')] class extends 
         $this->updatedAppointmentFor($value);
     }
 
-    public function selectCommunication(string $channel): void
-    {
-        $this->communications = match ($channel) {
-            'video' => ['chat', 'video'],
-            'voice' => ['chat', 'voice'],
-            default => ['chat'],
-        };
-    }
-
-    public function communicationCardActive(string $channel): bool
-    {
-        return match ($channel) {
-            'video' => in_array('video', $this->communications, true),
-            'voice' => in_array('voice', $this->communications, true),
-            'chat' => ! in_array('video', $this->communications, true) && ! in_array('voice', $this->communications, true),
-            default => false,
-        };
-    }
-
     public function goToSummaryStep(): void
     {
         $this->validate([

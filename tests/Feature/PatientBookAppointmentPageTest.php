@@ -209,6 +209,32 @@ test('authenticated patient can load book appointments page with valid query', f
         ->assertSee('data-test="patient-booking-continue"', false);
 });
 
+test('authenticated patient can select multiple communication methods on booking', function () {
+    $user = User::factory()->create([
+        'profile_completed' => true,
+        'name' => 'Patient Test',
+        'phone' => '966500111222',
+    ]);
+
+    Duration::query()->create(['duration' => 15, 'title' => '15 min']);
+
+    $doctor = Doctor::factory()->create(['status' => 'approved']);
+    $doctor->durations()->attach(15, ['price' => 200.0]);
+
+    Livewire::actingAs($user)
+        ->withQueryParams([
+            'date' => '2026-05-05',
+            'time' => '12:15',
+            'duration' => 15,
+        ])
+        ->test('pages::patient.book-appointments', ['doctor' => $doctor])
+        ->assertSet('communications', ['chat'])
+        ->call('toggleCommunication', 'video')
+        ->assertSet('communications', ['chat', 'video'])
+        ->call('toggleCommunication', 'voice')
+        ->assertSet('communications', ['chat', 'video', 'voice']);
+});
+
 test('authenticated patient can advance booking to payment summary step on mobile', function () {
     $user = User::factory()->create([
         'profile_completed' => true,

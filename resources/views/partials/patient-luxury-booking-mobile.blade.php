@@ -61,27 +61,27 @@
                     <button
                         type="button"
                         wire:key="booking-comm-{{ $channel }}"
-                        wire:click="selectCommunication('{{ $channel }}')"
+                        wire:click="toggleCommunication('{{ $channel }}')"
                         @class([
                             'patient-luxury-booking-option relative flex flex-col items-center justify-center gap-2 rounded-2xl border-2 p-3 text-center',
-                            'patient-luxury-booking-option--active border-[#10B981] bg-emerald-50' => $this->communicationCardActive($channel),
-                            'border-slate-100 bg-white hover:border-slate-200' => ! $this->communicationCardActive($channel),
+                            'patient-luxury-booking-option--active border-[#10B981] bg-emerald-50' => $this->communicationSelected($channel),
+                            'border-slate-100 bg-white hover:border-slate-200' => ! $this->communicationSelected($channel),
                         ])
-                        aria-pressed="{{ $this->communicationCardActive($channel) ? 'true' : 'false' }}"
+                        aria-pressed="{{ $this->communicationSelected($channel) ? 'true' : 'false' }}"
                     >
                         <flux:icon
                             name="{{ $icon }}"
                             variant="outline"
                             @class([
                                 'size-5 stroke-[1.5]',
-                                'text-[#059669]' => $this->communicationCardActive($channel),
-                                'text-slate-400' => ! $this->communicationCardActive($channel),
+                                'text-[#059669]' => $this->communicationSelected($channel),
+                                'text-slate-400' => ! $this->communicationSelected($channel),
                             ])
                         />
                         <span @class([
                             'text-xs',
-                            'font-semibold text-emerald-900' => $this->communicationCardActive($channel),
-                            'font-medium text-slate-600' => ! $this->communicationCardActive($channel),
+                            'font-semibold text-emerald-900' => $this->communicationSelected($channel),
+                            'font-medium text-slate-600' => ! $this->communicationSelected($channel),
                         ])>{{ __('patient_booking.channel_'.$channel) }}</span>
                     </button>
                 @endforeach
