@@ -477,6 +477,8 @@ return [
         'balance_hint' => 'This balance is paid out when Awaan marks your monthly invoice as paid.',
         'month_earned' => 'Earned this month',
         'previous_month_earned' => 'Previous month earning',
+        'earnings_reversed_hint' => ':gross earned, :reversed refunded',
+        'refund_reversal_hint' => 'When a paid session is cancelled and refunded to the patient, the session amount is deducted from your wallet.',
         'month_paid_out' => 'Paid out this month',
         'month_completed' => 'Completed this month',
         'completed_suffix' => 'sessions',

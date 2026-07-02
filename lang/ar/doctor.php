@@ -478,6 +478,8 @@ return [
         'balance_hint' => 'يُصرف هذا الرصيد عندما تعتمد أوان فاتورتك الشهرية كمدفوعة.',
         'month_earned' => 'أُضيف هذا الشهر',
         'previous_month_earned' => 'أرباح الشهر السابق',
+        'earnings_reversed_hint' => ':gross أُضيفت، :reversed مُستردة',
+        'refund_reversal_hint' => 'عند إلغاء جلسة مدفوعة واسترداد المبلغ للمريض، يُخصم مبلغ الجلسة من محفظتك.',
         'month_paid_out' => 'صُرف هذا الشهر',
         'month_completed' => 'مكتملة هذا الشهر',
         'completed_suffix' => 'جلسات',

@@ -27,7 +27,7 @@ new #[Layout('layouts::doctor')] #[Title('Wallet')] class extends Component
     }
 
     /**
-     * @return array{earned: float, paid_out: float, balance: float, completed_appointments: int}
+     * @return array{earned: float, reversed: float, net_earned: float, paid_out: float, balance: float, completed_appointments: int}
      */
     public function getMonthlySummaryProperty(): array
     {
@@ -35,7 +35,7 @@ new #[Layout('layouts::doctor')] #[Title('Wallet')] class extends Component
     }
 
     /**
-     * @return array{earned: float, paid_out: float, balance: float, completed_appointments: int}
+     * @return array{earned: float, reversed: float, net_earned: float, paid_out: float, balance: float, completed_appointments: int}
      */
     public function getPreviousMonthSummaryProperty(): array
     {
@@ -94,10 +94,21 @@ new #[Layout('layouts::doctor')] #[Title('Wallet')] class extends Component
             <div class="flex items-start justify-between gap-3">
                 <div class="min-w-0">
                     <p class="text-sm font-semibold text-zinc-500">{{ __('doctor.wallet.month_earned') }}</p>
+                    @php
+                        $monthNetEarned = $this->monthlySummary['net_earned'];
+                    @endphp
                     <p class="mt-2 text-3xl font-bold tabular-nums tracking-tight text-zinc-900">
-                        +{{ number_format($this->monthlySummary['earned'], 2) }}
+                        {{ $monthNetEarned >= 0 ? '+' : '' }}{{ number_format($monthNetEarned, 2) }}
                         <span class="text-base font-semibold text-[#10B981]">{{ config('currency.sa_riyal_symbol') }}</span>
                     </p>
+                    @if ($this->monthlySummary['reversed'] > 0)
+                        <p class="mt-1 text-xs text-rose-600">
+                            {{ __('doctor.wallet.earnings_reversed_hint', [
+                                'gross' => number_format($this->monthlySummary['earned'], 2),
+                                'reversed' => number_format($this->monthlySummary['reversed'], 2),
+                            ]) }}
+                        </p>
+                    @endif
                 </div>
                 <span class="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-[#10B981]/10 text-[#10B981]" aria-hidden="true">
                     <flux:icon name="banknotes" variant="outline" class="size-6" />
@@ -109,10 +120,21 @@ new #[Layout('layouts::doctor')] #[Title('Wallet')] class extends Component
             <div class="flex items-start justify-between gap-3">
                 <div class="min-w-0">
                     <p class="text-sm font-semibold text-zinc-500">{{ __('doctor.wallet.previous_month_earned') }}</p>
+                    @php
+                        $previousMonthNetEarned = $this->previousMonthSummary['net_earned'];
+                    @endphp
                     <p class="mt-2 text-3xl font-bold tabular-nums tracking-tight text-zinc-900">
-                        +{{ number_format($this->previousMonthSummary['earned'], 2) }}
+                        {{ $previousMonthNetEarned >= 0 ? '+' : '' }}{{ number_format($previousMonthNetEarned, 2) }}
                         <span class="text-base font-semibold text-violet-600">{{ config('currency.sa_riyal_symbol') }}</span>
                     </p>
+                    @if ($this->previousMonthSummary['reversed'] > 0)
+                        <p class="mt-1 text-xs text-rose-600">
+                            {{ __('doctor.wallet.earnings_reversed_hint', [
+                                'gross' => number_format($this->previousMonthSummary['earned'], 2),
+                                'reversed' => number_format($this->previousMonthSummary['reversed'], 2),
+                            ]) }}
+                        </p>
+                    @endif
                 </div>
                 <span class="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-violet-100 text-violet-600" aria-hidden="true">
                     <flux:icon name="clock" variant="outline" class="size-6" />
