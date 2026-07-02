@@ -44,17 +44,21 @@
             $portalBack = \App\Support\PatientPortalBackNavigation::resolve();
         @endphp
         <header
-            class="relative sticky top-0 z-40 flex shrink-0 items-center justify-end gap-2 border-b border-emerald-900/40 bg-[#10B981] px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] text-white backdrop-blur-sm sm:hidden"
+            class="sticky top-0 z-40 grid shrink-0 grid-cols-[auto_1fr_auto] items-center gap-2 border-b border-emerald-900/40 bg-[#10B981] px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] text-white backdrop-blur-sm sm:hidden"
         >
-            <div class="absolute inset-y-0 left-4 flex items-center gap-1" dir="ltr">
+            <div class="flex shrink-0 items-center justify-self-start">
                 @if ($portalBack !== null)
                     @include('partials.patient-portal-header-back', ['portalBack' => $portalBack])
+                @else
+                    <span class="min-w-10 shrink-0" aria-hidden="true"></span>
                 @endif
-
-                @include('partials.patient-brand-strip', ['density' => 'compact', 'align' => 'start'])
             </div>
 
-            <div class="flex shrink-0 items-center gap-2">
+            <div class="min-w-0 justify-self-center">
+                @include('partials.patient-brand-strip', ['density' => 'compact', 'align' => 'center'])
+            </div>
+
+            <div class="flex shrink-0 items-center justify-end justify-self-end gap-2">
                 @include('partials.patient-language-switch', ['variant' => 'header'])
                 @auth
                     @include('partials.patient-user-account-menu', ['density' => 'header'])

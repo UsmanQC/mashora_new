@@ -206,6 +206,26 @@
             const labels = () => copy[locale];
             const bookingLabels = () => labels().booking;
 
+            const isCoarsePointer = () => window.matchMedia('(pointer: coarse)').matches;
+
+            const hasInteractiveChoices = () => {
+                return quickActionsVisible || document.getElementById('awaan-ai-chatbot-selection') !== null;
+            };
+
+            const focusInputIfNeeded = () => {
+                if (isCoarsePointer() || hasInteractiveChoices()) {
+                    return;
+                }
+
+                input.focus();
+            };
+
+            const blurInput = () => {
+                if (document.activeElement === input) {
+                    input.blur();
+                }
+            };
+
             const bubbleClasses = (role) => {
                 if (locale === 'ar') {
                     return role === 'user'
@@ -459,6 +479,7 @@
 
                 messagesEl.appendChild(container);
                 scrollMessages();
+                blurInput();
             };
 
             const selectSingleOption = async (stepData, option) => {
@@ -516,7 +537,7 @@
                     bookingFlowActive = false;
                 } finally {
                     setLoading(false);
-                    input.focus();
+                    focusInputIfNeeded();
                 }
             };
 
@@ -586,6 +607,7 @@
                 messagesEl.appendChild(container);
                 quickActionsVisible = true;
                 scrollMessages();
+                blurInput();
             };
 
             const showWelcomeState = ({ replace = false } = {}) => {
@@ -664,7 +686,7 @@
                     appendBubble('assistant', labels().networkError);
                 } finally {
                     setLoading(false);
-                    input.focus();
+                    focusInputIfNeeded();
                 }
             };
 
@@ -694,7 +716,8 @@
                 if (messagesEl.childElementCount === 0) {
                     showWelcomeState();
                 }
-                input.focus();
+
+                blurInput();
                 if (window.lucide) {
                     window.lucide.createIcons();
                 }
