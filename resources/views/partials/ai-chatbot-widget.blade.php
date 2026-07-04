@@ -741,8 +741,17 @@
                 await sendUserMessage(action.label, { skipUserBubble: true });
             };
 
+            const isPanelOpen = () => ! panel.classList.contains('hidden');
+
+            const closePanel = () => {
+                panel.classList.add('hidden');
+                toggle?.setAttribute('aria-label', labels().open);
+            };
+
             const openPanel = () => {
                 panel.classList.remove('hidden');
+                toggle?.setAttribute('aria-label', labels().close);
+
                 if (messagesEl.childElementCount === 0) {
                     showWelcomeState();
                 }
@@ -750,6 +759,14 @@
                 blurInput();
                 if (window.lucide) {
                     window.lucide.createIcons();
+                }
+            };
+
+            const togglePanel = () => {
+                if (isPanelOpen()) {
+                    closePanel();
+                } else {
+                    openPanel();
                 }
             };
 
@@ -775,18 +792,12 @@
                 }
 
                 event.preventDefault();
-                openPanel();
+                togglePanel();
             });
 
-            toggle?.addEventListener('click', () => {
-                if (panel.classList.contains('hidden')) {
-                    openPanel();
-                } else {
-                    panel.classList.add('hidden');
-                }
-            });
+            toggle?.addEventListener('click', togglePanel);
 
-            closeBtn.addEventListener('click', () => panel.classList.add('hidden'));
+            closeBtn.addEventListener('click', closePanel);
 
             resetBtn.addEventListener('click', async () => {
                 exitBookingFlow();
