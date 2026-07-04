@@ -33,6 +33,12 @@ test('authenticated patient sees luxury header on menu sub-pages', function () {
         ->assertSee('data-test="patient-luxury-section-empty-medications"', false)
         ->assertSee('data-test="patient-section-empty-header-medications"', false);
 
+    $this->actingAs($user)->get(route('patient.favorites'))
+        ->assertSuccessful()
+        ->assertSee('data-test="patient-luxury-favorites"', false)
+        ->assertSee('data-test="patient-favorites-header"', false)
+        ->assertSee(__('patient.menu.favorites_browse'), false);
+
     $this->actingAs($user)->get(route('patient.support'))
         ->assertSuccessful()
         ->assertSee('data-test="patient-luxury-support"', false)

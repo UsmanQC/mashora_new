@@ -147,7 +147,7 @@ Route::view('patient/medications', 'patient.section-empty', ['titleKey' => 'pati
     ->middleware(['auth', 'patient.profile'])
     ->name('patient.medications');
 
-Route::view('patient/favorites', 'patient.section-empty', ['titleKey' => 'patient.menu.favorites'])
+Route::view('patient/favorites', 'patient.favorites')
     ->middleware(['auth', 'patient.profile'])
     ->name('patient.favorites');
 
