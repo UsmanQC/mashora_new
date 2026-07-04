@@ -50,6 +50,7 @@ test('guest can view important numbers with luxury mobile shell', function () {
         ->assertSuccessful()
         ->assertSee('data-test="patient-luxury-important-numbers"', false)
         ->assertSee('data-test="patient-important-numbers-header"', false)
+        ->assertSee('data-test="patient-important-numbers-board"', false)
         ->assertSee(__('patient.nav.important_numbers'), false);
 });
 
@@ -60,7 +61,10 @@ test('authenticated patient sees luxury header on important numbers', function (
         ->assertSuccessful()
         ->assertSee('data-test="patient-luxury-important-numbers"', false)
         ->assertSee('data-test="patient-important-numbers-header"', false)
-        ->assertSee(__('patient.numbers_intro'), false);
+        ->assertSee('data-test="patient-important-numbers-list"', false)
+        ->assertSee('href="tel:1919"', false)
+        ->assertSee(__('patient.numbers_intro'), false)
+        ->assertSee(__('patient.numbers_tap_to_call'), false);
 });
 
 test('authenticated patient navbar shows language switch', function () {

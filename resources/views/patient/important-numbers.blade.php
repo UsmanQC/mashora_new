@@ -27,18 +27,9 @@
             <flux:text class="mt-2 text-zinc-600">{{ __('patient.numbers_intro') }}</flux:text>
         </div>
 
-        <figure class="overflow-hidden rounded-3xl border border-slate-100/80 bg-white p-4 shadow-[0_8px_32px_0_rgba(0,0,0,0.03)] sm:rounded-2xl sm:border-[#10B981]/25 sm:p-6 sm:shadow-[0_1px_4px_-1px_rgba(15,23,42,0.08)]">
-            <img
-                src="{{ asset('images/important-numbers.svg') }}"
-                alt="{{ __('patient.numbers_board_alt') }}"
-                class="mx-auto block h-auto w-full max-w-4xl"
-                width="1200"
-                height="800"
-                decoding="async"
-                fetchpriority="high"
-            />
-            <figcaption class="sr-only">{{ __('patient.numbers_board_alt') }}</figcaption>
-        </figure>
+        <div class="overflow-hidden rounded-3xl border border-slate-100/80 bg-white p-4 shadow-[0_8px_32px_0_rgba(0,0,0,0.03)] sm:rounded-2xl sm:border-[#10B981]/25 sm:p-6 sm:shadow-[0_1px_4px_-1px_rgba(15,23,42,0.08)]">
+            @include('partials.patient-important-numbers-board')
+        </div>
     </div>
 </div>
 </x-layouts::patient>

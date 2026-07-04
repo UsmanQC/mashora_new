@@ -305,6 +305,11 @@ return [
 
     'numbers_intro' => 'Crisis and support hotlines and regional protection committees.',
     'numbers_board_alt' => 'Important helplines and protection committee phone numbers',
+    'numbers_tap_hint' => 'Tap a number to call from your phone.',
+    'numbers_tap_to_call' => 'Tap to call',
+    'numbers_zoom_chart' => 'View chart',
+    'numbers_zoom_dialog_label' => 'Important numbers chart',
+    'numbers_zoom_hint' => 'Pinch or use + / − to zoom. Tap outside to close.',
 
     'share' => 'Share',
     'share_failed' => 'Sharing is not supported in this browser.',
