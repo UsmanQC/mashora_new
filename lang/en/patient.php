@@ -84,6 +84,19 @@ return [
         'language_aria' => 'Choose interface language',
     ],
 
+    'medications_page' => [
+        'empty_title' => 'No prescriptions yet',
+        'empty_hint' => 'When your specialist adds medications after a session, they will appear here.',
+        'session_label' => 'Prescribed session',
+        'dosage' => 'Dosage',
+        'usage' => 'Usage',
+        'frequency' => 'Frequency',
+        'duration' => 'Duration',
+        'unit_days' => 'days',
+        'unit_week' => 'weeks',
+        'unit_month' => 'months',
+    ],
+
     'settings_page' => [
         'title' => 'Profile settings',
         'page_title' => 'Personal profile',

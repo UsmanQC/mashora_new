@@ -143,7 +143,7 @@ Route::post('patient/follow-up/payment/execute/{appointment}', [FollowUpPaymentC
     ->middleware(['auth', 'patient.profile'])
     ->name('patient.follow-up.payment.execute');
 
-Route::view('patient/medications', 'patient.section-empty', ['titleKey' => 'patient.menu.medications'])
+Route::livewire('patient/medications', 'pages::patient.medications')
     ->middleware(['auth', 'patient.profile'])
     ->name('patient.medications');
 

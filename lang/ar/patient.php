@@ -84,6 +84,19 @@ return [
         'language_aria' => 'اختر لغة الواجهة',
     ],
 
+    'medications_page' => [
+        'empty_title' => 'لا توجد وصفات بعد',
+        'empty_hint' => 'عندما يضيف أخصائيك أدوية بعد الجلسة، ستظهر هنا.',
+        'session_label' => 'جلسة موصوفة',
+        'dosage' => 'الجرعة',
+        'usage' => 'طريقة الاستخدام',
+        'frequency' => 'التكرار',
+        'duration' => 'المدة',
+        'unit_days' => 'أيام',
+        'unit_week' => 'أسابيع',
+        'unit_month' => 'أشهر',
+    ],
+
     'settings_page' => [
         'title' => 'إعدادات الملف الشخصي',
         'page_title' => 'الملف الشخصي',
