@@ -22,6 +22,9 @@ test('authenticated patient menu shows grouped shortcuts', function () {
         ->assertSeeText(__('patient.sidebar.group_account'))
         ->assertSeeText(__('patient.menu.account_settings'))
         ->assertSeeText(__('patient.menu.support'))
+        ->assertSee('data-test="patient-menu-sign-out"', false)
+        ->assertSee(__('patient.menu.sign_out_sub'), false)
+        ->assertSee(route('logout'), false)
         ->assertSee(route('patient.wallet'), false);
 });
 

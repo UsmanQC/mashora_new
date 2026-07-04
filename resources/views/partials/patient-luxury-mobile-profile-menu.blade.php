@@ -50,17 +50,20 @@
     </button>
 
     <flux:menu class="min-w-[11rem]">
-        <form method="POST" action="{{ route('logout') }}" class="w-full">
-            @csrf
-            <flux:menu.item
-                as="button"
-                type="submit"
-                icon="arrow-right-start-on-rectangle"
-                class="w-full cursor-pointer"
-                data-test="patient-logout-button"
-            >
-                {{ __('patient.menu.sign_out') }}
-            </flux:menu.item>
-        </form>
+        <flux:menu.item
+            as="button"
+            type="button"
+            icon="arrow-right-start-on-rectangle"
+            icon:variant="outline"
+            variant="danger"
+            class="w-full cursor-pointer"
+            data-test="patient-logout-button"
+            onclick="document.getElementById('{{ $testId }}-logout-form')?.submit()"
+        >
+            {{ __('patient.menu.sign_out') }}
+        </flux:menu.item>
     </flux:menu>
+    <form id="{{ $testId }}-logout-form" method="POST" action="{{ route('logout') }}" class="hidden">
+        @csrf
+    </form>
 </flux:dropdown>

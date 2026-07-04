@@ -79,6 +79,7 @@ return [
         'locale_en' => 'EN',
         'locale_ar_short' => 'AR',
         'sign_out' => 'Sign out',
+        'sign_out_sub' => 'End your session on this device',
         'no_record_found' => 'No record found',
         'grid_aria' => 'Patient menu shortcuts',
         'language_aria' => 'Choose interface language',

@@ -79,6 +79,7 @@ return [
         'locale_en' => 'EN',
         'locale_ar_short' => 'AR',
         'sign_out' => 'تسجيل الخروج',
+        'sign_out_sub' => 'إنهاء جلستك على هذا الجهاز',
         'no_record_found' => 'لا توجد سجلات',
         'grid_aria' => 'اختصارات قائمة المريض',
         'language_aria' => 'اختر لغة الواجهة',

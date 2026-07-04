@@ -50,6 +50,12 @@
         @endauth
 
         @include('partials.patient-luxury-menu-sections')
+
+        @auth
+            <div class="px-6 pb-2">
+                @include('partials.patient-luxury-sign-out-row', ['testId' => 'patient-menu-sign-out'])
+            </div>
+        @endauth
     </div>
 
     <div class="mx-auto hidden w-full max-w-5xl space-y-8 px-6 py-4 sm:block sm:px-0 sm:py-0 lg:px-0">

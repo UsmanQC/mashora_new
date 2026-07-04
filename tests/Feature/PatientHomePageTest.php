@@ -175,6 +175,15 @@ test('authenticated patient luxury home shows active session card when in proces
         ->assertSee(route('patient.appointments.conversation', ['appointment' => $appointment->id]), false);
 });
 
+test('patient profile menu logout item includes sign out icon', function () {
+    $user = User::factory()->create(['profile_completed' => true]);
+
+    $this->actingAs($user)->get(route('patient.home'))
+        ->assertSuccessful()
+        ->assertSee('data-test="patient-logout-button"', false)
+        ->assertSee('data-flux-menu-item-has-icon', false);
+});
+
 test('signed-in patient mobile home profile opens logout menu instead of profile link', function () {
     $user = User::factory()->create([
         'profile_completed' => true,
