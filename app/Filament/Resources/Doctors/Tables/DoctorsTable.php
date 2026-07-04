@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Doctors\Tables;
 
+use App\Filament\Resources\Doctors\Actions\ChangeDoctorStatusAction;
 use App\Models\Doctor;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
@@ -51,6 +52,11 @@ class DoctorsTable
                     ->sortable(false),
                 TextColumn::make('status')
                     ->badge()
+                    ->color(fn (string $state): string => match ($state) {
+                        'approved' => 'success',
+                        'rejected' => 'danger',
+                        default => 'warning',
+                    })
                     ->sortable(),
                 IconColumn::make('is_online')
                     ->label('Online')
@@ -77,6 +83,7 @@ class DoctorsTable
             ])
             ->recordActions([
                 ViewAction::make(),
+                ChangeDoctorStatusAction::make(),
                 EditAction::make(),
                 DeleteAction::make(),
             ])
