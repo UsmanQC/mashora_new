@@ -410,7 +410,8 @@ test('patient conversation luxury mobile shell is rendered', function () {
         ->assertSee('data-test="patient-luxury-conversation-header"', false)
         ->assertSee('Nora Specialist', false)
         ->assertSee('id="patient-agora-overlay"', false)
-        ->assertSee('id="patient-session-join-call-btn"', false);
+        ->assertSee('id="incoming-call-accept"', false)
+        ->assertDontSee('id="patient-session-join-call-btn"', false);
 });
 
 test('patient appointments renders realtime notification scripts', function () {

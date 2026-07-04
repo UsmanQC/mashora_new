@@ -259,33 +259,22 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
     <div
         id="patient-session-live-banner"
         @class([
-            'rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50 to-white px-4 py-3 shadow-sm shadow-emerald-900/5 ring-1 ring-emerald-100 max-sm:fixed max-sm:inset-x-6 max-sm:bottom-[calc(4.75rem+env(safe-area-inset-bottom))] max-sm:z-30 max-sm:shadow-lg',
+            'max-sm:hidden rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50 to-white px-4 py-3 shadow-sm shadow-emerald-900/5 ring-1 ring-emerald-100',
+            'hidden sm:block' => $appointment->status === 'in_process',
             'hidden' => $appointment->status !== 'in_process',
         ])
     >
-        <div class="flex flex-col gap-3 max-sm:gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div class="min-w-0 max-sm:hidden">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div class="min-w-0">
                 <p class="text-sm font-semibold text-emerald-950">{{ __('patient.appointments.session_live_banner_title') }}</p>
                 <p class="mt-0.5 text-sm text-emerald-800">{{ __('patient.appointments.session_live_banner_body') }}</p>
             </div>
-            <div class="flex min-w-0 flex-1 shrink-0 flex-col gap-2 max-sm:flex-row sm:flex-row sm:items-center">
-                @if ($appointment->allowsPatientCalls())
-                    <button
-                        type="button"
-                        id="patient-session-join-call-btn"
-                        class="inline-flex min-h-10 flex-1 items-center justify-center gap-2 rounded-xl bg-[#10B981] px-4 py-2.5 text-sm font-semibold text-white shadow-md shadow-emerald-900/20 transition hover:brightness-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2"
-                    >
-                        <flux:icon name="video-camera" variant="mini" class="size-4" />
-                        {{ __('patient.appointments.join_call') }}
-                    </button>
-                @endif
-                <a
-                    href="#patient-chat-panel"
-                    class="inline-flex min-h-10 flex-1 items-center justify-center rounded-xl border border-emerald-300 bg-white px-4 py-2.5 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-50 max-sm:hidden"
-                >
-                    {{ __('patient.appointments.open_session_chat') }}
-                </a>
-            </div>
+            <a
+                href="#patient-chat-panel"
+                class="inline-flex min-h-10 shrink-0 items-center justify-center rounded-xl border border-emerald-300 bg-white px-4 py-2.5 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-50"
+            >
+                {{ __('patient.appointments.open_session_chat') }}
+            </a>
         </div>
     </div>
 
@@ -345,7 +334,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
 
     <div
         id="patient-chat-panel"
-        class="overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-[0_8px_32px_0_rgba(0,0,0,0.03)] ring-1 ring-slate-100 max-sm:mb-[calc(5.5rem+env(safe-area-inset-bottom))] sm:border-zinc-200/90 sm:shadow-[0_20px_55px_-32px_rgba(15,23,42,0.35)] sm:ring-zinc-100"
+        class="overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-[0_8px_32px_0_rgba(0,0,0,0.03)] ring-1 ring-slate-100 sm:border-zinc-200/90 sm:shadow-[0_20px_55px_-32px_rgba(15,23,42,0.35)] sm:ring-zinc-100"
         data-appointment-id="{{ $appointment->id }}"
         data-notify-url="{{ route('patient.appointments.realtime.notify-call', $appointment) }}"
         data-pending-call-url="{{ route('patient.appointments.realtime.pending-call', $appointment) }}"
@@ -857,16 +846,12 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                     chip.classList.toggle('hidden', !activeMode);
                 }
 
-                const joinSessionBtn = document.getElementById('patient-session-join-call-btn');
                 const sessionLiveBanner = document.getElementById('patient-session-live-banner');
                 const hasIncomingCall = Boolean(incomingPayload)
                     || (incomingBanner && !incomingBanner.classList.contains('hidden'));
-                if (joinSessionBtn) {
-                    joinSessionBtn.classList.toggle('hidden', Boolean(activeMode) || hasIncomingCall);
-                }
 
                 if (sessionLiveBanner && sessionActive) {
-                    sessionLiveBanner.classList.toggle('hidden', hasIncomingCall);
+                    sessionLiveBanner.classList.toggle('sm:hidden', hasIncomingCall);
                 }
             }
 
@@ -1322,7 +1307,11 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                     metrics.dataset.sessionEnd = data.extend_at || '';
                 }
 
-                document.getElementById('patient-session-live-banner')?.classList.remove('hidden');
+                const liveBanner = document.getElementById('patient-session-live-banner');
+                if (liveBanner) {
+                    liveBanner.classList.remove('hidden');
+                    liveBanner.classList.add('max-sm:hidden', 'sm:block');
+                }
                 document.getElementById('patient-chat-locked-callout')?.classList.add('hidden');
 
                 const waitingChipEl = document.getElementById('patient-waiting-for-call-chip');
@@ -1633,11 +1622,6 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                     if (event.target.closest('#incoming-call-dismiss')) {
                         event.preventDefault();
                         bootEl.__dismissIncoming?.();
-                    }
-
-                    if (event.target.closest('#patient-session-join-call-btn')) {
-                        event.preventDefault();
-                        bootEl.__joinSessionCall?.();
                     }
 
                     if (event.target.closest('#patient-agora-leave, [data-video-call-leave="patient-agora-leave"]')) {
