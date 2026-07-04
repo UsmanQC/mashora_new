@@ -5,7 +5,6 @@
     $appointmentsUrl = $isAuthenticated ? route('patient.appointments') : $phoneEntry;
     $recordsUrl = $isAuthenticated ? route('patient.appointments', ['tab' => 'completed']) : $phoneEntry;
     $notificationsUrl = $isAuthenticated ? route('patient.notifications') : $phoneEntry;
-    $profileUrl = $isAuthenticated ? route('profile.edit') : $phoneEntry;
 @endphp
 
 <div class="patient-luxury-home relative flex h-[100dvh] flex-col overflow-hidden bg-slate-50 sm:hidden" data-test="patient-luxury-home">
@@ -13,28 +12,13 @@
         <div class="flex items-center justify-between gap-3">
             <div class="flex min-w-0 items-center gap-3">
                 @if ($isAuthenticated)
-                    <a
-                        href="{{ $profileUrl }}"
-                        wire:navigate
-                        class="relative shrink-0"
-                        aria-label="{{ __('patient.nav.my_account') }}"
-                        data-test="patient-luxury-home-avatar"
-                    >
-                        @if ($this->profilePhotoUrl !== null)
-                            <img
-                                src="{{ $this->profilePhotoUrl }}"
-                                alt=""
-                                class="size-11 rounded-full object-cover shadow-sm ring-2 ring-white"
-                            />
-                        @else
-                            <flux:avatar :name="Auth::user()?->name ?? ''" circle class="size-11 ring-2 ring-white" />
-                        @endif
-                        <span class="absolute bottom-0 end-0 size-3 rounded-full border-2 border-white bg-[#10B981]" aria-hidden="true"></span>
-                    </a>
-                    <div class="min-w-0">
-                        <p class="mb-0.5 text-[0.6875rem] font-medium text-slate-500">{{ $this->greetingLabel }}</p>
-                        <h1 class="truncate text-base font-bold tracking-tight text-slate-900">{{ Auth::user()?->name }}</h1>
-                    </div>
+                    @include('partials.patient-luxury-mobile-profile-menu', [
+                        'profilePhotoUrl' => $this->profilePhotoUrl,
+                        'userName' => Auth::user()?->name ?? '',
+                        'greeting' => $this->greetingLabel,
+                        'variant' => 'home',
+                        'testId' => 'patient-luxury-home-profile-menu',
+                    ])
                 @else
                     <div class="flex size-11 shrink-0 items-center justify-center rounded-full bg-[#10B981]/10 ring-2 ring-white">
                         @include('partials.patient-brand-logo', [

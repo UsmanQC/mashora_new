@@ -175,6 +175,19 @@ test('authenticated patient luxury home shows active session card when in proces
         ->assertSee(route('patient.appointments.conversation', ['appointment' => $appointment->id]), false);
 });
 
+test('signed-in patient mobile home profile opens logout menu instead of profile link', function () {
+    $user = User::factory()->create([
+        'profile_completed' => true,
+        'name' => 'Testing',
+    ]);
+
+    $this->actingAs($user)->get(route('patient.home'))
+        ->assertSuccessful()
+        ->assertSee('data-test="patient-luxury-home-profile-menu-trigger"', false)
+        ->assertSee('data-test="patient-logout-button"', false)
+        ->assertDontSee('data-test="patient-luxury-home-avatar"', false);
+});
+
 test('signed-in patient navbar exposes account menu with logout', function () {
     $user = User::factory()->create(['profile_completed' => true]);
 
@@ -396,7 +409,7 @@ test('patient appointments luxury mobile shell is rendered', function () {
         ->assertSuccessful()
         ->assertSee('data-test="patient-luxury-appointments"', false)
         ->assertSee('data-test="patient-luxury-appointments-header"', false)
-        ->assertSee('data-test="patient-luxury-page-header-avatar"', false)
+        ->assertSee('data-test="patient-luxury-page-header-profile-menu-trigger"', false)
         ->assertSee('data-test="patient-navbar-language-switch"', false)
         ->assertDontSee('data-test="patient-brand-strip"', false)
         ->assertSee(__('patient.appointments.luxury.tab_upcoming'), false)

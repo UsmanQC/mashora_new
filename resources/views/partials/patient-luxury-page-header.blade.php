@@ -12,7 +12,6 @@
 ])
 
 @php
-    $profileHref = $profileUrl ?? (auth()->check() ? route('profile.edit') : route('patient.phone'));
     $resolvedUserName = $userName ?? auth()->user()?->name ?? '';
 @endphp
 
@@ -49,19 +48,39 @@
         <div class="flex shrink-0 items-center gap-2">
             @include('partials.patient-language-switch', ['variant' => 'luxury'])
 
-            <a
-                href="{{ $profileHref }}"
-                wire:navigate
-                class="patient-luxury-page-header__avatar active-scale shrink-0 overflow-hidden rounded-full bg-white shadow-sm ring-2 ring-white"
-                aria-label="{{ __('patient.nav.my_account') }}"
-                data-test="patient-luxury-page-header-avatar"
-            >
-                @if (filled($profilePhotoUrl))
-                    <img src="{{ $profilePhotoUrl }}" alt="" class="size-10 object-cover" />
-                @else
+            @if (auth()->check())
+                <div class="sm:hidden">
+                    @include('partials.patient-luxury-mobile-profile-menu', [
+                        'profilePhotoUrl' => $profilePhotoUrl,
+                        'userName' => $resolvedUserName,
+                        'variant' => 'avatar',
+                        'testId' => 'patient-luxury-page-header-profile-menu',
+                    ])
+                </div>
+                <a
+                    href="{{ $profileUrl ?? route('profile.edit') }}"
+                    wire:navigate
+                    class="patient-luxury-page-header__avatar active-scale hidden shrink-0 overflow-hidden rounded-full bg-white shadow-sm ring-2 ring-white sm:inline-block"
+                    aria-label="{{ __('patient.nav.my_account') }}"
+                    data-test="patient-luxury-page-header-avatar"
+                >
+                    @if (filled($profilePhotoUrl))
+                        <img src="{{ $profilePhotoUrl }}" alt="" class="size-10 object-cover" />
+                    @else
+                        <flux:avatar :name="$resolvedUserName" circle class="size-10" />
+                    @endif
+                </a>
+            @else
+                <a
+                    href="{{ route('patient.phone') }}"
+                    wire:navigate
+                    class="patient-luxury-page-header__avatar active-scale shrink-0 overflow-hidden rounded-full bg-white shadow-sm ring-2 ring-white"
+                    aria-label="{{ __('patient.nav.my_account') }}"
+                    data-test="patient-luxury-page-header-avatar"
+                >
                     <flux:avatar :name="$resolvedUserName" circle class="size-10" />
-                @endif
-            </a>
+                </a>
+            @endif
         </div>
     </div>
 

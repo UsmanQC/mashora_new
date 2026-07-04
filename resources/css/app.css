@@ -150,11 +150,17 @@ select:focus[data-flux-control] {
     }
 
     .patient-gender-segmented ui-radio-group[data-flux-radio-group-segmented] ui-radio[data-flux-radio-segmented] {
-        @apply flex min-h-11 min-w-0 flex-1 flex-row items-center justify-center !rounded-full !border-0 !bg-transparent !px-4 !py-2 text-sm font-semibold !text-[#10B981] !shadow-none hover:!text-[#059669];
+        @apply flex min-h-11 min-w-0 flex-1 flex-row items-center justify-center !rounded-full !border-0 !bg-transparent !px-4 !py-2 text-sm font-semibold !text-zinc-700 !shadow-none hover:!bg-zinc-50;
     }
 
     .patient-gender-segmented ui-radio-group[data-flux-radio-group-segmented] ui-radio[data-flux-radio-segmented][data-checked] {
-        @apply !bg-mashora-brand !text-white !shadow-none hover:!bg-mashora-brand hover:!text-white;
+        @apply !border-mashora-brand !bg-mashora-brand !text-white !shadow-none hover:!bg-mashora-brand hover:!text-white;
+        -webkit-text-fill-color: #ffffff !important;
+    }
+
+    .patient-gender-segmented ui-radio-group[data-flux-radio-group-segmented] ui-radio[data-flux-radio-segmented][data-checked] * {
+        @apply !text-white;
+        -webkit-text-fill-color: #ffffff !important;
     }
 
     /** Doctor onboarding: Mashora green accent for pills and checkboxes. */
@@ -254,7 +260,7 @@ select:focus[data-flux-control] {
         @apply !border-[#10B981] !ring-2 !ring-[#10B981]/20;
     }
 
-    .patient-auth-content [data-flux-control]:not([data-flux-otp-input]):not([data-flux-otp]):not([data-flux-radio-pills]) {
+    .patient-auth-content [data-flux-control]:not([data-flux-otp-input]):not([data-flux-otp]):not([data-flux-radio-pills]):not([data-flux-radio-segmented]) {
         @apply !shadow-none;
         color: #18181b !important;
         background-color: #ffffff !important;
@@ -263,12 +269,12 @@ select:focus[data-flux-control] {
         caret-color: #18181b !important;
     }
 
-    .patient-auth-content [data-flux-control]:not([data-flux-otp-input]):not([data-flux-otp]):not([data-flux-radio-pills]):focus {
+    .patient-auth-content [data-flux-control]:not([data-flux-otp-input]):not([data-flux-otp]):not([data-flux-radio-pills]):not([data-flux-radio-segmented]):focus {
         border-color: #10b981 !important;
         box-shadow: 0 0 0 2px rgb(16 185 129 / 0.2) !important;
     }
 
-    .patient-auth-content [data-flux-control]:not([data-flux-otp-input]):not([data-flux-otp]):not([data-flux-radio-pills])::placeholder {
+    .patient-auth-content [data-flux-control]:not([data-flux-otp-input]):not([data-flux-otp]):not([data-flux-radio-pills]):not([data-flux-radio-segmented])::placeholder {
         color: #a1a1aa !important;
         opacity: 1;
     }
@@ -285,7 +291,7 @@ select:focus[data-flux-control] {
         color: #18181b !important;
     }
 
-    .scheme-light [data-flux-control]:not([data-flux-otp-input]):not([data-flux-otp]):not([data-flux-switch]):not([data-flux-checkbox]):not([data-flux-radio-pills]),
+    .scheme-light [data-flux-control]:not([data-flux-otp-input]):not([data-flux-otp]):not([data-flux-switch]):not([data-flux-checkbox]):not([data-flux-radio-pills]):not([data-flux-radio-segmented]),
     .scheme-light input[data-flux-control]:not([data-flux-otp-input]),
     .scheme-light textarea[data-flux-control],
     .scheme-light select[data-flux-control] {
@@ -296,7 +302,7 @@ select:focus[data-flux-control] {
         caret-color: #18181b !important;
     }
 
-    .scheme-light [data-flux-control]:not([data-flux-otp-input]):not([data-flux-otp]):not([data-flux-switch]):not([data-flux-checkbox]):not([data-flux-radio-pills]):focus,
+    .scheme-light [data-flux-control]:not([data-flux-otp-input]):not([data-flux-otp]):not([data-flux-switch]):not([data-flux-checkbox]):not([data-flux-radio-pills]):not([data-flux-radio-segmented]):focus,
     .scheme-light input[data-flux-control]:not([data-flux-otp-input]):focus,
     .scheme-light textarea[data-flux-control]:focus,
     .scheme-light select[data-flux-control]:focus {
@@ -304,7 +310,7 @@ select:focus[data-flux-control] {
         box-shadow: 0 0 0 2px rgb(16 185 129 / 0.2) !important;
     }
 
-    .scheme-light [data-flux-control]:not([data-flux-otp-input]):not([data-flux-otp]):not([data-flux-switch]):not([data-flux-checkbox]):not([data-flux-radio-pills])::placeholder,
+    .scheme-light [data-flux-control]:not([data-flux-otp-input]):not([data-flux-otp]):not([data-flux-switch]):not([data-flux-checkbox]):not([data-flux-radio-pills]):not([data-flux-radio-segmented])::placeholder,
     .scheme-light input[data-flux-control]:not([data-flux-otp-input])::placeholder,
     .scheme-light textarea[data-flux-control]::placeholder {
         color: #a1a1aa !important;
@@ -1165,7 +1171,6 @@ select:focus[data-flux-control] {
 
 .patient-luxury-page-header__avatar,
 .patient-luxury-appointments__avatar {
-    display: block;
     -webkit-tap-highlight-color: transparent;
 }
 

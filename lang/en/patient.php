@@ -125,6 +125,8 @@ return [
         'unverified' => 'Email not verified',
         'member_since' => 'Member since :date',
         'completeness' => 'Profile completeness',
+        'profile_photo_label' => 'Profile photo',
+        'profile_photo_help' => 'Tap the photo to upload a new image (JPG, PNG, or WebP, max 2 MB).',
     ],
 
     'nav' => [

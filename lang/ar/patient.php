@@ -125,6 +125,8 @@ return [
         'unverified' => 'البريد غير موثّق',
         'member_since' => 'عضو منذ :date',
         'completeness' => 'اكتمال الملف',
+        'profile_photo_label' => 'صورة الملف الشخصي',
+        'profile_photo_help' => 'اضغط على الصورة لرفع صورة جديدة (JPG أو PNG أو WebP، بحد أقصى 2 ميجابايت).',
     ],
 
     'nav' => [
