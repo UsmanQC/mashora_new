@@ -134,23 +134,23 @@
             <a
                 href="{{ $isAuthenticated ? $filterUrl : $phoneEntry }}"
                 wire:navigate
-                class="patient-luxury-action-card group relative block overflow-hidden rounded-3xl bg-slate-900 p-5 shadow-[0_10px_40px_-10px_rgba(16,185,129,0.2)] transition-colors hover:bg-slate-800"
+                class="patient-luxury-action-card group relative block overflow-hidden rounded-3xl bg-[#10B981] p-5 shadow-[0_10px_40px_-10px_rgba(16,185,129,0.35)] transition-colors hover:bg-[#059669]"
             >
-                <div class="absolute end-0 top-0 size-32 translate-x-1/2 -translate-y-1/2 rounded-full bg-[#10B981]/20 blur-3xl" aria-hidden="true"></div>
+                <div class="absolute end-0 top-0 size-32 translate-x-1/2 -translate-y-1/2 rounded-full bg-white/20 blur-3xl" aria-hidden="true"></div>
                 <div class="relative z-10 flex items-center justify-between">
                     <div class="flex items-center gap-4">
-                        <div class="flex size-12 items-center justify-center rounded-2xl border border-white/5 bg-white/10 text-emerald-300 backdrop-blur-sm">
+                        <div class="flex size-12 items-center justify-center rounded-2xl border border-white/20 bg-white/15 text-white backdrop-blur-sm">
                             <flux:icon name="bolt" variant="outline" class="size-6 shrink-0" />
                         </div>
                         <div>
                             <h3 class="mb-1 text-sm font-semibold text-white">{{ __('patient.home_luxury.instant_title') }}</h3>
-                            <p class="text-xs text-slate-400">{{ __('patient.home_luxury.instant_note') }}</p>
+                            <p class="text-xs text-emerald-50/80">{{ __('patient.home_luxury.instant_note') }}</p>
                         </div>
                     </div>
                     <flux:icon
                         name="chevron-{{ app()->getLocale() === 'ar' ? 'left' : 'right' }}"
                         variant="outline"
-                        class="size-5 text-slate-500 transition-all duration-300 group-hover:-translate-x-1 group-hover:text-white rtl:group-hover:translate-x-1"
+                        class="size-5 text-white/60 transition-all duration-300 group-hover:-translate-x-1 group-hover:text-white rtl:group-hover:translate-x-1"
                     />
                 </div>
             </a>
