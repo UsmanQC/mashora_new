@@ -17,7 +17,7 @@
         ])
 
         @auth
-            <section class="px-6 pb-6">
+            <section class="px-6 pt-5 pb-2">
                 <div class="rounded-3xl border border-slate-100 bg-white p-5 shadow-[0_4px_20px_-2px_rgba(0,0,0,0.03)]">
                     <div class="flex items-center gap-4">
                         @if ($profilePhotoUrl !== null)

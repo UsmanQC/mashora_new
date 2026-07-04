@@ -6,6 +6,7 @@ use App\Services\TicketService;
 use Flux\Flux;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
@@ -67,20 +68,44 @@ new #[Layout('layouts::patient')] #[Title('New support ticket')] class extends C
 
         $this->redirectRoute('patient.support.show', $ticket, navigate: true);
     }
+
+    public function profilePhotoUrl(): ?string
+    {
+        $user = Auth::user();
+
+        if ($user === null || ! filled($user->profile_photo_path)) {
+            return null;
+        }
+
+        return Storage::disk('public')->url((string) $user->profile_photo_path);
+    }
 }; ?>
 
-<div class="mx-auto max-w-2xl space-y-6 px-4 py-8">
-    <div class="flex items-start justify-between gap-4">
-        <div>
-            <flux:heading size="xl" class="font-semibold text-[#10B981]">{{ __('tickets.new_ticket') }}</flux:heading>
-            <flux:text class="mt-1 text-zinc-600">{{ __('tickets.subtitle') }}</flux:text>
-        </div>
-        <flux:button :href="route('patient.support')" wire:navigate variant="ghost" size="sm" icon="arrow-left">
-            {{ __('tickets.title') }}
-        </flux:button>
+<div class="patient-luxury-support-create bg-slate-50 pb-[calc(4.75rem+env(safe-area-inset-bottom))] sm:bg-transparent sm:pb-12" data-test="patient-luxury-support-create">
+    <div class="sm:hidden">
+        @include('partials.patient-luxury-page-header', [
+            'title' => __('tickets.new_ticket'),
+            'subtitle' => __('tickets.subtitle'),
+            'profilePhotoUrl' => $this->profilePhotoUrl(),
+            'userName' => auth()->user()?->name,
+            'backUrl' => route('patient.support'),
+            'backLabel' => __('patient.menu.support'),
+            'testId' => 'patient-support-create-header',
+        ])
     </div>
 
-    <form wire:submit="save" class="space-y-5 rounded-2xl border border-zinc-200/90 bg-white p-5 shadow-sm">
+    <div class="mx-auto max-w-2xl space-y-5 px-6 pt-5 sm:space-y-6 sm:px-4 sm:py-8">
+        <div class="hidden items-start justify-between gap-4 sm:flex">
+            <div>
+                <flux:heading size="xl" class="font-semibold text-[#10B981]">{{ __('tickets.new_ticket') }}</flux:heading>
+                <flux:text class="mt-1 text-zinc-600">{{ __('tickets.subtitle') }}</flux:text>
+            </div>
+            <flux:button :href="route('patient.support')" wire:navigate variant="ghost" size="sm" icon="arrow-left">
+                {{ __('tickets.title') }}
+            </flux:button>
+        </div>
+
+        <form wire:submit="save" class="space-y-5 rounded-3xl border border-slate-100/80 bg-white p-5 shadow-[0_8px_32px_0_rgba(0,0,0,0.03)] sm:rounded-2xl sm:border-zinc-200/90 sm:shadow-sm">
         <flux:field>
             <flux:label>{{ __('tickets.category_label') }}</flux:label>
             <select
@@ -109,7 +134,8 @@ new #[Layout('layouts::patient')] #[Title('New support ticket')] class extends C
         </flux:field>
 
         <div class="flex justify-end">
-            <flux:button type="submit" variant="primary">{{ __('tickets.submit') }}</flux:button>
+            <flux:button type="submit" variant="primary" class="!bg-[#10B981] !text-white">{{ __('tickets.submit') }}</flux:button>
         </div>
     </form>
+    </div>
 </div>

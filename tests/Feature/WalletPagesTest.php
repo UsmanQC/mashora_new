@@ -28,6 +28,8 @@ test('patient wallet page shows balance and refund transaction', function (): vo
     $this->actingAs($patient)
         ->get(route('patient.wallet'))
         ->assertSuccessful()
+        ->assertSee('data-test="patient-luxury-wallet"', false)
+        ->assertSee('data-test="patient-wallet-header"', false)
         ->assertSee(__('patient.wallet.title'), false)
         ->assertSee('120.00', false)
         ->assertSee(__('patient.wallet.type_refund'), false)

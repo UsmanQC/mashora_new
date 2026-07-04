@@ -45,9 +45,22 @@ test('guest is redirected to patient phone from patient appointments', function 
         ->assertRedirect(route('patient.phone'));
 });
 
-test('guest is redirected to patient phone from important numbers', function () {
+test('guest can view important numbers with luxury mobile shell', function () {
     $this->get(route('patient.important-numbers'))
-        ->assertRedirect(route('patient.phone'));
+        ->assertSuccessful()
+        ->assertSee('data-test="patient-luxury-important-numbers"', false)
+        ->assertSee('data-test="patient-important-numbers-header"', false)
+        ->assertSee(__('patient.nav.important_numbers'), false);
+});
+
+test('authenticated patient sees luxury header on important numbers', function () {
+    $user = User::factory()->create(['profile_completed' => true]);
+
+    $this->actingAs($user)->get(route('patient.important-numbers'))
+        ->assertSuccessful()
+        ->assertSee('data-test="patient-luxury-important-numbers"', false)
+        ->assertSee('data-test="patient-important-numbers-header"', false)
+        ->assertSee(__('patient.numbers_intro'), false);
 });
 
 test('authenticated patient navbar shows language switch', function () {

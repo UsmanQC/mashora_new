@@ -235,6 +235,8 @@ return [
             'live_session' => 'Live now',
             'join_video' => 'Join video call',
             'session_workspace' => 'Session workspace',
+            'missed_action_banner' => '{1} A specialist missed your session. Choose reschedule or refund.|[2,*] :count sessions need your action — reschedule or refund.',
+            'view_missed_sessions' => 'View missed sessions',
         ],
         'realtime_misconfigured' => 'Real-time alerts are misconfigured. Set BROADCAST_CONNECTION=pusher in .env (not log) and run php artisan config:clear.',
         'call_in_progress' => 'Call in progress',

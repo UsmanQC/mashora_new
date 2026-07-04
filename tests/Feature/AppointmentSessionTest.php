@@ -61,6 +61,7 @@ test('doctor starting session broadcasts patient session started event', functio
         'status' => 'new',
         'duration' => 30,
         'appointment_date' => now()->toDateString(),
+        'start_time' => now()->format('H:i:s'),
         'scheduled_at' => now(),
     ]);
 

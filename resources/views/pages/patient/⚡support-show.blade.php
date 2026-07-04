@@ -4,6 +4,7 @@ use App\Models\Ticket;
 use App\Models\User;
 use App\Services\TicketService;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
@@ -31,11 +32,34 @@ new #[Layout('layouts::patient')] #[Title('Support ticket')] class extends Compo
             default => $status,
         };
     }
+
+    public function profilePhotoUrl(): ?string
+    {
+        $user = Auth::user();
+
+        if ($user === null || ! filled($user->profile_photo_path)) {
+            return null;
+        }
+
+        return Storage::disk('public')->url((string) $user->profile_photo_path);
+    }
 }; ?>
 
-<div class="mx-auto max-w-2xl space-y-6 px-4 py-8">
-    <div class="flex items-start justify-between gap-4">
-        <div class="min-w-0">
+<div class="patient-luxury-support-show bg-slate-50 pb-[calc(4.75rem+env(safe-area-inset-bottom))] sm:bg-transparent sm:pb-12" data-test="patient-luxury-support-show">
+    <div class="sm:hidden">
+        @include('partials.patient-luxury-page-header', [
+            'title' => $ticket->subject,
+            'subtitle' => $ticket->ticket_number.' · '.$this->statusLabel((string) $ticket->status),
+            'profilePhotoUrl' => $this->profilePhotoUrl(),
+            'userName' => auth()->user()?->name,
+            'backUrl' => route('patient.support'),
+            'backLabel' => __('patient.menu.support'),
+            'testId' => 'patient-support-show-header',
+        ])
+    </div>
+
+    <div class="mx-auto max-w-2xl space-y-5 px-6 pt-5 sm:space-y-6 sm:px-4 sm:py-8">
+        <div class="hidden min-w-0 sm:block">
             <flux:button :href="route('patient.support')" wire:navigate variant="ghost" size="sm" icon="arrow-left" class="mb-3">
                 {{ __('tickets.title') }}
             </flux:button>
@@ -45,9 +69,8 @@ new #[Layout('layouts::patient')] #[Title('Support ticket')] class extends Compo
                 {{ $ticket->category?->displayName() }} · {{ $this->statusLabel((string) $ticket->status) }}
             </flux:text>
         </div>
-    </div>
 
-    <section class="rounded-2xl border border-zinc-200/90 bg-white p-5 shadow-sm">
+        <section class="rounded-3xl border border-slate-100/80 bg-white p-5 shadow-[0_8px_32px_0_rgba(0,0,0,0.03)] sm:rounded-2xl sm:border-zinc-200/90 sm:shadow-sm">
         <p class="text-xs font-semibold uppercase tracking-wide text-zinc-500">{{ __('tickets.initial_message') }}</p>
         <p class="mt-3 whitespace-pre-wrap text-sm text-zinc-800">{{ $ticket->message }}</p>
         <p class="mt-3 text-xs text-zinc-400">{{ $ticket->created_at?->translatedFormat('d M Y, H:i') }}</p>
@@ -72,4 +95,5 @@ new #[Layout('layouts::patient')] #[Title('Support ticket')] class extends Compo
             </div>
         @endforelse
     </section>
+    </div>
 </div>

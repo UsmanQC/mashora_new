@@ -238,6 +238,8 @@ return [
             'live_session' => 'مباشرة الآن',
             'join_video' => 'انضم لمكالمة الفيديو',
             'session_workspace' => 'مساحة الجلسة',
+            'missed_action_banner' => '{1} لم يلتحق المختص بجلستك. اختر إعادة الجدولة أو الاسترداد.|[2,*] :count جلسات تحتاج إجراءً — إعادة جدولة أو استرداد.',
+            'view_missed_sessions' => 'عرض الجلسات الفائتة',
         ],
         'realtime_misconfigured' => 'تنبيهات الوقت الفعلي غير مضبوطة. عيّن BROADCAST_CONNECTION=pusher في .env (وليس log) ثم نفّذ php artisan config:clear.',
         'call_in_progress' => 'المكالمة قيد التنفيذ',

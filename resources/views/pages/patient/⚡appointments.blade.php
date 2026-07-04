@@ -269,7 +269,13 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
     {
         app(AppointmentMissedService::class)->processDueMissedAppointments();
 
-        unset($this->appointments, $this->tabCounts, $this->mobileAppointments, $this->mobileSegmentCounts);
+        unset(
+            $this->appointments,
+            $this->tabCounts,
+            $this->mobileAppointments,
+            $this->mobileSegmentCounts,
+            $this->unresolvedMissedCount,
+        );
     }
 
     public function mobileEmptyMessage(): string
@@ -282,7 +288,24 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
     #[On('patient-appointment-session-started')]
     public function onPatientAppointmentSessionStarted(): void
     {
-        unset($this->appointments, $this->tabCounts, $this->mobileAppointments, $this->mobileSegmentCounts);
+        unset(
+            $this->appointments,
+            $this->tabCounts,
+            $this->mobileAppointments,
+            $this->mobileSegmentCounts,
+            $this->unresolvedMissedCount,
+        );
+    }
+
+    public function getUnresolvedMissedCountProperty(): int
+    {
+        return $this->baseQuery()
+            ->where('status', 'not_attended')
+            ->where('cancel_status', 'doctor_missed')
+            ->where('is_follow_up', false)
+            ->get()
+            ->filter(fn (Appointment $appointment): bool => app(PatientMissedAppointmentService::class)->canResolve($appointment))
+            ->count();
     }
 
     /**

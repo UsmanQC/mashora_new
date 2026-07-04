@@ -27,6 +27,15 @@
             'patient.notifications',
             'patient.payment.success',
             'patient.payment.failed',
+            'profile.edit',
+            'patient.important-numbers',
+            'patient.wallet',
+            'patient.medications',
+            'patient.favorites',
+            'patient.privacy',
+            'patient.support',
+            'patient.support.create',
+            'patient.support.show',
         ]);
     @endphp
     <body

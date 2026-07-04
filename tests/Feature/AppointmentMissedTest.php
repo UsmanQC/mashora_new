@@ -323,4 +323,11 @@ test('patient appointments page shows missed tab entries', function () {
         ->assertSee(__('patient.missed.reschedule'), false)
         ->assertSee(__('patient.missed.refund'), false)
         ->assertSee('data-test="patient-missed-resolution"', false);
+
+    $this->actingAs($user)
+        ->get(route('patient.appointments'))
+        ->assertSuccessful()
+        ->assertSee('data-test="patient-luxury-appointments-header"', false)
+        ->assertSee('data-test="patient-missed-action-banner"', false)
+        ->assertSee(__('patient.appointments.luxury.view_missed_sessions'), false);
 });

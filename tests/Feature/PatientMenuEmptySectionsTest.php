@@ -25,6 +25,20 @@ test('authenticated patient menu shows grouped shortcuts', function () {
         ->assertSee(route('patient.wallet'), false);
 });
 
+test('authenticated patient sees luxury header on menu sub-pages', function () {
+    $user = User::factory()->create(['profile_completed' => true]);
+
+    $this->actingAs($user)->get(route('patient.medications'))
+        ->assertSuccessful()
+        ->assertSee('data-test="patient-luxury-section-empty-medications"', false)
+        ->assertSee('data-test="patient-section-empty-header-medications"', false);
+
+    $this->actingAs($user)->get(route('patient.support'))
+        ->assertSuccessful()
+        ->assertSee('data-test="patient-luxury-support"', false)
+        ->assertSee('data-test="patient-support-header"', false);
+});
+
 test('authenticated patient sees luxury notifications page', function () {
     $user = User::factory()->create();
 

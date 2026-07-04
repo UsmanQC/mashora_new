@@ -15,6 +15,26 @@
     ])
 
     <main class="space-y-5 px-6 pt-5">
+        @if ($this->unresolvedMissedCount > 0)
+            <div
+                class="rounded-2xl border border-orange-200/90 bg-orange-50 px-4 py-3.5 shadow-sm"
+                data-test="patient-missed-action-banner"
+            >
+                <p class="text-xs font-semibold leading-relaxed text-orange-950">
+                    {{ trans_choice('patient.appointments.luxury.missed_action_banner', $this->unresolvedMissedCount, ['count' => $this->unresolvedMissedCount]) }}
+                </p>
+                <button
+                    type="button"
+                    wire:click="selectMobileSegment('previous')"
+                    wire:loading.attr="disabled"
+                    class="mt-3 inline-flex min-h-9 w-full items-center justify-center gap-2 rounded-xl bg-white px-4 py-2 text-xs font-bold text-orange-900 shadow-sm ring-1 ring-orange-200/80 transition hover:bg-orange-100/50"
+                >
+                    <flux:icon name="calendar-days" variant="mini" class="size-4" />
+                    {{ __('patient.appointments.luxury.view_missed_sessions') }}
+                </button>
+            </div>
+        @endif
+
         @if ($mobileSegment === 'upcoming')
             <a
                 href="{{ $filterUrl }}"

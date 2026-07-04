@@ -1,13 +1,19 @@
 <?php
 
 use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Livewire\Livewire;
+
+uses(RefreshDatabase::class);
 
 test('profile page is displayed', function () {
     $this->actingAs($user = User::factory()->create());
 
-    $this->get(route('profile.edit'))->assertOk();
+    $this->get(route('profile.edit'))
+        ->assertOk()
+        ->assertSee('data-test="patient-settings-profile-header"', false)
+        ->assertSee(__('patient.settings_page.page_title'), false);
 });
 
 test('profile information can be updated', function () {
