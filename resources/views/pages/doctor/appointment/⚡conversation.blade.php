@@ -1330,7 +1330,7 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                         return;
                     }
 
-                    if (event.target.closest('#agora-leave-btn')) {
+                    if (event.target.closest('#agora-leave-btn, [data-video-call-leave="agora-leave-btn"]')) {
                         event.preventDefault();
                         bootEl.__leaveCall?.().catch((error) => console.error(error));
                     }

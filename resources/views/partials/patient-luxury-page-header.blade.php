@@ -7,6 +7,8 @@
     'testId' => null,
     'progressStep' => null,
     'progressTotal' => null,
+    'backUrl' => null,
+    'backLabel' => null,
 ])
 
 @php
@@ -19,17 +21,29 @@
     @if ($testId) data-test="{{ $testId }}" @endif
 >
     <div class="flex items-center justify-between gap-4">
-        <div class="min-w-0 flex-1">
-            <h1
-                class="text-2xl font-bold tracking-tight text-slate-900"
-                @if ($testId) data-test="{{ $testId }}-title" @endif
-            >{{ $title }}</h1>
-            @if (filled($subtitle))
-                <p
-                    class="mt-0.5 text-xs font-medium text-slate-500"
-                    @if ($testId) data-test="{{ $testId }}-subtitle" @endif
-                >{{ $subtitle }}</p>
+        <div class="flex min-w-0 flex-1 items-center gap-3">
+            @if (filled($backUrl))
+                <a
+                    href="{{ $backUrl }}"
+                    wire:navigate
+                    class="active-scale inline-flex size-10 shrink-0 items-center justify-center rounded-full border border-slate-200/80 bg-white text-slate-700 shadow-sm transition hover:bg-slate-50"
+                    aria-label="{{ $backLabel ?? __('patient.appointments.back_aria') }}"
+                >
+                    <flux:icon name="chevron-left" variant="outline" class="size-5 rtl:rotate-180" />
+                </a>
             @endif
+            <div class="min-w-0 flex-1">
+                <h1
+                    class="truncate text-2xl font-bold tracking-tight text-slate-900"
+                    @if ($testId) data-test="{{ $testId }}-title" @endif
+                >{{ $title }}</h1>
+                @if (filled($subtitle))
+                    <p
+                        class="mt-0.5 truncate text-xs font-medium text-slate-500"
+                        @if ($testId) data-test="{{ $testId }}-subtitle" @endif
+                    >{{ $subtitle }}</p>
+                @endif
+            </div>
         </div>
 
         <div class="flex shrink-0 items-center gap-2">

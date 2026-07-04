@@ -854,6 +854,20 @@ select:focus[data-flux-control] {
     color: rgb(251 113 133) !important;
 }
 
+.video-call-overlay:not(.hidden) {
+    touch-action: none;
+}
+
+.video-call-overlay .video-call-shell {
+    max-height: 100dvh;
+}
+
+@media (max-width: 639px) {
+    .video-call-overlay .video-call-stage {
+        min-height: 0;
+    }
+}
+
 .portal-sidebar-scroll {
     scrollbar-gutter: stable;
     scrollbar-width: thin;

@@ -141,14 +141,43 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
             }
         }
     }
+
+    public function profilePhotoUrl(): ?string
+    {
+        $user = auth()->user();
+
+        if (! $user instanceof User || ! filled($user->profile_photo_path)) {
+            return null;
+        }
+
+        return \Illuminate\Support\Facades\Storage::disk('public')->url((string) $user->profile_photo_path);
+    }
+
+    public function conversationHeaderSubtitle(): string
+    {
+        return __('patient.appointments.status_'.$this->appointment->status);
+    }
 }; ?>
 
 <div
     id="patient-conversation-root"
-    class="space-y-5"
+    class="patient-luxury-conversation bg-slate-50 pb-[calc(4.75rem+env(safe-area-inset-bottom))] sm:bg-transparent sm:space-y-5 sm:pb-0"
+    data-test="patient-luxury-conversation"
     @if (! in_array($appointment->status, ['in_process', 'completed', 'cancelled', 'not_attended'], true)) wire:poll.3s="refreshAppointmentSession" @endif
 >
-    <header class="relative overflow-hidden rounded-2xl border border-zinc-200/80 bg-gradient-to-br from-white via-white to-[#f7f9ff] p-4 shadow-sm shadow-zinc-200/60 ring-1 ring-zinc-100 sm:p-5">
+    <div class="sm:hidden">
+        @include('partials.patient-luxury-page-header', [
+            'title' => $appointment->doctor?->displayName() ?: __('patient.appointments.title'),
+            'subtitle' => $this->conversationHeaderSubtitle(),
+            'profilePhotoUrl' => $this->profilePhotoUrl(),
+            'userName' => auth()->user()?->name,
+            'testId' => 'patient-luxury-conversation-header',
+            'backUrl' => route('patient.appointments'),
+            'backLabel' => __('patient.appointments.title'),
+        ])
+    </div>
+
+    <header class="relative hidden overflow-hidden rounded-2xl border border-zinc-200/80 bg-gradient-to-br from-white via-white to-[#f7f9ff] p-4 shadow-sm shadow-zinc-200/60 ring-1 ring-zinc-100 sm:block sm:p-5">
         <div class="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#10B981] via-[#34d399] to-[#059669] opacity-85"></div>
         <div class="flex flex-wrap items-center justify-between gap-3">
         <div class="flex items-center gap-3">
@@ -164,31 +193,29 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 <p id="patient-conversation-status-label" class="mt-0.5 text-xs text-zinc-500">{{ __('patient.appointments.status_'.$appointment->status) }}</p>
             </div>
         </div>
-
-        <div class="flex items-center gap-2">
-            @if ($appointment->allowsPatientCalls())
-                <span
-                    id="patient-call-started-chip"
-                    class="hidden inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700"
-                >
-                    <span id="patient-call-chip-label">{{ __('patient.appointments.call_in_progress') }}</span>
-                    <span id="patient-call-chip-duration" class="font-mono tabular-nums">00:00</span>
-                </span>
-                @if ($appointment->allowsPatientCalls())
-                    <span
-                        id="patient-waiting-for-call-chip"
-                        @class([
-                            'rounded-full border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-[11px] font-semibold text-zinc-600',
-                            'hidden' => $appointment->status !== 'in_process',
-                        ])
-                    >
-                        {{ __('patient.appointments.waiting_for_specialist_call') }}
-                    </span>
-                @endif
-            @endif
-        </div>
         </div>
     </header>
+
+    @if ($appointment->allowsPatientCalls())
+        <div class="flex flex-wrap items-center gap-2 px-6 pt-3 sm:px-0 sm:pt-0">
+            <span
+                id="patient-call-started-chip"
+                class="hidden inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700"
+            >
+                <span id="patient-call-chip-label">{{ __('patient.appointments.call_in_progress') }}</span>
+                <span id="patient-call-chip-duration" class="font-mono tabular-nums">00:00</span>
+            </span>
+            <span
+                id="patient-waiting-for-call-chip"
+                @class([
+                    'rounded-full border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-[11px] font-semibold text-zinc-600',
+                    'hidden' => $appointment->status !== 'in_process',
+                ])
+            >
+                {{ __('patient.appointments.waiting_for_specialist_call') }}
+            </span>
+        </div>
+    @endif
 
     <div
         id="patient-conversation-metrics"
@@ -211,6 +238,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
         data-relaxed-session-limits="{{ config('appointments.relaxed_session_limits') ? '1' : '0' }}"
     ></div>
 
+    <div class="space-y-4 px-6 pt-4 sm:space-y-5 sm:px-0 sm:pt-0">
     @if (in_array($appointment->status, ['new', 'rescheduled'], true) && ! $appointment->isChatOpen())
         <flux:callout id="patient-chat-locked-callout" variant="secondary" icon="clock" class="border-zinc-200">
             {{ __('patient.appointments.chat_locked_until_doctor_starts') }}
@@ -230,28 +258,29 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
     <div
         id="patient-session-live-banner"
         @class([
-            'rounded-xl border border-emerald-200 bg-gradient-to-r from-emerald-50 to-white px-4 py-3 shadow-sm shadow-emerald-900/5 ring-1 ring-emerald-100',
+            'rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50 to-white px-4 py-3 shadow-sm shadow-emerald-900/5 ring-1 ring-emerald-100 max-sm:fixed max-sm:inset-x-6 max-sm:bottom-[calc(4.75rem+env(safe-area-inset-bottom))] max-sm:z-30 max-sm:shadow-lg',
             'hidden' => $appointment->status !== 'in_process',
         ])
     >
-        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div class="min-w-0">
+        <div class="flex flex-col gap-3 max-sm:gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div class="min-w-0 max-sm:hidden">
                 <p class="text-sm font-semibold text-emerald-950">{{ __('patient.appointments.session_live_banner_title') }}</p>
                 <p class="mt-0.5 text-sm text-emerald-800">{{ __('patient.appointments.session_live_banner_body') }}</p>
             </div>
-            <div class="flex shrink-0 flex-col gap-2 sm:flex-row sm:items-center">
+            <div class="flex min-w-0 flex-1 shrink-0 flex-col gap-2 max-sm:flex-row sm:flex-row sm:items-center">
                 @if ($appointment->allowsPatientCalls())
                     <button
                         type="button"
                         id="patient-session-join-call-btn"
-                        class="inline-flex min-h-10 items-center justify-center rounded-xl bg-[#10B981] px-4 py-2 text-sm font-semibold text-white shadow-md shadow-emerald-900/20 transition hover:brightness-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2"
+                        class="inline-flex min-h-10 flex-1 items-center justify-center gap-2 rounded-xl bg-[#10B981] px-4 py-2.5 text-sm font-semibold text-white shadow-md shadow-emerald-900/20 transition hover:brightness-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2"
                     >
+                        <flux:icon name="video-camera" variant="mini" class="size-4" />
                         {{ __('patient.appointments.join_call') }}
                     </button>
                 @endif
                 <a
                     href="#patient-chat-panel"
-                    class="inline-flex min-h-10 items-center justify-center rounded-xl border border-emerald-300 bg-white px-4 py-2 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-50"
+                    class="inline-flex min-h-10 flex-1 items-center justify-center rounded-xl border border-emerald-300 bg-white px-4 py-2.5 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-50 max-sm:hidden"
                 >
                     {{ __('patient.appointments.open_session_chat') }}
                 </a>
@@ -259,14 +288,14 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
         </div>
     </div>
 
-    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:max-w-xl">
-        <div class="rounded-xl border border-zinc-200/80 bg-gradient-to-br from-white to-zinc-50 px-3 py-2 shadow-sm">
-            <p class="text-[11px] font-semibold uppercase tracking-wide text-zinc-400">{{ __('patient.appointments.session_elapsed_label') }}</p>
-            <p id="patient-timer-session-elapsed" class="mt-0.5 font-mono text-lg font-semibold tabular-nums text-zinc-900">{{ $this->formattedAppointmentTime() }}</p>
+    <div class="grid grid-cols-2 gap-2 sm:gap-3 lg:max-w-xl">
+        <div class="rounded-2xl border border-slate-100 bg-white px-3 py-2.5 shadow-sm sm:rounded-xl sm:border-zinc-200/80 sm:bg-gradient-to-br sm:from-white sm:to-zinc-50">
+            <p class="text-[10px] font-semibold uppercase tracking-wide text-slate-400 sm:text-[11px]">{{ __('patient.appointments.session_elapsed_label') }}</p>
+            <p id="patient-timer-session-elapsed" class="mt-0.5 font-mono text-base font-bold tabular-nums text-slate-900 sm:text-lg sm:font-semibold">{{ $this->formattedAppointmentTime() }}</p>
         </div>
-        <div id="patient-wrap-session-remaining" class="rounded-xl border border-zinc-200/80 bg-gradient-to-br from-white to-zinc-50 px-3 py-2 shadow-sm">
-            <p class="text-[11px] font-semibold uppercase tracking-wide text-zinc-400">{{ __('patient.appointments.session_remaining_label') }}</p>
-            <p id="patient-timer-session-remaining" class="mt-0.5 font-mono text-lg font-semibold tabular-nums text-[#047857]">--:--</p>
+        <div id="patient-wrap-session-remaining" class="rounded-2xl border border-slate-100 bg-white px-3 py-2.5 shadow-sm sm:rounded-xl sm:border-zinc-200/80 sm:bg-gradient-to-br sm:from-white sm:to-zinc-50">
+            <p class="text-[10px] font-semibold uppercase tracking-wide text-slate-400 sm:text-[11px]">{{ __('patient.appointments.session_remaining_label') }}</p>
+            <p id="patient-timer-session-remaining" class="mt-0.5 font-mono text-base font-bold tabular-nums text-[#047857] sm:text-lg sm:font-semibold">--:--</p>
         </div>
     </div>
 
@@ -278,7 +307,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
 
     <div
         id="patient-chat-panel"
-        class="overflow-hidden rounded-3xl border border-zinc-200/90 bg-white shadow-[0_20px_55px_-32px_rgba(15,23,42,0.35)] ring-1 ring-zinc-100"
+        class="overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-[0_8px_32px_0_rgba(0,0,0,0.03)] ring-1 ring-slate-100 max-sm:mb-[calc(5.5rem+env(safe-area-inset-bottom))] sm:border-zinc-200/90 sm:shadow-[0_20px_55px_-32px_rgba(15,23,42,0.35)] sm:ring-zinc-100"
         data-appointment-id="{{ $appointment->id }}"
         data-notify-url="{{ route('patient.appointments.realtime.notify-call', $appointment) }}"
         data-pending-call-url="{{ route('patient.appointments.realtime.pending-call', $appointment) }}"
@@ -286,8 +315,8 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
         data-token-url="{{ route('patient.appointments.realtime.agora-token', $appointment) }}"
         data-csrf="{{ csrf_token() }}"
     >
-        <div class="grid min-h-[34rem] grid-cols-1 lg:grid-cols-12">
-            <div class="flex min-h-[30rem] flex-col border-zinc-200 lg:col-span-8 lg:border-e">
+        <div class="grid min-h-[34rem] grid-cols-1 max-sm:min-h-[min(32rem,calc(100dvh-18rem))] lg:grid-cols-12">
+            <div class="flex min-h-[30rem] flex-col border-zinc-200 max-sm:min-h-[min(28rem,calc(100dvh-20rem))] lg:col-span-8 lg:border-e">
                 <div
                     id="incoming-call-banner"
                     class="hidden shrink-0 border-b border-emerald-300 bg-gradient-to-r from-emerald-50 via-emerald-50/95 to-white px-4 py-3 shadow-md shadow-emerald-900/10 ring-1 ring-inset ring-emerald-200/80 sm:px-5"
@@ -391,6 +420,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 </div>
             </aside>
         </div>
+    </div>
     </div>
 
     @include('partials.video-call-overlay', [
@@ -1553,7 +1583,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                         bootEl.__joinSessionCall?.();
                     }
 
-                    if (event.target.closest('#patient-agora-leave')) {
+                    if (event.target.closest('#patient-agora-leave, [data-video-call-leave="patient-agora-leave"]')) {
                         event.preventDefault();
                         bootEl.__leaveCall?.().catch((error) => console.error(error));
                     }

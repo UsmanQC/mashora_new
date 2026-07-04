@@ -150,6 +150,16 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
         return now()->locale(app()->getLocale())->translatedFormat('j F Y');
     }
 
+    public function headerSubtitle(): string
+    {
+        $count = (int) ($this->mobileSegmentCounts['upcoming'] ?? 0);
+
+        return trans_choice('patient.appointments.luxury.header_subtitle', $count, [
+            'count' => $count,
+            'date' => $this->headerDateLabel(),
+        ]);
+    }
+
     public function profilePhotoUrl(): ?string
     {
         $user = Auth::user();
@@ -707,40 +717,50 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
         data-notify-base="{{ route('patient.appointments.realtime.notify-call', ['appointment' => '__ID__']) }}"
     ></div>
 
-    <div id="patient-inline-call-overlay" class="fixed inset-0 z-[210] hidden bg-zinc-950/90 backdrop-blur-sm">
-        <div class="mx-auto flex h-full w-full max-w-6xl flex-col p-3 sm:p-5">
-            <div class="flex items-center justify-between rounded-xl border border-white/10 bg-zinc-900/80 px-4 py-3 text-white">
-                <div>
-                    <p class="text-xs uppercase tracking-wide text-zinc-300">{{ __('patient.appointments.call_in_progress') }}</p>
-                    <p id="patient-inline-call-state" class="text-sm font-semibold text-white">{{ __('patient.appointments.session_started_join_now') }}</p>
+    <div id="patient-inline-call-overlay" class="video-call-overlay fixed inset-0 z-[210] hidden" aria-hidden="true" role="dialog" aria-modal="true">
+        <div class="absolute inset-0 bg-zinc-950/95 backdrop-blur-md" aria-hidden="true"></div>
+        <div class="relative flex h-full min-h-0 flex-col">
+            <div class="flex shrink-0 items-center justify-between gap-3 border-b border-white/10 bg-zinc-900/95 px-4 py-3 text-white">
+                <div class="min-w-0">
+                    <p class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-emerald-300">
+                        <span class="relative flex size-2">
+                            <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#10B981] opacity-60"></span>
+                            <span class="relative inline-flex size-2 rounded-full bg-[#10B981]"></span>
+                        </span>
+                        {{ __('patient.appointments.call_in_progress') }}
+                    </p>
+                    <p id="patient-inline-call-state" class="truncate text-sm font-semibold text-white">{{ __('patient.appointments.session_started_join_now') }}</p>
                 </div>
-                <button type="button" id="patient-inline-call-end" class="rounded-xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700">
+                <button type="button" id="patient-inline-call-end" class="inline-flex shrink-0 items-center gap-2 rounded-xl bg-rose-600 px-3 py-2 text-xs font-semibold text-white shadow-lg shadow-rose-900/35 transition hover:bg-rose-500">
+                    <flux:icon name="x-mark" variant="mini" class="size-4" />
                     {{ __('patient.appointments.end_call') }}
                 </button>
             </div>
 
-            <div class="mt-3 grid min-h-0 flex-1 grid-cols-1 gap-3 md:grid-cols-[1fr_18rem]">
-                <div class="min-h-[50vh] overflow-hidden rounded-2xl border border-white/10 bg-black">
-                    <div id="patient-inline-call-remote" class="h-full w-full"></div>
+            <div class="relative min-h-0 flex-1 bg-black">
+                <div id="patient-inline-call-remote" class="absolute inset-0 h-full w-full"></div>
+                <div class="absolute end-3 top-3 z-10 w-28 overflow-hidden rounded-2xl border border-white/20 bg-zinc-900/90 shadow-2xl ring-1 ring-white/10 sm:w-36">
+                    <div id="patient-inline-call-local" class="aspect-video w-full bg-zinc-800"></div>
                 </div>
-                <div class="flex flex-col gap-3">
-                    <div class="rounded-xl border border-white/10 bg-zinc-900/80 px-3 py-2 text-xs text-zinc-200">
-                        <p id="patient-inline-doctor-name" class="font-semibold text-white">—</p>
-                        <p id="patient-inline-session-time" class="mt-0.5 text-zinc-300">—</p>
-                    </div>
-                    <div class="overflow-hidden rounded-xl border border-white/10 bg-zinc-900">
-                        <div id="patient-inline-call-local" class="aspect-video w-full"></div>
-                    </div>
-                    <div class="grid grid-cols-2 gap-2">
-                        <button type="button" id="patient-inline-video" class="inline-flex items-center justify-center rounded-lg bg-white/10 px-3 py-2 text-xs font-semibold text-white hover:bg-white/20">
-                            {{ __('patient.appointments.video_call') }}
-                        </button>
-                        <button type="button" id="patient-inline-audio" class="inline-flex items-center justify-center rounded-lg bg-white/10 px-3 py-2 text-xs font-semibold text-white hover:bg-white/20">
-                            {{ __('patient.appointments.voice_call') }}
-                        </button>
-                    </div>
-                    <a id="patient-inline-open-chat" href="#" wire:navigate class="inline-flex items-center justify-center rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-xs font-semibold text-white hover:bg-white/20">
-                        {{ __('patient.appointments.join_session') }}
+            </div>
+
+            <div class="shrink-0 border-t border-white/10 bg-zinc-900/95 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+                <div class="mb-3 rounded-xl border border-white/10 bg-zinc-800/80 px-3 py-2 text-xs text-zinc-200">
+                    <p id="patient-inline-doctor-name" class="font-semibold text-white">—</p>
+                    <p id="patient-inline-session-time" class="mt-0.5 text-zinc-400">—</p>
+                </div>
+                <div class="grid grid-cols-3 gap-2">
+                    <button type="button" id="patient-inline-video" class="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl bg-white/10 px-2 py-2 text-[11px] font-semibold text-white transition hover:bg-white/20">
+                        <flux:icon name="video-camera" variant="mini" class="size-4" />
+                        {{ __('patient.appointments.video_call') }}
+                    </button>
+                    <button type="button" id="patient-inline-audio" class="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl bg-white/10 px-2 py-2 text-[11px] font-semibold text-white transition hover:bg-white/20">
+                        <flux:icon name="phone" variant="mini" class="size-4" />
+                        {{ __('patient.appointments.voice_call') }}
+                    </button>
+                    <a id="patient-inline-open-chat" href="#" wire:navigate class="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl border border-[#10B981]/40 bg-[#10B981]/20 px-2 py-2 text-[11px] font-semibold text-emerald-100 transition hover:bg-[#10B981]/30">
+                        <flux:icon name="chat-bubble-left-right" variant="mini" class="size-4" />
+                        {{ __('patient.appointments.open_chat') }}
                     </a>
                 </div>
             </div>

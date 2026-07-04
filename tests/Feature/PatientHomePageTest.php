@@ -388,7 +388,29 @@ test('patient appointments luxury mobile shell is rendered', function () {
         ->assertDontSee('data-test="patient-brand-strip"', false)
         ->assertSee(__('patient.appointments.luxury.tab_upcoming'), false)
         ->assertSee(__('patient.appointments.luxury.instant_title'), false)
+        ->assertSee(__('patient.appointments.luxury.book_session_cta'), false)
         ->assertSee('Fahad Specialist', false);
+});
+
+test('patient conversation luxury mobile shell is rendered', function () {
+    $user = User::factory()->create(['profile_completed' => true]);
+    $doctor = Doctor::factory()->create(['name' => 'Nora Specialist']);
+    $appointment = Appointment::factory()->create([
+        'user_id' => $user->id,
+        'doctor_id' => $doctor->id,
+        'status' => 'in_process',
+        'actual_start_at' => now(),
+        'extend_at' => now()->addMinutes(30),
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('patient.appointments.conversation', ['appointment' => $appointment->id]))
+        ->assertSuccessful()
+        ->assertSee('data-test="patient-luxury-conversation"', false)
+        ->assertSee('data-test="patient-luxury-conversation-header"', false)
+        ->assertSee('Nora Specialist', false)
+        ->assertSee('id="patient-agora-overlay"', false)
+        ->assertSee('id="patient-session-join-call-btn"', false);
 });
 
 test('patient appointments renders realtime notification scripts', function () {

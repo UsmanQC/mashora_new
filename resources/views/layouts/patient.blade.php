@@ -17,6 +17,7 @@
         $patientLuxuryMobileShell = request()->routeIs([
             'patient.home',
             'patient.appointments',
+            'patient.appointments.conversation',
             'patient.schedule.filter',
             'patient.schedule.specialists',
             'patient.book-appointments',
