@@ -123,7 +123,6 @@ test('future appointments are not marked missed', function () {
 
 test('appointment is marked missed ten minutes after scheduled start when doctor never joined', function () {
     config([
-        'appointments.relaxed_session_limits' => false,
         'appointments.doctor_missed_grace_minutes' => 10,
     ]);
 
@@ -154,7 +153,6 @@ test('appointment is marked missed ten minutes after scheduled start when doctor
 
 test('appointment is not marked missed before ten minute grace elapses', function () {
     config([
-        'appointments.relaxed_session_limits' => false,
         'appointments.doctor_missed_grace_minutes' => 10,
     ]);
 
@@ -182,9 +180,64 @@ test('appointment is not marked missed before ten minute grace elapses', functio
         ->and($appointment->fresh()->status)->toBe('new');
 });
 
-test('missed appointment processing is idempotent for refunds', function () {
-    config(['appointments.relaxed_session_limits' => false]);
+test('missed appointment uses start_time not scheduled_at when they differ', function () {
+    config(['appointments.doctor_missed_grace_minutes' => 10]);
 
+    Carbon::setTestNow('2026-06-23 14:41:00');
+
+    $doctor = Doctor::factory()->create(['status' => 'approved']);
+    $user = User::factory()->create(['profile_completed' => true]);
+
+    $appointment = Appointment::factory()->create([
+        'doctor_id' => $doctor->id,
+        'user_id' => $user->id,
+        'status' => 'new',
+        'scheduled_at' => '2026-06-23 16:00:00',
+        'appointment_date' => '2026-06-23',
+        'start_time' => '14:30:00',
+        'end_time' => '15:00:00',
+        'duration' => 30,
+        'total' => 150,
+        'wallet_amount' => 150,
+    ]);
+
+    $processed = app(AppointmentMissedService::class)->processDueMissedAppointments();
+
+    expect($processed)->toBe(1)
+        ->and($appointment->fresh()->status)->toBe('not_attended')
+        ->and($appointment->fresh()->cancel_status)->toBe('doctor_missed');
+});
+
+test('missed appointment processing runs even when relaxed session limits are enabled', function () {
+    config([
+        'appointments.relaxed_session_limits' => true,
+        'appointments.doctor_missed_grace_minutes' => 10,
+    ]);
+
+    Carbon::setTestNow('2026-06-23 14:41:00');
+
+    $doctor = Doctor::factory()->create(['status' => 'approved']);
+    $user = User::factory()->create(['profile_completed' => true]);
+
+    $appointment = Appointment::factory()->create([
+        'doctor_id' => $doctor->id,
+        'user_id' => $user->id,
+        'status' => 'new',
+        'appointment_date' => '2026-06-23',
+        'start_time' => '14:30:00',
+        'end_time' => '15:00:00',
+        'duration' => 30,
+        'total' => 150,
+        'wallet_amount' => 150,
+    ]);
+
+    $processed = app(AppointmentMissedService::class)->processDueMissedAppointments();
+
+    expect($processed)->toBe(1)
+        ->and($appointment->fresh()->status)->toBe('not_attended');
+});
+
+test('missed appointment processing is idempotent for refunds', function () {
     Carbon::setTestNow('2026-06-23 14:00:00');
 
     $doctor = Doctor::factory()->create(['status' => 'approved']);

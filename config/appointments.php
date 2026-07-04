@@ -20,9 +20,8 @@ return [
     | Relaxed session limits (testing)
     |--------------------------------------------------------------------------
     |
-    | When true: doctors may start sessions before the scheduled time, overdue
-    | sessions are not auto-marked as missed, and calls are not auto-disconnected
-    | when extend_at passes.
+    | When true: doctors may start sessions before the scheduled time, and calls are not
+    | auto-disconnected when extend_at passes. Missed-session marking still runs.
     |
     */
 
