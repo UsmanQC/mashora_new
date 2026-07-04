@@ -132,5 +132,6 @@ return [
         'total_due' => 'Amount due',
         'vat_included' => 'Including VAT',
         'discount_placeholder' => 'Discount code',
+        'payment_success_subtitle' => 'Your session is confirmed and ready.',
     ],
 ];

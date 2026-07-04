@@ -132,5 +132,6 @@ return [
         'total_due' => 'الإجمالي المستحق',
         'vat_included' => 'شامل ضريبة القيمة المضافة',
         'discount_placeholder' => 'كود الخصم',
+        'payment_success_subtitle' => 'تم تأكيد جلستك وهي جاهزة الآن.',
     ],
 ];

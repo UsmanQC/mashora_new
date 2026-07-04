@@ -24,6 +24,8 @@
             'patient.checkout.demo',
             'patient.menu',
             'patient.notifications',
+            'patient.payment.success',
+            'patient.payment.failed',
         ]);
     @endphp
     <body
