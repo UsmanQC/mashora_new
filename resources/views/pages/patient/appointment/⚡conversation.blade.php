@@ -4,7 +4,10 @@ use App\Events\AppointmentChatMessageSent;
 use App\Models\Appointment;
 use App\Models\ChMessage;
 use App\Models\User;
+use App\Services\AppointmentMissedService;
+use App\Services\PatientMissedAppointmentService;
 use App\Support\DoctorAgoraChannel;
+use Flux\Flux;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Title;
@@ -31,9 +34,67 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
     {
         abort_unless((int) $appointment->user_id === (int) auth()->id(), 403);
 
-        $this->appointment = $appointment;
+        app(AppointmentMissedService::class)->processDueMissedAppointments();
+
+        $this->appointment = $appointment->fresh() ?? $appointment;
         $this->refreshAgoraCredentials();
         $this->loadMessages();
+    }
+
+    public function canResolveMissed(): bool
+    {
+        return app(PatientMissedAppointmentService::class)->canResolve($this->appointment);
+    }
+
+    public bool $showRefundModal = false;
+
+    public function promptRefundMissed(int $appointmentId): void
+    {
+        if ((int) $this->appointment->id !== $appointmentId) {
+            abort(404);
+        }
+
+        if (! $this->canResolveMissed()) {
+            Flux::toast(variant: 'warning', text: __('patient.missed.not_eligible'));
+
+            return;
+        }
+
+        $this->showRefundModal = true;
+    }
+
+    public function dismissRefundMissedModal(): void
+    {
+        $this->showRefundModal = false;
+    }
+
+    public function confirmRefundMissed(): void
+    {
+        $user = auth()->user();
+        if (! $user instanceof User) {
+            abort(403);
+        }
+
+        if (! $this->canResolveMissed()) {
+            Flux::toast(variant: 'warning', text: __('patient.missed.not_eligible'));
+            $this->dismissRefundMissedModal();
+
+            return;
+        }
+
+        app(PatientMissedAppointmentService::class)->refund($user, $this->appointment);
+
+        $this->appointment->refresh();
+        $this->dismissRefundMissedModal();
+
+        Flux::toast(
+            variant: 'success',
+            text: __('patient.missed.refund_success', [
+                'amount' => number_format((float) $this->appointment->total, 2),
+            ]),
+        );
+
+        $this->redirectRoute('patient.appointments', ['tab' => 'missed'], navigate: true);
     }
 
     public function sendMessage(): void
@@ -105,6 +166,8 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
         if (in_array((string) $this->appointment->status, ['completed', 'cancelled', 'not_attended'], true)) {
             return;
         }
+
+        app(AppointmentMissedService::class)->processDueMissedAppointments();
 
         $this->appointment->refresh();
 
@@ -214,6 +277,14 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
             >
                 {{ __('patient.appointments.waiting_for_specialist_call') }}
             </span>
+        </div>
+    @endif
+
+    @if ($this->canResolveMissed())
+        <div class="px-6 sm:px-0">
+            <div class="rounded-2xl border border-orange-200/90 bg-gradient-to-r from-orange-50 to-amber-50/80 px-4 py-4 shadow-sm">
+                @include('partials.patient-luxury-missed-resolution', ['appointment' => $appointment])
+            </div>
         </div>
     @endif
 
@@ -448,6 +519,51 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
         data-agora-ready="{{ $agoraAppId !== '' ? '1' : '0' }}"
         data-appointment-status="{{ $appointment->status }}"
     ></div>
+
+    <flux:modal wire:model.self="showRefundModal" class="max-w-md rounded-2xl shadow-xl" :closable="true">
+        <div class="px-6 py-8 sm:px-8">
+            <div class="mx-auto flex size-16 items-center justify-center rounded-full bg-[#10B981]/10 text-[#10B981]">
+                <flux:icon name="banknotes" variant="outline" class="size-8" />
+            </div>
+
+            <flux:heading size="lg" class="mt-5 text-center font-semibold text-zinc-900">
+                {{ __('patient.missed.refund_modal.title') }}
+            </flux:heading>
+
+            <flux:text class="mt-2 text-center text-sm leading-relaxed text-zinc-600">
+                {{ __('patient.missed.refund_modal.body') }}
+            </flux:text>
+
+            <div class="mt-5 rounded-xl border border-zinc-200/90 bg-zinc-50 px-4 py-3 text-sm">
+                <p class="font-semibold text-zinc-900">{{ $appointment->doctor?->displayName() }}</p>
+                @if ((float) $appointment->total > 0)
+                    <p class="mt-2 text-xs font-medium text-[#047857]">
+                        {{ __('patient.missed.refund_modal.refund_note', ['amount' => number_format((float) $appointment->total, 2)]) }}
+                    </p>
+                @endif
+            </div>
+
+            <div class="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <flux:button type="button" variant="ghost" class="w-full sm:w-auto" wire:click="dismissRefundMissedModal">
+                    {{ __('patient.missed.refund_modal.dismiss') }}
+                </flux:button>
+                <flux:button
+                    type="button"
+                    class="w-full !bg-[#10B981] !text-white hover:!brightness-95 sm:w-auto"
+                    wire:click="confirmRefundMissed"
+                    wire:loading.attr="disabled"
+                    wire:target="confirmRefundMissed"
+                >
+                    <span wire:loading.remove wire:target="confirmRefundMissed">
+                        {{ __('patient.missed.refund_modal.confirm') }}
+                    </span>
+                    <span wire:loading wire:target="confirmRefundMissed">
+                        {{ __('patient.missed.refund_modal.confirming') }}
+                    </span>
+                </flux:button>
+            </div>
+        </div>
+    </flux:modal>
 </div>
 
 @push('scripts')

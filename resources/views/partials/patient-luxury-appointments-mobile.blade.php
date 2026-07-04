@@ -108,8 +108,9 @@
                         $cardUrl = $this->appointmentCardUrl($appointment);
                         $doctorName = $appointment->doctor?->displayName() ?: __('patient.appointments.specialist_label');
                         $isLive = $appointment->status === 'in_process';
+                        $canResolveMissed = $this->canResolveMissed($appointment);
                     @endphp
-                    @if ($cardUrl)
+                    @if ($cardUrl && ! $canResolveMissed)
                         <a
                             href="{{ $cardUrl }}"
                             wire:navigate

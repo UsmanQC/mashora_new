@@ -7,12 +7,13 @@ return [
     | Doctor missed appointment grace period
     |--------------------------------------------------------------------------
     |
-    | Minutes after the scheduled session end time before an unpaid start
-    | (status new/rescheduled) is marked as missed for patient resolution.
+    | Minutes after the scheduled session start time before an unstarted session
+    | (status new/rescheduled, no actual_start_at) is marked as missed for patient
+    | reschedule or refund.
     |
     */
 
-    'doctor_missed_grace_minutes' => (int) env('APPOINTMENT_DOCTOR_MISSED_GRACE_MINUTES', 15),
+    'doctor_missed_grace_minutes' => (int) env('APPOINTMENT_DOCTOR_MISSED_GRACE_MINUTES', 10),
 
     /*
     |--------------------------------------------------------------------------

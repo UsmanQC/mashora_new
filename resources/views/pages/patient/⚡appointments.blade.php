@@ -193,6 +193,10 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
 
     public function luxuryStatusLabel(Appointment $appointment): string
     {
+        if ($appointment->isDoctorMissed()) {
+            return __('patient.appointments.status_missed');
+        }
+
         if (in_array($appointment->status, ['new', 'rescheduled'], true) && ! $appointment->is_follow_up) {
             return __('patient.appointments.luxury.status_confirmed');
         }
@@ -254,11 +258,14 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
             return route('patient.appointments.conversation', ['appointment' => $appointment->id]);
         }
 
-        if ($this->canResolveMissed($appointment)) {
-            return route('patient.appointments.missed-reschedule', ['appointment' => $appointment->id]);
-        }
-
         return null;
+    }
+
+    public function processMissedAppointments(): void
+    {
+        app(AppointmentMissedService::class)->processDueMissedAppointments();
+
+        unset($this->appointments, $this->tabCounts, $this->mobileAppointments, $this->mobileSegmentCounts);
     }
 
     public function mobileEmptyMessage(): string
@@ -502,7 +509,7 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
     }
 }; ?>
 
-<div>
+<div wire:poll.60s="processMissedAppointments">
     @include('partials.patient-luxury-appointments-mobile')
 
     <div id="patient-appointments-root" class="hidden space-y-5 sm:block">

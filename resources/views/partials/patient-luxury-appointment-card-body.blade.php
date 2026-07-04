@@ -66,4 +66,6 @@
             {{ __('patient.appointments.luxury.join_video') }}
         </span>
     </div>
+@elseif ($this->canResolveMissed($appointment))
+    @include('partials.patient-luxury-missed-resolution', ['appointment' => $appointment])
 @endif
