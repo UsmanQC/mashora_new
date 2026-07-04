@@ -60,43 +60,30 @@ test('doctor wallet page shows balance and earning transaction', function (): vo
         ->assertSee(__('doctor.wallet.type_earning'), false);
 });
 
-test('doctor wallet page shows completed appointments count for current month', function (): void {
+test('doctor wallet page shows paid sessions count for current month', function (): void {
     app()->setLocale('en');
 
-    $doctor = Doctor::factory()->create(['status' => 'approved']);
+    $doctor = Doctor::factory()->create(['status' => 'approved', 'commission' => 25]);
     $patient = User::factory()->create();
-    $thisMonth = now(config('app.timezone'));
 
     Appointment::factory()->count(2)->create([
         'doctor_id' => $doctor->id,
         'user_id' => $patient->id,
+        'total' => 100.00,
         'status' => 'completed',
-        'appointment_date' => $thisMonth->copy()->startOfMonth()->addDays(3)->toDateString(),
-    ]);
-
-    Appointment::factory()->create([
-        'doctor_id' => $doctor->id,
-        'user_id' => $patient->id,
-        'status' => 'completed',
-        'appointment_date' => $thisMonth->copy()->subMonth()->endOfMonth()->toDateString(),
-    ]);
-
-    Appointment::factory()->create([
-        'doctor_id' => $doctor->id,
-        'user_id' => $patient->id,
-        'status' => 'new',
-        'appointment_date' => $thisMonth->toDateString(),
-    ]);
+    ])->each(function (Appointment $appointment): void {
+        app(AppointmentWalletService::class)->creditDoctorEarning($appointment->fresh());
+    });
 
     $this->actingAs($doctor, 'doctor')
         ->get(route('doctor.settings.wallet'))
         ->assertSuccessful()
-        ->assertSee(__('doctor.wallet.month_completed'), false)
+        ->assertSee(__('doctor.wallet.month_sessions'), false)
         ->assertSee('2', false)
-        ->assertSee(__('doctor.wallet.completed_suffix'), false);
+        ->assertSee(__('doctor.wallet.sessions_suffix'), false);
 });
 
-test('doctor wallet page shows previous month earning', function (): void {
+test('doctor wallet page shows previous month income', function (): void {
     app()->setLocale('en');
 
     $doctor = Doctor::factory()->create(['status' => 'approved', 'commission' => 25]);
@@ -129,12 +116,48 @@ test('doctor wallet page shows previous month earning', function (): void {
     $this->actingAs($doctor, 'doctor')
         ->get(route('doctor.settings.wallet'))
         ->assertSuccessful()
-        ->assertSee(__('doctor.wallet.previous_month_earned'), false)
+        ->assertSee(__('doctor.wallet.previous_month_income'), false)
         ->assertSee('150.00', false)
         ->assertSee('300.00', false);
 });
 
-test('doctor wallet page shows net previous month earning after refund reversal', function (): void {
+test('doctor wallet page shows simplified monthly summary for mixed month', function (): void {
+    app()->setLocale('en');
+
+    $doctor = Doctor::factory()->create(['status' => 'approved', 'commission' => 30]);
+    $patient = User::factory()->create();
+
+    $completedAppointment = Appointment::factory()->create([
+        'doctor_id' => $doctor->id,
+        'user_id' => $patient->id,
+        'total' => 20.00,
+        'status' => 'completed',
+    ]);
+
+    $refundedAppointment = Appointment::factory()->create([
+        'doctor_id' => $doctor->id,
+        'user_id' => $patient->id,
+        'total' => 20.00,
+        'status' => 'cancelled',
+    ]);
+
+    $wallet = app(AppointmentWalletService::class);
+    $wallet->creditDoctorEarning($completedAppointment->fresh());
+    $wallet->creditDoctorEarning($refundedAppointment->fresh());
+    $wallet->refundToPatient($refundedAppointment->fresh());
+
+    $this->actingAs($doctor, 'doctor')
+        ->get(route('doctor.settings.wallet'))
+        ->assertSuccessful()
+        ->assertSee(__('doctor.wallet.month_income'), false)
+        ->assertSee(__('doctor.wallet.month_refunded_sessions'), false)
+        ->assertSee(__('doctor.wallet.month_sessions'), false)
+        ->assertSee(__('doctor.wallet.month_paid_out'), false)
+        ->assertSee('14.00', false)
+        ->assertSee('2', false);
+});
+
+test('doctor wallet page shows zero income previous month after refund reversal', function (): void {
     app()->setLocale('en');
 
     $doctor = Doctor::factory()->create(['status' => 'approved', 'commission' => 30]);
@@ -157,11 +180,8 @@ test('doctor wallet page shows net previous month earning after refund reversal'
     $this->actingAs($doctor, 'doctor')
         ->get(route('doctor.settings.wallet'))
         ->assertSuccessful()
-        ->assertSee(__('doctor.wallet.how_it_works_title'), false)
-        ->assertSee(__('doctor.wallet.net_previous_month'), false)
-        ->assertSee(__('doctor.wallet.previous_month_refunded'), false)
-        ->assertSee('20.00', false)
-        ->assertSee('14.00', false);
+        ->assertSee(__('doctor.wallet.previous_month_income'), false)
+        ->assertSee('0.00', false);
 });
 
 test('patient wallet page tolerates transactions linked to soft deleted wallets', function (): void {
