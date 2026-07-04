@@ -310,6 +310,8 @@ return [
     'home_support_label' => 'Continuous support',
 
     'numbers_intro' => 'Crisis and support hotlines and regional protection committees.',
+    'numbers_section_national' => 'National emergency & support hotlines',
+    'numbers_section_regional' => 'Regional protection committees',
     'numbers_board_alt' => 'Important helplines and protection committee phone numbers',
     'numbers_tap_hint' => 'Tap a number to call from your phone.',
     'numbers_tap_to_call' => 'Tap to call',

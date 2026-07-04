@@ -4,8 +4,11 @@ namespace App\Support;
 
 final class ImportantNumbers
 {
+    /** @var list<string> */
+    private const CATEGORY_ORDER = ['national', 'regional'];
+
     /**
-     * @return list<array{id: string, column: string, sort: int, label: string, phone: string, tel_href: string}>
+     * @return list<array{id: string, category: string, sort: int, label: string, phone: string, tel_href: string}>
      */
     public static function entries(): array
     {
@@ -20,7 +23,7 @@ final class ImportantNumbers
             $phone = (string) ($entry['phone'] ?? '');
             $entries[] = [
                 'id' => (string) ($entry['id'] ?? ''),
-                'column' => (string) ($entry['column'] ?? 'left'),
+                'category' => (string) ($entry['category'] ?? 'regional'),
                 'sort' => (int) ($entry['sort'] ?? 0),
                 'label' => (string) ($entry[$labelKey] ?? $entry['label_en'] ?? ''),
                 'phone' => $phone,
@@ -29,16 +32,35 @@ final class ImportantNumbers
         }
 
         usort($entries, static function (array $left, array $right): int {
-            $columnOrder = ['left' => 0, 'right' => 1];
+            $leftCategory = array_search($left['category'], self::CATEGORY_ORDER, true);
+            $rightCategory = array_search($right['category'], self::CATEGORY_ORDER, true);
 
-            if ($left['sort'] !== $right['sort']) {
-                return $left['sort'] <=> $right['sort'];
+            if ($leftCategory !== $rightCategory) {
+                return ($leftCategory !== false ? $leftCategory : 99) <=> ($rightCategory !== false ? $rightCategory : 99);
             }
 
-            return ($columnOrder[$left['column']] ?? 0) <=> ($columnOrder[$right['column']] ?? 0);
+            return $left['sort'] <=> $right['sort'];
         });
 
         return $entries;
+    }
+
+    /**
+     * @return array{national: list<array{id: string, category: string, sort: int, label: string, phone: string, tel_href: string}>, regional: list<array{id: string, category: string, sort: int, label: string, phone: string, tel_href: string}>}
+     */
+    public static function groupedEntries(): array
+    {
+        $grouped = [
+            'national' => [],
+            'regional' => [],
+        ];
+
+        foreach (self::entries() as $entry) {
+            $category = $entry['category'] === 'national' ? 'national' : 'regional';
+            $grouped[$category][] = $entry;
+        }
+
+        return $grouped;
     }
 
     public static function telHref(string $phone): string

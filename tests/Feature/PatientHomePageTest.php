@@ -46,14 +46,22 @@ test('guest is redirected to patient phone from patient appointments', function 
 });
 
 test('guest can view important numbers with luxury mobile shell', function () {
+    app()->setLocale('en');
+
     $this->get(route('patient.important-numbers'))
         ->assertSuccessful()
         ->assertSee('data-test="patient-luxury-important-numbers"', false)
         ->assertSee('data-test="patient-important-numbers-header"', false)
         ->assertSee('data-test="patient-important-numbers-board"', false)
         ->assertSee('data-test="patient-important-numbers-zoom-open"', false)
+        ->assertSee('data-test="patient-important-numbers-section-national"', false)
+        ->assertSee('data-test="patient-important-numbers-section-regional"', false)
+        ->assertSee(__('patient.numbers_section_national'), false)
+        ->assertSee(__('patient.numbers_section_regional'), false)
         ->assertSee(__('patient.numbers_zoom_chart'), false)
-        ->assertSee(__('patient.nav.important_numbers'), false);
+        ->assertSee(__('patient.nav.important_numbers'), false)
+        ->assertSee('data-test="patient-important-number-moh"', false)
+        ->assertSee('937', false);
 });
 
 test('important numbers chart dialog uses light theme markup', function () {

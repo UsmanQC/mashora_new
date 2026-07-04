@@ -310,6 +310,8 @@ return [
     'home_support_label' => 'دعم مستمر',
 
     'numbers_intro' => 'أرقام الطوارئ والدعم ولجان الحماية في المناطق.',
+    'numbers_section_national' => 'خطوط الطوارئ والدعم الوطنية',
+    'numbers_section_regional' => 'لجان الحماية بالمناطق',
     'numbers_board_alt' => 'أرقام الخطوط الساخنة ولجان الحماية المهمة',
     'numbers_tap_hint' => 'اضغط على الرقم للاتصال من هاتفك.',
     'numbers_tap_to_call' => 'اضغط للاتصال',
