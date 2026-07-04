@@ -72,6 +72,49 @@ test('doctor and patient can chat after session is completed within window', fun
     expect(ChMessage::query()->where('appointment_id', $appointment->id)->count())->toBe(2);
 });
 
+test('doctor completed appointments list shows open chat within follow up window', function () {
+    app()->setLocale('en');
+
+    $user = User::factory()->create();
+    $doctor = Doctor::factory()->create(['profile_completed' => true]);
+
+    $appointment = Appointment::factory()->create([
+        'doctor_id' => $doctor->id,
+        'user_id' => $user->id,
+        'status' => 'completed',
+        'patient_name' => 'Patient Test',
+        'appointment_date' => now()->subDays(3)->toDateString(),
+        'start_time' => '10:00:00',
+        'end_time' => '10:30:00',
+    ]);
+
+    Livewire::actingAs($doctor, 'doctor')
+        ->test('pages::doctor.appointments', ['status' => 'completed'])
+        ->assertSee(__('doctor.appointments.open_chat'), false)
+        ->assertSee(route('doctor.appointments.conversation', $appointment), false);
+});
+
+test('doctor completed appointments list hides open chat after follow up window', function () {
+    app()->setLocale('en');
+
+    $user = User::factory()->create();
+    $doctor = Doctor::factory()->create(['profile_completed' => true]);
+
+    Appointment::factory()->create([
+        'doctor_id' => $doctor->id,
+        'user_id' => $user->id,
+        'status' => 'completed',
+        'patient_name' => 'Old Patient',
+        'appointment_date' => now()->subDays(FollowUpAppointmentService::windowDays() + 1)->toDateString(),
+        'start_time' => '10:00:00',
+        'end_time' => '10:30:00',
+    ]);
+
+    Livewire::actingAs($doctor, 'doctor')
+        ->test('pages::doctor.appointments', ['status' => 'completed'])
+        ->assertDontSee(__('doctor.appointments.open_chat'), false);
+});
+
 test('patient completed tab shows open chat for sessions within follow up window', function () {
     app()->setLocale('en');
 

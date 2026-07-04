@@ -3,6 +3,7 @@
 use App\Models\Appointment;
 use App\Models\Doctor;
 use App\Services\AppointmentMissedService;
+use App\Services\AppointmentSessionService;
 use App\Services\AppointmentWalletService;
 use App\Services\FollowUpAppointmentService;
 use App\Services\PatientAppointmentNotifier;
@@ -130,6 +131,11 @@ new #[Layout('layouts::doctor')] #[Title('Appointments')] class extends Componen
         }
 
         return app(AppointmentSessionService::class)->canDoctorStart($appointment);
+    }
+
+    public function canOpenChat(Appointment $appointment): bool
+    {
+        return $appointment->isChatOpen();
     }
 
     public function statusLabelFor(Appointment $appointment): string
@@ -586,6 +592,16 @@ new #[Layout('layouts::doctor')] #[Title('Appointments')] class extends Componen
                                             {{ __('doctor.appointments.follow_up_pending') }}
                                         </a>
                                     </div>
+                                @elseif ($row->status === 'completed' && $this->canOpenChat($row))
+                                    <a
+                                        href="{{ route('doctor.appointments.conversation', $row) }}"
+                                        wire:navigate
+                                        class="inline-flex shrink-0 items-center justify-center gap-1 rounded-lg border border-[#047857]/30 bg-[#047857]/5 px-2.5 py-1.5 text-[0.6875rem] font-semibold whitespace-nowrap text-[#047857] transition hover:bg-[#047857]/10"
+                                        title="{{ __('doctor.appointments.chat_open_until', ['date' => $row->chatOpenUntil()->locale(app()->getLocale())->translatedFormat('d M Y')]) }}"
+                                    >
+                                        <flux:icon name="chat-bubble-left-right" variant="mini" class="size-3.5 shrink-0" />
+                                        {{ __('doctor.appointments.open_chat') }}
+                                    </a>
                                 @else
                                     <span class="block text-center text-xs text-zinc-400">—</span>
                                 @endif

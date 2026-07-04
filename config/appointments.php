@@ -55,7 +55,8 @@ return [
     |--------------------------------------------------------------------------
     |
     | Days after the parent session date when a doctor may offer a free
-    | follow-up using their available working hours.
+    | follow-up using their available working hours. Also defines how long
+    | post-session chat stays open for doctors and patients.
     |
     */
 

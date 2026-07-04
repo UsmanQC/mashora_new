@@ -257,6 +257,8 @@ return [
         'cancel_success' => 'تم إلغاء الموعد.',
         'cancel_not_allowed' => 'لم يعد بالإمكان إلغاء هذا الموعد.',
         'open_session' => 'فتح الجلسة',
+        'open_chat' => 'فتح المحادثة',
+        'chat_open_until' => 'المحادثة متاحة حتى :date',
         'view_session' => 'عرض الجلسة',
         'follow_up_pending' => 'متابعات قادمة',
         'starts_in' => 'يبدأ خلال :time',

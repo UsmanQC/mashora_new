@@ -256,6 +256,8 @@ return [
         'cancel_success' => 'Appointment cancelled.',
         'cancel_not_allowed' => 'This appointment can no longer be cancelled.',
         'open_session' => 'Open session',
+        'open_chat' => 'Open chat',
+        'chat_open_until' => 'Chat available until :date',
         'view_session' => 'View session',
         'follow_up_pending' => 'Upcoming Follow Ups',
         'starts_in' => 'Starts in :time',
