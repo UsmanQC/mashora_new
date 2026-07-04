@@ -22,6 +22,8 @@
             'patient.book-appointments',
             'patient.checkout',
             'patient.checkout.demo',
+            'patient.menu',
+            'patient.notifications',
         ]);
     @endphp
     <body

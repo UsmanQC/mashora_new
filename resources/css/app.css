@@ -1115,6 +1115,10 @@ select:focus[data-flux-control] {
     transform: scale(0.98);
 }
 
+.patient-luxury-menu .active-scale:active {
+    transform: scale(0.98);
+}
+
 .patient-luxury-page-header__avatar,
 .patient-luxury-appointments__avatar {
     display: block;

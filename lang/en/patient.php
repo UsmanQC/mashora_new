@@ -117,6 +117,7 @@ return [
         'appointments' => 'Appointments',
         'my_appointments' => 'Appointment',
         'messages' => 'Messages',
+        'notifications' => 'Alerts',
         'my_account' => 'My account',
         'ai_assistant' => 'AI assistant',
         'menu' => 'Menu',
@@ -310,8 +311,9 @@ return [
     ],
 
     'notifications' => [
-        'subtitle' => 'Updates about your appointments and follow-ups.',
+        'subtitle' => 'Session alerts, appointment updates, and account activity.',
         'empty' => 'No notifications yet.',
+        'empty_hint' => 'When something needs your attention — a booking update, follow-up, or session reminder — it will show up here.',
         'unread' => 'New',
         'unread_count' => '{0} No unread|{1} :count unread|[2,*] :count unread',
         'view_all' => 'View all notifications',

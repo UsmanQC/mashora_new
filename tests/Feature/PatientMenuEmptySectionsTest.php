@@ -16,19 +16,24 @@ test('authenticated patient menu shows grouped shortcuts', function () {
     $response = $this->actingAs($user)->get(route('patient.menu'));
 
     $response->assertSuccessful()
+        ->assertSee('data-test="patient-luxury-menu"', false)
+        ->assertSee('data-test="patient-menu-header"', false)
+        ->assertSee('data-test="patient-luxury-menu-sections"', false)
         ->assertSeeText(__('patient.sidebar.group_account'))
         ->assertSeeText(__('patient.menu.account_settings'))
         ->assertSeeText(__('patient.menu.support'))
-        ->assertSee(route('patient.wallet'), false)
-        ->assertSee('snap-x', false);
+        ->assertSee(route('patient.wallet'), false);
 });
 
-test('authenticated patient sees no data on notifications page', function () {
+test('authenticated patient sees luxury notifications page', function () {
     $user = User::factory()->create();
 
     $this->actingAs($user)
         ->get(route('patient.notifications'))
         ->assertSuccessful()
+        ->assertSee('data-test="patient-luxury-notifications"', false)
+        ->assertSee('data-test="patient-notifications-header"', false)
         ->assertSee(__('patient.menu.notifications'), false)
-        ->assertSee(__('patient.menu.no_record_found'), false);
+        ->assertSee(__('patient.notifications.empty'), false)
+        ->assertSee(__('patient.notifications.empty_hint'), false);
 });

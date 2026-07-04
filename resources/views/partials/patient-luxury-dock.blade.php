@@ -91,10 +91,10 @@
                 'patient-luxury-dock-btn relative',
                 'patient-luxury-dock-btn--active' => $activeMessages,
             ])
-            data-test="patient-luxury-dock-messages"
+            data-test="patient-luxury-dock-notifications"
         >
-            <flux:icon name="chat-bubble-left-ellipsis" variant="outline" class="patient-luxury-dock-btn__icon" />
-            <span class="patient-luxury-dock-btn__label">{{ __('patient.nav.messages') }}</span>
+            <flux:icon name="bell" variant="outline" class="patient-luxury-dock-btn__icon" />
+            <span class="patient-luxury-dock-btn__label">{{ __('patient.nav.notifications') }}</span>
             @if ($unreadMessages > 0)
                 <span class="absolute top-2 end-4 size-2 rounded-full bg-[#10B981] ring-2 ring-white" aria-hidden="true"></span>
             @endif
