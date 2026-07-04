@@ -95,7 +95,7 @@ return [
         'join_specialist' => 'Register as a specialist',
         'therapist_guide' => 'Therapist guide',
         'terms' => 'Terms of use',
-        'copyright' => '© 2026 Awaan. All rights reserved.',
+        'copyright' => 'AWAAN ALL RIGHTS RESERVED 2026 ©',
         'terms_link' => 'Terms & conditions',
         'privacy_link' => 'Privacy policy',
     ],

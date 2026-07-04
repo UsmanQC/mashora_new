@@ -10,7 +10,11 @@ test('marketing homepage shows language switch in header', function () {
         ->assertSee('data-test="patient-navbar-language-switch"', false)
         ->assertSee(route('patient.locale', ['locale' => 'en']), false)
         ->assertSee('dir="rtl"', false)
-        ->assertSee(__('marketing.nav.ai_assistant', [], 'ar'), false);
+        ->assertSee(__('marketing.nav.ai_assistant', [], 'ar'), false)
+        ->assertSee(asset('images/store/apple-icon.svg'), false)
+        ->assertSee('fill="#00F076"', false)
+        ->assertSee(__('marketing.cta.play_store'), false)
+        ->assertSee(__('marketing.footer.copyright'), false);
 });
 
 test('marketing homepage switches to english locale', function () {

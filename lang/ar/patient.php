@@ -157,7 +157,7 @@ return [
         'mood_excellent' => 'ممتاز',
         'actions_heading' => 'الاستشارات والمواعيد',
         'instant_title' => 'استشارة فورية',
-        'instant_note' => 'تحدث مع مختص مرخص خلال 5 دقائق.',
+        'instant_note' => 'تحدث مع مختص مرخص خلال 60 دقيقة.',
         'active_session_title' => 'جلسة قيد الانعقاد',
         'active_session_note' => 'د. :doctor ينتظرك في الغرفة.',
         'active_session_join' => 'انضمام',

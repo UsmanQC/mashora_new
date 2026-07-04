@@ -157,7 +157,7 @@ return [
         'mood_excellent' => 'Excellent',
         'actions_heading' => 'Consultations & appointments',
         'instant_title' => 'Instant consultation',
-        'instant_note' => 'Talk to a licensed specialist within 5 minutes.',
+        'instant_note' => 'Talk to a licensed specialist within 60 minutes.',
         'active_session_title' => 'Session in progress',
         'active_session_note' => 'Dr. :doctor is waiting for you in the room.',
         'active_session_join' => 'Join',

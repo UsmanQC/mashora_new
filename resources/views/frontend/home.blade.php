@@ -469,15 +469,22 @@
                 </div>
                 
                 <div class="flex flex-col sm:flex-row gap-5 relative z-10 w-full md:w-auto">
-                    <button class="bg-white hover:bg-surface-subtle text-ink px-8 py-4 rounded-2xl font-bold flex items-center justify-center gap-4 transition-colors min-w-[220px] shadow-lg">
-                        <i data-lucide="apple" class="w-7 h-7"></i>
+                    <button type="button" class="bg-white hover:bg-surface-subtle text-ink px-8 py-4 rounded-2xl font-bold flex items-center justify-center gap-4 transition-colors min-w-[220px] shadow-lg">
+                        <img
+                            src="{{ asset('images/store/apple-icon.svg') }}"
+                            alt=""
+                            width="28"
+                            height="28"
+                            class="size-7 shrink-0"
+                            aria-hidden="true"
+                        >
                         <div class="text-start leading-none">
                             <span class="text-[10px] text-ink-muted block mb-1 font-sans">{{ __('marketing.cta.app_store_top') }}</span>
                             <span class="text-base tracking-tight">{{ __('marketing.cta.app_store') }}</span>
                         </div>
                     </button>
-                    <button class="bg-ink hover:bg-slate-800 text-white px-8 py-4 rounded-2xl font-bold flex items-center justify-center gap-4 transition-colors min-w-[220px] shadow-lg border border-slate-700">
-                        <i data-lucide="play" class="w-7 h-7"></i>
+                    <button type="button" class="bg-ink hover:bg-slate-800 text-white px-8 py-4 rounded-2xl font-bold flex items-center justify-center gap-4 transition-colors min-w-[220px] shadow-lg border border-slate-700">
+                        @include('partials.marketing-google-play-icon')
                         <div class="text-start leading-none">
                             <span class="text-[10px] text-slate-400 block mb-1 font-sans">{{ __('marketing.cta.play_store_top') }}</span>
                             <span class="text-base tracking-tight">{{ __('marketing.cta.play_store') }}</span>

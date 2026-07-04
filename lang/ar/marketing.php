@@ -95,7 +95,7 @@ return [
         'join_specialist' => 'سجل كمختص',
         'therapist_guide' => 'دليل المعالجين',
         'terms' => 'سياسة الاستخدام',
-        'copyright' => '© 2026 Awaan. All rights reserved.',
+        'copyright' => 'AWAAN ALL RIGHTS RESERVED 2026 ©',
         'terms_link' => 'الشروط والأحكام',
         'privacy_link' => 'سياسة الخصوصية',
     ],
