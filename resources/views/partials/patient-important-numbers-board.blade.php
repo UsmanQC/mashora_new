@@ -28,21 +28,23 @@
     }"
     data-test="patient-important-numbers-board"
 >
-    <div class="flex flex-wrap items-center justify-between gap-3">
-        <flux:text class="text-sm text-zinc-600">
-            {{ __('patient.numbers_tap_hint') }}
-        </flux:text>
-        <flux:button
-            type="button"
-            variant="ghost"
-            size="sm"
-            icon="arrows-pointing-out"
-            class="shrink-0 text-[#059669]"
-            x-on:click="openChart()"
-            data-test="patient-important-numbers-zoom-open"
-        >
-            {{ __('patient.numbers_zoom_chart') }}
-        </flux:button>
+    <div class="flex flex-col gap-3">
+        <div class="flex flex-wrap items-start justify-between gap-3">
+            <flux:text class="min-w-0 flex-1 text-sm text-zinc-600">
+                {{ __('patient.numbers_tap_hint') }}
+            </flux:text>
+            <flux:button
+                type="button"
+                variant="outline"
+                size="sm"
+                icon="arrows-pointing-out"
+                class="w-full shrink-0 border-[#10B981]/35! bg-emerald-50! text-[#047857]! shadow-sm hover:border-[#10B981]/55! hover:bg-emerald-100/80! sm:w-auto"
+                x-on:click="openChart()"
+                data-test="patient-important-numbers-zoom-open"
+            >
+                {{ __('patient.numbers_zoom_chart') }}
+            </flux:button>
+        </div>
     </div>
 
     <div class="grid gap-3 sm:grid-cols-2 sm:gap-4" data-test="patient-important-numbers-list">
@@ -84,15 +86,15 @@
         x-cloak
         x-show="chartOpen"
         x-transition.opacity
-        class="fixed inset-0 z-[80] flex flex-col bg-black/90"
+        class="fixed inset-0 z-[80] flex flex-col bg-white"
         role="dialog"
         aria-modal="true"
         aria-label="{{ __('patient.numbers_zoom_dialog_label') }}"
         data-test="patient-important-numbers-zoom-dialog"
         x-on:keydown.escape.window="closeChart()"
     >
-        <div class="flex shrink-0 items-center justify-between gap-3 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
-            <flux:heading size="sm" class="font-semibold text-white">
+        <div class="flex shrink-0 items-center justify-between gap-3 border-b border-emerald-100 bg-white px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
+            <flux:heading size="sm" class="font-semibold text-[#047857]">
                 {{ __('patient.numbers_zoom_dialog_label') }}
             </flux:heading>
             <div class="flex items-center gap-2">
@@ -101,7 +103,7 @@
                     variant="ghost"
                     size="sm"
                     icon="minus"
-                    class="!text-white hover:!bg-white/10"
+                    class="!text-zinc-600 hover:!bg-emerald-50 hover:!text-[#047857]"
                     x-on:click="zoomOut()"
                     data-test="patient-important-numbers-zoom-out"
                 />
@@ -110,7 +112,7 @@
                     variant="ghost"
                     size="sm"
                     icon="plus"
-                    class="!text-white hover:!bg-white/10"
+                    class="!text-zinc-600 hover:!bg-emerald-50 hover:!text-[#047857]"
                     x-on:click="zoomIn()"
                     data-test="patient-important-numbers-zoom-in"
                 />
@@ -119,7 +121,7 @@
                     variant="ghost"
                     size="sm"
                     icon="x-mark"
-                    class="!text-white hover:!bg-white/10"
+                    class="!text-zinc-600 hover:!bg-emerald-50 hover:!text-[#047857]"
                     x-on:click="closeChart()"
                     data-test="patient-important-numbers-zoom-close"
                 />
@@ -127,24 +129,26 @@
         </div>
 
         <div
-            class="min-h-0 flex-1 overflow-auto overscroll-contain px-4 pb-[max(1rem,env(safe-area-inset-bottom))]"
+            class="min-h-0 flex-1 overflow-auto overscroll-contain bg-slate-50 px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))]"
             x-on:click.self="closeChart()"
         >
             <div class="mx-auto flex min-h-full w-full max-w-5xl items-center justify-center">
-                <img
-                    src="{{ $boardImage }}"
-                    alt="{{ __('patient.numbers_board_alt') }}"
-                    class="h-auto max-w-none origin-center transition-transform duration-200"
-                    :style="`transform: scale(${chartScale}); width: ${chartScale > 1 ? chartScale * 100 : 100}%;`"
-                    width="1200"
-                    height="800"
-                    decoding="async"
-                    data-test="patient-important-numbers-zoom-image"
-                />
+                <div class="w-full overflow-hidden rounded-2xl border border-emerald-100 bg-white p-3 shadow-sm sm:p-4">
+                    <img
+                        src="{{ $boardImage }}"
+                        alt="{{ __('patient.numbers_board_alt') }}"
+                        class="h-auto w-full max-w-none origin-center transition-transform duration-200"
+                        :style="`transform: scale(${chartScale}); width: ${chartScale > 1 ? chartScale * 100 : 100}%;`"
+                        width="1200"
+                        height="800"
+                        decoding="async"
+                        data-test="patient-important-numbers-zoom-image"
+                    />
+                </div>
             </div>
         </div>
 
-        <p class="shrink-0 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] text-center text-xs text-white/70">
+        <p class="shrink-0 border-t border-emerald-50 bg-white px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] text-center text-xs text-zinc-500">
             {{ __('patient.numbers_zoom_hint') }}
         </p>
     </div>

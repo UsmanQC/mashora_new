@@ -51,7 +51,17 @@ test('guest can view important numbers with luxury mobile shell', function () {
         ->assertSee('data-test="patient-luxury-important-numbers"', false)
         ->assertSee('data-test="patient-important-numbers-header"', false)
         ->assertSee('data-test="patient-important-numbers-board"', false)
+        ->assertSee('data-test="patient-important-numbers-zoom-open"', false)
+        ->assertSee(__('patient.numbers_zoom_chart'), false)
         ->assertSee(__('patient.nav.important_numbers'), false);
+});
+
+test('important numbers chart dialog uses light theme markup', function () {
+    $this->get(route('patient.important-numbers'))
+        ->assertSuccessful()
+        ->assertSee('data-test="patient-important-numbers-zoom-dialog"', false)
+        ->assertSee('bg-white', false)
+        ->assertDontSee('bg-black/90', false);
 });
 
 test('authenticated patient sees luxury header on important numbers', function () {
