@@ -1,4 +1,5 @@
 @import 'tailwindcss';
+@import './thmanyah-fonts.css';
 @import '../../vendor/livewire/flux/dist/flux.css';
 
 @source '../views';
@@ -81,12 +82,28 @@
         border-color: var(--color-gray-200, currentColor);
     }
 
+    html {
+        font-family: var(--font-sans);
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+    }
+
     body,
     input,
     textarea,
     select,
-    button {
-        font-family: var(--font-sans);
+    button,
+    ui-button,
+    ui-label,
+    ui-field,
+    ui-input,
+    ui-select,
+    ui-menu,
+    ui-dropdown,
+    [data-flux-field],
+    [data-flux-label],
+    [data-flux-control] {
+        font-family: inherit;
     }
 }
 

@@ -8,8 +8,8 @@
 
     <link rel="icon" href="{{ asset('images/favicon-awaan.png') }}" type="image/png">
     <link rel="apple-touch-icon" href="{{ asset('images/favicon-awaan.png') }}">
-    
-    <link rel="stylesheet" href="{{ asset('fonts/thmanyah/thmanyah.css') }}">
+
+    @include('partials.thmanyah-font')
     
     <!-- Premium Icons: Lucide -->
     <script src="https://unpkg.com/lucide@latest"></script>

@@ -2,7 +2,7 @@
 <html
     lang="{{ str_replace('_', '-', app()->getLocale()) }}"
     dir="{{ app()->getLocale() === 'ar' ? 'rtl' : 'ltr' }}"
-    class="scheme-light h-svh max-h-svh overflow-hidden bg-[#F6FFFC]"
+    class="scheme-light h-svh max-h-svh overflow-hidden bg-[#F6FFFC] font-sans antialiased"
 >
     <head>
         <meta name="application-name" content="{{ config('app.name') }} — {{ __('doctor.portal_name') }}" />

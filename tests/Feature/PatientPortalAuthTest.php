@@ -32,7 +32,8 @@ test('guest can open patient phone entry screen', function () {
         ->assertSee('intlTelInput.css', false)
         ->assertSee('intlTelInput.min.js', false)
         ->assertSee('patientPhoneField', false)
-        ->assertSee('Thmanyah Sans', false);
+        ->assertSee('Thmanyah Sans', false)
+        ->assertSee('fonts/thmanyah/thmanyah.css', false);
 });
 
 test('guest can switch patient locale from auth pages', function () {

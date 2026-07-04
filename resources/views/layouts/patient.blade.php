@@ -2,7 +2,7 @@
 <html
     lang="{{ str_replace('_', '-', app()->getLocale()) }}"
     dir="{{ app()->getLocale() === 'ar' ? 'rtl' : 'ltr' }}"
-    class="scheme-light bg-[#F3F5F9]"
+    class="scheme-light bg-[#F3F5F9] font-sans antialiased"
 >
     <head>
         <meta name="application-name" content="{{ config('app.name') }}" />
