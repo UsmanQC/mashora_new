@@ -97,7 +97,7 @@ new #[Layout('layouts::doctor')] #[Title('Duration and price')] class extends Co
 
     public function goBack(): void
     {
-        $this->redirect(route('doctor.register.basic.info'), navigate: true);
+        $this->redirect(route('doctor.register.bank-account'), navigate: true);
     }
 
     public function save(): void
@@ -146,7 +146,7 @@ new #[Layout('layouts::doctor')] #[Title('Duration and price')] class extends Co
 <div class="mx-auto max-w-xl space-y-8">
     <div class="space-y-2">
         <flux:text class="text-sm font-medium text-zinc-500">
-            {{ __('doctor.auth.onboarding_progress', ['current' => 4, 'total' => 5]) }}
+            {{ __('doctor.auth.onboarding_progress', ['current' => 5, 'total' => 6]) }}
         </flux:text>
         <flux:heading size="xl" class="font-semibold text-zinc-900">{{ __('doctor.auth.duration_title') }}</flux:heading>
         <flux:text class="text-zinc-600">{{ __('doctor.auth.duration_subtitle') }}</flux:text>

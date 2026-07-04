@@ -65,6 +65,11 @@ new #[Layout('layouts::doctor')] #[Title('Complete profile')] class extends Comp
     {
         $doctor = $this->doctor();
 
+        $requestedStep = (int) request()->query('step', 1);
+        if ($requestedStep >= 1 && $requestedStep <= 3) {
+            $this->step = $requestedStep;
+        }
+
         $this->name = (string) ($doctor->name ?? '');
         $this->name_ar = (string) ($doctor->name_ar ?? '');
         $this->about = (string) ($doctor->about ?? '');
@@ -72,11 +77,22 @@ new #[Layout('layouts::doctor')] #[Title('Complete profile')] class extends Comp
         $this->gender = $doctor->gender;
         $this->degree_id = $doctor->degree_id !== null ? (int) $doctor->degree_id : null;
         $doctor->loadMissing('specialities');
-        $this->speciality_ids = $doctor->specialities
-            ->pluck('id')
-            ->map(static fn (mixed $id): int => (int) $id)
-            ->values()
-            ->all();
+
+        if ($doctor->profile_completed || filled($doctor->registration_number)) {
+            $this->speciality_ids = $doctor->specialities
+                ->pluck('id')
+                ->map(static fn (mixed $id): int => (int) $id)
+                ->values()
+                ->all();
+        } else {
+            $this->speciality_ids = [];
+
+            if ($doctor->specialities()->exists()) {
+                $doctor->specialities()->detach();
+                $doctor->updateQuietly(['speciality_id' => null]);
+            }
+        }
+
         $this->registration_number = (string) ($doctor->registration_number ?? '');
         $this->experience = $doctor->experience !== null ? (int) $doctor->experience : null;
         $this->medical_career_level = (string) ($doctor->medical_career_level ?? '');
@@ -313,7 +329,7 @@ new #[Layout('layouts::doctor')] #[Title('Complete profile')] class extends Comp
 
         $doctor->save();
 
-        $this->redirect(route('doctor.register.duration'), navigate: true);
+        $this->redirect(route('doctor.register.bank-account'), navigate: true);
     }
 
     /**
@@ -454,14 +470,14 @@ new #[Layout('layouts::doctor')] #[Title('Complete profile')] class extends Comp
     <div class="space-y-4">
         <div class="flex items-center justify-between gap-3">
             <flux:text class="text-xs font-semibold uppercase tracking-wider text-[#047857]">
-                {{ __('doctor.auth.onboarding_progress', ['current' => $step, 'total' => 5]) }}
+                {{ __('doctor.auth.onboarding_progress', ['current' => $step, 'total' => 6]) }}
             </flux:text>
             <flux:text class="text-xs font-medium tabular-nums text-zinc-500">
-                {{ round(($step / 5) * 100) }}%
+                {{ round(($step / 6) * 100) }}%
             </flux:text>
         </div>
         <div class="flex gap-1.5" aria-hidden="true">
-            @for ($progressStep = 1; $progressStep <= 5; $progressStep++)
+            @for ($progressStep = 1; $progressStep <= 6; $progressStep++)
                 <div
                     @class([
                         'h-1.5 flex-1 rounded-full transition-colors duration-300',
