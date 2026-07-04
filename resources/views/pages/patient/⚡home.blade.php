@@ -6,9 +6,11 @@ use App\Models\PatientMood;
 use App\Models\User;
 use App\Services\PatientMoodLogService;
 use App\Support\PatientMoodImage;
+use Flux\Flux;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\On;
@@ -17,6 +19,12 @@ use Livewire\Component;
 
 new #[Layout('layouts::patient')] #[Title('Home')] class extends Component
 {
+    public ?string $pendingMoodKey = null;
+
+    public string $moodNoteQuick = '';
+
+    public bool $shareWithTherapistQuick = false;
+
     /**
      * @return list<array{iso: string, is_today: bool, label: string, mood_key: string|null}>
      */
@@ -84,6 +92,18 @@ new #[Layout('layouts::patient')] #[Title('Home')] class extends Component
         }
 
         return __('patient.home_luxury.greeting_evening');
+    }
+
+    #[Computed]
+    public function hasLoggedMoodToday(): bool
+    {
+        $user = Auth::user();
+
+        if ($user === null) {
+            return false;
+        }
+
+        return app(PatientMoodLogService::class)->hasMoodForToday($user);
     }
 
     #[Computed]
@@ -170,7 +190,7 @@ new #[Layout('layouts::patient')] #[Title('Home')] class extends Component
         $this->dispatch('open-patient-mood-picker', dateIso: $iso);
     }
 
-    public function selectMoodQuick(string $key): void
+    public function pickMoodQuick(string $key): void
     {
         if (! Auth::check()) {
             $this->redirect(route('patient.phone'), navigate: true);
@@ -182,13 +202,98 @@ new #[Layout('layouts::patient')] #[Title('Home')] class extends Component
             return;
         }
 
-        $this->dispatch('open-patient-mood-picker', dateIso: now()->toDateString(), moodKey: $key);
+        $user = Auth::user();
+
+        if ($user === null) {
+            return;
+        }
+
+        if (app(PatientMoodLogService::class)->hasMoodForToday($user)) {
+            $this->dispatch('open-patient-mood-picker', dateIso: now()->toDateString());
+
+            return;
+        }
+
+        $this->pendingMoodKey = $key;
+        $this->resetValidation(['pendingMoodKey', 'moodNoteQuick']);
+    }
+
+    public function cancelMoodQuick(): void
+    {
+        $this->pendingMoodKey = null;
+        $this->moodNoteQuick = '';
+        $this->shareWithTherapistQuick = false;
+        $this->resetValidation(['pendingMoodKey', 'moodNoteQuick']);
+    }
+
+    public function saveMoodQuick(): void
+    {
+        $user = Auth::user();
+
+        if ($user === null) {
+            return;
+        }
+
+        /** @var PatientMoodLogService $moodLog */
+        $moodLog = app(PatientMoodLogService::class);
+
+        if ($moodLog->hasMoodForToday($user)) {
+            $this->cancelMoodQuick();
+            $this->dispatch('open-patient-mood-picker', dateIso: now()->toDateString());
+
+            return;
+        }
+
+        $validated = $this->validate([
+            'pendingMoodKey' => ['required', Rule::in(PatientMoodImage::MOOD_KEYS)],
+            'moodNoteQuick' => ['nullable', 'string', 'max:5000'],
+            'shareWithTherapistQuick' => ['boolean'],
+        ], [
+            'pendingMoodKey.required' => __('patient.mood_tracker_select_mood'),
+            'pendingMoodKey.in' => __('patient.mood_tracker_select_mood'),
+        ]);
+
+        $comments = (($validated['moodNoteQuick'] ?? '') !== '')
+            ? trim((string) $validated['moodNoteQuick'])
+            : null;
+
+        $record = $moodLog->logMoodForToday(
+            $user,
+            $validated['pendingMoodKey'],
+            $comments,
+            (bool) ($validated['shareWithTherapistQuick'] ?? false),
+        );
+
+        if ($record === null) {
+            $this->cancelMoodQuick();
+            $this->dispatch('open-patient-mood-picker', dateIso: now()->toDateString());
+
+            return;
+        }
+
+        $label = __('patient.mood_selector_options.'.$validated['pendingMoodKey']);
+
+        Flux::toast(variant: 'success', text: __('patient.mood_logged_toast', ['mood' => $label]));
+
+        $this->cancelMoodQuick();
+        $this->refreshMoodState();
+        $this->dispatch('patient-mood-saved');
+    }
+
+    public function selectMoodQuick(string $key): void
+    {
+        $this->pickMoodQuick($key);
     }
 
     #[On('patient-mood-saved')]
     public function refreshMoodWeek(): void
     {
-        unset($this->moodWeekDays, $this->todayMoodKey, $this->moodOptions);
+        $this->refreshMoodState();
+    }
+
+    protected function refreshMoodState(): void
+    {
+        unset($this->moodWeekDays, $this->todayMoodKey, $this->moodOptions, $this->hasLoggedMoodToday);
     }
 
     /**
@@ -207,7 +312,7 @@ new #[Layout('layouts::patient')] #[Title('Home')] class extends Component
 <div class="relative w-full pb-4">
     <div
         wire:loading.flex
-        wire:target="selectMoodDay,selectMoodQuick"
+        wire:target="selectMoodDay,pickMoodQuick,saveMoodQuick,cancelMoodQuick"
         class="absolute inset-0 z-20 items-center justify-center rounded-2xl bg-[#10B981]"
         aria-hidden="true"
     >

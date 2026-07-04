@@ -124,6 +124,63 @@ test('clicking mood day on home dispatches open patient mood picker event for au
         ->assertDispatched('open-patient-mood-picker');
 });
 
+test('mobile mood quick pick shows inline save panel instead of opening modal', function () {
+    app()->setLocale('en');
+
+    $user = User::factory()->create(['profile_completed' => true]);
+
+    Livewire::actingAs($user)
+        ->test('pages::patient.home')
+        ->call('pickMoodQuick', 'happy')
+        ->assertSet('pendingMoodKey', 'happy')
+        ->assertSee(__('patient.home_luxury.mood_save_check_in'), false)
+        ->assertSee('data-test="patient-luxury-mood-save-panel"', false);
+});
+
+test('patient can save mood inline from mobile home card', function () {
+    app()->setLocale('en');
+
+    $user = User::factory()->create(['profile_completed' => true]);
+
+    Livewire::actingAs($user)
+        ->test('pages::patient.home')
+        ->call('pickMoodQuick', 'happy')
+        ->set('moodNoteQuick', 'Feeling good after a walk.')
+        ->set('shareWithTherapistQuick', true)
+        ->call('saveMoodQuick')
+        ->assertSet('pendingMoodKey', null)
+        ->assertDispatched('patient-mood-saved');
+
+    $this->assertDatabaseHas('patient_moods', [
+        'user_id' => $user->getKey(),
+        'mood' => 'happy',
+        'comments' => 'Feeling good after a walk.',
+        'is_shared' => true,
+    ]);
+});
+
+test('mobile mood card shows saved state after check in', function () {
+    app()->setLocale('en');
+
+    $user = User::factory()->create(['profile_completed' => true]);
+
+    Livewire::actingAs($user)
+        ->test('pages::patient.home')
+        ->call('pickMoodQuick', 'happy')
+        ->call('saveMoodQuick');
+
+    Livewire::actingAs($user)
+        ->test('pages::patient.home')
+        ->assertSee('data-test="patient-luxury-mood-saved"', false)
+        ->assertSee(__('patient.home_luxury.mood_logged_title'), false);
+});
+
+test('pick mood quick redirects guests to phone entry', function () {
+    Livewire::test('pages::patient.home')
+        ->call('pickMoodQuick', 'happy')
+        ->assertRedirect(route('patient.phone'));
+});
+
 test('saving mood from modal refreshes home mood week strip', function () {
     app()->setLocale('en');
 

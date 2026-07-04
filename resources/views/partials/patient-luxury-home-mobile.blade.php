@@ -74,18 +74,23 @@
             <div class="patient-luxury-mood-row -mx-1 flex items-start gap-2 overflow-x-auto overscroll-x-contain pb-1">
                 @foreach ($this->moodOptions as $mood)
                     @php
-                        $isSelected = $isAuthenticated && $this->todayMoodKey === $mood['key'];
+                        $isSaved = $isAuthenticated && $this->todayMoodKey === $mood['key'];
+                        $isPending = $isAuthenticated && $this->pendingMoodKey === $mood['key'] && ! $this->hasLoggedMoodToday;
+                        $isDimmed = $isAuthenticated && $this->pendingMoodKey !== null && ! $isPending && ! $isSaved;
                     @endphp
                     <button
                         type="button"
-                        wire:click="selectMoodQuick('{{ $mood['key'] }}')"
+                        wire:click="pickMoodQuick('{{ $mood['key'] }}')"
                         wire:key="luxury-mood-{{ $mood['key'] }}"
                         @class([
                             'patient-luxury-mood-btn shrink-0',
-                            'is-active' => $isSelected,
+                            'is-active' => $isSaved,
+                            'is-pending' => $isPending,
+                            'is-dimmed' => $isDimmed,
                         ])
                         aria-label="{{ $mood['label'] }}"
-                        aria-pressed="{{ $isSelected ? 'true' : 'false' }}"
+                        aria-pressed="{{ ($isSaved || $isPending) ? 'true' : 'false' }}"
+                        @disabled($isAuthenticated && $this->hasLoggedMoodToday && ! $isSaved)
                     >
                         <span class="patient-luxury-mood-icon">
                             @if ($mood['image_url'] !== null)
@@ -94,7 +99,7 @@
                                     alt=""
                                     @class([
                                         'pointer-events-none size-7 object-contain',
-                                        'grayscale-[25%]' => ! $isSelected,
+                                        'grayscale-[25%] opacity-80' => ! $isSaved && ! $isPending,
                                     ])
                                     decoding="async"
                                     loading="lazy"
@@ -102,7 +107,7 @@
                             @else
                                 <span @class([
                                     'pointer-events-none text-xl leading-none',
-                                    'opacity-70' => ! $isSelected,
+                                    'opacity-70' => ! $isSaved && ! $isPending,
                                 ]) aria-hidden="true">{{ $mood['emoji'] }}</span>
                             @endif
                         </span>
@@ -110,6 +115,75 @@
                     </button>
                 @endforeach
             </div>
+
+            @if ($isAuthenticated && $this->hasLoggedMoodToday && $this->todayMoodKey)
+                <div
+                    class="patient-luxury-mood-saved mt-3 flex items-center gap-2.5 rounded-2xl border border-emerald-100 bg-emerald-50/80 px-3 py-2.5"
+                    data-test="patient-luxury-mood-saved"
+                >
+                    <span class="flex size-8 shrink-0 items-center justify-center rounded-full bg-[#10B981] text-white shadow-sm">
+                        <flux:icon name="check" variant="mini" class="size-4" />
+                    </span>
+                    <div class="min-w-0">
+                        <p class="text-[0.6875rem] font-semibold text-emerald-800">
+                            {{ __('patient.home_luxury.mood_logged_title') }}
+                        </p>
+                        <p class="truncate text-[0.625rem] text-emerald-600/90">
+                            {{ __('patient.home_luxury.mood_logged_banner', ['mood' => __('patient.mood_selector_options.'.$this->todayMoodKey)]) }}
+                        </p>
+                    </div>
+                </div>
+            @elseif ($isAuthenticated && $this->pendingMoodKey)
+                <div
+                    class="patient-luxury-mood-save-panel mt-3 space-y-3 rounded-2xl border border-emerald-100/80 bg-slate-50/90 p-3"
+                    data-test="patient-luxury-mood-save-panel"
+                >
+                    <div class="flex items-center justify-between gap-2">
+                        <p class="text-[0.6875rem] font-semibold text-slate-700">
+                            {{ __('patient.home_luxury.mood_selected_label', ['mood' => __('patient.mood_selector_options.'.$this->pendingMoodKey)]) }}
+                        </p>
+                        <button
+                            type="button"
+                            wire:click="cancelMoodQuick"
+                            class="shrink-0 text-[0.625rem] font-medium text-slate-400 transition-colors hover:text-slate-600"
+                        >
+                            {{ __('patient.home_luxury.mood_cancel') }}
+                        </button>
+                    </div>
+
+                    <flux:textarea
+                        wire:model="moodNoteQuick"
+                        :label="__('patient.mood_tracker_note_label')"
+                        rows="2"
+                        resize="none"
+                        class="[&_textarea]:min-h-[4.5rem] [&_textarea]:text-sm [&_textarea]:border-slate-200 [&_textarea:focus]:border-[#10B981]/55 [&_textarea:focus]:ring-[#10B981]/20"
+                    />
+                    <flux:error name="moodNoteQuick" />
+                    <flux:error name="pendingMoodKey" />
+
+                    <flux:checkbox
+                        wire:model="shareWithTherapistQuick"
+                        class="[&_input]:accent-[#10B981] [&_label]:text-[0.6875rem]"
+                        :label="__('patient.mood_tracker_share_label')"
+                    />
+
+                    <flux:button
+                        type="button"
+                        variant="primary"
+                        wire:click="saveMoodQuick"
+                        wire:loading.attr="disabled"
+                        wire:target="saveMoodQuick"
+                        class="w-full rounded-xl! py-2.5! text-sm! font-semibold !bg-[#10B981] !text-white hover:!bg-[#059669]"
+                    >
+                        <span wire:loading.remove wire:target="saveMoodQuick">{{ __('patient.home_luxury.mood_save_check_in') }}</span>
+                        <span wire:loading wire:target="saveMoodQuick">{{ __('patient.mood_tracker_saving') }}</span>
+                    </flux:button>
+                </div>
+            @elseif ($isAuthenticated)
+                <p class="mt-2.5 text-center text-[0.625rem] font-medium text-slate-400">
+                    {{ __('patient.home_luxury.mood_tap_hint') }}
+                </p>
+            @endif
         </section>
 
         <section class="space-y-4">

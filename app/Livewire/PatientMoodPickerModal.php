@@ -2,7 +2,6 @@
 
 namespace App\Livewire;
 
-use App\Models\PatientMood;
 use App\Services\PatientMoodLogService;
 use App\Support\PatientMoodImage;
 use Flux\Flux;
@@ -100,7 +99,6 @@ class PatientMoodPickerModal extends Component
 
         /** @var PatientMoodLogService $moodLog */
         $moodLog = app(PatientMoodLogService::class);
-        $loggedOn = $moodLog->todayDate();
 
         if ($moodLog->hasMoodForToday($user)) {
             $this->showMoodModal = false;
@@ -122,13 +120,12 @@ class PatientMoodPickerModal extends Component
             ? trim((string) $validated['moodNote'])
             : null;
 
-        PatientMood::query()->create([
-            'user_id' => $user->getKey(),
-            'mood' => $validated['selectedMoodKey'],
-            'comments' => $comments,
-            'date' => $loggedOn,
-            'is_shared' => (bool) ($validated['shareWithTherapist'] ?? false),
-        ]);
+        $moodLog->logMoodForToday(
+            $user,
+            $validated['selectedMoodKey'],
+            $comments,
+            (bool) ($validated['shareWithTherapist'] ?? false),
+        );
 
         $label = __('patient.mood_selector_options.'.$validated['selectedMoodKey']);
 

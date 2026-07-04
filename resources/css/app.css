@@ -1132,6 +1132,47 @@ select:focus[data-flux-control] {
     box-shadow: 0 10px 25px -5px rgb(16 185 129 / 0.4);
 }
 
+.patient-luxury-mood-btn.is-pending {
+    color: #047857;
+}
+
+.patient-luxury-mood-btn.is-dimmed {
+    opacity: 0.45;
+}
+
+.patient-luxury-mood-btn.is-pending .patient-luxury-mood-icon {
+    border-color: #10b981;
+    background-color: #ecfdf5;
+    color: #047857;
+    box-shadow: 0 0 0 2px rgb(16 185 129 / 0.35);
+    transform: scale(1.06);
+}
+
+.patient-luxury-mood-btn.is-pending .patient-luxury-mood-label {
+    color: #047857;
+    font-weight: 600;
+}
+
+.patient-luxury-mood-btn:disabled {
+    cursor: default;
+}
+
+.patient-luxury-mood-save-panel {
+    animation: patient-luxury-mood-panel-in 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes patient-luxury-mood-panel-in {
+    from {
+        opacity: 0;
+        transform: translateY(0.375rem);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
 .patient-luxury-home .patient-luxury-mood-btn.is-active {
     transform: scale(1.04) translateY(-2px);
     box-shadow: 0 8px 20px -6px rgb(16 185 129 / 0.35);
@@ -1147,7 +1188,7 @@ select:focus[data-flux-control] {
     border: 1px solid #f1f5f9;
     background-color: #f8fafc;
     color: #94a3b8;
-    transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+    transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease, transform 0.3s ease;
 }
 
 .patient-luxury-home .patient-luxury-mood-icon {
