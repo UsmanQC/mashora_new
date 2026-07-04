@@ -25,7 +25,7 @@
         id="awaan-ai-chatbot"
         @class([
             'font-sans',
-            'patient-chatbot-dock-host pointer-events-none fixed inset-x-0 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-[70] flex justify-center px-4' => $isPatientDock,
+            'patient-chatbot-dock-host pointer-events-none fixed inset-x-0 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-[70] flex justify-center px-4 sm:hidden' => $isPatientDock,
             'z-50' => ! $isPatientDock,
             'fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] !left-6 !right-auto sm:bottom-6' => ! $isPatientDock && $toggleAnchor === 'left' && $abovePatientDock,
             'fixed bottom-6 !left-6 !right-auto' => ! $isPatientDock && $toggleAnchor === 'left' && ! $abovePatientDock,
@@ -123,7 +123,10 @@
             <button
                 type="button"
                 id="awaan-ai-chatbot-toggle"
-                class="pointer-events-auto hidden h-14 w-14 items-center justify-center rounded-full bg-primary text-white shadow-lg shadow-primary/30 transition hover:bg-primary-600 hover:shadow-xl sm:inline-flex"
+                @class([
+                    'pointer-events-auto hidden h-14 w-14 items-center justify-center rounded-full bg-primary text-white shadow-lg shadow-primary/30 transition hover:bg-primary-600 hover:shadow-xl',
+                    'sm:inline-flex' => ! $isPatientDock,
+                ])
                 aria-label="{{ __('ai_chatbot.open', [], $initialChatbotLocale) }}"
             >
                 <i data-lucide="message-circle" class="h-6 w-6"></i>
