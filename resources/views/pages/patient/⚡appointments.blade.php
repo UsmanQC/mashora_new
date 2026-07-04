@@ -68,6 +68,10 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
             $this->tab = 'ongoing';
         }
 
+        if (in_array($this->tab, ['missed', 'completed', 'cancelled'], true)) {
+            $this->mobileSegment = 'previous';
+        }
+
         app(AppointmentMissedService::class)->processDueMissedAppointments();
     }
 

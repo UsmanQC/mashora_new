@@ -133,6 +133,7 @@ test('appointment is marked missed ten minutes after scheduled start when doctor
         'doctor_id' => $doctor->id,
         'user_id' => $user->id,
         'status' => 'new',
+        'scheduled_at' => '2026-06-23 13:00:00',
         'appointment_date' => '2026-06-23',
         'start_time' => '13:00:00',
         'end_time' => '13:30:00',
