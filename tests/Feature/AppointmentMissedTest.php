@@ -95,6 +95,8 @@ test('missed notification with stored translation keys displays resolved copy', 
 });
 
 test('future appointments are not marked missed', function () {
+    config(['appointments.relaxed_session_limits' => false]);
+
     Carbon::setTestNow('2026-06-23 10:00:00');
 
     $doctor = Doctor::factory()->create(['status' => 'approved']);
@@ -104,6 +106,7 @@ test('future appointments are not marked missed', function () {
         'doctor_id' => $doctor->id,
         'user_id' => $user->id,
         'status' => 'new',
+        'scheduled_at' => '2026-06-23 13:00:00',
         'appointment_date' => '2026-06-23',
         'start_time' => '13:00:00',
         'end_time' => '13:30:00',
@@ -164,6 +167,7 @@ test('appointment is not marked missed before ten minute grace elapses', functio
         'doctor_id' => $doctor->id,
         'user_id' => $user->id,
         'status' => 'new',
+        'scheduled_at' => '2026-06-23 13:00:00',
         'appointment_date' => '2026-06-23',
         'start_time' => '13:00:00',
         'end_time' => '13:30:00',
@@ -179,6 +183,8 @@ test('appointment is not marked missed before ten minute grace elapses', functio
 });
 
 test('missed appointment processing is idempotent for refunds', function () {
+    config(['appointments.relaxed_session_limits' => false]);
+
     Carbon::setTestNow('2026-06-23 14:00:00');
 
     $doctor = Doctor::factory()->create(['status' => 'approved']);
@@ -188,6 +194,7 @@ test('missed appointment processing is idempotent for refunds', function () {
         'doctor_id' => $doctor->id,
         'user_id' => $user->id,
         'status' => 'new',
+        'scheduled_at' => '2026-06-23 12:00:00',
         'appointment_date' => '2026-06-23',
         'start_time' => '12:00:00',
         'end_time' => '12:30:00',
