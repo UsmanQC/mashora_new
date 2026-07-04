@@ -1,4 +1,6 @@
 @php
+    $isRtl = app()->getLocale() === 'ar';
+    $chevronIcon = $isRtl ? 'chevron-left' : 'chevron-right';
     $isAuthenticated = auth()->check();
     $scheduledUrl = route('patient.phone');
     $instantUrl = route('patient.schedule.filter');
@@ -45,12 +47,12 @@
 @endphp
 
 <section class="marketing-appointments w-full">
-    <div class="mb-4 text-right sm:mb-6">
+    <div class="mb-4 text-start sm:mb-6">
         <h2 class="font-display text-xl font-bold tracking-tight text-ink sm:text-2xl">
             {{ __('patient.nav.appointments') }}
         </h2>
         <p class="mt-1 text-sm text-ink-muted sm:mt-1.5 sm:text-base">
-            اختر نوع الجلسة التي تناسبك.
+            {{ __('marketing.appointments_subtitle') }}
         </p>
     </div>
 
@@ -67,17 +69,17 @@
                     <i data-lucide="{{ $card['icon'] }}" class="size-5 sm:size-[1.35rem]"></i>
                 </div>
 
-                <div class="min-w-0 flex-1 text-right">
+                <div class="min-w-0 flex-1 text-start">
                     <h3 class="font-display text-[0.9375rem] font-bold leading-snug text-ink sm:text-base">{{ $card['title'] }}</h3>
                     <p class="mt-0.5 line-clamp-2 text-xs leading-relaxed text-ink-muted sm:text-sm">{{ $card['note'] }}</p>
                 </div>
 
-                <div class="flex shrink-0 items-center {{ $card['chevron'] }} transition duration-300 group-hover:-translate-x-0.5 sm:hidden">
-                    <i data-lucide="chevron-left" class="size-5"></i>
+                <div class="flex shrink-0 items-center {{ $card['chevron'] }} transition duration-300 group-hover:translate-x-0.5 rtl:group-hover:-translate-x-0.5 sm:hidden">
+                    <i data-lucide="{{ $chevronIcon }}" class="size-5"></i>
                 </div>
 
-                <div class="mt-auto hidden items-center pt-1 {{ $card['chevron'] }} transition duration-300 group-hover:-translate-x-0.5 sm:flex">
-                    <i data-lucide="chevron-left" class="size-5"></i>
+                <div class="mt-auto hidden items-center pt-1 {{ $card['chevron'] }} transition duration-300 group-hover:translate-x-0.5 rtl:group-hover:-translate-x-0.5 sm:flex">
+                    <i data-lucide="{{ $chevronIcon }}" class="size-5"></i>
                 </div>
             </a>
         @endforeach

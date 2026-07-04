@@ -19,7 +19,9 @@ Route::get('/doctor/manifest.webmanifest', WebManifestController::class)
     ->name('manifest.doctor');
 
 Route::get('/', function () {
-    app()->setLocale('ar');
+    if (! session()->has('patient_locale')) {
+        app()->setLocale('ar');
+    }
 
     return view('frontend.home', [
         'featuredDoctors' => SpecialistCatalog::forMarketingHomepage(12),
