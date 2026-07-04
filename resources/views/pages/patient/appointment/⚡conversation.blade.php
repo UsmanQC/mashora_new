@@ -219,6 +219,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
 
     <div
         id="patient-conversation-metrics"
+        wire:key="patient-conversation-metrics-{{ $appointment->id }}-{{ $appointment->status }}-{{ $appointment->actual_start_at?->timestamp ?? 0 }}"
         class="hidden"
         data-status="{{ $appointment->status }}"
         data-session-start="{{ $appointment->actual_start_at?->toIso8601String() }}"
@@ -498,6 +499,8 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 boot.__bindCallControlButtons?.();
                 boot.__restorePendingCall?.();
                 boot.__syncCallOverlay?.();
+                boot.__observeSessionMetrics?.();
+                startSessionTimers();
 
                 return;
             }
@@ -524,7 +527,11 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
             let appointmentStatus = boot.dataset.appointmentStatus || 'new';
             const messagesWrap = document.getElementById('patient-chat-messages');
             const seen = new Set();
-            const metrics = document.getElementById('patient-conversation-metrics');
+
+            function metricsEl() {
+                return document.getElementById('patient-conversation-metrics');
+            }
+
             let sessionTimerId = null;
             let sessionEndedDisconnectHandled = false;
 
@@ -591,9 +598,9 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
 
             const labelVideo = @js(__('patient.appointments.video_call'));
             const labelVoice = @js(__('patient.appointments.voice_call'));
-            const labelConnecting = metrics?.dataset.labelConnecting || 'Connecting…';
-            const labelCallFailed = metrics?.dataset.labelCallFailed || 'Could not join the call.';
-            const labelNoActiveCall = metrics?.dataset.labelNoActiveCall || 'No active call yet.';
+            const labelConnecting = metricsEl()?.dataset.labelConnecting || 'Connecting…';
+            const labelCallFailed = metricsEl()?.dataset.labelCallFailed || 'Could not join the call.';
+            const labelNoActiveCall = metricsEl()?.dataset.labelNoActiveCall || 'No active call yet.';
             const waitingChip = document.getElementById('patient-waiting-for-call-chip');
 
             function showCallToast(text, variant = 'danger') {
@@ -634,18 +641,18 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                     const message = String(error?.message || '');
 
                     if (message.includes('denied by system')) {
-                        return metrics?.dataset.labelSystemMediaPermission
-                            || metrics?.dataset.labelCameraPermission
+                        return metricsEl()?.dataset.labelSystemMediaPermission
+                            || metricsEl()?.dataset.labelCameraPermission
                             || fallback;
                     }
 
                     if (mode === 'audio') {
-                        return metrics?.dataset.labelMicPermission
-                            || metrics?.dataset.labelCameraPermission
+                        return metricsEl()?.dataset.labelMicPermission
+                            || metricsEl()?.dataset.labelCameraPermission
                             || fallback;
                     }
 
-                    return metrics?.dataset.labelCameraPermission || fallback;
+                    return metricsEl()?.dataset.labelCameraPermission || fallback;
                 }
 
                 const message = error?.message || '';
@@ -741,7 +748,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                         }
 
                         if (Date.now() - startedAt >= timeoutMs) {
-                            reject(new Error(metrics?.dataset.labelAgoraSdkMissing || 'Agora SDK missing'));
+                            reject(new Error(metricsEl()?.dataset.labelAgoraSdkMissing || 'Agora SDK missing'));
 
                             return;
                         }
@@ -963,9 +970,12 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
             }
 
             function tickSessionTimers() {
+                const metrics = metricsEl();
                 const elapsedEl = document.getElementById('patient-timer-session-elapsed');
                 const remainingEl = document.getElementById('patient-timer-session-remaining');
-                if (!metrics || !elapsedEl || !remainingEl) return;
+                if (!metrics || !elapsedEl || !remainingEl) {
+                    return;
+                }
 
                 const status = metrics.dataset.status || '';
                 const startIso = metrics.dataset.sessionStart || '';
@@ -999,6 +1009,35 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 sessionTimerId = setInterval(tickSessionTimers, 1000);
             }
 
+            function replayActiveVideoTracks() {
+                const localTrack = boot.__localVideo || localVideo;
+                if (localTrack) {
+                    try {
+                        localTrack.stop();
+                        localTrack.play('patient-agora-local');
+                    } catch (error) {
+                        console.error('Failed to replay local video track', error);
+                    }
+                }
+
+                if (!agoraClient) {
+                    return;
+                }
+
+                agoraClient.remoteUsers.forEach((user) => {
+                    if (!user.videoTrack) {
+                        return;
+                    }
+
+                    try {
+                        user.videoTrack.stop();
+                        user.videoTrack.play('patient-agora-remote');
+                    } catch (error) {
+                        console.error('Failed to replay remote video track', error);
+                    }
+                });
+            }
+
             function showOverlay(show) {
                 if (!overlay) {
                     return;
@@ -1006,6 +1045,14 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
 
                 overlay.classList.toggle('hidden', !show);
                 overlay.setAttribute('aria-hidden', show ? 'false' : 'true');
+
+                if (show) {
+                    window.requestAnimationFrame(() => {
+                        window.requestAnimationFrame(() => {
+                            replayActiveVideoTracks();
+                        });
+                    });
+                }
             }
 
             function assignLocalTracks(audio, video = null) {
@@ -1204,7 +1251,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
             }
 
             function maybeEndCallWhenSessionExpired(leftSeconds) {
-                if (metrics?.dataset.relaxedSessionLimits === '1') {
+                if (metricsEl()?.dataset.relaxedSessionLimits === '1') {
                     return;
                 }
 
@@ -1219,7 +1266,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 }
 
                 sessionEndedDisconnectHandled = true;
-                const endedMessage = metrics?.dataset.sessionEnded || 'Session time has ended.';
+                const endedMessage = metricsEl()?.dataset.sessionEnded || 'Session time has ended.';
 
                 leaveCall()
                     .then(() => {
@@ -1260,6 +1307,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
             function applySessionStartedPayload(data) {
                 appointmentStatus = data.status || 'in_process';
                 boot.dataset.appointmentStatus = appointmentStatus;
+                const metrics = metricsEl();
                 if (metrics) {
                     metrics.dataset.status = data.status || 'in_process';
                     metrics.dataset.sessionStart = data.actual_start_at || '';
@@ -1283,7 +1331,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                     Livewire.dispatch('patient-session-started', { appointmentId });
                 }
 
-                showCallToast(metrics?.dataset.sessionStartedWaiting || @js(__('patient.appointments.session_started_waiting')), 'success');
+                showCallToast(metricsEl()?.dataset.sessionStartedWaiting || @js(__('patient.appointments.session_started_waiting')), 'success');
                 startSessionTimers();
                 refreshCallUiState();
             }
@@ -1482,9 +1530,10 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                     camTrack = null;
 
                     markCallConnected(effectiveMode);
+                    replayActiveVideoTracks();
 
                     if (cameraUnavailable && effectiveMode === 'video') {
-                        showCallToast(metrics?.dataset.labelCameraUnavailable || labelCallFailed, 'warning');
+                        showCallToast(metricsEl()?.dataset.labelCameraUnavailable || labelCallFailed, 'warning');
                     }
 
                     subscribeExistingRemoteUsers(client, effectiveMode).catch((error) => {
@@ -1703,7 +1752,10 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                         succeed(() => {
                             const bootEl = document.getElementById('patient-conversation-bootstrap');
                             bootEl?.__bindCallControlButtons?.();
+                            bootEl?.__mountOverlayToBody?.();
                             bootEl?.__syncCallOverlay?.();
+                            bootEl?.__observeSessionMetrics?.();
+                            startSessionTimers();
                         });
                     });
                 };
@@ -1714,6 +1766,33 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                     document.addEventListener('livewire:init', registerHook);
                 }
             }
+
+            function observeSessionMetrics() {
+                const metrics = metricsEl();
+                if (!metrics) {
+                    return;
+                }
+
+                if (boot.__sessionMetricsObserver) {
+                    boot.__sessionMetricsObserver.disconnect();
+                    boot.__sessionMetricsObserver = null;
+                }
+
+                const sessionObserver = new MutationObserver(() => {
+                    syncPatientSessionFromDom(boot);
+                    refreshCallUiState();
+                    startSessionTimers();
+                });
+
+                sessionObserver.observe(metrics, {
+                    attributes: true,
+                    attributeFilter: ['data-status', 'data-session-start', 'data-session-end'],
+                });
+
+                boot.__sessionMetricsObserver = sessionObserver;
+            }
+
+            boot.__observeSessionMetrics = observeSessionMetrics;
 
             registerPatientConversationMorphHook();
 
@@ -1728,10 +1807,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                     startSessionTimers();
                 });
                 sessionObserver.observe(boot, { attributes: true, attributeFilter: ['data-appointment-status'] });
-
-                if (metrics) {
-                    sessionObserver.observe(metrics, { attributes: true, attributeFilter: ['data-status', 'data-session-start', 'data-session-end'] });
-                }
+                observeSessionMetrics();
             }
 
             window.__patientConversationInitLock = false;

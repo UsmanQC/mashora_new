@@ -880,6 +880,38 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
             const endBtn = document.getElementById('patient-inline-call-end');
             const openChat = document.getElementById('patient-inline-open-chat');
             const callState = document.getElementById('patient-inline-call-state');
+
+            if (overlay && overlay.parentElement !== document.body) {
+                document.body.appendChild(overlay);
+            }
+
+            function replayInlineVideoTracks() {
+                if (localVideo) {
+                    try {
+                        localVideo.stop();
+                        localVideo.play('patient-inline-call-local');
+                    } catch (error) {
+                        console.error('Failed to replay inline local video', error);
+                    }
+                }
+
+                if (!agoraClient) {
+                    return;
+                }
+
+                agoraClient.remoteUsers.forEach((user) => {
+                    if (!user.videoTrack) {
+                        return;
+                    }
+
+                    try {
+                        user.videoTrack.stop();
+                        user.videoTrack.play('patient-inline-call-remote');
+                    } catch (error) {
+                        console.error('Failed to replay inline remote video', error);
+                    }
+                });
+            }
             const payloadByAppointment = new Map();
             let currentAppointmentId = 0;
             let agoraClient = null;
@@ -1110,6 +1142,11 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
                     }
                     if (overlay) {
                         overlay.classList.remove('hidden');
+                        window.requestAnimationFrame(() => {
+                            window.requestAnimationFrame(() => {
+                                replayInlineVideoTracks();
+                            });
+                        });
                     }
                 } catch (error) {
                     console.error(error);

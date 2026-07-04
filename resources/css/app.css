@@ -831,17 +831,53 @@ select:focus[data-flux-control] {
 }
 
 /* Video call overlay — Agora tracks fill the stage */
+.video-call-overlay .video-call-remote,
+.video-call-overlay .video-call-remote video,
+.video-call-overlay .video-call-remote > div,
 .video-call-overlay .video-call-stage > div[id] video,
-.video-call-overlay .video-call-stage > div[id] > div {
+.video-call-overlay .video-call-stage > div[id] > div,
+.video-call-overlay #patient-agora-local video,
+.video-call-overlay #patient-agora-local > div,
+.video-call-overlay #agora-local-player video,
+.video-call-overlay #agora-local-player > div {
     width: 100% !important;
     height: 100% !important;
     object-fit: cover;
 }
 
+.video-call-overlay .video-call-remote,
 .video-call-overlay .video-call-stage > div[id] {
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    display: block;
+}
+
+.video-call-overlay .video-call-stage {
+    min-height: 0;
+}
+
+.video-call-overlay:not(.hidden) .video-call-stage {
+    min-height: calc(100dvh - 4.25rem);
+}
+
+@media (min-width: 640px) {
+    .video-call-overlay:not(.hidden) .video-call-stage {
+        min-height: min(52vh, 720px);
+    }
+}
+
+#patient-inline-call-overlay #patient-inline-call-remote,
+#patient-inline-call-overlay #patient-inline-call-remote video,
+#patient-inline-call-overlay #patient-inline-call-remote > div,
+#patient-inline-call-overlay #patient-inline-call-local,
+#patient-inline-call-overlay #patient-inline-call-local video,
+#patient-inline-call-overlay #patient-inline-call-local > div {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover;
+}
+
+#patient-inline-call-overlay #patient-inline-call-remote {
+    display: block;
+    min-height: calc(100dvh - 11rem);
 }
 
 .video-call-control--off [data-control-ring] {
@@ -860,12 +896,6 @@ select:focus[data-flux-control] {
 
 .video-call-overlay .video-call-shell {
     max-height: 100dvh;
-}
-
-@media (max-width: 639px) {
-    .video-call-overlay .video-call-stage {
-        min-height: 0;
-    }
 }
 
 .portal-sidebar-scroll {

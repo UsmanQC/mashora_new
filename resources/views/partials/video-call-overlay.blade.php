@@ -20,15 +20,15 @@
 <div
     id="{{ $overlayId }}"
     wire:ignore
-    class="video-call-overlay fixed inset-0 z-[200] hidden"
+    class="video-call-overlay fixed inset-0 z-[200] hidden h-dvh w-dvw"
     aria-hidden="true"
     role="dialog"
     aria-modal="true"
 >
     <div class="absolute inset-0 bg-zinc-950/95 backdrop-blur-md sm:bg-zinc-950/90" aria-hidden="true"></div>
 
-    <div class="relative flex h-full min-h-0 flex-col p-0 sm:items-center sm:justify-center sm:p-6 lg:p-8">
-        <div class="video-call-shell flex h-full w-full max-w-none flex-col overflow-hidden bg-zinc-900 text-white sm:h-auto sm:max-w-6xl sm:rounded-3xl sm:border sm:border-white/10 sm:shadow-2xl sm:shadow-black/60 sm:ring-1 sm:ring-white/10">
+    <div class="relative flex h-dvh min-h-0 w-full flex-col sm:h-full sm:items-center sm:justify-center sm:p-6 lg:p-8">
+        <div class="video-call-shell flex h-full min-h-0 w-full max-w-none flex-col overflow-hidden bg-zinc-900 text-white sm:h-auto sm:max-w-6xl sm:rounded-3xl sm:border sm:border-white/10 sm:shadow-2xl sm:shadow-black/60 sm:ring-1 sm:ring-white/10">
             <div class="flex shrink-0 items-center justify-between gap-3 border-b border-white/10 bg-gradient-to-r from-zinc-900 via-zinc-900 to-zinc-800/95 px-4 py-3 sm:gap-4 sm:px-6 sm:py-4">
                 <div class="flex min-w-0 items-center gap-3">
                     <span class="relative flex size-3 shrink-0">
@@ -47,7 +47,7 @@
                 </div>
                 <button
                     type="button"
-                    data-video-call-leave="patient-agora-leave"
+                    data-video-call-leave="{{ $leaveBtnId }}"
                     class="video-call-leave-header inline-flex shrink-0 items-center gap-2 rounded-xl bg-rose-600 px-3 py-2 text-xs font-semibold text-white shadow-lg shadow-rose-900/35 transition hover:bg-rose-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-400 sm:hidden"
                 >
                     <flux:icon name="x-mark" variant="mini" class="size-4" />
@@ -55,17 +55,17 @@
                 </button>
             </div>
 
-            <div class="relative flex min-h-0 flex-1 flex-col bg-black sm:flex-none">
+            <div class="relative flex min-h-0 flex-1 flex-col bg-black">
                 <div class="video-call-stage relative min-h-0 w-full flex-1 bg-zinc-950 sm:aspect-video sm:min-h-[min(52vh,720px)] sm:flex-none">
-                    <div id="{{ $remoteId }}" class="absolute inset-0 h-full w-full"></div>
+                    <div id="{{ $remoteId }}" class="video-call-remote absolute inset-0 z-0 h-full w-full"></div>
 
-                    <div class="absolute end-3 top-3 z-10 w-28 overflow-hidden rounded-2xl border border-white/20 bg-zinc-900/90 shadow-2xl shadow-black/50 ring-1 ring-white/10 sm:end-6 sm:top-6 sm:w-44 lg:w-52">
+                    <div class="video-call-local-preview absolute end-3 top-3 z-10 w-28 overflow-hidden rounded-2xl border border-white/20 bg-zinc-900/90 shadow-2xl shadow-black/50 ring-1 ring-white/10 sm:end-6 sm:top-6 sm:w-44 lg:w-52">
                         <div id="{{ $localId }}" class="aspect-video w-full bg-zinc-800"></div>
                         <p class="px-2 py-1 text-center text-[10px] font-semibold tracking-wide text-zinc-300 sm:px-3 sm:py-1.5 sm:text-[11px]">{{ $youLabel }}</p>
                     </div>
 
-                    <div class="video-call-controls absolute inset-x-0 bottom-0 z-10 flex justify-center px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-10 sm:px-6 sm:pb-6">
-                        <div class="flex items-end gap-2 rounded-2xl border border-white/10 bg-zinc-900/90 px-3 py-2.5 shadow-xl shadow-black/40 backdrop-blur-md sm:gap-4 sm:px-6 sm:py-4">
+                    <div class="video-call-controls pointer-events-none absolute inset-x-0 bottom-0 z-20 flex justify-center px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-16 sm:px-6 sm:pb-6 sm:pt-10">
+                        <div class="pointer-events-auto flex items-end gap-2 rounded-2xl border border-white/10 bg-zinc-900/90 px-3 py-2.5 shadow-xl shadow-black/40 backdrop-blur-md sm:gap-4 sm:px-6 sm:py-4">
                             <button
                                 type="button"
                                 id="{{ $toggleMicId }}"
