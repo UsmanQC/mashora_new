@@ -2,8 +2,11 @@
 
 return [
     'page_heading' => 'Available specialists',
+    'page_heading_instant' => 'Available now',
     'page_sub_with_filters' => 'Based on your session preferences.',
     'page_sub_default' => 'Choose a clinician and pick a convenient time.',
+    'page_sub_instant' => 'Specialists with a free slot in the next :minutes minutes.',
+    'instant_window_hint' => 'Showing only times starting within the next :minutes minutes.',
 
     'roles' => [
         'therapist' => 'Non-Doctor (Therapist)',

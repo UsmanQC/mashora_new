@@ -177,6 +177,10 @@ Route::livewire('patient/specialists', 'pages::patient.schedule-specialists')
     ->middleware(['patient.public'])
     ->name('patient.schedule.specialists');
 
+Route::livewire('patient/available-now', 'pages::patient.schedule-specialists')
+    ->middleware(['patient.public'])
+    ->name('patient.schedule.instant');
+
 Route::livewire('patient/book-appointments/{doctor}', 'pages::patient.book-appointments')
     ->middleware(['auth', 'patient.profile'])
     ->name('patient.book-appointments');

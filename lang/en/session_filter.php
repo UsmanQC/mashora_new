@@ -70,6 +70,10 @@ return [
     'step_of' => 'Step :current of :total',
     'mobile_hint' => 'Tap an option to continue automatically',
     'finish' => 'View specialists',
+    'instant_title' => 'Instant consultation',
+    'instant_subtitle' => 'Choose your preferences — we will only show specialists with a free slot in the next :minutes minutes.',
+    'instant_window_hint' => 'Only specialists available within the next :minutes minutes will be shown.',
+    'instant_step_of' => ':step · Step :current of :total',
     'mobile_steps' => [
         'degree' => 'Specialist type',
         'gender' => 'Gender preference',

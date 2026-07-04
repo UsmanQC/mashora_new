@@ -70,6 +70,10 @@ return [
     'step_of' => 'الخطوة :current من :total',
     'mobile_hint' => 'اضغط على أحد الخيارات للمتابعة تلقائياً',
     'finish' => 'عرض المختصين',
+    'instant_title' => 'استشارة فورية',
+    'instant_subtitle' => 'اختر تفضيلاتك — سنعرض فقط المختصين المتاحين خلال :minutes دقيقة القادمة.',
+    'instant_window_hint' => 'سيتم عرض المختصين المتاحين خلال :minutes دقيقة القادمة فقط.',
+    'instant_step_of' => ':step · الخطوة :current من :total',
     'mobile_steps' => [
         'degree' => 'نوع المختص',
         'gender' => 'تفضيل الجنس',

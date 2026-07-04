@@ -2,6 +2,7 @@
     $isAuthenticated = auth()->check();
     $phoneEntry = route('patient.phone');
     $filterUrl = route('patient.schedule.filter');
+    $instantFilterUrl = route('patient.schedule.filter', ['instant' => 1]);
     $appointmentsUrl = $isAuthenticated ? route('patient.appointments') : $phoneEntry;
     $recordsUrl = $isAuthenticated ? route('patient.appointments', ['tab' => 'completed']) : $phoneEntry;
     $notificationsUrl = $isAuthenticated ? route('patient.notifications') : $phoneEntry;
@@ -190,8 +191,8 @@
             <h2 class="px-1 text-base font-bold text-slate-900">{{ __('patient.home_luxury.actions_heading') }}</h2>
 
             <a
-                href="{{ $isAuthenticated ? $filterUrl : $phoneEntry }}"
-                wire:navigate
+                href="{{ $isAuthenticated ? $instantFilterUrl : $phoneEntry }}"
+                wire:navigate="false"
                 class="patient-luxury-action-card group relative block overflow-hidden rounded-3xl bg-[#10B981] p-5 shadow-[0_10px_40px_-10px_rgba(16,185,129,0.35)] transition-colors hover:bg-[#059669]"
             >
                 <div class="absolute end-0 top-0 size-32 translate-x-1/2 -translate-y-1/2 rounded-full bg-white/20 blur-3xl" aria-hidden="true"></div>

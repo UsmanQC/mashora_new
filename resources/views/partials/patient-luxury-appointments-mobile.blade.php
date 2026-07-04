@@ -2,6 +2,7 @@
     $upcomingCount = $this->mobileSegmentCounts['upcoming'] ?? 0;
     $previousCount = $this->mobileSegmentCounts['previous'] ?? 0;
     $filterUrl = route('patient.schedule.filter');
+    $instantFilterUrl = route('patient.schedule.filter', ['instant' => 1]);
     $chevron = app()->getLocale() === 'ar' ? 'left' : 'right';
 @endphp
 
@@ -85,8 +86,8 @@
 
         @if ($mobileSegment === 'upcoming')
             <a
-                href="{{ $filterUrl }}"
-                wire:navigate
+                href="{{ $instantFilterUrl }}"
+                wire:navigate="false"
                 class="patient-luxury-appointments__instant active-scale group relative block overflow-hidden rounded-3xl bg-[#10B981] p-4 shadow-[0_10px_40px_-10px_rgba(16,185,129,0.35)] transition-colors hover:bg-[#059669]"
             >
                 <div class="absolute end-0 top-0 size-28 translate-x-1/2 -translate-y-1/2 rounded-full bg-white/20 blur-3xl" aria-hidden="true"></div>

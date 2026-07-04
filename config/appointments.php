@@ -62,4 +62,16 @@ return [
 
     'follow_up_window_days' => (int) env('APPOINTMENT_FOLLOW_UP_WINDOW_DAYS', 14),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Instant consultation window
+    |--------------------------------------------------------------------------
+    |
+    | Minutes from now within which a doctor must have a free slot to appear
+    | in instant booking results.
+    |
+    */
+
+    'instant_window_minutes' => (int) env('APPOINTMENT_INSTANT_WINDOW_MINUTES', 60),
+
 ];

@@ -291,6 +291,7 @@ final class SpecialistCatalog
             'photo_url' => $doctor->profilePhotoUrl(),
             'degree_title' => $degreeTitle,
             'is_online' => (bool) $doctor->is_online,
+            'accept_instant_appointment' => $doctor->accept_instant_appointment !== false,
             'experience_years' => (int) ($doctor->experience ?? 0),
             'role_kind' => $roleKind,
             'likes' => 0,
@@ -375,6 +376,7 @@ final class SpecialistCatalog
             'doctor_database_id' => $explicitDoctorId
                 ?? $fallbackDoctorId
                 ?? self::fallbackDoctorIdFromDatabase(),
+            'accept_instant_appointment' => (bool) ($entry['accept_instant_appointment'] ?? true),
         ];
     }
 

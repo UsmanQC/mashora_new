@@ -9,6 +9,7 @@ use Flux\Flux;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Layout;
@@ -354,7 +355,7 @@ new #[Layout('layouts::patient')] #[Title('Book an appointment')] class extends 
                 'discount' => $this->discountAmount,
                 'tax' => 0.0,
                 'total' => $this->totalPrice(),
-                'appointment_type' => 'regular',
+                'appointment_type' => Session::get('instant_booking') ? 'instant' : 'regular',
                 'payment_status' => 'unpaid',
             ]);
         });

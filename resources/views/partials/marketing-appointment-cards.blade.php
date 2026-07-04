@@ -3,7 +3,7 @@
     $chevronIcon = $isRtl ? 'chevron-left' : 'chevron-right';
     $isAuthenticated = auth()->check();
     $scheduledUrl = route('patient.phone');
-    $instantUrl = route('patient.schedule.filter');
+    $instantUrl = route('patient.schedule.filter', ['instant' => 1]);
     $ongoingUrl = $isAuthenticated ? route('patient.appointments') : route('patient.phone');
 
     $cards = [

@@ -75,6 +75,51 @@ class DoctorAvailabilityService
             ->all();
     }
 
+    public function instantWindowMinutes(): int
+    {
+        return max(1, (int) config('appointments.instant_window_minutes', 60));
+    }
+
+    /**
+     * Bookable start times today that begin within the instant booking window.
+     *
+     * @return list<string>
+     */
+    public function availableSlotsWithinInstantWindow(
+        Doctor $doctor,
+        int $durationMinutes,
+        ?int $windowMinutes = null,
+        ?int $excludeAppointmentId = null,
+    ): array {
+        $timezone = AppTimezone::name();
+        $now = now()->timezone($timezone);
+        $today = $now->toDateString();
+        $windowMinutes ??= $this->instantWindowMinutes();
+        $windowEnd = $now->copy()->addMinutes($windowMinutes);
+
+        return collect($this->availableSlots($doctor, $today, $durationMinutes, $excludeAppointmentId))
+            ->filter(function (string $slot) use ($today, $now, $windowEnd, $timezone): bool {
+                try {
+                    $start = Carbon::createFromFormat('Y-m-d H:i', $today.' '.$slot, $timezone);
+                } catch (\Throwable) {
+                    return false;
+                }
+
+                return $start->greaterThan($now) && $start->lessThanOrEqualTo($windowEnd);
+            })
+            ->values()
+            ->all();
+    }
+
+    public function hasInstantAvailability(Doctor $doctor, int $durationMinutes): bool
+    {
+        if ($doctor->accept_instant_appointment === false) {
+            return false;
+        }
+
+        return $this->availableSlotsWithinInstantWindow($doctor, $durationMinutes) !== [];
+    }
+
     /**
      * First calendar date (Y-m-d) within the lookahead window that has at least one bookable slot.
      */

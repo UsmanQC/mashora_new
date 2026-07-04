@@ -7,6 +7,7 @@
         'patient.appointments',
         'patient.schedule.filter',
         'patient.schedule.specialists',
+        'patient.schedule.instant',
         'patient.book-appointments',
         'patient.checkout',
         'patient.checkout.demo',

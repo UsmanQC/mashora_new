@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
+use Livewire\Attributes\Url;
 use Livewire\Component;
 
 new #[Layout('layouts::patient')] #[Title('Schedule a session')] class extends Component
@@ -26,7 +27,35 @@ new #[Layout('layouts::patient')] #[Title('Schedule a session')] class extends C
 
     public bool $subspecialtiesExpanded = false;
 
+    #[Url(as: 'instant', except: false)]
+    public bool $instantBooking = false;
+
     public int $mobileStep = 1;
+
+    public function mount(): void
+    {
+        if (request()->boolean('instant')) {
+            $this->instantBooking = true;
+        }
+
+        $this->syncInstantBookingSession();
+    }
+
+    public function updatedInstantBooking(): void
+    {
+        $this->syncInstantBookingSession();
+    }
+
+    protected function syncInstantBookingSession(): void
+    {
+        if ($this->instantBooking) {
+            Session::put('instant_booking', true);
+
+            return;
+        }
+
+        Session::forget('instant_booking');
+    }
 
     public function mobileStepsTotal(): int
     {
@@ -53,11 +82,23 @@ new #[Layout('layouts::patient')] #[Title('Schedule a session')] class extends C
 
     public function mobileHeaderTitle(): string
     {
+        if ($this->instantBooking) {
+            return (string) __('session_filter.instant_title');
+        }
+
         return $this->mobileStepTitle();
     }
 
     public function mobileHeaderSubtitle(): string
     {
+        if ($this->instantBooking) {
+            return (string) __('session_filter.instant_step_of', [
+                'step' => $this->mobileStepTitle(),
+                'current' => $this->mobileStep,
+                'total' => $this->mobileStepsTotal(),
+            ]);
+        }
+
         return (string) __('session_filter.step_of', [
             'current' => $this->mobileStep,
             'total' => $this->mobileStepsTotal(),
@@ -274,6 +315,7 @@ new #[Layout('layouts::patient')] #[Title('Schedule a session')] class extends C
             'duration_minutes' => $this->durationMinutes,
             'language_preference' => $this->languagePreference,
             'subspecialties' => array_values(array_unique($this->subspecialties)),
+            'instant_booking' => $this->instantBooking,
         ];
     }
 
@@ -294,14 +336,26 @@ new #[Layout('layouts::patient')] #[Title('Schedule a session')] class extends C
         ]);
 
         Session::put('session_filter_preferences', $this->preferenceSnapshot());
+
+        if ($this->instantBooking) {
+            Session::put('instant_booking', true);
+        } else {
+            Session::forget('instant_booking');
+        }
+
         Flux::toast(variant: 'success', text: __('session_filter.next_toast'));
 
-        $this->redirect(route('patient.schedule.specialists'));
+        $this->redirect(
+            $this->instantBooking
+                ? route('patient.schedule.instant')
+                : route('patient.schedule.specialists')
+        );
     }
 
     public function proceedSkip(): void
     {
         Session::forget('session_filter_preferences');
+        Session::forget('instant_booking');
 
         Flux::toast(text: __('session_filter.skip_toast'));
 
@@ -355,6 +409,11 @@ new #[Layout('layouts::patient')] #[Title('Schedule a session')] class extends C
         ])
 
         <div class="session-filter-mobile-body mt-4 space-y-3 px-6">
+            @if ($instantBooking)
+                <div class="rounded-2xl border border-emerald-100 bg-emerald-50/80 px-4 py-3 text-sm font-medium text-emerald-800">
+                    {{ __('session_filter.instant_window_hint', ['minutes' => config('appointments.instant_window_minutes', 60)]) }}
+                </div>
+            @endif
             @if ($mobileStep === 1)
                 <div class="space-y-2.5" role="radiogroup" aria-label="{{ __('session_filter.sections.specialist') }}">
                     @foreach ($this->specialistKindOptions as $option)
@@ -535,8 +594,12 @@ new #[Layout('layouts::patient')] #[Title('Schedule a session')] class extends C
                     <flux:icon name="calendar-days" variant="mini" class="size-5 lg:size-6" />
                 </span>
                 <div class="min-w-0 flex-1">
-                    <p class="text-sm font-semibold text-zinc-900 sm:text-base lg:text-lg">{{ __('session_filter.title') }}</p>
-                    <p class="mt-0.5 text-xs text-zinc-600 sm:text-sm">{{ __('session_filter.subtitle') }}</p>
+                    <p class="text-sm font-semibold text-zinc-900 sm:text-base lg:text-lg">
+                        {{ $instantBooking ? __('session_filter.instant_title') : __('session_filter.title') }}
+                    </p>
+                    <p class="mt-0.5 text-xs text-zinc-600 sm:text-sm">
+                        {{ $instantBooking ? __('session_filter.instant_subtitle', ['minutes' => config('appointments.instant_window_minutes', 60)]) : __('session_filter.subtitle') }}
+                    </p>
                 </div>
             </div>
 
