@@ -86,7 +86,7 @@
                     </button>
                 @endforeach
             </div>
-            @error('communications')
+            @error('bookingChannels')
                 <p class="text-sm text-red-600">{{ $message }}</p>
             @enderror
         </section>

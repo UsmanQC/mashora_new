@@ -20,6 +20,8 @@
             'patient.schedule.filter',
             'patient.schedule.specialists',
             'patient.book-appointments',
+            'patient.checkout',
+            'patient.checkout.demo',
         ]);
     @endphp
     <body

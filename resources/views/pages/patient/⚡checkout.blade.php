@@ -8,6 +8,8 @@ use App\Services\PatientPaymentCompletionService;
 use App\Services\StripeCheckoutService;
 use App\Support\PaymentGateway;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
@@ -37,7 +39,7 @@ new #[Layout('layouts::patient')] #[Title('Payment')] class extends Component
             abort(403);
         }
 
-        $this->temporaryAppointment = $temporaryAppointment->load('doctor');
+        $this->temporaryAppointment = $temporaryAppointment->load(['doctor.specialities:id,title,title_ar']);
         $this->bootPatientWalletPayment((float) $this->temporaryAppointment->wallet_amount);
         $this->persistWalletAmountOnBooking();
 
@@ -284,6 +286,69 @@ new #[Layout('layouts::patient')] #[Title('Payment')] class extends Component
         return '';
     }
 
+    public function formattedLuxuryDate(): string
+    {
+        try {
+            return Carbon::parse($this->temporaryAppointment->appointment_date)
+                ->locale(app()->getLocale())
+                ->translatedFormat('l, j F Y');
+        } catch (\Throwable) {
+            return $this->formattedDate();
+        }
+    }
+
+    public function headerSubtitle(): string
+    {
+        return implode(' · ', array_filter([
+            $this->specialistName(),
+            $this->formattedLuxuryDate(),
+            $this->formattedTime(),
+        ]));
+    }
+
+    public function doctorPhotoUrl(): ?string
+    {
+        $doctor = $this->temporaryAppointment->doctor;
+
+        if ($doctor instanceof Doctor) {
+            return $doctor->profilePhotoUrl();
+        }
+
+        return null;
+    }
+
+    public function doctorSpecialtyLabel(): string
+    {
+        $doctor = $this->temporaryAppointment->doctor;
+
+        if (! $doctor instanceof Doctor) {
+            return __('patient.appointments.specialist_label');
+        }
+
+        $speciality = $doctor->specialities->first();
+
+        if ($speciality === null) {
+            return __('patient.appointments.specialist_label');
+        }
+
+        if (app()->getLocale() === 'ar' && filled($speciality->title_ar)) {
+            return (string) $speciality->title_ar;
+        }
+
+        return (string) ($speciality->title ?? $speciality->title_ar ?? __('patient.appointments.specialist_label'));
+    }
+
+    public function profilePhotoUrl(): ?string
+    {
+        $user = Auth::user();
+
+        if ($user === null || ! filled($user->profile_photo_path)) {
+            return null;
+        }
+
+        return Storage::disk('public')->url((string) $user->profile_photo_path);
+    }
+
     public function startCardPayment(): void
     {
         if ($this->usesStripe()) {
@@ -469,20 +534,45 @@ new #[Layout('layouts::patient')] #[Title('Payment')] class extends Component
     }
 }; ?>
 
-<div class="pb-28 sm:pb-10">
-    <div class="w-full space-y-5 lg:space-y-6">
+<div class="patient-luxury-checkout bg-slate-50 pb-[calc(4.75rem+env(safe-area-inset-bottom))] sm:bg-transparent sm:pb-12" data-test="patient-luxury-checkout">
+    <div class="sm:hidden">
+        @include('partials.patient-luxury-page-header', [
+            'title' => __('patient_booking.checkout_title'),
+            'subtitle' => $this->headerSubtitle(),
+            'profilePhotoUrl' => $this->profilePhotoUrl(),
+            'userName' => auth()->user()?->name,
+            'testId' => 'patient-checkout-header',
+            'progressStep' => 3,
+            'progressTotal' => 3,
+        ])
+
+        @include('partials.patient-luxury-checkout-mobile')
+    </div>
+
+    <div class="mx-auto hidden w-full max-w-7xl px-6 py-4 sm:block sm:px-0 sm:py-0">
         @if (session('flash_payment'))
-            <p class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">{{ session('flash_payment') }}</p>
+            <p class="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">{{ session('flash_payment') }}</p>
         @endif
 
-        {{-- Booking steps --}}
-        <nav class="flex flex-wrap items-center gap-2 text-xs font-semibold sm:text-sm" aria-label="{{ __('patient_booking.checkout_title') }}">
-            <span class="rounded-full bg-emerald-50 px-3 py-1 text-[#10B981]">{{ __('patient_booking.crumb_find_specialist') }}</span>
-            <flux:icon name="chevron-right" variant="mini" class="size-4 text-zinc-300 rtl:rotate-180" />
-            <span class="rounded-full bg-emerald-50 px-3 py-1 text-[#10B981]">{{ __('patient_booking.crumb_book') }}</span>
-            <flux:icon name="chevron-right" variant="mini" class="size-4 text-zinc-300 rtl:rotate-180" />
-            <span class="rounded-full bg-[#10B981] px-3 py-1 text-white">{{ __('patient_booking.checkout_title') }}</span>
-        </nav>
+        <header class="mb-8">
+            <nav class="mb-3 text-sm text-zinc-600" aria-label="Breadcrumb">
+                <ol class="flex flex-wrap items-center gap-2">
+                    <li>
+                        <flux:link :href="route('patient.schedule.specialists')" wire:navigate class="font-medium text-[#10B981] hover:text-[#064e3b]">
+                            {{ __('patient_booking.crumb_find_specialist') }}
+                        </flux:link>
+                    </li>
+                    <li aria-hidden="true" class="text-zinc-400">/</li>
+                    <li class="font-medium text-zinc-600">{{ __('patient_booking.crumb_book') }}</li>
+                    <li aria-hidden="true" class="text-zinc-400">/</li>
+                    <li class="font-semibold text-zinc-900">{{ __('patient_booking.checkout_title') }}</li>
+                </ol>
+            </nav>
+            <flux:heading size="xl" class="font-semibold text-zinc-900">
+                {{ __('patient_booking.checkout_title') }}
+            </flux:heading>
+            <flux:text class="mt-1 text-zinc-600">{{ __('patient_booking.checkout_subtitle') }}</flux:text>
+        </header>
 
         @php
             $checkoutTotal = (float) $this->temporaryAppointment->total;
@@ -490,84 +580,60 @@ new #[Layout('layouts::patient')] #[Title('Payment')] class extends Component
             $showAmountDue = $this->walletApplied() > 0 && $checkoutDue < $checkoutTotal;
         @endphp
 
-        {{-- Hero — soft vertical split --}}
-        <header class="grid min-h-[10.5rem] grid-rows-2 overflow-hidden rounded-2xl border border-emerald-100/90 bg-white shadow-sm">
-            <div class="flex items-center gap-4 bg-emerald-50/70 p-4 sm:p-5">
-                <span class="flex size-11 shrink-0 items-center justify-center rounded-xl bg-[#10B981]/12 text-[#10B981] sm:size-12">
-                    <flux:icon name="credit-card" variant="mini" class="size-5 sm:size-6" />
-                </span>
-                <div class="min-w-0 flex-1">
-                    <p class="text-sm font-semibold text-zinc-900 sm:text-base">{{ __('patient_booking.checkout_title') }}</p>
-                    <p class="mt-0.5 text-xs text-zinc-600 sm:text-sm">{{ __('patient_booking.checkout_subtitle') }}</p>
-                </div>
-            </div>
-            <div class="flex flex-col justify-center border-t border-emerald-100/90 bg-white px-4 py-4 sm:px-5">
-                <p class="text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                    {{ $showAmountDue ? __('patient_booking.amount_due') : __('patient_booking.total') }}
-                </p>
-                <p class="mt-1 text-2xl font-bold tabular-nums text-[#10B981] sm:text-3xl">
-                    {{ number_format($showAmountDue ? $checkoutDue : $checkoutTotal, 2) }}
-                    <span class="text-lg font-semibold sm:text-xl">{{ __('patient_booking.sar') }}</span>
-                </p>
-                @if ($showAmountDue)
-                    <p class="mt-1 text-xs text-zinc-500">
-                        {{ __('patient_booking.total') }}:
-                        <span class="tabular-nums line-through">{{ number_format($checkoutTotal, 2) }} {{ __('patient_booking.sar') }}</span>
-                    </p>
-                @endif
-            </div>
-        </header>
-
-        <div class="grid gap-5 lg:grid-cols-5 lg:items-stretch lg:gap-6">
-            {{-- Session summary --}}
-            <div class="flex h-full flex-col lg:col-span-3">
-                <div class="flex h-full flex-col overflow-hidden rounded-2xl border border-zinc-200/90 bg-white shadow-sm">
-                    <div class="border-b border-zinc-100 bg-zinc-50/80 px-5 py-4">
+        <div class="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:gap-10">
+            <div class="order-2 space-y-6 lg:order-1">
+                <div class="overflow-hidden rounded-3xl border border-slate-100/80 bg-white shadow-[0_8px_32px_0_rgba(0,0,0,0.03)]">
+                    <div class="border-b border-slate-100 bg-slate-50/80 px-5 py-4">
                         <div class="flex items-center gap-3">
-                            <flux:avatar :name="$this->specialistName()" circle class="shrink-0 ring-2 ring-[#10B981]/15" />
+                            @if ($this->doctorPhotoUrl() !== null)
+                                <img src="{{ $this->doctorPhotoUrl() }}" alt="" class="size-12 shrink-0 rounded-full object-cover ring-2 ring-[#10B981]/15" />
+                            @else
+                                <flux:avatar :name="$this->specialistName()" circle class="shrink-0 ring-2 ring-[#10B981]/15" />
+                            @endif
                             <div class="min-w-0">
-                                <p class="text-xs font-semibold uppercase tracking-wide text-zinc-500">{{ __('patient_booking.specialist_name') }}</p>
-                                <p class="truncate text-base font-semibold text-zinc-900">{{ $this->specialistName() }}</p>
+                                <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">{{ __('patient_booking.specialist_name') }}</p>
+                                <p class="truncate text-base font-semibold text-slate-900">{{ $this->specialistName() }}</p>
+                                <p class="truncate text-xs text-slate-500">{{ $this->doctorSpecialtyLabel() }}</p>
                             </div>
                         </div>
                     </div>
 
                     <div class="grid gap-3 px-5 py-4 sm:grid-cols-3">
-                        <div class="rounded-xl border border-zinc-100 bg-zinc-50/50 px-3 py-2.5">
-                            <p class="text-[0.65rem] font-semibold uppercase tracking-wide text-zinc-500">{{ __('patient_booking.session_date') }}</p>
-                            <p class="mt-1 text-sm font-semibold text-zinc-900">{{ $this->formattedDate() }}</p>
+                        <div class="rounded-xl border border-slate-100 bg-slate-50/50 px-3 py-2.5">
+                            <p class="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-500">{{ __('patient_booking.session_date') }}</p>
+                            <p class="mt-1 text-sm font-semibold text-slate-900">{{ $this->formattedDate() }}</p>
                         </div>
-                        <div class="rounded-xl border border-zinc-100 bg-zinc-50/50 px-3 py-2.5">
-                            <p class="text-[0.65rem] font-semibold uppercase tracking-wide text-zinc-500">{{ __('patient_booking.session_time') }}</p>
-                            <p class="mt-1 text-sm font-semibold text-zinc-900">{{ $this->formattedTime() }}</p>
+                        <div class="rounded-xl border border-slate-100 bg-slate-50/50 px-3 py-2.5">
+                            <p class="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-500">{{ __('patient_booking.session_time') }}</p>
+                            <p class="mt-1 text-sm font-semibold text-slate-900">{{ $this->formattedTime() }}</p>
                         </div>
-                        <div class="rounded-xl border border-zinc-100 bg-zinc-50/50 px-3 py-2.5 sm:col-span-1">
-                            <p class="text-[0.65rem] font-semibold uppercase tracking-wide text-zinc-500">{{ __('patient_booking.session_duration') }}</p>
-                            <p class="mt-1 text-sm font-semibold text-zinc-900">{{ $this->temporaryAppointment->duration }}</p>
+                        <div class="rounded-xl border border-slate-100 bg-slate-50/50 px-3 py-2.5">
+                            <p class="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-500">{{ __('patient_booking.session_duration') }}</p>
+                            <p class="mt-1 text-sm font-semibold text-slate-900">{{ $temporaryAppointment->duration }}</p>
                         </div>
                     </div>
 
-                    <div class="space-y-2 border-t border-zinc-100 px-5 py-4 text-sm">
+                    <div class="space-y-2 border-t border-slate-100 px-5 py-4 text-sm">
                         <div class="flex justify-between gap-3">
-                            <span class="text-zinc-600">{{ __('patient_booking.session_price') }}</span>
-                            <span class="font-medium tabular-nums text-zinc-900">{{ number_format((float) $this->temporaryAppointment->amount, 2) }} {{ __('patient_booking.sar') }}</span>
+                            <span class="text-slate-600">{{ __('patient_booking.session_price') }}</span>
+                            <span class="font-medium tabular-nums text-slate-900">{{ number_format((float) $temporaryAppointment->amount, 2) }} {{ __('patient_booking.sar') }}</span>
                         </div>
                         <div class="flex justify-between gap-3">
-                            <span class="text-zinc-600">{{ __('patient_booking.discount') }}</span>
-                            <span class="font-medium tabular-nums text-zinc-900">{{ number_format((float) $this->temporaryAppointment->discount, 2) }} {{ __('patient_booking.sar') }}</span>
+                            <span class="text-slate-600">{{ __('patient_booking.discount') }}</span>
+                            <span class="font-medium tabular-nums text-slate-900">{{ number_format((float) $temporaryAppointment->discount, 2) }} {{ __('patient_booking.sar') }}</span>
                         </div>
-                        <div class="flex justify-between gap-3 border-t border-zinc-100 pt-3 font-semibold">
-                            <span class="text-zinc-800">{{ __('patient_booking.total') }}</span>
-                            <span class="tabular-nums text-zinc-900">{{ number_format($checkoutTotal, 2) }} {{ __('patient_booking.sar') }}</span>
+                        <div class="flex justify-between gap-3 border-t border-slate-100 pt-3 font-semibold">
+                            <span class="text-slate-800">{{ __('patient_booking.total') }}</span>
+                            <span class="tabular-nums text-slate-900">{{ number_format($checkoutTotal, 2) }} {{ __('patient_booking.sar') }}</span>
                         </div>
                     </div>
 
                     @if ($this->walletBalance() > 0)
-                        <div class="border-t border-zinc-100 px-5 py-4">
+                        <div class="border-t border-slate-100 px-5 py-4">
                             <div class="flex items-start justify-between gap-3 rounded-xl border border-[#10B981]/15 bg-[#10B981]/5 p-3">
                                 <div class="min-w-0 text-sm">
-                                    <span class="font-semibold text-zinc-800">{{ __('patient_booking.use_wallet') }}</span>
-                                    <span class="mt-1 block text-xs text-zinc-500">
+                                    <span class="font-semibold text-slate-800">{{ __('patient_booking.use_wallet') }}</span>
+                                    <span class="mt-1 block text-xs text-slate-500">
                                         {{ __('patient_booking.wallet_balance') }}:
                                         {{ number_format($this->walletBalance(), 2) }} {{ __('patient_booking.sar') }}
                                     </span>
@@ -581,7 +647,7 @@ new #[Layout('layouts::patient')] #[Title('Payment')] class extends Component
                             @if ($this->walletApplied() > 0)
                                 <div class="mt-3 space-y-2 text-sm">
                                     <div class="flex justify-between gap-3">
-                                        <span class="text-zinc-600">{{ __('patient_booking.wallet_applied') }}</span>
+                                        <span class="text-slate-600">{{ __('patient_booking.wallet_applied') }}</span>
                                         <span class="font-medium tabular-nums text-emerald-600">- {{ number_format($this->walletApplied(), 2) }} {{ __('patient_booking.sar') }}</span>
                                     </div>
                                     <div class="flex justify-between gap-3 rounded-lg bg-emerald-50/80 px-3 py-2 font-semibold text-[#10B981]">
@@ -595,137 +661,37 @@ new #[Layout('layouts::patient')] #[Title('Payment')] class extends Component
                 </div>
             </div>
 
-            {{-- Payment --}}
-            <div class="flex h-full flex-col overflow-visible lg:col-span-2">
-                <div class="flex h-full flex-col overflow-visible rounded-2xl border border-zinc-200/90 bg-white p-5 shadow-sm">
-                <div class="flex items-center gap-2 border-b border-zinc-100 pb-4">
-                    <span class="flex size-9 items-center justify-center rounded-lg bg-[#10B981]/10 text-[#10B981]">
-                        <flux:icon name="lock-closed" variant="mini" class="size-4" />
-                    </span>
-                    <flux:heading size="sm" class="font-semibold text-zinc-900">{{ __('patient_booking.checkout_accepts') }}</flux:heading>
-                </div>
-
-                @if ($paymentError !== '')
-                    <p class="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{{ $paymentError }}</p>
-                @endif
-
-                <div class="flex min-h-0 flex-1 flex-col pt-4">
-                    <div class="space-y-3">
-                    @if ($this->walletApplied() > 0 && $checkoutDue <= 0)
-                        <p class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-                            {{ __('patient_booking.wallet_covers_full') }}
-                        </p>
-                        <flux:button type="button" variant="primary" class="min-h-11 w-full !border-[#10B981] !bg-[#10B981] !text-white hover:!brightness-[0.97]" wire:click="payWithWalletOnly" wire:loading.attr="disabled">
-                            <span wire:loading.remove wire:target="payWithWalletOnly">{{ __('patient_booking.pay_with_wallet_only') }}</span>
-                            <span wire:loading wire:target="payWithWalletOnly">{{ __('patient_booking.payment_processing') }}</span>
-                        </flux:button>
-                    @elseif ($this->paymentGatewayConfigured())
-                        @if ($this->walletApplied() > 0 && $checkoutDue > 0)
-                            <p class="rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900">
-                                {{ __('patient_booking.wallet_partial_hint') }}
+            <div class="order-1 lg:order-2">
+                <div class="rounded-3xl border border-slate-100/80 bg-white p-5 shadow-[0_8px_32px_0_rgba(0,0,0,0.03)]">
+                    <div class="mb-4 flex items-center justify-between gap-3 border-b border-slate-100 pb-4">
+                        <div class="flex items-center gap-2">
+                            <span class="flex size-9 items-center justify-center rounded-lg bg-[#10B981]/10 text-[#10B981]">
+                                <flux:icon name="lock-closed" variant="mini" class="size-4" />
+                            </span>
+                            <flux:heading size="sm" class="font-semibold text-slate-900">{{ __('patient_booking.checkout_accepts') }}</flux:heading>
+                        </div>
+                        <div class="text-end">
+                            <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                {{ $showAmountDue ? __('patient_booking.amount_due') : __('patient_booking.total') }}
                             </p>
-                        @endif
-                        @if ($this->usesStripe())
-                            <flux:button
-                                type="button"
-                                variant="primary"
-                                class="min-h-11 w-full !border-[#10B981] !bg-[#10B981] !text-white shadow-md shadow-[#10B981]/20 hover:!brightness-[0.97]"
-                                wire:click="startStripePayment"
-                                wire:loading.attr="disabled"
-                            >
-                                <span wire:loading.remove wire:target="startStripePayment">
-                                    @if ($this->walletApplied() > 0)
-                                        {{ __('patient_booking.pay_wallet_and_card', [
-                                            'wallet' => number_format($this->walletApplied(), 2),
-                                            'due' => number_format($checkoutDue, 2),
-                                        ]) }}
-                                    @else
-                                        {{ __('patient_booking.pay_now_stripe') }}
-                                    @endif
-                                </span>
-                                <span wire:loading wire:target="startStripePayment">{{ __('patient_booking.payment_processing') }}</span>
-                            </flux:button>
-
-                            <flux:text class="text-center text-xs text-zinc-500">{{ __('patient_booking.payment_stripe_note') }}</flux:text>
-                        @elseif ($this->usesHyperPay() && $embeddedReady)
-                            @include('partials.hyperpay-widget', [
-                                'callbackUrl' => $hyperpayCallbackUrl,
-                                'checkoutId' => $hyperpayCheckoutId,
-                                'integrity' => $hyperpayIntegrity,
-                                'env' => $hyperpayEnv,
-                            ])
-
-                            <flux:button
-                                type="button"
-                                variant="ghost"
-                                class="w-full"
-                                wire:click="initHyperpayCheckout"
-                                wire:loading.attr="disabled"
-                            >
-                                <span wire:loading.remove wire:target="initHyperpayCheckout">{{ __('patient_booking.payment_retry') }}</span>
-                                <span wire:loading wire:target="initHyperpayCheckout">{{ __('patient_booking.payment_processing') }}</span>
-                            </flux:button>
-                        @elseif ($this->usesMyFatoorah() && $embeddedReady)
-                            @include('partials.payment-card-field-guide')
-
-                            <div id="mf-form-element" class="min-h-[11rem] w-full overflow-visible rounded-xl border border-zinc-200 bg-white p-3 sm:min-h-[13rem]"></div>
-                            <p id="mf-card-error" class="hidden rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-                                {{ __('patient_booking.payment_embedded_unavailable') }}
+                            <p class="text-xl font-bold tabular-nums text-[#059669]">
+                                {{ number_format($showAmountDue ? $checkoutDue : $checkoutTotal, 2) }}
+                                <span class="text-sm">{{ __('patient_booking.sar') }}</span>
                             </p>
-
-                            <button
-                                type="button"
-                                id="embedded-pay-now"
-                                class="min-h-11 w-full rounded-xl border border-[#10B981] bg-[#10B981] py-3 text-sm font-semibold text-white shadow-md shadow-[#10B981]/20 transition hover:brightness-[0.97]"
-                            >
-                                {{ __('patient_booking.pay_now') }}
-                            </button>
-
-                            <flux:button
-                                type="button"
-                                variant="ghost"
-                                class="w-full"
-                                wire:click="startCardPayment"
-                                wire:loading.attr="disabled"
-                            >
-                                <span wire:loading.remove wire:target="startCardPayment">{{ __('patient_booking.pay_now_fallback') }}</span>
-                                <span wire:loading wire:target="startCardPayment">{{ __('patient_booking.payment_processing') }}</span>
-                            </flux:button>
-                        @else
-                            <flux:button
-                                type="button"
-                                variant="primary"
-                                class="min-h-11 w-full !border-[#10B981] !bg-[#10B981] !text-white shadow-md shadow-[#10B981]/20 hover:!brightness-[0.97]"
-                                wire:click="startCardPayment"
-                                wire:loading.attr="disabled"
-                            >
-                                <span wire:loading.remove wire:target="startCardPayment">{{ __('patient_booking.pay_now') }}</span>
-                                <span wire:loading wire:target="startCardPayment">{{ __('patient_booking.payment_processing') }}</span>
-                            </flux:button>
-                        @endif
-
-                        @if ($this->usesMyFatoorah())
-                            <flux:text class="text-center text-xs text-zinc-500">{{ __('patient_booking.payment_secure_note') }}</flux:text>
-                        @elseif ($this->usesHyperPay())
-                            <flux:text class="text-center text-xs text-zinc-500">{{ __('patient_booking.payment_hyperpay_note') }}</flux:text>
-                        @endif
-                    @else
-                        <p class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-                            @if ($this->usesStripe())
-                                {{ __('patient_booking.payment_stripe_missing') }}
-                            @elseif ($this->usesHyperPay())
-                                {{ __('patient_booking.payment_hyperpay_missing') }}
-                            @else
-                                {{ __('patient_booking.payment_api_missing') }}
-                            @endif
-                        </p>
-                    @endif
+                        </div>
                     </div>
 
-                    <flux:button :href="route('patient.home')" wire:navigate variant="ghost" class="mt-auto w-full pt-4">
+                    <div class="space-y-3">
+                        @include('partials.patient-checkout-payment-panel')
+                    </div>
+
+                    <flux:button :href="route('patient.home')" wire:navigate variant="ghost" class="mt-4 w-full">
                         {{ __('patient_booking.back_home') }}
                     </flux:button>
-                </div>
+
+                    <div class="mt-6 border-t border-slate-100 pt-5">
+                        @include('partials.patient-checkout-payment-methods')
+                    </div>
                 </div>
             </div>
         </div>

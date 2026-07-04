@@ -32,7 +32,7 @@ new #[Layout('layouts::patient')] #[Title('Book an appointment')] class extends 
     public string $appointmentFor = 'self';
 
     /** @var list<string> */
-    public array $communications = ['chat'];
+    public array $bookingChannels = ['chat', 'video', 'voice'];
 
     public string $patientName = '';
 
@@ -89,6 +89,8 @@ new #[Layout('layouts::patient')] #[Title('Book an appointment')] class extends 
             $this->patientEmail = (string) ($user->email ?? '');
             $this->patientPhone = (string) ($user->phone ?? '');
         }
+
+        $this->bookingChannels = ['chat', 'video', 'voice'];
     }
 
     public function updatedAppointmentFor(string $value): void
@@ -241,12 +243,12 @@ new #[Layout('layouts::patient')] #[Title('Book an appointment')] class extends 
             'patientName' => ['required', 'string', 'max:255'],
             'patientPhone' => ['required', 'string', 'max:32'],
             'patientNotes' => ['nullable', 'string', 'max:300'],
-            'communications' => ['required', 'array', 'min:1'],
+            'bookingChannels' => ['required', 'array', 'min:1'],
         ]);
 
-        if (! in_array('chat', $this->communications, true)) {
+        if (! in_array('chat', $this->bookingChannels, true)) {
             throw ValidationException::withMessages([
-                'communications' => __('patient_booking.chat_required'),
+                'bookingChannels' => __('patient_booking.chat_required'),
             ]);
         }
 
@@ -275,19 +277,19 @@ new #[Layout('layouts::patient')] #[Title('Book an appointment')] class extends 
             return;
         }
 
-        if (in_array($channel, $this->communications, true)) {
-            $this->communications = array_values(array_filter(
-                $this->communications,
+        if (in_array($channel, $this->bookingChannels, true)) {
+            $this->bookingChannels = array_values(array_filter(
+                $this->bookingChannels,
                 static fn (string $c): bool => $c !== $channel
             ));
         } else {
-            $this->communications = array_values(array_unique([...$this->communications, $channel]));
+            $this->bookingChannels = array_values(array_unique([...$this->bookingChannels, $channel]));
         }
     }
 
     public function communicationSelected(string $channel): bool
     {
-        return in_array($channel, $this->communications, true);
+        return in_array($channel, $this->bookingChannels, true);
     }
 
     public function submitBooking(): void
@@ -298,12 +300,12 @@ new #[Layout('layouts::patient')] #[Title('Book an appointment')] class extends 
             'patientEmail' => ['nullable', 'email', 'max:255'],
             'patientPhone' => ['required', 'string', 'max:32'],
             'patientNotes' => ['nullable', 'string', 'max:300'],
-            'communications' => ['required', 'array', 'min:1'],
+            'bookingChannels' => ['required', 'array', 'min:1'],
         ]);
 
-        if (! in_array('chat', $this->communications, true)) {
+        if (! in_array('chat', $this->bookingChannels, true)) {
             throw ValidationException::withMessages([
-                'communications' => __('patient_booking.chat_required'),
+                'bookingChannels' => __('patient_booking.chat_required'),
             ]);
         }
 
@@ -373,7 +375,7 @@ new #[Layout('layouts::patient')] #[Title('Book an appointment')] class extends 
                 'voice' => 'voice_call',
                 default => $channel,
             },
-            $this->communications
+            $this->bookingChannels
         ));
     }
 }; ?>
@@ -452,7 +454,7 @@ new #[Layout('layouts::patient')] #[Title('Book an appointment')] class extends 
                             </button>
                         @endforeach
                     </div>
-                    @error('communications')
+                    @error('bookingChannels')
                         <flux:text class="text-sm text-red-600">{{ $message }}</flux:text>
                     @enderror
                 </section>

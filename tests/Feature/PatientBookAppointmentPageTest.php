@@ -228,11 +228,11 @@ test('authenticated patient can select multiple communication methods on booking
             'duration' => 15,
         ])
         ->test('pages::patient.book-appointments', ['doctor' => $doctor])
-        ->assertSet('communications', ['chat'])
+        ->assertSet('bookingChannels', ['chat', 'video', 'voice'])
         ->call('toggleCommunication', 'video')
-        ->assertSet('communications', ['chat', 'video'])
+        ->assertSet('bookingChannels', ['chat', 'voice'])
         ->call('toggleCommunication', 'voice')
-        ->assertSet('communications', ['chat', 'video', 'voice']);
+        ->assertSet('bookingChannels', ['chat', 'video', 'voice']);
 });
 
 test('authenticated patient can advance booking to payment summary step on mobile', function () {
