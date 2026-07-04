@@ -13,7 +13,7 @@ return [
     |
     */
 
-    'doctor_missed_grace_minutes' => (int) env('APPOINTMENT_DOCTOR_MISSED_GRACE_MINUTES', 10),
+    'doctor_missed_grace_minutes' => (int) env('APPOINTMENT_DOCTOR_MISSED_GRACE_MINUTES', 5),
 
     /*
     |--------------------------------------------------------------------------
