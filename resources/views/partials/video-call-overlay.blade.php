@@ -45,14 +45,6 @@
                         @endif
                     </div>
                 </div>
-                <button
-                    type="button"
-                    data-video-call-leave="{{ $leaveBtnId }}"
-                    class="video-call-leave-header inline-flex shrink-0 items-center gap-2 rounded-xl bg-rose-600 px-3 py-2 text-xs font-semibold text-white shadow-lg shadow-rose-900/35 transition hover:bg-rose-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-400 sm:hidden"
-                >
-                    <flux:icon name="x-mark" variant="mini" class="size-4" />
-                    {{ $endCallLabel }}
-                </button>
             </div>
 
             <div class="relative flex min-h-0 flex-1 flex-col bg-black">

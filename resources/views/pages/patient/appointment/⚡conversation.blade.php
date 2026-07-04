@@ -307,6 +307,43 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
     @endif
 
     <div
+        id="incoming-call-banner"
+        class="hidden rounded-2xl border border-emerald-300 bg-gradient-to-r from-emerald-50 via-emerald-50/95 to-white px-4 py-3 shadow-md shadow-emerald-900/10 ring-1 ring-inset ring-emerald-200/80 max-sm:fixed max-sm:inset-x-6 max-sm:bottom-[calc(4.75rem+env(safe-area-inset-bottom))] max-sm:z-40 max-sm:shadow-lg sm:px-5"
+        role="alert"
+        data-test="patient-incoming-call-banner"
+    >
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div class="flex min-w-0 items-start gap-2.5">
+                <span class="relative mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white shadow-sm shadow-emerald-900/25">
+                    <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60"></span>
+                    <flux:icon name="video-camera" variant="mini" class="relative size-4" />
+                </span>
+                <div class="min-w-0">
+                    <p class="text-sm font-semibold text-emerald-950">{{ __('patient.appointments.incoming_call_title') }}</p>
+                    <p id="incoming-call-label" class="mt-0.5 text-sm text-emerald-800"></p>
+                </div>
+            </div>
+            <div class="flex shrink-0 flex-col gap-2 max-sm:w-full sm:flex-row sm:items-center">
+                <button
+                    type="button"
+                    id="incoming-call-accept"
+                    class="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#10B981] px-4 py-2.5 text-sm font-semibold text-white shadow-md shadow-emerald-900/20 transition hover:brightness-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 sm:min-h-10 sm:w-auto"
+                >
+                    <flux:icon name="video-camera" variant="mini" class="size-4" />
+                    {{ __('patient.appointments.join_call') }}
+                </button>
+                <button
+                    type="button"
+                    id="incoming-call-dismiss"
+                    class="inline-flex min-h-10 w-full items-center justify-center rounded-xl border border-emerald-300 bg-white px-4 py-2 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 sm:w-auto"
+                >
+                    {{ __('patient.appointments.dismiss_call') }}
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div
         id="patient-chat-panel"
         class="overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-[0_8px_32px_0_rgba(0,0,0,0.03)] ring-1 ring-slate-100 max-sm:mb-[calc(5.5rem+env(safe-area-inset-bottom))] sm:border-zinc-200/90 sm:shadow-[0_20px_55px_-32px_rgba(15,23,42,0.35)] sm:ring-zinc-100"
         data-appointment-id="{{ $appointment->id }}"
@@ -318,40 +355,6 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
     >
         <div class="grid min-h-[34rem] grid-cols-1 max-sm:min-h-[min(32rem,calc(100dvh-18rem))] lg:grid-cols-12">
             <div class="flex min-h-[30rem] flex-col border-zinc-200 max-sm:min-h-[min(28rem,calc(100dvh-20rem))] lg:col-span-8 lg:border-e">
-                <div
-                    id="incoming-call-banner"
-                    class="hidden shrink-0 border-b border-emerald-300 bg-gradient-to-r from-emerald-50 via-emerald-50/95 to-white px-4 py-3 shadow-md shadow-emerald-900/10 ring-1 ring-inset ring-emerald-200/80 sm:px-5"
-                    role="alert"
-                >
-                    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                        <div class="flex min-w-0 items-start gap-2.5">
-                            <span class="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white shadow-sm shadow-emerald-900/25">
-                                <flux:icon name="video-camera" variant="mini" class="size-4" />
-                            </span>
-                            <div class="min-w-0">
-                                <p class="text-sm font-semibold text-emerald-950">{{ __('patient.appointments.incoming_call_title') }}</p>
-                                <p id="incoming-call-label" class="mt-0.5 text-sm text-emerald-800"></p>
-                            </div>
-                        </div>
-                        <div class="flex shrink-0 items-center gap-2">
-                            <button
-                                type="button"
-                                id="incoming-call-accept"
-                                class="inline-flex min-h-10 items-center justify-center rounded-xl bg-[#10B981] px-4 py-2 text-sm font-semibold text-white shadow-md shadow-emerald-900/20 transition hover:brightness-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2"
-                            >
-                                {{ __('patient.appointments.join_call') }}
-                            </button>
-                            <button
-                                type="button"
-                                id="incoming-call-dismiss"
-                                class="inline-flex min-h-10 items-center justify-center rounded-xl border border-emerald-300 bg-white px-4 py-2 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2"
-                            >
-                                {{ __('patient.appointments.dismiss_call') }}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
                 <div id="patient-chat-messages" class="min-h-0 flex-1 space-y-3 overflow-y-auto bg-gradient-to-b from-zinc-50/90 via-zinc-50/70 to-zinc-100/70 px-4 py-4 sm:px-5">
             @forelse ($messages as $msg)
                 <div @class(['flex', 'justify-end' => $msg['send_by'] === 'patient', 'justify-start' => $msg['send_by'] !== 'patient']) wire:key="patient-chat-{{ $msg['id'] }}">
@@ -855,10 +858,15 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 }
 
                 const joinSessionBtn = document.getElementById('patient-session-join-call-btn');
+                const sessionLiveBanner = document.getElementById('patient-session-live-banner');
                 const hasIncomingCall = Boolean(incomingPayload)
                     || (incomingBanner && !incomingBanner.classList.contains('hidden'));
                 if (joinSessionBtn) {
                     joinSessionBtn.classList.toggle('hidden', Boolean(activeMode) || hasIncomingCall);
+                }
+
+                if (sessionLiveBanner && sessionActive) {
+                    sessionLiveBanner.classList.toggle('hidden', hasIncomingCall);
                 }
             }
 
