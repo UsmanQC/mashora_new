@@ -15,7 +15,6 @@
     $id = $specialist['id'];
     $roleKind = $specialist['role_kind'];
     $roleLabel = __('specialist_results.roles.'.$roleKind);
-    $badgeColor = $roleKind === 'therapist' ? 'lime' : 'sky';
 @endphp
 
 <article
@@ -34,9 +33,9 @@
                 <div class="min-w-0">
                     <flux:heading size="lg" class="truncate text-zinc-900">{{ $specialist['name'] }}</flux:heading>
                     <div class="mt-2 inline-flex flex-wrap gap-2">
-                        <flux:badge size="sm" color="{{ $badgeColor }}" variant="pill">
+                        <span class="inline-flex items-center rounded-full border border-zinc-900/10 bg-zinc-100 px-3 py-1 text-xs font-semibold text-zinc-900">
                             {{ $roleLabel }}
-                        </flux:badge>
+                        </span>
                     </div>
                 </div>
 
@@ -137,11 +136,11 @@
     <div class="mt-4 border-t border-zinc-100 pt-4" x-data="{ showAllTags: false }">
         <div class="flex flex-wrap gap-2">
             @foreach ($visibleTags as $tag)
-                <flux:badge variant="pill" color="zinc" class="!rounded-full !border !border-zinc-200 !bg-zinc-100/85 !px-3 !py-1 !text-[0.78rem] !font-medium">{{ $tag }}</flux:badge>
+                <flux:badge variant="pill" color="zinc" class="!rounded-full !border !border-zinc-200 !bg-zinc-50 !px-3 !py-1 !text-[0.78rem] !font-medium !text-zinc-900">{{ $tag }}</flux:badge>
             @endforeach
 
             @foreach ($hiddenTags as $tag)
-                <flux:badge x-cloak x-show="showAllTags" variant="pill" color="zinc" class="!rounded-full !border !border-zinc-200 !bg-zinc-100/85 !px-3 !py-1 !text-[0.78rem] !font-medium">{{ $tag }}</flux:badge>
+                <flux:badge x-cloak x-show="showAllTags" variant="pill" color="zinc" class="!rounded-full !border !border-zinc-200 !bg-zinc-50 !px-3 !py-1 !text-[0.78rem] !font-medium !text-zinc-900">{{ $tag }}</flux:badge>
             @endforeach
         </div>
 
