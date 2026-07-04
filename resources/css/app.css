@@ -235,6 +235,11 @@ select:focus[data-flux-control] {
         color: #71717a !important;
     }
 
+    .scheme-light ui-menu[data-flux-menu][popover]:popover-open,
+    .scheme-light ui-menu[data-flux-menu].\:popover-open {
+        z-index: 60 !important;
+    }
+
     .doctor-emerald-pill-radios ui-radio-group[data-flux-radio-group-pills] {
         @apply grid w-full grid-cols-2 gap-2;
     }

@@ -10,16 +10,23 @@
     $resolvedUserName = (string) $userName;
 @endphp
 
-<flux:dropdown position="bottom" align="start" class="min-w-0">
-    <button
+<flux:dropdown
+    position="bottom"
+    align="{{ $variant === 'avatar' ? 'end' : 'start' }}"
+    class="min-w-0"
+>
+    <flux:button
+        variant="ghost"
+        size="sm"
         type="button"
+        :square="$variant === 'avatar'"
+        :aria-label="__('patient.account_menu_aria')"
+        data-test="{{ $testId }}-trigger"
         @class([
             'active-scale text-start',
-            'flex min-w-0 items-center gap-3' => $variant === 'home',
-            'patient-luxury-page-header__avatar shrink-0 overflow-hidden rounded-full bg-white shadow-sm ring-2 ring-white' => $variant === 'avatar',
+            'patient-luxury-page-header__avatar !size-10 !min-h-0 shrink-0 overflow-hidden !rounded-full !border-0 !bg-white !p-0 !shadow-sm ring-2 ring-white hover:!bg-white' => $variant === 'avatar',
+            '!h-auto !min-h-0 !justify-start !gap-3 !rounded-none !border-0 !bg-transparent !p-0 !shadow-none hover:!bg-transparent active:!bg-transparent' => $variant === 'home',
         ])
-        aria-label="{{ __('patient.account_menu_aria') }}"
-        data-test="{{ $testId }}-trigger"
     >
         @if ($variant === 'home')
             <span class="relative shrink-0">
@@ -42,28 +49,27 @@
             </span>
         @else
             @if (filled($profilePhotoUrl))
-                <img src="{{ $profilePhotoUrl }}" alt="" class="size-10 object-cover" />
+                <img src="{{ $profilePhotoUrl }}" alt="" class="size-full object-cover" />
             @else
                 <flux:avatar :name="$resolvedUserName" circle class="size-10" />
             @endif
         @endif
-    </button>
+    </flux:button>
 
     <flux:menu class="min-w-[11rem]">
-        <flux:menu.item
-            as="button"
-            type="button"
-            icon="arrow-right-start-on-rectangle"
-            icon:variant="outline"
-            variant="danger"
-            class="w-full cursor-pointer"
-            data-test="patient-logout-button"
-            onclick="document.getElementById('{{ $testId }}-logout-form')?.submit()"
-        >
-            {{ __('patient.menu.sign_out') }}
-        </flux:menu.item>
+        <form method="POST" action="{{ route('logout') }}" class="w-full">
+            @csrf
+            <flux:menu.item
+                as="button"
+                type="submit"
+                icon="arrow-right-start-on-rectangle"
+                icon:variant="outline"
+                variant="danger"
+                class="w-full cursor-pointer"
+                data-test="patient-logout-button"
+            >
+                {{ __('patient.menu.sign_out') }}
+            </flux:menu.item>
+        </form>
     </flux:menu>
-    <form id="{{ $testId }}-logout-form" method="POST" action="{{ route('logout') }}" class="hidden">
-        @csrf
-    </form>
 </flux:dropdown>
