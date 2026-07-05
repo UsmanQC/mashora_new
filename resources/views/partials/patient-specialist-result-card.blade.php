@@ -25,7 +25,12 @@
 
     <div class="flex gap-4">
         <div class="rounded-full ring-2 ring-[#10B981]/25 ring-offset-2 ring-offset-white">
-            <flux:avatar :name="$specialist['name']" circle size="xl" />
+            <flux:avatar
+                :name="$specialist['name']"
+                :src="$specialist['photo_url'] ?? null"
+                circle
+                size="xl"
+            />
         </div>
 
         <div class="min-w-0 flex-1">
