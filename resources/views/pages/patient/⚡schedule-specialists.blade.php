@@ -771,14 +771,14 @@ new #[Layout('layouts::patient')] #[Title('Specialists')] class extends Componen
             </button>
         </div>
 
-        <div @class(['grid grid-cols-4 gap-2 sm:grid-cols-8 sm:gap-2.5', 'hidden' => $this->instantBooking])>
+        <div @class(['flex gap-2 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:overflow-visible', 'hidden' => $this->instantBooking])>
             @foreach ($this->dayOptions as $day)
                 <button
                     type="button"
                     wire:key="day-{{ $day['date'] }}"
                     wire:click="selectDate('{{ $day['date'] }}')"
                     @class([
-                        'w-full rounded-2xl border px-2.5 py-2.5 text-center text-sm font-semibold transition',
+                        'min-w-[4.5rem] shrink-0 rounded-2xl border px-2.5 py-2.5 text-center text-sm font-semibold transition sm:min-w-0 sm:flex-1 sm:shrink',
                         $this->selectedDate === $day['date']
                             ? 'border-[#10B981] bg-[#10B981] text-white shadow-[0_10px_20px_-12px_rgb(16_185_129/0.45)]'
                             : 'border-zinc-200/80 bg-zinc-50/70 text-[#10B981] hover:border-[#10B981]/35 hover:bg-[#10B981]/5',
@@ -796,14 +796,14 @@ new #[Layout('layouts::patient')] #[Title('Specialists')] class extends Componen
             </div>
         @endif
 
-        <div class="flex flex-wrap justify-center gap-2 pt-0.5">
+        <div class="flex flex-nowrap gap-2 pt-0.5">
             @foreach ($this->durationOptions as $minutes)
                 <button
                     type="button"
                     wire:key="duration-{{ $minutes }}"
                     wire:click="selectDuration('{{ $minutes }}')"
                     @class([
-                        'rounded-xl border px-3.5 py-2 text-sm font-semibold transition',
+                        'min-w-0 flex-1 shrink-0 whitespace-nowrap rounded-xl border px-3 py-2 text-sm font-semibold transition',
                         $this->selectedDuration === $minutes
                             ? 'border-[#10B981] bg-[#10B981] text-white shadow-[0_10px_20px_-12px_rgb(16_185_129/0.45)]'
                             : 'border-zinc-200/80 bg-zinc-50/70 text-[#10B981] hover:border-[#10B981]/35 hover:bg-[#10B981]/5',

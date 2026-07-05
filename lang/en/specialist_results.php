@@ -40,7 +40,7 @@ return [
     'search_placeholder' => 'Search by doctor name',
     'filters' => 'Filters',
     'today_short' => 'Today',
-    'duration_minutes' => ':minutes minutes',
+    'duration_minutes' => ':minutes min',
     'filter_title' => 'Filter your search',
     'all_option' => 'All',
     'clear' => 'Clear',
