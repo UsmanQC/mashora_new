@@ -21,10 +21,10 @@
     class="group relative flex flex-col overflow-hidden rounded-3xl border border-zinc-200/80 bg-white p-5 shadow-[0_14px_30px_-22px_rgba(2,6,23,0.4)] transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_22px_40px_-24px_rgba(2,6,23,0.45)]"
     wire:key="specialist-card-{{ $id }}"
 >
-    <div class="pointer-events-none absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-[#3b63ff] via-[#5e7cff] to-[#9bb0ff] opacity-80"></div>
+    <div class="pointer-events-none absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-[#10B981] via-[#059669] to-[#34d399] opacity-90"></div>
 
     <div class="flex gap-4">
-        <div class="rounded-full ring-2 ring-[#3b63ff]/20 ring-offset-2 ring-offset-white">
+        <div class="rounded-full ring-2 ring-[#10B981]/25 ring-offset-2 ring-offset-white">
             <flux:avatar :name="$specialist['name']" circle size="xl" />
         </div>
 
