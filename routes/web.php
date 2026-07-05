@@ -149,7 +149,7 @@ Route::livewire('patient/medications', 'pages::patient.medications')
     ->middleware(['auth', 'patient.profile'])
     ->name('patient.medications');
 
-Route::view('patient/favorites', 'patient.favorites')
+Route::livewire('patient/favorites', 'pages::patient.favorites')
     ->middleware(['auth', 'patient.profile'])
     ->name('patient.favorites');
 

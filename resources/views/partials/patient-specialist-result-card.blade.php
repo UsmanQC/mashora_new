@@ -3,6 +3,8 @@
     'specialist',
     /** @var int|string $likes */
     'likes',
+    /** @var bool $likedByUser */
+    'likedByUser' => false,
     /** @var string $selectedDate */
     'selectedDate' => now()->timezone(config('app.timezone'))->toDateString(),
     /** @var list<string> $availableSlots */
@@ -47,12 +49,25 @@
                 <div class="flex shrink-0 flex-col items-center gap-0.5 rounded-xl bg-zinc-50/80 px-2 py-1.5 text-center">
                     <button
                         type="button"
-                        wire:click="incrementLike('{{ $id }}')"
-                        title="{{ __('specialist_results.like_incremented') }}"
-                        class="rounded-lg text-[#10B981] transition hover:scale-105 hover:bg-emerald-500/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#064e3b]/30"
-                        aria-label="{{ __('specialist_results.like_incremented') }}"
+                        wire:click="toggleLike('{{ $id }}')"
+                        title="{{ $likedByUser ? __('specialist_results.like_saved') : (auth()->check() ? __('specialist_results.like_save') : __('specialist_results.like_login_required')) }}"
+                        @class([
+                            'rounded-lg transition hover:scale-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#064e3b]/30',
+                            $likedByUser
+                                ? 'text-[#10B981] hover:bg-emerald-500/10'
+                                : 'text-zinc-400 hover:bg-zinc-100 hover:text-[#10B981]',
+                        ])
+                        aria-label="{{ $likedByUser ? __('specialist_results.like_saved') : __('specialist_results.like_save') }}"
+                        aria-pressed="{{ $likedByUser ? 'true' : 'false' }}"
                     >
-                        <flux:icon name="heart" variant="outline" class="size-7" />
+                        <flux:icon
+                            name="heart"
+                            :variant="$likedByUser ? 'solid' : 'outline'"
+                            @class([
+                                'size-7',
+                                $likedByUser ? 'text-[#10B981]' : '',
+                            ])
+                        />
                     </button>
                     <flux:text class="text-xs font-semibold tabular-nums text-zinc-600">{{ $likes }}</flux:text>
                 </div>

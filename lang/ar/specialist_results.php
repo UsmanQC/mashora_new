@@ -28,7 +28,10 @@ return [
     'times_timezone_note' => 'الأوقات المعروضة بتوقيت السعودية (Asia/Riyadh).',
     'no_slots_for_selected_day' => 'لا توجد أوقات قادمة متاحة في اليوم المحدد.',
 
-    'like_incremented' => 'تم الإضافة للمفضلة (عرض تجريبي)',
+    'like_saved' => 'تم الإضافة للمفضلة',
+    'like_removed' => 'تمت الإزالة من المفضلة',
+    'like_save' => 'أضف إلى المفضلة',
+    'like_login_required' => 'سجّل الدخول لحفظ المفضلة',
 
     'slot_selected_toast' => 'تم حفظ الموعد :time (الحجز قريبًا)',
 

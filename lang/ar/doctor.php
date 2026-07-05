@@ -223,6 +223,8 @@ return [
         'stat_revenue' => 'الإيرادات',
         'stat_appointments' => 'المواعيد',
         'stat_cases' => 'الحالات',
+        'stat_likes' => 'المفضلة',
+        'likes_suffix' => 'مريض حفظك',
         'sar_suffix' => config('currency.sa_riyal_symbol'),
         'reservations_suffix' => 'حجز',
         'cases_suffix' => 'مرضى جدد',

@@ -222,6 +222,8 @@ return [
         'stat_revenue' => 'Revenue',
         'stat_appointments' => 'Appointments',
         'stat_cases' => 'Cases',
+        'stat_likes' => 'Favourites',
+        'likes_suffix' => 'patients saved you',
         'sar_suffix' => config('currency.sa_riyal_symbol'),
         'reservations_suffix' => 'bookings',
         'cases_suffix' => 'new patients',

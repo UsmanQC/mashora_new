@@ -11,6 +11,33 @@ use Carbon\Carbon;
 final class SpecialistCatalog
 {
     /**
+     * @return list<array<string, mixed>> Card-shaped rows saved by the patient.
+     */
+    public static function favoritedDoctorCardsForUser(int $userId): array
+    {
+        $doctorIds = DoctorFavorites::likedDoctorIdsForUser($userId);
+
+        if ($doctorIds === []) {
+            return [];
+        }
+
+        $order = array_flip($doctorIds);
+
+        $doctors = Doctor::query()
+            ->where('status', 'approved')
+            ->whereIn('id', $doctorIds)
+            ->withCount('likes')
+            ->with(['degree', 'specialities', 'durations', 'workingDays.workingHours', 'communications'])
+            ->get()
+            ->sortBy(static fn (Doctor $doctor): int => $order[$doctor->id] ?? PHP_INT_MAX)
+            ->values();
+
+        return $doctors
+            ->map(static fn (Doctor $doctor): array => self::toDoctorCardShape($doctor))
+            ->all();
+    }
+
+    /**
      * @return list<array<string, mixed>> Card-shaped rows for patient-specialist-result-card
      */
     public static function all(): array
@@ -165,6 +192,7 @@ final class SpecialistCatalog
     {
         $doctors = Doctor::query()
             ->where('status', 'approved')
+            ->withCount('likes')
             ->with(['degree', 'specialities', 'durations', 'workingDays.workingHours', 'communications'])
             ->orderByDesc('is_online')
             ->orderBy('id')
@@ -294,7 +322,7 @@ final class SpecialistCatalog
             'accept_instant_appointment' => $doctor->accept_instant_appointment !== false,
             'experience_years' => (int) ($doctor->experience ?? 0),
             'role_kind' => $roleKind,
-            'likes' => 0,
+            'likes' => (int) ($doctor->likes_count ?? 0),
             'price_sar' => $price,
             'session_minutes' => $sessionMinutes,
             'offered_duration_minutes' => $offeredDurationMinutes,

@@ -27,7 +27,10 @@ return [
     'times_timezone_note' => 'Times are shown in Saudi Arabia time (Asia/Riyadh).',
     'no_slots_for_selected_day' => 'No upcoming times left for the selected day.',
 
-    'like_incremented' => 'Saved to favourites (demo)',
+    'like_saved' => 'Saved to favourites',
+    'like_removed' => 'Removed from favourites',
+    'like_save' => 'Save to favourites',
+    'like_login_required' => 'Sign in to save favourites',
 
     'slot_selected_toast' => 'Time slot :time saved (booking opens soon)',
 

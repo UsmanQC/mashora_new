@@ -96,6 +96,16 @@ class Doctor extends Authenticatable implements Wallet, WalletFloat
     }
 
     /**
+     * Patient favourites for this doctor.
+     *
+     * @return HasMany<Like, $this>
+     */
+    public function likes(): HasMany
+    {
+        return $this->hasMany(Like::class);
+    }
+
+    /**
      * @return HasMany<WorkingDay, $this>
      */
     public function workingDays(): HasMany

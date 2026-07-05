@@ -81,7 +81,22 @@ new #[Layout('layouts::doctor')] #[Title('Dashboard')] class extends Component
     #[Computed]
     public function currentDoctor(): ?Doctor
     {
-        return $this->doctor();
+        $doctor = $this->doctor();
+
+        if ($doctor === null) {
+            return null;
+        }
+
+        return Doctor::query()
+            ->whereKey($doctor->id)
+            ->withCount('likes')
+            ->first();
+    }
+
+    #[Computed]
+    public function likesCount(): int
+    {
+        return (int) ($this->currentDoctor?->likes_count ?? 0);
     }
 
     /**
@@ -243,7 +258,14 @@ new #[Layout('layouts::doctor')] #[Title('Dashboard')] class extends Component
                         <p class="text-sm text-zinc-500">{{ __('Hope you have a productive day.') }}</p>
                     </div>
                 </div>
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-3">
+                    <div
+                        class="flex shrink-0 flex-col items-center gap-0.5 rounded-xl border border-emerald-200/70 bg-emerald-50/60 px-3 py-2 text-center"
+                        title="{{ __('doctor.dashboard.stat_likes') }}"
+                    >
+                        <flux:icon name="heart" variant="solid" class="size-7 text-[#10B981]" />
+                        <span class="text-xs font-semibold tabular-nums text-zinc-700">{{ $this->likesCount }}</span>
+                    </div>
                     <span class="inline-flex items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-1.5 text-xs font-medium text-zinc-600">
                         {{ now()->locale(app()->getLocale())->isoFormat('ddd, D MMM') }}
                     </span>

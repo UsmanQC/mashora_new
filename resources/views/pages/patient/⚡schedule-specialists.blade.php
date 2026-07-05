@@ -1,10 +1,12 @@
 <?php
 
 use App\Support\PendingPatientBooking;
+use App\Support\DoctorFavorites;
 use App\Support\SpecialistCatalog;
 use App\Models\Duration;
 use App\Models\Degree;
 use App\Models\Doctor;
+use App\Models\Like;
 use App\Models\Speciality;
 use App\Services\DoctorAvailabilityService;
 use Flux\Flux;
@@ -21,6 +23,9 @@ new #[Layout('layouts::patient')] #[Title('Specialists')] class extends Componen
 {
     /** @var array<string, int> */
     public array $likeCounts = [];
+
+    /** @var array<string, bool> */
+    public array $likedByUser = [];
 
     public string $searchDoctor = '';
 
@@ -93,9 +98,7 @@ new #[Layout('layouts::patient')] #[Title('Specialists')] class extends Componen
             $this->instantBooking = true;
         }
 
-        foreach ($this->filteredSpecialists() as $specialist) {
-            $this->likeCounts[$specialist['id']] = (int) ($specialist['likes'] ?? 0);
-        }
+        $this->hydrateLikeState();
 
         $this->selectedDate = now()->timezone($this->patientTimezone())->toDateString();
 
@@ -427,13 +430,91 @@ new #[Layout('layouts::patient')] #[Title('Specialists')] class extends Componen
         $this->showFilterPanel = false;
     }
 
-    public function incrementLike(string $id): void
+    protected function hydrateLikeState(): void
     {
+        $specialists = $this->filteredSpecialists();
+
+        foreach ($specialists as $specialist) {
+            $this->likeCounts[$specialist['id']] = (int) ($specialist['likes'] ?? 0);
+            $this->likedByUser[$specialist['id']] = false;
+        }
+
+        $userId = Auth::id();
+        if ($userId === null) {
+            return;
+        }
+
+        $doctorIdsByCardId = collect($specialists)
+            ->mapWithKeys(static function (array $specialist): array {
+                $doctorId = $specialist['doctor_database_id'] ?? null;
+
+                return filled($doctorId)
+                    ? [(string) $specialist['id'] => (int) $doctorId]
+                    : [];
+            });
+
+        if ($doctorIdsByCardId->isEmpty()) {
+            return;
+        }
+
+        $likedDoctorIds = Like::query()
+            ->where('user_id', $userId)
+            ->whereIn('doctor_id', $doctorIdsByCardId->values()->all())
+            ->pluck('doctor_id')
+            ->map(static fn (mixed $id): int => (int) $id)
+            ->all();
+
+        foreach ($doctorIdsByCardId as $cardId => $doctorId) {
+            $this->likedByUser[(string) $cardId] = in_array($doctorId, $likedDoctorIds, true);
+        }
+    }
+
+    public function toggleLike(string $id): void
+    {
+        if (! Auth::check()) {
+            $this->redirect(route('patient.phone'), navigate: true);
+
+            return;
+        }
+
         if (! array_key_exists($id, $this->likeCounts)) {
             return;
         }
 
-        $this->likeCounts[$id]++;
+        $specialist = collect($this->specialists)->firstWhere('id', $id);
+        if ($specialist === null) {
+            return;
+        }
+
+        $doctorId = $specialist['doctor_database_id'] ?? null;
+        if (! filled($doctorId)) {
+            return;
+        }
+
+        $userId = (int) Auth::id();
+        $doctorId = (int) $doctorId;
+
+        $isLiked = DoctorFavorites::toggle($userId, $doctorId);
+
+        if ($isLiked) {
+            $this->likedByUser[$id] = true;
+            $this->likeCounts[$id]++;
+
+            Flux::toast(
+                variant: 'success',
+                text: __('specialist_results.like_saved'),
+            );
+
+            return;
+        }
+
+        $this->likedByUser[$id] = false;
+        $this->likeCounts[$id] = max(0, $this->likeCounts[$id] - 1);
+
+        Flux::toast(
+            variant: 'success',
+            text: __('specialist_results.like_removed'),
+        );
     }
 
     public function pickSlot(string $specialistId, string $slot): void
@@ -824,6 +905,7 @@ new #[Layout('layouts::patient')] #[Title('Specialists')] class extends Componen
                 @include('partials.patient-specialist-result-card', [
                     'specialist' => $specialist,
                     'likes' => $this->likeCounts[$specialist['id']] ?? (int) $specialist['likes'],
+                    'likedByUser' => $this->likedByUser[$specialist['id']] ?? false,
                     'selectedDate' => $this->selectedDate,
                     'availableSlots' => $this->availableSlots($specialist),
                     'displayTimezone' => $this->patientTimezone(),
