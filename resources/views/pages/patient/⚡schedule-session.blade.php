@@ -65,7 +65,9 @@ new #[Layout('layouts::patient')] #[Title('Schedule a session')] class extends C
 
     public function mobileStepsTotal(): int
     {
-        return 5;
+        // return 5; // includes session length step (mobile step 3)
+
+        return 4;
     }
 
     public function mobileStepProgressPercent(): int
@@ -78,8 +80,8 @@ new #[Layout('layouts::patient')] #[Title('Schedule a session')] class extends C
         $key = match ($this->mobileStep) {
             1 => 'degree',
             2 => 'gender',
-            3 => 'duration',
-            4 => 'language',
+            // 3 => 'duration', // Session length step (disabled on mobile)
+            3 => 'language',
             default => 'subspecialties',
         };
 
@@ -154,6 +156,26 @@ new #[Layout('layouts::patient')] #[Title('Schedule a session')] class extends C
         $this->proceedNext();
     }
 
+    public function skipMobileGenderStep(): void
+    {
+        $this->genderPreference = 'both';
+        $this->ensureMobileDurationDefault();
+        $this->goToNextMobileStep();
+    }
+
+    public function skipMobileLanguageStep(): void
+    {
+        $this->languagePreference = 'both';
+        $this->goToNextMobileStep();
+    }
+
+    protected function ensureMobileDurationDefault(): void
+    {
+        if ($this->durationMinutes === '') {
+            $this->durationMinutes = '30';
+        }
+    }
+
     public function selectMobileDegree(string $value): void
     {
         $this->degree_id = $value;
@@ -163,14 +185,17 @@ new #[Layout('layouts::patient')] #[Title('Schedule a session')] class extends C
     public function selectMobileGender(string $value): void
     {
         $this->genderPreference = $value;
+        $this->ensureMobileDurationDefault();
         $this->goToNextMobileStep();
     }
 
+    /*
     public function selectMobileDuration(string $minutes): void
     {
         $this->durationMinutes = $minutes;
         $this->goToNextMobileStep();
     }
+    */
 
     public function selectMobileLanguage(string $value): void
     {
@@ -178,13 +203,19 @@ new #[Layout('layouts::patient')] #[Title('Schedule a session')] class extends C
         $this->goToNextMobileStep();
     }
 
+    /**
+     * @return list<string>
+     */
+    protected function allowedDegreeIds(): array
+    {
+        return [...array_column($this->specialistKindOptions, 'value'), 'all'];
+    }
+
     protected function validateCurrentMobileStep(): void
     {
-        $availableDegreeIds = array_column($this->specialistKindOptions, 'value');
-
         match ($this->mobileStep) {
             1 => $this->validate([
-                'degree_id' => ['required', 'string', 'in:'.implode(',', $availableDegreeIds)],
+                'degree_id' => ['required', 'string', 'in:'.implode(',', $this->allowedDegreeIds())],
             ], [
                 'degree_id.required' => __('session_filter.validation.specialist_required'),
             ]),
@@ -193,16 +224,25 @@ new #[Layout('layouts::patient')] #[Title('Schedule a session')] class extends C
             ], [
                 'genderPreference.required' => __('session_filter.validation.gender_required'),
             ]),
+            /*
             3 => $this->validate([
                 'durationMinutes' => ['required', 'in:15,30,45,60'],
             ], [
                 'durationMinutes.required' => __('session_filter.validation.duration_required'),
             ]),
+            */
+            3 => $this->validate([
+                'languagePreference' => ['required', 'in:ar,en,both'],
+            ], [
+                'languagePreference.required' => __('session_filter.validation.language_required'),
+            ]),
+            /*
             4 => $this->validate([
                 'languagePreference' => ['required', 'in:ar,en,both'],
             ], [
                 'languagePreference.required' => __('session_filter.validation.language_required'),
             ]),
+            */
             default => null,
         };
     }
@@ -311,6 +351,23 @@ new #[Layout('layouts::patient')] #[Title('Schedule a session')] class extends C
         $this->subspecialtiesExpanded = ! $this->subspecialtiesExpanded;
     }
 
+    public function selectAllSubspecialties(): void
+    {
+        $this->subspecialties = array_column($this->specialityOptions, 'id');
+        $this->subspecialtiesExpanded = true;
+    }
+
+    public function allSubspecialtiesSelected(): bool
+    {
+        $allIds = array_column($this->specialityOptions, 'id');
+
+        if ($allIds === []) {
+            return false;
+        }
+
+        return count(array_diff($allIds, $this->subspecialties)) === 0;
+    }
+
     /**
      * @return array<string, mixed>
      */
@@ -328,10 +385,8 @@ new #[Layout('layouts::patient')] #[Title('Schedule a session')] class extends C
 
     public function proceedNext(): void
     {
-        $availableDegreeIds = array_column($this->specialistKindOptions, 'value');
-
         $this->validate([
-            'degree_id' => ['required', 'string', 'in:'.implode(',', $availableDegreeIds)],
+            'degree_id' => ['required', 'string', 'in:'.implode(',', $this->allowedDegreeIds())],
             'genderPreference' => ['required', 'in:male,female,both'],
             'durationMinutes' => ['required', 'in:15,30,45,60'],
             'languagePreference' => ['required', 'in:ar,en,both'],
@@ -423,6 +478,25 @@ new #[Layout('layouts::patient')] #[Title('Schedule a session')] class extends C
             @endif
             @if ($mobileStep === 1)
                 <div class="space-y-2.5" role="radiogroup" aria-label="{{ __('session_filter.sections.specialist') }}">
+                    <button
+                        type="button"
+                        wire:key="mobile-degree-all"
+                        wire:click="selectMobileDegree('all')"
+                        wire:loading.attr="disabled"
+                        wire:target="selectMobileDegree"
+                        aria-pressed="{{ $degree_id === 'all' ? 'true' : 'false' }}"
+                        data-test="session-filter-select-all-specialists"
+                        @class([
+                            'session-filter-mobile-option',
+                            'session-filter-mobile-option--active' => $degree_id === 'all',
+                        ])
+                    >
+                        <span class="session-filter-mobile-option__icon session-filter-mobile-option__icon--specialist">
+                            <flux:icon name="users" class="size-5" />
+                        </span>
+                        <span class="session-filter-mobile-option__label">{{ __('session_filter.select_all') }}</span>
+                        <span class="session-filter-mobile-option__indicator" aria-hidden="true"></span>
+                    </button>
                     @foreach ($this->specialistKindOptions as $option)
                         <button
                             type="button"
@@ -471,6 +545,8 @@ new #[Layout('layouts::patient')] #[Title('Schedule a session')] class extends C
                     @endforeach
                 </div>
                 <flux:error name="genderPreference" />
+            {{-- Session length step (mobile step 3) — disabled, kept for reference --}}
+            {{--
             @elseif ($mobileStep === 3)
                 <div class="grid grid-cols-2 gap-2.5" role="radiogroup" aria-label="{{ __('session_filter.sections.duration') }}">
                     @foreach (['15', '30', '45', '60'] as $minutes)
@@ -492,7 +568,8 @@ new #[Layout('layouts::patient')] #[Title('Schedule a session')] class extends C
                     @endforeach
                 </div>
                 <flux:error name="durationMinutes" />
-            @elseif ($mobileStep === 4)
+            --}}
+            @elseif ($mobileStep === 3)
                 <div class="space-y-2.5" role="radiogroup" aria-label="{{ __('session_filter.sections.language') }}">
                     @foreach (['ar' => __('session_filter.sections.lang.ar'), 'en' => __('session_filter.sections.lang.en'), 'both' => __('session_filter.sections.lang.both')] as $value => $label)
                         <button
@@ -525,6 +602,19 @@ new #[Layout('layouts::patient')] #[Title('Schedule a session')] class extends C
                         </span>
                     </div>
                     <div class="flex flex-wrap gap-2">
+                        <button
+                            type="button"
+                            wire:key="mobile-sub-all"
+                            wire:click="selectAllSubspecialties"
+                            aria-pressed="{{ $this->allSubspecialtiesSelected() ? 'true' : 'false' }}"
+                            data-test="session-filter-select-all-subspecialties"
+                            @class([
+                                'session-filter-chip',
+                                'session-filter-chip--selected' => $this->allSubspecialtiesSelected(),
+                            ])
+                        >
+                            {{ __('session_filter.select_all') }}
+                        </button>
                         @foreach ($this->visibleSpecialityOptions as $opt)
                             <button
                                 type="button"
@@ -593,19 +683,47 @@ new #[Layout('layouts::patient')] #[Title('Schedule a session')] class extends C
                             type="button"
                             class="!min-h-11 w-full !rounded-full !border !border-zinc-200 !bg-white !px-3 !text-sm !font-semibold !text-zinc-700 hover:!bg-zinc-50"
                             wire:loading.attr="disabled"
-                            icon="arrow-left"
                             data-test="session-filter-mobile-back"
                         >
                             {{ __('session_filter.back') }}
                         </flux:button>
                     </div>
                 </div>
+            @elseif (in_array($mobileStep, [2, 3], true))
+                <div class="pointer-events-auto mx-auto w-full max-w-md">
+                    <div class="grid grid-cols-2 gap-2">
+                        <button
+                            type="button"
+                            wire:click="{{ $mobileStep === 2 ? 'skipMobileGenderStep' : 'skipMobileLanguageStep' }}"
+                            wire:loading.attr="disabled"
+                            class="inline-flex min-h-11 w-full items-center justify-center rounded-full border border-zinc-300 bg-white px-4 text-sm font-semibold text-zinc-700 shadow-sm transition hover:border-zinc-400 hover:bg-zinc-50 active:scale-[0.98] disabled:opacity-70"
+                            data-test="session-filter-mobile-skip-{{ $mobileStep === 2 ? 'gender' : 'language' }}"
+                        >
+                            {{ __('session_filter.skip') }}
+                        </button>
+
+                        <flux:button
+                            variant="ghost"
+                            size="sm"
+                            wire:click="goToPreviousMobileStep"
+                            type="button"
+                            class="!min-h-11 w-full !rounded-full !border !border-zinc-200 !bg-white !px-3 !text-sm !font-semibold !text-zinc-700 hover:!bg-zinc-50"
+                            wire:loading.attr="disabled"
+                            data-test="session-filter-mobile-back"
+                        >
+                            {{ __('session_filter.back') }}
+                        </flux:button>
+                    </div>
+                </div>
+            {{-- Session length step footer (back only) — disabled with step above --}}
+            {{--
             @else
                 <div class="pointer-events-auto mx-auto flex w-full max-w-md">
-                    <flux:button variant="ghost" size="sm" wire:click="goToPreviousMobileStep" type="button" class="!px-2" wire:loading.attr="disabled" icon="arrow-left">
+                    <flux:button variant="ghost" size="sm" wire:click="goToPreviousMobileStep" type="button" class="!px-2" wire:loading.attr="disabled">
                         {{ __('session_filter.back') }}
                     </flux:button>
                 </div>
+            --}}
             @endif
         </div>
     </div>
@@ -659,6 +777,19 @@ new #[Layout('layouts::patient')] #[Title('Schedule a session')] class extends C
                         {{ __('session_filter.sections.specialist') }}
                     </flux:heading>
                     <div class="flex flex-wrap gap-2 sm:gap-2.5" role="radiogroup" aria-labelledby="sess-spec-kind">
+                        <button
+                            type="button"
+                            wire:key="degree-all"
+                            wire:click="$set('degree_id', 'all')"
+                            aria-pressed="{{ $degree_id === 'all' ? 'true' : 'false' }}"
+                            data-test="session-filter-select-all-specialists"
+                            @class([
+                                'session-filter-chip',
+                                'session-filter-chip--active' => $degree_id === 'all',
+                            ])
+                        >
+                            {{ __('session_filter.select_all') }}
+                        </button>
                         @foreach ($this->specialistKindOptions as $option)
                             <button
                                 type="button"
@@ -784,6 +915,19 @@ new #[Layout('layouts::patient')] #[Title('Schedule a session')] class extends C
                         </span>
                     </div>
                     <div class="flex flex-wrap gap-2">
+                        <button
+                            type="button"
+                            wire:key="sub-all"
+                            wire:click="selectAllSubspecialties"
+                            aria-pressed="{{ $this->allSubspecialtiesSelected() ? 'true' : 'false' }}"
+                            data-test="session-filter-select-all-subspecialties"
+                            @class([
+                                'session-filter-chip',
+                                'session-filter-chip--selected' => $this->allSubspecialtiesSelected(),
+                            ])
+                        >
+                            {{ __('session_filter.select_all') }}
+                        </button>
                         @foreach ($this->visibleSpecialityOptions as $opt)
                             <button
                                 type="button"

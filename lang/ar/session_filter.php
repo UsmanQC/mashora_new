@@ -63,6 +63,7 @@ return [
     ],
     'show_more' => 'أظهر المزيد',
     'show_less' => 'أظهر أقل',
+    'select_all' => 'الكل',
     'next' => 'التالي',
     'skip' => 'تخطي',
     'back' => 'رجوع',

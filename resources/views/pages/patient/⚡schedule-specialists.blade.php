@@ -196,7 +196,7 @@ new #[Layout('layouts::patient')] #[Title('Specialists')] class extends Componen
             ));
         }
 
-        if ($this->filterDegree !== '') {
+        if ($this->filterDegree !== '' && $this->filterDegree !== 'all') {
             $items = array_values(array_filter(
                 $items,
                 fn (array $specialist): bool => (string) ($specialist['degree_id'] ?? '') === $this->filterDegree

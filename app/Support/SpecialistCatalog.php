@@ -85,7 +85,7 @@ final class SpecialistCatalog
     private static function matchesFilters(array $doc, array $preferences): bool
     {
         $roleWant = $preferences['degree_id'] ?? ($preferences['specialist_role'] ?? null);
-        if (is_string($roleWant) && $roleWant !== '') {
+        if (is_string($roleWant) && $roleWant !== '' && $roleWant !== 'all') {
             $docDegreeId = (string) ($doc['degree_id'] ?? '');
 
             if (is_numeric($roleWant)) {

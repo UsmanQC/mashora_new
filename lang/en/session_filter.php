@@ -63,6 +63,7 @@ return [
     ],
     'show_more' => 'Show more',
     'show_less' => 'Show less',
+    'select_all' => 'All',
     'next' => 'Next',
     'skip' => 'Skip',
     'back' => 'Back',
