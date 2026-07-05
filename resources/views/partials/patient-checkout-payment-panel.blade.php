@@ -4,7 +4,9 @@
 @endphp
 
 @if ($paymentError !== '')
-    <p class="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{{ $paymentError }}</p>
+    <div class="rounded-xl border border-red-200/90 bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">
+        {{ $paymentError }}
+    </div>
 @endif
 
 @if ($this->walletApplied() > 0 && $checkoutDue <= 0)
@@ -112,9 +114,9 @@
     @endif
 
     @if ($this->usesMyFatoorah())
-        <flux:text class="text-center text-xs text-slate-500">{{ __('patient_booking.payment_secure_note') }}</flux:text>
+        <p class="text-center text-xs leading-relaxed text-slate-500">{{ __('patient_booking.payment_secure_note') }}</p>
     @elseif ($this->usesHyperPay())
-        <flux:text class="text-center text-xs text-slate-500">{{ __('patient_booking.payment_hyperpay_note') }}</flux:text>
+        <p class="text-center text-xs leading-relaxed text-slate-500">{{ __('patient_booking.payment_hyperpay_note') }}</p>
     @endif
 @else
     <p class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">

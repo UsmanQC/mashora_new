@@ -81,7 +81,7 @@
                 aria-label="{{ __('patient.nav.ai_assistant') }}"
                 data-test="patient-luxury-dock-chatbot"
             >
-                <flux:icon name="sparkles" variant="outline" class="size-5 shrink-0" />
+                @include('partials.ai-chatbot-logo', ['class' => 'size-6 shrink-0 text-white'])
             </button>
         </div>
 

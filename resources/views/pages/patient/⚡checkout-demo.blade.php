@@ -136,8 +136,10 @@ new #[Layout('layouts::patient')] #[Title('Checkout demo')] class extends Compon
             <div class="pt-2">
                 <flux:link :href="route('patient.home')" wire:navigate>{{ __('patient_booking.back_home') }}</flux:link>
             </div>
+
+            <div class="mt-4 border-t border-zinc-100 pt-4">
+                @include('partials.patient-checkout-payment-methods', ['compact' => true])
+            </div>
         </div>
     </div>
-
-    @include('partials.patient-checkout-payment-methods')
 </div>
