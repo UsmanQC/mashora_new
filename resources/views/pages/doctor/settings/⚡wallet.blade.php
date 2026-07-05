@@ -27,7 +27,7 @@ new #[Layout('layouts::doctor')] #[Title('Wallet')] class extends Component
     }
 
     /**
-     * @return array{earned: float, reversed: float, net_earned: float, paid_out: float, balance: float, completed_appointments: int}
+     * @return array{income: float, refunded: float, refunded_count: int, paid_sessions: int, paid_out: float, balance: float}
      */
     public function getMonthlySummaryProperty(): array
     {
@@ -35,7 +35,7 @@ new #[Layout('layouts::doctor')] #[Title('Wallet')] class extends Component
     }
 
     /**
-     * @return array{earned: float, reversed: float, net_earned: float, paid_out: float, balance: float, completed_appointments: int}
+     * @return array{income: float, refunded: float, refunded_count: int, paid_sessions: int, paid_out: float, balance: float}
      */
     public function getPreviousMonthSummaryProperty(): array
     {
@@ -80,14 +80,51 @@ new #[Layout('layouts::doctor')] #[Title('Wallet')] class extends Component
 
     public function transactionDescription(Transaction $transaction): ?string
     {
-        $metaType = is_array($transaction->meta) ? ($transaction->meta['type'] ?? null) : null;
+        $meta = is_array($transaction->meta) ? $transaction->meta : [];
+        $metaType = $meta['type'] ?? null;
+        $appointmentNumber = $this->transactionAppointmentNumber($transaction);
+        $appointmentReference = $appointmentNumber !== null
+            ? __('doctor.wallet.appointment_reference', ['number' => $appointmentNumber])
+            : null;
 
         return match ($metaType) {
-            'appointment_earning' => __('doctor.wallet.desc_earning'),
-            'appointment_refund_reversal' => __('doctor.wallet.desc_refund_reversal'),
+            'appointment_earning' => $this->earningTransactionDescription($transaction, $meta, $appointmentReference),
+            'appointment_refund_reversal' => $this->prefixAppointmentReference(
+                $appointmentReference,
+                __('doctor.wallet.desc_refund_reversal_detail', [
+                    'share' => number_format((float) ($meta['doctor_share'] ?? abs($this->transactionAmount($transaction))), 2),
+                ]),
+            ),
             'invoice_payout' => __('doctor.wallet.desc_payout'),
             default => null,
         };
+    }
+
+    private function prefixAppointmentReference(?string $appointmentReference, string $description): string
+    {
+        if ($appointmentReference === null) {
+            return $description;
+        }
+
+        return $appointmentReference.' — '.$description;
+    }
+
+    private function earningTransactionDescription(Transaction $transaction, array $meta, ?string $appointmentReference): string
+    {
+        $appointmentId = (int) ($meta['appointment_id'] ?? 0);
+        $amount = number_format($this->transactionAmount($transaction), 2);
+
+        $description = $appointmentId > 0
+            && app(DoctorWalletService::class)->appointmentWasRefunded($this->doctor(), $appointmentId)
+            ? __('doctor.wallet.desc_earning_later_refunded', ['amount' => $amount])
+            : __('doctor.wallet.desc_earning_kept', ['amount' => $amount]);
+
+        return $this->prefixAppointmentReference($appointmentReference, $description);
+    }
+
+    public function transactionAppointmentNumber(Transaction $transaction): ?string
+    {
+        return app(DoctorWalletService::class)->transactionAppointmentNumber($transaction);
     }
 }; ?>
 
@@ -140,16 +177,21 @@ new #[Layout('layouts::doctor')] #[Title('Wallet')] class extends Component
             <flux:text class="mt-0.5 text-xs text-zinc-500">{{ __('doctor.wallet.current_period_hint') }}</flux:text>
         </div>
 
-    <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+    <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <div class="rounded-2xl border border-[#10B981]/20 bg-gradient-to-br from-[#eef2ff] via-white to-white p-5 shadow-sm transition hover:shadow-md">
             <div class="flex items-start justify-between gap-3">
                 <div class="min-w-0">
-                    <p class="text-sm font-semibold text-zinc-500">{{ __('doctor.wallet.month_earned') }}</p>
-                    <p class="mt-2 text-3xl font-bold tabular-nums tracking-tight text-zinc-900">
-                        +{{ number_format($this->monthlySummary['earned'], 2) }}
+                    <p class="text-sm font-semibold text-zinc-500">{{ __('doctor.wallet.month_income') }}</p>
+                    @php $monthIncome = $this->monthlySummary['income']; @endphp
+                    <p @class([
+                        'mt-2 text-3xl font-bold tabular-nums tracking-tight',
+                        'text-emerald-700' => $monthIncome >= 0,
+                        'text-rose-600' => $monthIncome < 0,
+                    ])>
+                        {{ $monthIncome >= 0 ? '+' : '' }}{{ number_format($monthIncome, 2) }}
                         <span class="text-base font-semibold text-[#10B981]">{{ config('currency.sa_riyal_symbol') }}</span>
                     </p>
-                    <p class="mt-2 text-xs leading-relaxed text-zinc-500">{{ __('doctor.wallet.month_earned_hint') }}</p>
+                    <p class="mt-2 text-xs leading-relaxed text-zinc-500">{{ __('doctor.wallet.month_income_hint') }}</p>
                 </div>
                 <span class="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-[#10B981]/10 text-[#10B981]" aria-hidden="true">
                     <flux:icon name="banknotes" variant="outline" class="size-6" />
@@ -160,12 +202,22 @@ new #[Layout('layouts::doctor')] #[Title('Wallet')] class extends Component
         <div class="rounded-2xl border border-rose-200/70 bg-gradient-to-br from-rose-50 via-white to-white p-5 shadow-sm transition hover:shadow-md">
             <div class="flex items-start justify-between gap-3">
                 <div class="min-w-0">
-                    <p class="text-sm font-semibold text-zinc-500">{{ __('doctor.wallet.month_refunded') }}</p>
+                    <p class="text-sm font-semibold text-zinc-500">{{ __('doctor.wallet.month_refunded_sessions') }}</p>
                     <p class="mt-2 text-3xl font-bold tabular-nums tracking-tight text-rose-600">
-                        -{{ number_format($this->monthlySummary['reversed'], 2) }}
+                        @if ($this->monthlySummary['refunded'] > 0)
+                            -{{ number_format($this->monthlySummary['refunded'], 2) }}
+                        @else
+                            {{ number_format(0, 2) }}
+                        @endif
                         <span class="text-base font-semibold text-rose-500">{{ config('currency.sa_riyal_symbol') }}</span>
                     </p>
-                    <p class="mt-2 text-xs leading-relaxed text-zinc-500">{{ __('doctor.wallet.month_refunded_hint') }}</p>
+                    <p class="mt-2 text-xs leading-relaxed text-zinc-500">
+                        @if ($this->monthlySummary['refunded_count'] > 0)
+                            {{ __('doctor.wallet.month_refunded_sessions_hint', ['count' => $this->monthlySummary['refunded_count']]) }}
+                        @else
+                            {{ __('doctor.wallet.month_refunded_sessions_empty') }}
+                        @endif
+                    </p>
                 </div>
                 <span class="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-rose-100 text-rose-600" aria-hidden="true">
                     <flux:icon name="arrow-uturn-left" variant="outline" class="size-6" />
@@ -173,20 +225,20 @@ new #[Layout('layouts::doctor')] #[Title('Wallet')] class extends Component
             </div>
         </div>
 
-        <div class="rounded-2xl border border-emerald-200/70 bg-gradient-to-br from-emerald-50 via-white to-white p-5 shadow-sm sm:col-span-2 xl:col-span-3">
-            <p class="text-sm font-semibold text-zinc-500">{{ __('doctor.wallet.net_this_month') }}</p>
-            @php
-                $monthNetEarned = $this->monthlySummary['net_earned'];
-            @endphp
-            <p @class([
-                'mt-2 text-2xl font-bold tabular-nums tracking-tight',
-                'text-emerald-700' => $monthNetEarned >= 0,
-                'text-rose-600' => $monthNetEarned < 0,
-            ])>
-                {{ $monthNetEarned >= 0 ? '+' : '' }}{{ number_format($monthNetEarned, 2) }}
-                <span class="text-base font-semibold">{{ config('currency.sa_riyal_symbol') }}</span>
-            </p>
-            <p class="mt-1 text-xs leading-relaxed text-zinc-500">{{ __('doctor.wallet.net_this_month_hint') }}</p>
+        <div class="rounded-2xl border border-sky-200/70 bg-gradient-to-br from-sky-50 via-white to-white p-5 shadow-sm transition hover:shadow-md">
+            <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                    <p class="text-sm font-semibold text-zinc-500">{{ __('doctor.wallet.month_sessions') }}</p>
+                    <p class="mt-2 text-3xl font-bold tabular-nums tracking-tight text-zinc-900">
+                        {{ $this->monthlySummary['paid_sessions'] }}
+                        <span class="text-base font-semibold normal-case text-sky-600">{{ __('doctor.wallet.sessions_suffix') }}</span>
+                    </p>
+                    <p class="mt-2 text-xs leading-relaxed text-zinc-500">{{ __('doctor.wallet.month_sessions_hint') }}</p>
+                </div>
+                <span class="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-sky-100 text-sky-600" aria-hidden="true">
+                    <flux:icon name="calendar-days" variant="outline" class="size-6" />
+                </span>
+            </div>
         </div>
 
         <div class="rounded-2xl border border-zinc-200/70 bg-gradient-to-br from-zinc-50 via-white to-white p-5 shadow-sm transition hover:shadow-md">
@@ -204,22 +256,6 @@ new #[Layout('layouts::doctor')] #[Title('Wallet')] class extends Component
                 </span>
             </div>
         </div>
-
-        <div class="rounded-2xl border border-sky-200/70 bg-gradient-to-br from-sky-50 via-white to-white p-5 shadow-sm transition hover:shadow-md">
-            <div class="flex items-start justify-between gap-3">
-                <div class="min-w-0">
-                    <p class="text-sm font-semibold text-zinc-500">{{ __('doctor.wallet.month_completed') }}</p>
-                    <p class="mt-2 text-3xl font-bold tabular-nums tracking-tight text-zinc-900">
-                        {{ $this->monthlySummary['completed_appointments'] }}
-                        <span class="text-base font-semibold normal-case text-sky-600">{{ __('doctor.wallet.completed_suffix') }}</span>
-                    </p>
-                    <p class="mt-2 text-xs leading-relaxed text-zinc-500">{{ __('doctor.wallet.month_completed_hint') }}</p>
-                </div>
-                <span class="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-sky-100 text-sky-600" aria-hidden="true">
-                    <flux:icon name="calendar-days" variant="outline" class="size-6" />
-                </span>
-            </div>
-        </div>
     </div>
     </div>
 
@@ -229,19 +265,24 @@ new #[Layout('layouts::doctor')] #[Title('Wallet')] class extends Component
             <flux:text class="mt-0.5 text-xs text-zinc-500">{{ __('doctor.wallet.previous_period_hint') }}</flux:text>
         </div>
 
-        <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <div class="rounded-2xl border border-violet-200/70 bg-gradient-to-br from-violet-50 via-white to-white p-5 shadow-sm transition hover:shadow-md">
                 <div class="flex items-start justify-between gap-3">
                     <div class="min-w-0">
-                        <p class="text-sm font-semibold text-zinc-500">{{ __('doctor.wallet.previous_month_earned') }}</p>
-                        <p class="mt-2 text-3xl font-bold tabular-nums tracking-tight text-zinc-900">
-                            +{{ number_format($this->previousMonthSummary['earned'], 2) }}
+                        <p class="text-sm font-semibold text-zinc-500">{{ __('doctor.wallet.previous_month_income') }}</p>
+                        @php $previousMonthIncome = $this->previousMonthSummary['income']; @endphp
+                        <p @class([
+                            'mt-2 text-3xl font-bold tabular-nums tracking-tight',
+                            'text-emerald-700' => $previousMonthIncome >= 0,
+                            'text-rose-600' => $previousMonthIncome < 0,
+                        ])>
+                            {{ $previousMonthIncome >= 0 ? '+' : '' }}{{ number_format($previousMonthIncome, 2) }}
                             <span class="text-base font-semibold text-violet-600">{{ config('currency.sa_riyal_symbol') }}</span>
                         </p>
-                        <p class="mt-2 text-xs leading-relaxed text-zinc-500">{{ __('doctor.wallet.previous_month_earned_hint') }}</p>
+                        <p class="mt-2 text-xs leading-relaxed text-zinc-500">{{ __('doctor.wallet.previous_month_income_hint') }}</p>
                     </div>
                     <span class="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-violet-100 text-violet-600" aria-hidden="true">
-                        <flux:icon name="clock" variant="outline" class="size-6" />
+                        <flux:icon name="banknotes" variant="outline" class="size-6" />
                     </span>
                 </div>
             </div>
@@ -249,12 +290,22 @@ new #[Layout('layouts::doctor')] #[Title('Wallet')] class extends Component
             <div class="rounded-2xl border border-rose-200/70 bg-gradient-to-br from-rose-50/80 via-white to-white p-5 shadow-sm transition hover:shadow-md">
                 <div class="flex items-start justify-between gap-3">
                     <div class="min-w-0">
-                        <p class="text-sm font-semibold text-zinc-500">{{ __('doctor.wallet.previous_month_refunded') }}</p>
+                        <p class="text-sm font-semibold text-zinc-500">{{ __('doctor.wallet.previous_month_refunded_sessions') }}</p>
                         <p class="mt-2 text-3xl font-bold tabular-nums tracking-tight text-rose-600">
-                            -{{ number_format($this->previousMonthSummary['reversed'], 2) }}
+                            @if ($this->previousMonthSummary['refunded'] > 0)
+                                -{{ number_format($this->previousMonthSummary['refunded'], 2) }}
+                            @else
+                                {{ number_format(0, 2) }}
+                            @endif
                             <span class="text-base font-semibold text-rose-500">{{ config('currency.sa_riyal_symbol') }}</span>
                         </p>
-                        <p class="mt-2 text-xs leading-relaxed text-zinc-500">{{ __('doctor.wallet.previous_month_refunded_hint') }}</p>
+                        <p class="mt-2 text-xs leading-relaxed text-zinc-500">
+                            @if ($this->previousMonthSummary['refunded_count'] > 0)
+                                {{ __('doctor.wallet.previous_month_refunded_sessions_hint', ['count' => $this->previousMonthSummary['refunded_count']]) }}
+                            @else
+                                {{ __('doctor.wallet.previous_month_refunded_sessions_empty') }}
+                            @endif
+                        </p>
                     </div>
                     <span class="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-rose-100 text-rose-600" aria-hidden="true">
                         <flux:icon name="arrow-uturn-left" variant="outline" class="size-6" />
@@ -262,20 +313,36 @@ new #[Layout('layouts::doctor')] #[Title('Wallet')] class extends Component
                 </div>
             </div>
 
-            <div class="rounded-2xl border border-emerald-200/70 bg-gradient-to-br from-emerald-50 via-white to-white p-5 shadow-sm sm:col-span-2 xl:col-span-1">
-                <p class="text-sm font-semibold text-zinc-500">{{ __('doctor.wallet.net_previous_month') }}</p>
-                @php
-                    $previousMonthNetEarned = $this->previousMonthSummary['net_earned'];
-                @endphp
-                <p @class([
-                    'mt-2 text-2xl font-bold tabular-nums tracking-tight',
-                    'text-emerald-700' => $previousMonthNetEarned >= 0,
-                    'text-rose-600' => $previousMonthNetEarned < 0,
-                ])>
-                    {{ $previousMonthNetEarned >= 0 ? '+' : '' }}{{ number_format($previousMonthNetEarned, 2) }}
-                    <span class="text-base font-semibold">{{ config('currency.sa_riyal_symbol') }}</span>
-                </p>
-                <p class="mt-1 text-xs leading-relaxed text-zinc-500">{{ __('doctor.wallet.net_previous_month_hint') }}</p>
+            <div class="rounded-2xl border border-sky-200/70 bg-gradient-to-br from-sky-50/80 via-white to-white p-5 shadow-sm transition hover:shadow-md">
+                <div class="flex items-start justify-between gap-3">
+                    <div class="min-w-0">
+                        <p class="text-sm font-semibold text-zinc-500">{{ __('doctor.wallet.previous_month_sessions') }}</p>
+                        <p class="mt-2 text-3xl font-bold tabular-nums tracking-tight text-zinc-900">
+                            {{ $this->previousMonthSummary['paid_sessions'] }}
+                            <span class="text-base font-semibold normal-case text-sky-600">{{ __('doctor.wallet.sessions_suffix') }}</span>
+                        </p>
+                        <p class="mt-2 text-xs leading-relaxed text-zinc-500">{{ __('doctor.wallet.previous_month_sessions_hint') }}</p>
+                    </div>
+                    <span class="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-sky-100 text-sky-600" aria-hidden="true">
+                        <flux:icon name="calendar-days" variant="outline" class="size-6" />
+                    </span>
+                </div>
+            </div>
+
+            <div class="rounded-2xl border border-zinc-200/70 bg-gradient-to-br from-zinc-50 via-white to-white p-5 shadow-sm transition hover:shadow-md">
+                <div class="flex items-start justify-between gap-3">
+                    <div class="min-w-0">
+                        <p class="text-sm font-semibold text-zinc-500">{{ __('doctor.wallet.previous_month_paid_out') }}</p>
+                        <p class="mt-2 text-3xl font-bold tabular-nums tracking-tight text-zinc-900">
+                            {{ number_format($this->previousMonthSummary['paid_out'], 2) }}
+                            <span class="text-base font-semibold text-zinc-500">{{ config('currency.sa_riyal_symbol') }}</span>
+                        </p>
+                        <p class="mt-2 text-xs leading-relaxed text-zinc-500">{{ __('doctor.wallet.previous_month_paid_out_hint') }}</p>
+                    </div>
+                    <span class="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-zinc-100 text-zinc-600" aria-hidden="true">
+                        <flux:icon name="arrow-down-tray" variant="outline" class="size-6" />
+                    </span>
+                </div>
             </div>
         </div>
     </div>
@@ -295,7 +362,12 @@ new #[Layout('layouts::doctor')] #[Title('Wallet')] class extends Component
                     @endphp
                     <div class="flex flex-wrap items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
                         <div class="min-w-0">
-                            <p class="text-sm font-semibold text-zinc-900">{{ $this->transactionLabel($transaction) }}</p>
+                            <p class="text-sm font-semibold text-zinc-900">
+                                {{ $this->transactionLabel($transaction) }}
+                                @if ($appointmentNumber = $this->transactionAppointmentNumber($transaction))
+                                    <span class="font-medium text-zinc-500">· {{ $appointmentNumber }}</span>
+                                @endif
+                            </p>
                             @if ($description = $this->transactionDescription($transaction))
                                 <p class="mt-0.5 text-xs text-zinc-500">{{ $description }}</p>
                             @endif

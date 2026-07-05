@@ -2,8 +2,11 @@
 
 return [
     'page_heading' => 'الأخصائيون المتاحون',
+    'page_heading_instant' => 'متاحون الآن',
     'page_sub_with_filters' => 'بناءً على تفضيلات الجلسة التي اخترتها.',
     'page_sub_default' => 'اختر أخصائيًا وحدد وقتًا يناسبك.',
+    'page_sub_instant' => 'أخصائيون لديهم موعد متاح خلال :minutes دقيقة القادمة.',
+    'instant_window_hint' => 'نعرض فقط الأوقات التي تبدأ خلال :minutes دقيقة القادمة.',
 
     'roles' => [
         'therapist' => 'غير طبيب (معالج نفسي)',
@@ -25,7 +28,10 @@ return [
     'times_timezone_note' => 'الأوقات المعروضة بتوقيت السعودية (Asia/Riyadh).',
     'no_slots_for_selected_day' => 'لا توجد أوقات قادمة متاحة في اليوم المحدد.',
 
-    'like_incremented' => 'تم الإضافة للمفضلة (عرض تجريبي)',
+    'like_saved' => 'تم الإضافة للمفضلة',
+    'like_removed' => 'تمت الإزالة من المفضلة',
+    'like_save' => 'أضف إلى المفضلة',
+    'like_login_required' => 'سجّل الدخول لحفظ المفضلة',
 
     'slot_selected_toast' => 'تم حفظ الموعد :time (الحجز قريبًا)',
 

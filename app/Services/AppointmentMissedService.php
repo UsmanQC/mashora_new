@@ -16,11 +16,7 @@ final class AppointmentMissedService
 
     public function processDueMissedAppointments(): int
     {
-        if ((bool) config('appointments.relaxed_session_limits', false)) {
-            return 0;
-        }
-
-        $graceMinutes = max(0, (int) config('appointments.doctor_missed_grace_minutes', 15));
+        $graceMinutes = max(0, (int) config('appointments.doctor_missed_grace_minutes', 10));
         $now = now()->timezone(config('app.timezone'));
 
         $candidates = Appointment::query()
@@ -49,16 +45,20 @@ final class AppointmentMissedService
             return false;
         }
 
-        $sessionEndsAt = $appointment->sessionEndsAt();
-
-        if ($sessionEndsAt === null) {
+        if ($appointment->actual_start_at !== null) {
             return false;
         }
 
-        $graceMinutes ??= max(0, (int) config('appointments.doctor_missed_grace_minutes', 15));
+        $sessionStartsAt = $appointment->sessionStartsAt();
+
+        if ($sessionStartsAt === null) {
+            return false;
+        }
+
+        $graceMinutes ??= max(0, (int) config('appointments.doctor_missed_grace_minutes', 10));
         $now ??= now()->timezone(config('app.timezone'));
 
-        return $sessionEndsAt->copy()->addMinutes($graceMinutes)->lessThanOrEqualTo($now);
+        return $sessionStartsAt->copy()->addMinutes($graceMinutes)->lessThanOrEqualTo($now);
     }
 
     public function markDoctorMissed(Appointment $appointment): void

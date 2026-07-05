@@ -3,6 +3,8 @@
     'specialist',
     /** @var int|string $likes */
     'likes',
+    /** @var bool $likedByUser */
+    'likedByUser' => false,
     /** @var string $selectedDate */
     'selectedDate' => now()->timezone(config('app.timezone'))->toDateString(),
     /** @var list<string> $availableSlots */
@@ -15,18 +17,22 @@
     $id = $specialist['id'];
     $roleKind = $specialist['role_kind'];
     $roleLabel = __('specialist_results.roles.'.$roleKind);
-    $badgeColor = $roleKind === 'therapist' ? 'lime' : 'sky';
 @endphp
 
 <article
     class="group relative flex flex-col overflow-hidden rounded-3xl border border-zinc-200/80 bg-white p-5 shadow-[0_14px_30px_-22px_rgba(2,6,23,0.4)] transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_22px_40px_-24px_rgba(2,6,23,0.45)]"
     wire:key="specialist-card-{{ $id }}"
 >
-    <div class="pointer-events-none absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-[#3b63ff] via-[#5e7cff] to-[#9bb0ff] opacity-80"></div>
+    <div class="pointer-events-none absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-[#10B981] via-[#059669] to-[#34d399] opacity-90"></div>
 
     <div class="flex gap-4">
-        <div class="rounded-full ring-2 ring-[#3b63ff]/20 ring-offset-2 ring-offset-white">
-            <flux:avatar :name="$specialist['name']" circle size="xl" />
+        <div class="rounded-full ring-2 ring-[#10B981]/25 ring-offset-2 ring-offset-white">
+            <flux:avatar
+                :name="$specialist['name']"
+                :src="$specialist['photo_url'] ?? null"
+                circle
+                size="xl"
+            />
         </div>
 
         <div class="min-w-0 flex-1">
@@ -34,21 +40,34 @@
                 <div class="min-w-0">
                     <flux:heading size="lg" class="truncate text-zinc-900">{{ $specialist['name'] }}</flux:heading>
                     <div class="mt-2 inline-flex flex-wrap gap-2">
-                        <flux:badge size="sm" color="{{ $badgeColor }}" variant="pill">
+                        <span class="inline-flex items-center rounded-full border border-zinc-900/10 bg-zinc-100 px-3 py-1 text-xs font-semibold text-zinc-900">
                             {{ $roleLabel }}
-                        </flux:badge>
+                        </span>
                     </div>
                 </div>
 
                 <div class="flex shrink-0 flex-col items-center gap-0.5 rounded-xl bg-zinc-50/80 px-2 py-1.5 text-center">
                     <button
                         type="button"
-                        wire:click="incrementLike('{{ $id }}')"
-                        title="{{ __('specialist_results.like_incremented') }}"
-                        class="rounded-lg text-[#10B981] transition hover:scale-105 hover:bg-emerald-500/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#064e3b]/30"
-                        aria-label="{{ __('specialist_results.like_incremented') }}"
+                        wire:click="toggleLike('{{ $id }}')"
+                        title="{{ $likedByUser ? __('specialist_results.like_saved') : (auth()->check() ? __('specialist_results.like_save') : __('specialist_results.like_login_required')) }}"
+                        @class([
+                            'rounded-lg transition hover:scale-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#064e3b]/30',
+                            $likedByUser
+                                ? 'text-[#10B981] hover:bg-emerald-500/10'
+                                : 'text-zinc-400 hover:bg-zinc-100 hover:text-[#10B981]',
+                        ])
+                        aria-label="{{ $likedByUser ? __('specialist_results.like_saved') : __('specialist_results.like_save') }}"
+                        aria-pressed="{{ $likedByUser ? 'true' : 'false' }}"
                     >
-                        <flux:icon name="heart" variant="outline" class="size-7" />
+                        <flux:icon
+                            name="heart"
+                            :variant="$likedByUser ? 'solid' : 'outline'"
+                            @class([
+                                'size-7',
+                                $likedByUser ? 'text-[#10B981]' : '',
+                            ])
+                        />
                     </button>
                     <flux:text class="text-xs font-semibold tabular-nums text-zinc-600">{{ $likes }}</flux:text>
                 </div>
@@ -137,11 +156,11 @@
     <div class="mt-4 border-t border-zinc-100 pt-4" x-data="{ showAllTags: false }">
         <div class="flex flex-wrap gap-2">
             @foreach ($visibleTags as $tag)
-                <flux:badge variant="pill" color="zinc" class="!rounded-full !border !border-zinc-200 !bg-zinc-100/85 !px-3 !py-1 !text-[0.78rem] !font-medium">{{ $tag }}</flux:badge>
+                <flux:badge variant="pill" color="zinc" class="!rounded-full !border !border-zinc-200 !bg-zinc-50 !px-3 !py-1 !text-[0.78rem] !font-medium !text-zinc-900">{{ $tag }}</flux:badge>
             @endforeach
 
             @foreach ($hiddenTags as $tag)
-                <flux:badge x-cloak x-show="showAllTags" variant="pill" color="zinc" class="!rounded-full !border !border-zinc-200 !bg-zinc-100/85 !px-3 !py-1 !text-[0.78rem] !font-medium">{{ $tag }}</flux:badge>
+                <flux:badge x-cloak x-show="showAllTags" variant="pill" color="zinc" class="!rounded-full !border !border-zinc-200 !bg-zinc-50 !px-3 !py-1 !text-[0.78rem] !font-medium !text-zinc-900">{{ $tag }}</flux:badge>
             @endforeach
         </div>
 

@@ -2,8 +2,11 @@
 
 return [
     'page_heading' => 'Available specialists',
+    'page_heading_instant' => 'Available now',
     'page_sub_with_filters' => 'Based on your session preferences.',
     'page_sub_default' => 'Choose a clinician and pick a convenient time.',
+    'page_sub_instant' => 'Specialists with a free slot in the next :minutes minutes.',
+    'instant_window_hint' => 'Showing only times starting within the next :minutes minutes.',
 
     'roles' => [
         'therapist' => 'Non-Doctor (Therapist)',
@@ -24,7 +27,10 @@ return [
     'times_timezone_note' => 'Times are shown in Saudi Arabia time (Asia/Riyadh).',
     'no_slots_for_selected_day' => 'No upcoming times left for the selected day.',
 
-    'like_incremented' => 'Saved to favourites (demo)',
+    'like_saved' => 'Saved to favourites',
+    'like_removed' => 'Removed from favourites',
+    'like_save' => 'Save to favourites',
+    'like_login_required' => 'Sign in to save favourites',
 
     'slot_selected_toast' => 'Time slot :time saved (booking opens soon)',
 

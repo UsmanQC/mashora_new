@@ -2,7 +2,7 @@
 <html
     lang="{{ str_replace('_', '-', app()->getLocale()) }}"
     dir="{{ app()->getLocale() === 'ar' ? 'rtl' : 'ltr' }}"
-    class="scheme-light bg-[#F3F5F9]"
+    class="scheme-light bg-[#F3F5F9] font-sans antialiased"
 >
     <head>
         <meta name="application-name" content="{{ config('app.name') }}" />
@@ -10,8 +10,42 @@
         @include('partials.pwa', ['themeColor' => '#10B981', 'pwaApp' => 'patient'])
         @include('partials.head')
     </head>
+    @php
+        $portalBack = \App\Support\PatientPortalBackNavigation::resolve();
+        $patientLuxuryMobileNav = true;
+        $patientLuxuryHome = request()->routeIs('patient.home');
+        $patientLuxuryMobileShell = request()->routeIs([
+            'patient.home',
+            'patient.appointments',
+            'patient.appointments.conversation',
+            'patient.schedule.filter',
+            'patient.schedule.specialists',
+            'patient.schedule.instant',
+            'patient.book-appointments',
+            'patient.checkout',
+            'patient.checkout.demo',
+            'patient.menu',
+            'patient.notifications',
+            'patient.payment.success',
+            'patient.payment.failed',
+            'profile.edit',
+            'patient.important-numbers',
+            'patient.wallet',
+            'patient.medications',
+            'patient.favorites',
+            'patient.privacy',
+            'patient.support',
+            'patient.support.create',
+            'patient.support.show',
+        ]);
+    @endphp
     <body
-        class="min-h-svh bg-[#F3F5F9] pb-24 antialiased sm:flex sm:min-h-svh sm:pb-0"
+        @class([
+            'min-h-svh antialiased sm:flex sm:min-h-svh sm:pb-0',
+            'bg-slate-50 max-sm:h-svh max-sm:overflow-hidden pb-0' => $patientLuxuryHome,
+            'bg-slate-50 pb-0' => $patientLuxuryMobileShell && ! $patientLuxuryHome,
+            'bg-[#F3F5F9] pb-24' => ! $patientLuxuryMobileShell,
+        ])
     >
         <script>
             (function () {
@@ -40,11 +74,11 @@
             })();
         </script>
         {{-- Mobile header — same blue chrome as legacy sidebar; guest signup via dock → /patient/phone --}}
-        @php
-            $portalBack = \App\Support\PatientPortalBackNavigation::resolve();
-        @endphp
         <header
-            class="sticky top-0 z-40 grid shrink-0 grid-cols-[auto_1fr_auto] items-center gap-2 border-b border-emerald-900/40 bg-[#10B981] px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] text-white backdrop-blur-sm sm:hidden"
+            @class([
+                'sticky top-0 z-40 grid shrink-0 grid-cols-[auto_1fr_auto] items-center gap-2 border-b border-emerald-900/40 bg-[#10B981] px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] text-white backdrop-blur-sm sm:hidden',
+                'hidden' => $patientLuxuryMobileShell,
+            ])
         >
             <div class="flex shrink-0 items-center justify-self-start">
                 @if ($portalBack !== null)
@@ -104,23 +138,30 @@
             </div>
         </aside>
 
-        <main class="relative flex min-h-svh min-w-0 flex-1 flex-col">
+        <main @class([
+            'relative flex min-w-0 flex-1 flex-col',
+            'min-h-0 max-sm:overflow-hidden' => $patientLuxuryHome,
+            'min-h-svh' => ! $patientLuxuryHome,
+        ])>
             @auth
-                <livewire:patient-portal-chrome-bar />
+                @unless ($patientLuxuryMobileShell)
+                    <livewire:patient-portal-chrome-bar />
+                @endunless
                 <livewire:patient-mood-picker-modal />
             @endauth
-            <div class="mx-auto w-full max-w-6xl flex-1 px-4 py-6 pb-28 sm:px-6 lg:pb-8">
+            <div @class([
+                'mx-auto w-full max-w-6xl flex-1',
+                'px-0 py-0 max-sm:h-full max-sm:overflow-hidden sm:px-6 sm:py-6 sm:pb-8 lg:pb-8' => $patientLuxuryHome,
+                'px-0 py-0 sm:px-6 sm:py-6 sm:pb-8 lg:pb-8' => $patientLuxuryMobileShell && ! $patientLuxuryHome,
+                'px-4 py-6 pb-28 sm:px-6 lg:pb-8' => ! $patientLuxuryMobileShell,
+            ])>
                 {{ $slot }}
             </div>
         </main>
 
-        {{-- Mobile dock — chromed like legacy sidebar --}}
-        <nav
-            class="fixed bottom-0 inset-x-0 z-50 flex border-t border-emerald-950/40 bg-[#10B981] px-1 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-1 shadow-[0_-4px_20px_-4px_rgba(0,0,0,0.2)] sm:hidden"
-            aria-label="{{ __('patient.nav.label') }}"
-        >
-            @include('partials.patient-dock-buttons', ['theme' => 'legacy'])
-        </nav>
+        @if ($patientLuxuryMobileNav)
+            @include('partials.patient-luxury-dock')
+        @endif
 
         @persist('toast')
             <flux:toast.group>
@@ -132,6 +173,12 @@
         @stack('scripts')
 
         @include('partials.pwa-install-prompt', ['pwaApp' => 'patient'])
+
+        @include('partials.ai-chatbot-widget', [
+            'forceVisible' => true,
+            'hideToggle' => $patientLuxuryMobileNav,
+            'layout' => 'patient-dock',
+        ])
 
         @fluxScripts
     </body>

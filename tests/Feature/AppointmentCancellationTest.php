@@ -59,7 +59,7 @@ test('doctor cancelling appointment notifies patient and shows in cancelled tab'
     expect($appointment->status)->toBe('cancelled')
         ->and($appointment->cancel_status)->toBe('doctor')
         ->and((float) $user->fresh()->balanceFloat)->toBe(200.0)
-        ->and((float) $doctor->fresh()->balanceFloat)->toBe(-60.0)
+        ->and((float) $doctor->fresh()->balanceFloat)->toBe(0.0)
         ->and((float) $appointment->doctor_share)->toBe(0.0)
         ->and((float) $appointment->mashora_share)->toBe(0.0);
 

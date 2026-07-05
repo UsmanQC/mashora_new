@@ -406,6 +406,78 @@ test('doctor register page accepts phone email password in onboarding flow', fun
         ->and($doctor->profile_completed)->toBeFalse();
 });
 
+test('doctor bank account registration step requires account number and iban', function () {
+    $doctor = Doctor::factory()->pendingOnboarding()->create([
+        'phone' => '966511123477',
+        'name' => 'Dr. Bank',
+    ]);
+
+    $this->actingAs($doctor, 'doctor');
+
+    Livewire::test('pages::doctor.register-bank-account')
+        ->call('save')
+        ->assertHasErrors(['account_number', 'iban_number']);
+
+    Livewire::test('pages::doctor.register-bank-account')
+        ->set('account_number', '9988776655')
+        ->set('iban_number', 'INVALID')
+        ->call('save')
+        ->assertHasErrors(['iban_number']);
+
+    Livewire::test('pages::doctor.register-bank-account')
+        ->set('account_number', '9988776655')
+        ->set('iban_number', 'SA4410000000123456789001')
+        ->call('save')
+        ->assertHasNoErrors()
+        ->assertRedirect(route('doctor.register.duration'));
+
+    expect(BankAccount::query()->where('doctor_id', $doctor->id)->value('account_number'))->toBe('9988776655');
+});
+
+test('doctor registration professional step starts with no preselected specialities', function () {
+    Storage::fake('public');
+
+    $degree = Degree::query()->create([
+        'title' => 'Doctor (Specialist)',
+        'title_ar' => 'طبيب أخصائي',
+        'status' => true,
+    ]);
+
+    $specialities = collect([
+        ['title' => 'Depression disorder', 'title_ar' => 'اضطراب الاكتئاب'],
+        ['title' => 'Social phobia', 'title_ar' => 'رهاب اجتماعي'],
+        ['title' => 'Bipolar disorder', 'title_ar' => 'اضطراب ثنائي القطب'],
+    ])->map(fn (array $row): Speciality => Speciality::query()->create([
+        'title' => $row['title'],
+        'title_ar' => $row['title_ar'],
+        'status' => true,
+    ]));
+
+    $doctor = Doctor::factory()->pendingOnboarding()->create([
+        'phone' => '966511123466',
+        'name' => 'Dr. Empty Specs',
+        'name_ar' => 'د. تخصصات',
+        'about' => 'Bio',
+        'about_ar' => 'نبذة',
+        'registration_number' => null,
+    ]);
+
+    $doctor->specialities()->sync($specialities->pluck('id')->all());
+
+    $this->actingAs($doctor, 'doctor');
+
+    $headshot = UploadedFile::fake()->image('headshot.jpg', 400, 400);
+
+    Livewire::test('pages::doctor.register-basic-info')
+        ->set('profile_photo', $headshot)
+        ->call('nextFromBasic')
+        ->assertHasNoErrors()
+        ->assertSet('step', 2)
+        ->assertSet('speciality_ids', []);
+
+    expect($doctor->fresh()->specialities)->toHaveCount(0);
+});
+
 test('doctor basic info step requires name, arabic name, bios, and profile photo', function () {
     $doctor = Doctor::factory()->pendingOnboarding()->create([
         'phone' => '966511123488',
@@ -504,6 +576,13 @@ test('doctor completes multi-step onboarding with professional details and certi
         ->set('certificate', $pdf)
         ->call('finishDocuments', $signatureDataUrl)
         ->assertHasNoErrors()
+        ->assertRedirect(route('doctor.register.bank-account'));
+
+    Livewire::test('pages::doctor.register-bank-account')
+        ->set('account_number', '1234567890')
+        ->set('iban_number', 'SA4410000000123456789001')
+        ->call('save')
+        ->assertHasNoErrors()
         ->assertRedirect(route('doctor.register.duration'));
 
     Duration::query()->create(['duration' => 15, 'title' => '15 min']);
@@ -540,6 +619,11 @@ test('doctor completes multi-step onboarding with professional details and certi
         ->and($doctor->specialities->pluck('id')->all())->toBe([$speciality->id])
         ->and($doctor->durations()->count())->toBe(2)
         ->and($doctor->workingDays()->count())->toBe(2);
+
+    $bankAccount = BankAccount::query()->where('doctor_id', $doctor->id)->first();
+    expect($bankAccount)->not->toBeNull()
+        ->and($bankAccount->account_number)->toBe('1234567890')
+        ->and($bankAccount->iban_number)->toBe('SA4410000000123456789001');
 
     Storage::disk('public')->assertExists((string) $doctor->profile_photo_path);
     Storage::disk('public')->assertExists((string) $doctor->profile_detail_path);

@@ -28,4 +28,19 @@ final class PatientMoodImage
 
         return null;
     }
+
+    public static function emoji(string $key): string
+    {
+        return match ($key) {
+            'satisfied' => '😌',
+            'neutral' => '😐',
+            'disappointed' => '😕',
+            'anxiety' => '😰',
+            'happy' => '😄',
+            'sad' => '😔',
+            'tired' => '🥱',
+            'angry' => '😠',
+            default => '•',
+        };
+    }
 }

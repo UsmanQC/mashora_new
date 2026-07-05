@@ -19,7 +19,9 @@ Route::get('/doctor/manifest.webmanifest', WebManifestController::class)
     ->name('manifest.doctor');
 
 Route::get('/', function () {
-    app()->setLocale('ar');
+    if (! session()->has('patient_locale')) {
+        app()->setLocale('ar');
+    }
 
     return view('frontend.home', [
         'featuredDoctors' => SpecialistCatalog::forMarketingHomepage(12),
@@ -143,11 +145,11 @@ Route::post('patient/follow-up/payment/execute/{appointment}', [FollowUpPaymentC
     ->middleware(['auth', 'patient.profile'])
     ->name('patient.follow-up.payment.execute');
 
-Route::view('patient/medications', 'patient.section-empty', ['titleKey' => 'patient.menu.medications'])
+Route::livewire('patient/medications', 'pages::patient.medications')
     ->middleware(['auth', 'patient.profile'])
     ->name('patient.medications');
 
-Route::view('patient/favorites', 'patient.section-empty', ['titleKey' => 'patient.menu.favorites'])
+Route::livewire('patient/favorites', 'pages::patient.favorites')
     ->middleware(['auth', 'patient.profile'])
     ->name('patient.favorites');
 
@@ -174,6 +176,10 @@ Route::livewire('patient/filter', 'pages::patient.schedule-session')
 Route::livewire('patient/specialists', 'pages::patient.schedule-specialists')
     ->middleware(['patient.public'])
     ->name('patient.schedule.specialists');
+
+Route::livewire('patient/available-now', 'pages::patient.schedule-specialists')
+    ->middleware(['patient.public'])
+    ->name('patient.schedule.instant');
 
 Route::livewire('patient/book-appointments/{doctor}', 'pages::patient.book-appointments')
     ->middleware(['auth', 'patient.profile'])

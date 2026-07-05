@@ -1,7 +1,9 @@
 @php
+    $isRtl = app()->getLocale() === 'ar';
+    $chevronIcon = $isRtl ? 'chevron-left' : 'chevron-right';
     $isAuthenticated = auth()->check();
-    $scheduledUrl = route('patient.phone');
-    $instantUrl = route('patient.schedule.filter');
+    $scheduledUrl = route('patient.schedule.filter');
+    $instantUrl = route('patient.schedule.filter', ['instant' => 1]);
     $ongoingUrl = $isAuthenticated ? route('patient.appointments') : route('patient.phone');
 
     $cards = [
@@ -45,12 +47,12 @@
 @endphp
 
 <section class="marketing-appointments w-full">
-    <div class="mb-4 text-right sm:mb-6">
+    <div class="mb-4 text-start sm:mb-6">
         <h2 class="font-display text-xl font-bold tracking-tight text-ink sm:text-2xl">
             {{ __('patient.nav.appointments') }}
         </h2>
         <p class="mt-1 text-sm text-ink-muted sm:mt-1.5 sm:text-base">
-            اختر نوع الجلسة التي تناسبك.
+            {{ __('marketing.appointments_subtitle') }}
         </p>
     </div>
 
@@ -58,6 +60,9 @@
         @foreach ($cards as $card)
             <a
                 href="{{ $card['url'] }}"
+                @if (($card['icon'] ?? '') === 'calendar-days' || ($card['icon'] ?? '') === 'zap')
+                    wire:navigate="false"
+                @endif
                 class="marketing-appt-card group relative flex items-center gap-3 overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-3.5 shadow-[0_4px_24px_-12px_rgba(15,23,42,0.14)] ring-1 ring-slate-900/[0.02] transition-all duration-300 {{ $card['hover'] }} hover:-translate-y-0.5 hover:shadow-[0_12px_32px_-14px_rgba(15,23,42,0.18)] active:scale-[0.985] focus:outline-none focus-visible:ring-2 {{ $card['ring'] }} opacity-0 animate-fade-in-up sm:min-h-[10.5rem] sm:flex-col sm:items-start sm:p-4"
                 style="animation-delay: {{ $card['delay'] }};"
             >
@@ -67,17 +72,17 @@
                     <i data-lucide="{{ $card['icon'] }}" class="size-5 sm:size-[1.35rem]"></i>
                 </div>
 
-                <div class="min-w-0 flex-1 text-right">
+                <div class="min-w-0 flex-1 text-start">
                     <h3 class="font-display text-[0.9375rem] font-bold leading-snug text-ink sm:text-base">{{ $card['title'] }}</h3>
                     <p class="mt-0.5 line-clamp-2 text-xs leading-relaxed text-ink-muted sm:text-sm">{{ $card['note'] }}</p>
                 </div>
 
-                <div class="flex shrink-0 items-center {{ $card['chevron'] }} transition duration-300 group-hover:-translate-x-0.5 sm:hidden">
-                    <i data-lucide="chevron-left" class="size-5"></i>
+                <div class="flex shrink-0 items-center {{ $card['chevron'] }} transition duration-300 group-hover:translate-x-0.5 rtl:group-hover:-translate-x-0.5 sm:hidden">
+                    <i data-lucide="{{ $chevronIcon }}" class="size-5"></i>
                 </div>
 
-                <div class="mt-auto hidden items-center pt-1 {{ $card['chevron'] }} transition duration-300 group-hover:-translate-x-0.5 sm:flex">
-                    <i data-lucide="chevron-left" class="size-5"></i>
+                <div class="mt-auto hidden items-center pt-1 {{ $card['chevron'] }} transition duration-300 group-hover:translate-x-0.5 rtl:group-hover:-translate-x-0.5 sm:flex">
+                    <i data-lucide="{{ $chevronIcon }}" class="size-5"></i>
                 </div>
             </a>
         @endforeach

@@ -3,10 +3,13 @@
 use App\Models\Degree;
 use App\Models\Speciality;
 use Flux\Flux;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
+use Livewire\Attributes\Url;
 use Livewire\Component;
 
 new #[Layout('layouts::patient')] #[Title('Schedule a session')] class extends Component
@@ -24,11 +27,47 @@ new #[Layout('layouts::patient')] #[Title('Schedule a session')] class extends C
 
     public bool $subspecialtiesExpanded = false;
 
+    #[Url(as: 'instant', except: false)]
+    public bool $instantBooking = false;
+
     public int $mobileStep = 1;
+
+    public function mount(): void
+    {
+        if (request()->boolean('instant')) {
+            $this->instantBooking = true;
+        }
+
+        $this->syncInstantBookingSession();
+    }
+
+    public function updatedInstantBooking(): void
+    {
+        $this->syncInstantBookingSession();
+    }
+
+    protected function syncInstantBookingSession(): void
+    {
+        if ($this->instantBooking) {
+            Session::put('instant_booking', true);
+
+            return;
+        }
+
+        Session::forget('instant_booking');
+
+        $preferences = Session::get('session_filter_preferences');
+        if (is_array($preferences)) {
+            $preferences['instant_booking'] = false;
+            Session::put('session_filter_preferences', $preferences);
+        }
+    }
 
     public function mobileStepsTotal(): int
     {
-        return 5;
+        // return 5; // includes session length step (mobile step 3)
+
+        return 4;
     }
 
     public function mobileStepProgressPercent(): int
@@ -41,12 +80,38 @@ new #[Layout('layouts::patient')] #[Title('Schedule a session')] class extends C
         $key = match ($this->mobileStep) {
             1 => 'degree',
             2 => 'gender',
-            3 => 'duration',
-            4 => 'language',
+            // 3 => 'duration', // Session length step (disabled on mobile)
+            3 => 'language',
             default => 'subspecialties',
         };
 
         return (string) __('session_filter.mobile_steps.'.$key);
+    }
+
+    public function mobileHeaderTitle(): string
+    {
+        if ($this->instantBooking) {
+            return (string) __('session_filter.instant_title');
+        }
+
+        return (string) __('session_filter.scheduled_title');
+    }
+
+    public function mobileHeaderSubtitle(): string
+    {
+        if ($this->instantBooking) {
+            return (string) __('session_filter.instant_step_of', [
+                'step' => $this->mobileStepTitle(),
+                'current' => $this->mobileStep,
+                'total' => $this->mobileStepsTotal(),
+            ]);
+        }
+
+        return (string) __('session_filter.scheduled_step_of', [
+            'step' => $this->mobileStepTitle(),
+            'current' => $this->mobileStep,
+            'total' => $this->mobileStepsTotal(),
+        ]);
     }
 
     public function goToNextMobileStep(): void
@@ -91,6 +156,26 @@ new #[Layout('layouts::patient')] #[Title('Schedule a session')] class extends C
         $this->proceedNext();
     }
 
+    public function skipMobileGenderStep(): void
+    {
+        $this->genderPreference = 'both';
+        $this->ensureMobileDurationDefault();
+        $this->goToNextMobileStep();
+    }
+
+    public function skipMobileLanguageStep(): void
+    {
+        $this->languagePreference = 'both';
+        $this->goToNextMobileStep();
+    }
+
+    protected function ensureMobileDurationDefault(): void
+    {
+        if ($this->durationMinutes === '') {
+            $this->durationMinutes = '30';
+        }
+    }
+
     public function selectMobileDegree(string $value): void
     {
         $this->degree_id = $value;
@@ -100,14 +185,17 @@ new #[Layout('layouts::patient')] #[Title('Schedule a session')] class extends C
     public function selectMobileGender(string $value): void
     {
         $this->genderPreference = $value;
+        $this->ensureMobileDurationDefault();
         $this->goToNextMobileStep();
     }
 
+    /*
     public function selectMobileDuration(string $minutes): void
     {
         $this->durationMinutes = $minutes;
         $this->goToNextMobileStep();
     }
+    */
 
     public function selectMobileLanguage(string $value): void
     {
@@ -115,13 +203,19 @@ new #[Layout('layouts::patient')] #[Title('Schedule a session')] class extends C
         $this->goToNextMobileStep();
     }
 
+    /**
+     * @return list<string>
+     */
+    protected function allowedDegreeIds(): array
+    {
+        return [...array_column($this->specialistKindOptions, 'value'), 'all'];
+    }
+
     protected function validateCurrentMobileStep(): void
     {
-        $availableDegreeIds = array_column($this->specialistKindOptions, 'value');
-
         match ($this->mobileStep) {
             1 => $this->validate([
-                'degree_id' => ['required', 'string', 'in:'.implode(',', $availableDegreeIds)],
+                'degree_id' => ['required', 'string', 'in:'.implode(',', $this->allowedDegreeIds())],
             ], [
                 'degree_id.required' => __('session_filter.validation.specialist_required'),
             ]),
@@ -130,16 +224,25 @@ new #[Layout('layouts::patient')] #[Title('Schedule a session')] class extends C
             ], [
                 'genderPreference.required' => __('session_filter.validation.gender_required'),
             ]),
+            /*
             3 => $this->validate([
                 'durationMinutes' => ['required', 'in:15,30,45,60'],
             ], [
                 'durationMinutes.required' => __('session_filter.validation.duration_required'),
             ]),
+            */
+            3 => $this->validate([
+                'languagePreference' => ['required', 'in:ar,en,both'],
+            ], [
+                'languagePreference.required' => __('session_filter.validation.language_required'),
+            ]),
+            /*
             4 => $this->validate([
                 'languagePreference' => ['required', 'in:ar,en,both'],
             ], [
                 'languagePreference.required' => __('session_filter.validation.language_required'),
             ]),
+            */
             default => null,
         };
     }
@@ -248,6 +351,23 @@ new #[Layout('layouts::patient')] #[Title('Schedule a session')] class extends C
         $this->subspecialtiesExpanded = ! $this->subspecialtiesExpanded;
     }
 
+    public function selectAllSubspecialties(): void
+    {
+        $this->subspecialties = array_column($this->specialityOptions, 'id');
+        $this->subspecialtiesExpanded = true;
+    }
+
+    public function allSubspecialtiesSelected(): bool
+    {
+        $allIds = array_column($this->specialityOptions, 'id');
+
+        if ($allIds === []) {
+            return false;
+        }
+
+        return count(array_diff($allIds, $this->subspecialties)) === 0;
+    }
+
     /**
      * @return array<string, mixed>
      */
@@ -259,15 +379,14 @@ new #[Layout('layouts::patient')] #[Title('Schedule a session')] class extends C
             'duration_minutes' => $this->durationMinutes,
             'language_preference' => $this->languagePreference,
             'subspecialties' => array_values(array_unique($this->subspecialties)),
+            'instant_booking' => $this->instantBooking,
         ];
     }
 
     public function proceedNext(): void
     {
-        $availableDegreeIds = array_column($this->specialistKindOptions, 'value');
-
         $this->validate([
-            'degree_id' => ['required', 'string', 'in:'.implode(',', $availableDegreeIds)],
+            'degree_id' => ['required', 'string', 'in:'.implode(',', $this->allowedDegreeIds())],
             'genderPreference' => ['required', 'in:male,female,both'],
             'durationMinutes' => ['required', 'in:15,30,45,60'],
             'languagePreference' => ['required', 'in:ar,en,both'],
@@ -279,14 +398,26 @@ new #[Layout('layouts::patient')] #[Title('Schedule a session')] class extends C
         ]);
 
         Session::put('session_filter_preferences', $this->preferenceSnapshot());
+
+        if ($this->instantBooking) {
+            Session::put('instant_booking', true);
+        } else {
+            Session::forget('instant_booking');
+        }
+
         Flux::toast(variant: 'success', text: __('session_filter.next_toast'));
 
-        $this->redirect(route('patient.schedule.specialists'));
+        $this->redirect(
+            $this->instantBooking
+                ? route('patient.schedule.instant')
+                : route('patient.schedule.specialists')
+        );
     }
 
     public function proceedSkip(): void
     {
         Session::forget('session_filter_preferences');
+        Session::forget('instant_booking');
 
         Flux::toast(text: __('session_filter.skip_toast'));
 
@@ -308,63 +439,64 @@ new #[Layout('layouts::patient')] #[Title('Schedule a session')] class extends C
     {
         return (int) round(($this->requiredFiltersCompleted / 4) * 100);
     }
+
+    public function profilePhotoUrl(): ?string
+    {
+        $user = Auth::user();
+
+        if ($user === null || ! filled($user->profile_photo_path)) {
+            return null;
+        }
+
+        return Storage::disk('public')->url((string) $user->profile_photo_path);
+    }
 }; ?>
 
 <div class="pb-6 sm:pb-10">
     {{-- Mobile: step-by-step wizard --}}
     <div
-        class="session-filter-mobile pb-[calc(5.75rem+env(safe-area-inset-bottom))] sm:hidden"
+        class="session-filter-mobile bg-slate-50 pb-[calc(7.5rem+env(safe-area-inset-bottom))] sm:hidden"
         id="patient-portal-swipe-surface"
         data-swipe-livewire-method="goBackMobile"
         data-swipe-hint-id="patient-portal-swipe-hint"
     >
-        <header class="session-filter-mobile-hero overflow-hidden rounded-2xl border border-emerald-100/80 bg-white shadow-sm">
-            <div class="bg-gradient-to-br from-emerald-50 to-white px-4 pb-4 pt-5">
-                <div class="flex items-start justify-between gap-3">
-                    <div class="min-w-0 flex-1">
-                        <p class="text-[0.6875rem] font-bold uppercase tracking-[0.14em] text-[#10B981]">
-                            {{ __('session_filter.title') }}
-                        </p>
-                        <h1 class="mt-1 text-xl font-bold tracking-tight text-zinc-900">
-                            {{ $this->mobileStepTitle() }}
-                        </h1>
-                        <p class="mt-1 text-sm leading-relaxed text-zinc-600">
-                            {{ __('session_filter.mobile_hint') }}
-                        </p>
-                    </div>
-                    <span class="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-[#10B981]/10 text-[#10B981]">
-                        @if ($mobileStep === 1)
-                            <flux:icon name="user-circle" class="size-5" />
-                        @elseif ($mobileStep === 2)
-                            <flux:icon name="users" class="size-5" />
-                        @elseif ($mobileStep === 3)
-                            <flux:icon name="clock" class="size-5" />
-                        @elseif ($mobileStep === 4)
-                            <flux:icon name="language" class="size-5" />
-                        @else
-                            <flux:icon name="tag" class="size-5" />
-                        @endif
-                    </span>
-                </div>
+        @include('partials.patient-luxury-page-header', [
+            'title' => $this->mobileHeaderTitle(),
+            'subtitle' => $this->mobileHeaderSubtitle(),
+            'profilePhotoUrl' => $this->profilePhotoUrl(),
+            'userName' => auth()->user()?->name,
+            'testId' => 'patient-schedule-filter-header',
+            'progressStep' => $mobileStep,
+            'progressTotal' => $this->mobileStepsTotal(),
+        ])
 
-                <div class="mt-5 flex items-center gap-1.5" aria-hidden="true">
-                    @for ($stepIndex = 1; $stepIndex <= $this->mobileStepsTotal(); $stepIndex++)
-                        <span @class([
-                            'h-1.5 flex-1 rounded-full transition-all duration-300',
-                            'bg-[#10B981] shadow-sm shadow-[#10B981]/30' => $stepIndex <= $mobileStep,
-                            'bg-zinc-200/90' => $stepIndex > $mobileStep,
-                        ])></span>
-                    @endfor
+        <div class="session-filter-mobile-body mt-4 space-y-3 px-6">
+            @if ($instantBooking)
+                <div class="rounded-2xl border border-emerald-100 bg-emerald-50/80 px-4 py-3 text-sm font-medium text-emerald-800">
+                    {{ __('session_filter.instant_window_hint', ['minutes' => config('appointments.instant_window_minutes', 60)]) }}
                 </div>
-                <p class="mt-2 text-xs font-medium text-zinc-500">
-                    {{ __('session_filter.step_of', ['current' => $mobileStep, 'total' => $this->mobileStepsTotal()]) }}
-                </p>
-            </div>
-        </header>
-
-        <div class="session-filter-mobile-body mt-4 space-y-3">
+            @endif
             @if ($mobileStep === 1)
                 <div class="space-y-2.5" role="radiogroup" aria-label="{{ __('session_filter.sections.specialist') }}">
+                    <button
+                        type="button"
+                        wire:key="mobile-degree-all"
+                        wire:click="selectMobileDegree('all')"
+                        wire:loading.attr="disabled"
+                        wire:target="selectMobileDegree"
+                        aria-pressed="{{ $degree_id === 'all' ? 'true' : 'false' }}"
+                        data-test="session-filter-select-all-specialists"
+                        @class([
+                            'session-filter-mobile-option',
+                            'session-filter-mobile-option--active' => $degree_id === 'all',
+                        ])
+                    >
+                        <span class="session-filter-mobile-option__icon session-filter-mobile-option__icon--specialist">
+                            <flux:icon name="users" class="size-5" />
+                        </span>
+                        <span class="session-filter-mobile-option__label">{{ __('session_filter.select_all') }}</span>
+                        <span class="session-filter-mobile-option__indicator" aria-hidden="true"></span>
+                    </button>
                     @foreach ($this->specialistKindOptions as $option)
                         <button
                             type="button"
@@ -413,6 +545,8 @@ new #[Layout('layouts::patient')] #[Title('Schedule a session')] class extends C
                     @endforeach
                 </div>
                 <flux:error name="genderPreference" />
+            {{-- Session length step (mobile step 3) — disabled, kept for reference --}}
+            {{--
             @elseif ($mobileStep === 3)
                 <div class="grid grid-cols-2 gap-2.5" role="radiogroup" aria-label="{{ __('session_filter.sections.duration') }}">
                     @foreach (['15', '30', '45', '60'] as $minutes)
@@ -434,7 +568,8 @@ new #[Layout('layouts::patient')] #[Title('Schedule a session')] class extends C
                     @endforeach
                 </div>
                 <flux:error name="durationMinutes" />
-            @elseif ($mobileStep === 4)
+            --}}
+            @elseif ($mobileStep === 3)
                 <div class="space-y-2.5" role="radiogroup" aria-label="{{ __('session_filter.sections.language') }}">
                     @foreach (['ar' => __('session_filter.sections.lang.ar'), 'en' => __('session_filter.sections.lang.en'), 'both' => __('session_filter.sections.lang.both')] as $value => $label)
                         <button
@@ -467,6 +602,19 @@ new #[Layout('layouts::patient')] #[Title('Schedule a session')] class extends C
                         </span>
                     </div>
                     <div class="flex flex-wrap gap-2">
+                        <button
+                            type="button"
+                            wire:key="mobile-sub-all"
+                            wire:click="selectAllSubspecialties"
+                            aria-pressed="{{ $this->allSubspecialtiesSelected() ? 'true' : 'false' }}"
+                            data-test="session-filter-select-all-subspecialties"
+                            @class([
+                                'session-filter-chip',
+                                'session-filter-chip--selected' => $this->allSubspecialtiesSelected(),
+                            ])
+                        >
+                            {{ __('session_filter.select_all') }}
+                        </button>
                         @foreach ($this->visibleSpecialityOptions as $opt)
                             <button
                                 type="button"
@@ -493,40 +641,90 @@ new #[Layout('layouts::patient')] #[Title('Schedule a session')] class extends C
             @endif
         </div>
 
-        <div class="session-filter-mobile-actions fixed inset-x-0 bottom-[calc(4.25rem+env(safe-area-inset-bottom))] z-[55] border-t border-zinc-200/90 bg-white/95 px-4 py-3 shadow-[0_-10px_30px_rgb(15_23_42_/_0.08)] backdrop-blur-md">
-            <div class="mx-auto flex max-w-md items-center justify-between gap-3">
-                @if ($mobileStep > 1)
-                    <flux:button variant="ghost" size="sm" wire:click="goToPreviousMobileStep" type="button" class="shrink-0 !px-2" wire:loading.attr="disabled" icon="arrow-left">
-                        {{ __('session_filter.back') }}
+        <div class="session-filter-mobile-footer pointer-events-none fixed inset-x-0 bottom-[calc(6.25rem+env(safe-area-inset-bottom))] z-40 px-6">
+            @if ($mobileStep === 1)
+                <button
+                    type="button"
+                    wire:click="proceedSkip"
+                    wire:loading.attr="disabled"
+                    class="session-filter-skip-all pointer-events-auto mx-auto flex w-full max-w-md items-center justify-center rounded-full bg-[#10B981] px-5 py-3 text-sm font-bold text-black shadow-sm shadow-[#10B981]/25 transition hover:bg-[#0ea271] active:scale-[0.98] disabled:opacity-70"
+                >
+                    {{ __('session_filter.skip_all') }}
+                </button>
+            @elseif ($mobileStep === $this->mobileStepsTotal())
+                <div class="pointer-events-auto mx-auto w-full max-w-md space-y-2.5">
+                    <flux:button
+                        variant="primary"
+                        size="sm"
+                        wire:click="goToNextMobileStep"
+                        type="button"
+                        class="!min-h-11 w-full !rounded-full !border-[#10B981] !bg-[#10B981] !px-4 !text-sm !font-bold !text-black shadow-sm shadow-[#10B981]/20 hover:!brightness-[0.97]"
+                        wire:loading.attr="disabled"
+                        data-test="session-filter-mobile-finish"
+                    >
+                        {{ __('session_filter.finish') }}
                     </flux:button>
-                @else
-                    <flux:button variant="ghost" size="sm" wire:click="proceedSkip" type="button" class="shrink-0 !px-2" wire:loading.attr="disabled">
-                        {{ __('session_filter.skip_all') }}
-                    </flux:button>
-                @endif
 
-                @if ($mobileStep === $this->mobileStepsTotal())
-                    <div class="flex w-full max-w-[14rem] shrink-0 items-center justify-end gap-2 ms-auto">
-                        <flux:button variant="ghost" size="sm" wire:click="skipSubspecialtiesStep" type="button" class="!px-3" wire:loading.attr="disabled">
-                            {{ __('session_filter.skip') }}
-                        </flux:button>
-                        <flux:button
-                            variant="primary"
-                            size="sm"
-                            wire:click="goToNextMobileStep"
+                    <div class="grid grid-cols-2 gap-2">
+                        <button
                             type="button"
-                            class="!min-h-10 flex-1 !rounded-full !px-4 !border-[#10B981] !bg-[#10B981] !text-white shadow-sm shadow-[#10B981]/20 hover:!brightness-[0.97]"
+                            wire:click="skipSubspecialtiesStep"
                             wire:loading.attr="disabled"
+                            class="inline-flex min-h-11 w-full items-center justify-center rounded-full border border-zinc-300 bg-white px-4 text-sm font-semibold text-zinc-700 shadow-sm transition hover:border-zinc-400 hover:bg-zinc-50 active:scale-[0.98] disabled:opacity-70"
+                            data-test="session-filter-mobile-skip"
                         >
-                            {{ __('session_filter.finish') }}
+                            {{ __('session_filter.skip') }}
+                        </button>
+
+                        <flux:button
+                            variant="ghost"
+                            size="sm"
+                            wire:click="goToPreviousMobileStep"
+                            type="button"
+                            class="!min-h-11 w-full !rounded-full !border !border-zinc-200 !bg-white !px-3 !text-sm !font-semibold !text-zinc-700 hover:!bg-zinc-50"
+                            wire:loading.attr="disabled"
+                            data-test="session-filter-mobile-back"
+                        >
+                            {{ __('session_filter.back') }}
                         </flux:button>
                     </div>
-                @else
-                    <p class="ms-auto max-w-[11rem] truncate text-end text-xs font-medium text-zinc-500">
-                        {{ __('session_filter.mobile_hint') }}
-                    </p>
-                @endif
-            </div>
+                </div>
+            @elseif (in_array($mobileStep, [2, 3], true))
+                <div class="pointer-events-auto mx-auto w-full max-w-md">
+                    <div class="grid grid-cols-2 gap-2">
+                        <button
+                            type="button"
+                            wire:click="{{ $mobileStep === 2 ? 'skipMobileGenderStep' : 'skipMobileLanguageStep' }}"
+                            wire:loading.attr="disabled"
+                            class="inline-flex min-h-11 w-full items-center justify-center rounded-full border border-zinc-300 bg-white px-4 text-sm font-semibold text-zinc-700 shadow-sm transition hover:border-zinc-400 hover:bg-zinc-50 active:scale-[0.98] disabled:opacity-70"
+                            data-test="session-filter-mobile-skip-{{ $mobileStep === 2 ? 'gender' : 'language' }}"
+                        >
+                            {{ __('session_filter.skip') }}
+                        </button>
+
+                        <flux:button
+                            variant="ghost"
+                            size="sm"
+                            wire:click="goToPreviousMobileStep"
+                            type="button"
+                            class="!min-h-11 w-full !rounded-full !border !border-zinc-200 !bg-white !px-3 !text-sm !font-semibold !text-zinc-700 hover:!bg-zinc-50"
+                            wire:loading.attr="disabled"
+                            data-test="session-filter-mobile-back"
+                        >
+                            {{ __('session_filter.back') }}
+                        </flux:button>
+                    </div>
+                </div>
+            {{-- Session length step footer (back only) — disabled with step above --}}
+            {{--
+            @else
+                <div class="pointer-events-auto mx-auto flex w-full max-w-md">
+                    <flux:button variant="ghost" size="sm" wire:click="goToPreviousMobileStep" type="button" class="!px-2" wire:loading.attr="disabled">
+                        {{ __('session_filter.back') }}
+                    </flux:button>
+                </div>
+            --}}
+            @endif
         </div>
     </div>
 
@@ -539,8 +737,12 @@ new #[Layout('layouts::patient')] #[Title('Schedule a session')] class extends C
                     <flux:icon name="calendar-days" variant="mini" class="size-5 lg:size-6" />
                 </span>
                 <div class="min-w-0 flex-1">
-                    <p class="text-sm font-semibold text-zinc-900 sm:text-base lg:text-lg">{{ __('session_filter.title') }}</p>
-                    <p class="mt-0.5 text-xs text-zinc-600 sm:text-sm">{{ __('session_filter.subtitle') }}</p>
+                    <p class="text-sm font-semibold text-zinc-900 sm:text-base lg:text-lg">
+                        {{ $instantBooking ? __('session_filter.instant_title') : __('session_filter.scheduled_title') }}
+                    </p>
+                    <p class="mt-0.5 text-xs text-zinc-600 sm:text-sm">
+                        {{ $instantBooking ? __('session_filter.instant_subtitle', ['minutes' => config('appointments.instant_window_minutes', 60)]) : __('session_filter.scheduled_subtitle') }}
+                    </p>
                 </div>
             </div>
 
@@ -575,6 +777,19 @@ new #[Layout('layouts::patient')] #[Title('Schedule a session')] class extends C
                         {{ __('session_filter.sections.specialist') }}
                     </flux:heading>
                     <div class="flex flex-wrap gap-2 sm:gap-2.5" role="radiogroup" aria-labelledby="sess-spec-kind">
+                        <button
+                            type="button"
+                            wire:key="degree-all"
+                            wire:click="$set('degree_id', 'all')"
+                            aria-pressed="{{ $degree_id === 'all' ? 'true' : 'false' }}"
+                            data-test="session-filter-select-all-specialists"
+                            @class([
+                                'session-filter-chip',
+                                'session-filter-chip--active' => $degree_id === 'all',
+                            ])
+                        >
+                            {{ __('session_filter.select_all') }}
+                        </button>
                         @foreach ($this->specialistKindOptions as $option)
                             <button
                                 type="button"
@@ -700,6 +915,19 @@ new #[Layout('layouts::patient')] #[Title('Schedule a session')] class extends C
                         </span>
                     </div>
                     <div class="flex flex-wrap gap-2">
+                        <button
+                            type="button"
+                            wire:key="sub-all"
+                            wire:click="selectAllSubspecialties"
+                            aria-pressed="{{ $this->allSubspecialtiesSelected() ? 'true' : 'false' }}"
+                            data-test="session-filter-select-all-subspecialties"
+                            @class([
+                                'session-filter-chip',
+                                'session-filter-chip--selected' => $this->allSubspecialtiesSelected(),
+                            ])
+                        >
+                            {{ __('session_filter.select_all') }}
+                        </button>
                         @foreach ($this->visibleSpecialityOptions as $opt)
                             <button
                                 type="button"

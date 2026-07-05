@@ -12,10 +12,10 @@ uses(RefreshDatabase::class);
 test('guest can view patient home', function () {
     $this->get(route('patient.home'))
         ->assertSuccessful()
+        ->assertSee('data-test="patient-luxury-home"', false)
+        ->assertSee('data-test="patient-luxury-dock"', false)
         ->assertSee(__('patient.mood_section'), false)
-        ->assertSee('data-test="patient-navbar-language-switch"', false)
-        ->assertSee(route('patient.locale', ['locale' => 'ar']), false)
-        ->assertSee(__('patient.menu.locale_ar_short'), false);
+        ->assertSee(__('patient.home_luxury.sign_in'), false);
 });
 
 test('authenticated patient home shows mood strip above appointment actions', function () {
@@ -26,8 +26,12 @@ test('authenticated patient home shows mood strip above appointment actions', fu
         ->assertSuccessful()
         ->getContent();
 
-    expect(strpos($content, __('patient.mood_section')))
-        ->toBeLessThan(strpos($content, __('patient.book_title')));
+    $moodPos = strpos($content, __('patient.mood_section'));
+    $bookPos = strpos($content, __('patient.book_title'));
+
+    expect($moodPos)->not->toBeFalse();
+    expect($bookPos)->not->toBeFalse();
+    expect($moodPos)->toBeLessThan($bookPos);
 });
 
 test('guest mood day click redirects to patient phone entry', function () {
@@ -41,9 +45,44 @@ test('guest is redirected to patient phone from patient appointments', function 
         ->assertRedirect(route('patient.phone'));
 });
 
-test('guest is redirected to patient phone from important numbers', function () {
+test('guest can view important numbers with luxury mobile shell', function () {
+    app()->setLocale('en');
+
     $this->get(route('patient.important-numbers'))
-        ->assertRedirect(route('patient.phone'));
+        ->assertSuccessful()
+        ->assertSee('data-test="patient-luxury-important-numbers"', false)
+        ->assertSee('data-test="patient-important-numbers-header"', false)
+        ->assertSee('data-test="patient-important-numbers-board"', false)
+        ->assertSee('data-test="patient-important-numbers-zoom-open"', false)
+        ->assertSee('data-test="patient-important-numbers-section-national"', false)
+        ->assertSee('data-test="patient-important-numbers-section-regional"', false)
+        ->assertSee(__('patient.numbers_section_national'), false)
+        ->assertSee(__('patient.numbers_section_regional'), false)
+        ->assertSee(__('patient.numbers_zoom_chart'), false)
+        ->assertSee(__('patient.nav.important_numbers'), false)
+        ->assertSee('data-test="patient-important-number-moh"', false)
+        ->assertSee('937', false);
+});
+
+test('important numbers chart dialog uses light theme markup', function () {
+    $this->get(route('patient.important-numbers'))
+        ->assertSuccessful()
+        ->assertSee('data-test="patient-important-numbers-zoom-dialog"', false)
+        ->assertSee('bg-white', false)
+        ->assertDontSee('bg-black/90', false);
+});
+
+test('authenticated patient sees luxury header on important numbers', function () {
+    $user = User::factory()->create(['profile_completed' => true]);
+
+    $this->actingAs($user)->get(route('patient.important-numbers'))
+        ->assertSuccessful()
+        ->assertSee('data-test="patient-luxury-important-numbers"', false)
+        ->assertSee('data-test="patient-important-numbers-header"', false)
+        ->assertSee('data-test="patient-important-numbers-list"', false)
+        ->assertSee('href="tel:1919"', false)
+        ->assertSee(__('patient.numbers_intro'), false)
+        ->assertSee(__('patient.numbers_tap_to_call'), false);
 });
 
 test('authenticated patient navbar shows language switch', function () {
@@ -70,6 +109,8 @@ test('authenticated patient sidebar shows grouped navigation links', function ()
 });
 
 test('authenticated patient home renders arabic strings when locale is ar', function () {
+    $this->travelTo(now()->startOfDay()->addHours(9));
+
     app()->setLocale('ar');
     $user = User::factory()->create([
         'name' => 'User Example',
@@ -78,8 +119,9 @@ test('authenticated patient home renders arabic strings when locale is ar', func
 
     $this->actingAs($user)->get(route('patient.home'))
         ->assertSuccessful()
-        ->assertSee(__('patient.portal_greeting_label'), false)
-        ->assertSee('User', false);
+        ->assertSee(__('patient.home_luxury.greeting_morning'), false)
+        ->assertSee('User Example', false)
+        ->assertSee(__('patient.home_luxury.actions_heading'), false);
 });
 
 test('mood week strip opens mood picker for authenticated patients', function () {
@@ -98,6 +140,63 @@ test('clicking mood day on home dispatches open patient mood picker event for au
         ->test('pages::patient.home')
         ->call('selectMoodDay', now()->toDateString())
         ->assertDispatched('open-patient-mood-picker');
+});
+
+test('mobile mood quick pick shows inline save panel instead of opening modal', function () {
+    app()->setLocale('en');
+
+    $user = User::factory()->create(['profile_completed' => true]);
+
+    Livewire::actingAs($user)
+        ->test('pages::patient.home')
+        ->call('pickMoodQuick', 'happy')
+        ->assertSet('pendingMoodKey', 'happy')
+        ->assertSee(__('patient.home_luxury.mood_save_check_in'), false)
+        ->assertSee('data-test="patient-luxury-mood-save-panel"', false);
+});
+
+test('patient can save mood inline from mobile home card', function () {
+    app()->setLocale('en');
+
+    $user = User::factory()->create(['profile_completed' => true]);
+
+    Livewire::actingAs($user)
+        ->test('pages::patient.home')
+        ->call('pickMoodQuick', 'happy')
+        ->set('moodNoteQuick', 'Feeling good after a walk.')
+        ->set('shareWithTherapistQuick', true)
+        ->call('saveMoodQuick')
+        ->assertSet('pendingMoodKey', null)
+        ->assertDispatched('patient-mood-saved');
+
+    $this->assertDatabaseHas('patient_moods', [
+        'user_id' => $user->getKey(),
+        'mood' => 'happy',
+        'comments' => 'Feeling good after a walk.',
+        'is_shared' => true,
+    ]);
+});
+
+test('mobile mood card shows saved state after check in', function () {
+    app()->setLocale('en');
+
+    $user = User::factory()->create(['profile_completed' => true]);
+
+    Livewire::actingAs($user)
+        ->test('pages::patient.home')
+        ->call('pickMoodQuick', 'happy')
+        ->call('saveMoodQuick');
+
+    Livewire::actingAs($user)
+        ->test('pages::patient.home')
+        ->assertSee('data-test="patient-luxury-mood-saved"', false)
+        ->assertSee(__('patient.home_luxury.mood_logged_title'), false);
+});
+
+test('pick mood quick redirects guests to phone entry', function () {
+    Livewire::test('pages::patient.home')
+        ->call('pickMoodQuick', 'happy')
+        ->assertRedirect(route('patient.phone'));
 });
 
 test('saving mood from modal refreshes home mood week strip', function () {
@@ -119,7 +218,62 @@ test('signed-in patient home links both session cards to schedule filter', funct
 
     $response = $this->actingAs($user)->get(route('patient.home'))->assertSuccessful();
 
-    expect(substr_count($response->content(), $filterUrl))->toBe(2);
+    expect(substr_count($response->content(), $filterUrl))->toBeGreaterThanOrEqual(2);
+});
+
+test('authenticated patient luxury mobile home is rendered', function () {
+    $user = User::factory()->create(['profile_completed' => true]);
+
+    $this->actingAs($user)->get(route('patient.home'))
+        ->assertSuccessful()
+        ->assertSee('data-test="patient-luxury-home"', false)
+        ->assertSee('data-test="patient-luxury-dock"', false)
+        ->assertSee('id="awaan-ai-chatbot"', false)
+        ->assertSee('data-layout="patient-dock"', false)
+        ->assertSee('data-test="patient-luxury-dock-chatbot"', false)
+        ->assertSee('data-open-ai-chatbot', false)
+        ->assertSee(route('profile.edit'), false)
+        ->assertSee('data-test="patient-luxury-home-avatar"', false)
+        ->assertSee('data-test="patient-navbar-language-switch"', false);
+});
+
+test('authenticated patient luxury home shows active session card when in process', function () {
+    $user = User::factory()->create(['profile_completed' => true]);
+    $doctor = Doctor::factory()->create(['name' => 'Fahad Specialist']);
+
+    $appointment = Appointment::factory()->create([
+        'user_id' => $user->id,
+        'doctor_id' => $doctor->id,
+        'status' => 'in_process',
+        'actual_start_at' => now(),
+    ]);
+
+    $this->actingAs($user)->get(route('patient.home'))
+        ->assertSuccessful()
+        ->assertSee(__('patient.home_luxury.active_session_title'), false)
+        ->assertSee(route('patient.appointments.conversation', ['appointment' => $appointment->id]), false);
+});
+
+test('patient profile menu logout item includes sign out icon', function () {
+    $user = User::factory()->create(['profile_completed' => true]);
+
+    $this->actingAs($user)->get(route('patient.home'))
+        ->assertSuccessful()
+        ->assertSee('data-test="patient-logout-button"', false)
+        ->assertSee('data-flux-menu-item-has-icon', false);
+});
+
+test('signed-in patient mobile home profile opens logout menu instead of profile link', function () {
+    $user = User::factory()->create([
+        'profile_completed' => true,
+        'name' => 'Testing',
+    ]);
+
+    $this->actingAs($user)->get(route('patient.home'))
+        ->assertSuccessful()
+        ->assertSee('data-test="patient-luxury-home-profile-menu-trigger"', false)
+        ->assertSee('data-test="patient-logout-button"', false)
+        ->assertDontSee('data-test="patient-luxury-home-avatar"', false);
 });
 
 test('signed-in patient navbar exposes account menu with logout', function () {
@@ -127,10 +281,9 @@ test('signed-in patient navbar exposes account menu with logout', function () {
 
     $this->actingAs($user)->get(route('patient.home'))
         ->assertSuccessful()
-        ->assertSee('data-test="patient-account-menu-button"', false)
         ->assertSee('data-test="patient-logout-button"', false)
         ->assertSee(route('logout'), false)
-        ->assertDontSee('data-test="patient-account-menu-language-switch"', false);
+        ->assertSee(route('patient.menu'), false);
 });
 
 test('patient ongoing appointment shows countdown timer next to waiting status', function () {
@@ -324,6 +477,55 @@ test('patient appointments show join session link after doctor starts', function
         ->assertSuccessful()
         ->assertSee(route('patient.appointments.conversation', ['appointment' => $appointment->id]), false)
         ->assertSee(__('patient.appointments.join_session'), false);
+});
+
+test('patient appointments luxury mobile shell is rendered', function () {
+    $user = User::factory()->create(['profile_completed' => true]);
+    $doctor = Doctor::factory()->create(['name' => 'Fahad Specialist']);
+    $startsAt = now()->addDay();
+
+    Appointment::factory()->create([
+        'user_id' => $user->id,
+        'doctor_id' => $doctor->id,
+        'status' => 'new',
+        'appointment_date' => $startsAt->toDateString(),
+        'start_time' => $startsAt->format('H:i:s'),
+        'scheduled_at' => $startsAt,
+    ]);
+
+    $this->actingAs($user)->get(route('patient.appointments'))
+        ->assertSuccessful()
+        ->assertSee('data-test="patient-luxury-appointments"', false)
+        ->assertSee('data-test="patient-luxury-appointments-header"', false)
+        ->assertSee('data-test="patient-luxury-page-header-profile-menu-trigger"', false)
+        ->assertSee('data-test="patient-navbar-language-switch"', false)
+        ->assertDontSee('data-test="patient-brand-strip"', false)
+        ->assertSee(__('patient.appointments.luxury.tab_upcoming'), false)
+        ->assertSee(__('patient.appointments.luxury.instant_title'), false)
+        ->assertSee(__('patient.appointments.luxury.book_session_cta'), false)
+        ->assertSee('Fahad Specialist', false);
+});
+
+test('patient conversation luxury mobile shell is rendered', function () {
+    $user = User::factory()->create(['profile_completed' => true]);
+    $doctor = Doctor::factory()->create(['name' => 'Nora Specialist']);
+    $appointment = Appointment::factory()->create([
+        'user_id' => $user->id,
+        'doctor_id' => $doctor->id,
+        'status' => 'in_process',
+        'actual_start_at' => now(),
+        'extend_at' => now()->addMinutes(30),
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('patient.appointments.conversation', ['appointment' => $appointment->id]))
+        ->assertSuccessful()
+        ->assertSee('data-test="patient-luxury-conversation"', false)
+        ->assertSee('data-test="patient-luxury-conversation-header"', false)
+        ->assertSee('Nora Specialist', false)
+        ->assertSee('id="patient-agora-overlay"', false)
+        ->assertSee('id="incoming-call-accept"', false)
+        ->assertDontSee('id="patient-session-join-call-btn"', false);
 });
 
 test('patient appointments renders realtime notification scripts', function () {

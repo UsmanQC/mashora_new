@@ -1,14 +1,19 @@
 <?php
 
 use App\Support\PendingPatientBooking;
+use App\Support\DoctorFavorites;
 use App\Support\SpecialistCatalog;
 use App\Models\Duration;
 use App\Models\Degree;
 use App\Models\Doctor;
+use App\Models\Like;
 use App\Models\Speciality;
+use App\Services\DoctorAvailabilityService;
 use Flux\Flux;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
@@ -18,6 +23,9 @@ new #[Layout('layouts::patient')] #[Title('Specialists')] class extends Componen
 {
     /** @var array<string, int> */
     public array $likeCounts = [];
+
+    /** @var array<string, bool> */
+    public array $likedByUser = [];
 
     public string $searchDoctor = '';
 
@@ -36,6 +44,8 @@ new #[Layout('layouts::patient')] #[Title('Specialists')] class extends Componen
     /** @var list<string> */
     public array $filterSubspecialties = [];
 
+    public bool $instantBooking = false;
+
     /** @var list<array<string, mixed>>|null */
     protected ?array $filteredSpecialistsCache = null;
 
@@ -47,6 +57,86 @@ new #[Layout('layouts::patient')] #[Title('Specialists')] class extends Componen
         return \App\Support\AppTimezone::name();
     }
 
+    protected function isInstantEntryRequest(): bool
+    {
+        return request()->routeIs('patient.schedule.instant')
+            || request()->boolean('instant');
+    }
+
+    public function boot(): void
+    {
+        if (Session::get('instant_booking')) {
+            $this->instantBooking = true;
+        }
+    }
+
+    public function mount(): void
+    {
+        if ($this->isInstantEntryRequest()) {
+            $this->instantBooking = true;
+            $this->syncInstantBookingState();
+
+            if (! $this->hasCompletedFilterPreferences()) {
+                $this->redirect(route('patient.schedule.filter', ['instant' => 1]));
+
+                return;
+            }
+
+            $this->applyPreferencesFromSession(forInstant: true);
+        } elseif (request()->routeIs('patient.schedule.specialists') && ! $this->isLivewireUpdateRequest()) {
+            $this->instantBooking = false;
+            Session::forget('instant_booking');
+
+            if (! $this->hasCompletedFilterPreferences()) {
+                $this->redirect(route('patient.schedule.filter'));
+
+                return;
+            }
+
+            $this->applyPreferencesFromSession(forInstant: false);
+        } elseif (Session::get('instant_booking')) {
+            $this->instantBooking = true;
+        }
+
+        $this->hydrateLikeState();
+
+        $this->selectedDate = now()->timezone($this->patientTimezone())->toDateString();
+
+        if ($this->instantBooking) {
+            Session::put('instant_booking', true);
+        }
+
+        $sessionDuration = (string) (Session::get('session_filter_preferences.duration_minutes') ?? '');
+        if ($sessionDuration !== '' && $this->selectedDuration === '') {
+            $this->selectedDuration = $sessionDuration;
+        }
+
+        if ($this->filterGender === 'both') {
+            $this->filterGender = (string) (Session::get('session_filter_preferences.gender_preference') ?? 'both');
+        }
+
+        if ($this->filterLanguage === 'both') {
+            $this->filterLanguage = (string) (Session::get('session_filter_preferences.language_preference') ?? 'both');
+        }
+
+        if ($this->filterDegree === '') {
+            $this->filterDegree = (string) (Session::get('session_filter_preferences.degree_id') ?? '');
+        }
+
+        if ($this->filterSubspecialties === []) {
+            $this->filterSubspecialties = collect(Session::get('session_filter_preferences.subspecialties', []))
+                ->map(static fn (mixed $id): string => (string) $id)
+                ->filter()
+                ->values()
+                ->all();
+        }
+    }
+
+    protected function isLivewireUpdateRequest(): bool
+    {
+        return request()->hasHeader('X-Livewire');
+    }
+
     /**
      * @return list<array<string, mixed>>
      */
@@ -55,29 +145,6 @@ new #[Layout('layouts::patient')] #[Title('Specialists')] class extends Componen
         return $this->filteredSpecialistsCache ??= SpecialistCatalog::filtered(
             Session::get('session_filter_preferences')
         );
-    }
-
-    public function mount(): void
-    {
-        foreach ($this->filteredSpecialists() as $specialist) {
-            $this->likeCounts[$specialist['id']] = (int) ($specialist['likes'] ?? 0);
-        }
-
-        $this->selectedDate = now()->timezone($this->patientTimezone())->toDateString();
-
-        $sessionDuration = (string) (Session::get('session_filter_preferences.duration_minutes') ?? '');
-        if ($sessionDuration !== '') {
-            $this->selectedDuration = $sessionDuration;
-        }
-
-        $this->filterGender = (string) (Session::get('session_filter_preferences.gender_preference') ?? 'both');
-        $this->filterLanguage = (string) (Session::get('session_filter_preferences.language_preference') ?? 'both');
-        $this->filterDegree = (string) (Session::get('session_filter_preferences.degree_id') ?? '');
-        $this->filterSubspecialties = collect(Session::get('session_filter_preferences.subspecialties', []))
-            ->map(static fn (mixed $id): string => (string) $id)
-            ->filter()
-            ->values()
-            ->all();
     }
 
     /**
@@ -129,7 +196,7 @@ new #[Layout('layouts::patient')] #[Title('Specialists')] class extends Componen
             ));
         }
 
-        if ($this->filterDegree !== '') {
+        if ($this->filterDegree !== '' && $this->filterDegree !== 'all') {
             $items = array_values(array_filter(
                 $items,
                 fn (array $specialist): bool => (string) ($specialist['degree_id'] ?? '') === $this->filterDegree
@@ -147,7 +214,95 @@ new #[Layout('layouts::patient')] #[Title('Specialists')] class extends Componen
             ));
         }
 
+        if ($this->instantBooking) {
+            $items = array_values(array_filter(
+                $items,
+                fn (array $specialist): bool => ($specialist['accept_instant_appointment'] ?? true) !== false
+                    && $this->availableSlots($specialist) !== []
+            ));
+        }
+
         return $items;
+    }
+
+    protected function syncInstantBookingState(): void
+    {
+        $fromSession = (bool) (
+            Session::get('instant_booking')
+            ?? data_get(Session::get('session_filter_preferences'), 'instant_booking')
+        );
+
+        if ($this->instantBooking || $fromSession) {
+            $this->instantBooking = true;
+            Session::put('instant_booking', true);
+
+            $preferences = Session::get('session_filter_preferences', []);
+            if (is_array($preferences)) {
+                $preferences['instant_booking'] = true;
+                Session::put('session_filter_preferences', $preferences);
+            }
+
+            return;
+        }
+
+        Session::forget('instant_booking');
+    }
+
+    protected function hasCompletedFilterPreferences(): bool
+    {
+        $preferences = Session::get('session_filter_preferences');
+
+        if (! is_array($preferences)) {
+            return false;
+        }
+
+        return filled($preferences['degree_id'] ?? null)
+            && filled($preferences['gender_preference'] ?? null)
+            && filled($preferences['duration_minutes'] ?? null)
+            && filled($preferences['language_preference'] ?? null);
+    }
+
+    protected function applyPreferencesFromSession(bool $forInstant = true): void
+    {
+        if ($forInstant) {
+            Session::put('instant_booking', true);
+            $this->instantBooking = true;
+        } else {
+            Session::forget('instant_booking');
+            $this->instantBooking = false;
+        }
+
+        $preferences = Session::get('session_filter_preferences');
+
+        if (! is_array($preferences)) {
+            return;
+        }
+
+        $preferences['instant_booking'] = $forInstant;
+        Session::put('session_filter_preferences', $preferences);
+
+        $this->filterGender = (string) ($preferences['gender_preference'] ?? 'both');
+        $this->filterLanguage = (string) ($preferences['language_preference'] ?? 'both');
+        $this->filterDegree = (string) ($preferences['degree_id'] ?? '');
+        $this->filterSubspecialties = collect($preferences['subspecialties'] ?? [])
+            ->map(static fn (mixed $id): string => (string) $id)
+            ->filter()
+            ->values()
+            ->all();
+
+        $sessionDuration = (string) ($preferences['duration_minutes'] ?? '');
+        if ($sessionDuration !== '') {
+            $this->selectedDuration = $sessionDuration;
+        }
+
+        $this->selectedDate = now()->timezone($this->patientTimezone())->toDateString();
+        $this->filteredSpecialistsCache = null;
+        $this->doctorSlotsCache = [];
+    }
+
+    public function updatedInstantBooking(): void
+    {
+        $this->syncInstantBookingState();
     }
 
     /**
@@ -269,18 +424,97 @@ new #[Layout('layouts::patient')] #[Title('Specialists')] class extends Componen
             'duration_minutes' => $this->selectedDuration,
             'language_preference' => $this->filterLanguage,
             'subspecialties' => $this->filterSubspecialties,
+            'instant_booking' => $this->instantBooking,
         ]);
 
         $this->showFilterPanel = false;
     }
 
-    public function incrementLike(string $id): void
+    protected function hydrateLikeState(): void
     {
+        $specialists = $this->filteredSpecialists();
+
+        foreach ($specialists as $specialist) {
+            $this->likeCounts[$specialist['id']] = (int) ($specialist['likes'] ?? 0);
+            $this->likedByUser[$specialist['id']] = false;
+        }
+
+        $userId = Auth::id();
+        if ($userId === null) {
+            return;
+        }
+
+        $doctorIdsByCardId = collect($specialists)
+            ->mapWithKeys(static function (array $specialist): array {
+                $doctorId = $specialist['doctor_database_id'] ?? null;
+
+                return filled($doctorId)
+                    ? [(string) $specialist['id'] => (int) $doctorId]
+                    : [];
+            });
+
+        if ($doctorIdsByCardId->isEmpty()) {
+            return;
+        }
+
+        $likedDoctorIds = Like::query()
+            ->where('user_id', $userId)
+            ->whereIn('doctor_id', $doctorIdsByCardId->values()->all())
+            ->pluck('doctor_id')
+            ->map(static fn (mixed $id): int => (int) $id)
+            ->all();
+
+        foreach ($doctorIdsByCardId as $cardId => $doctorId) {
+            $this->likedByUser[(string) $cardId] = in_array($doctorId, $likedDoctorIds, true);
+        }
+    }
+
+    public function toggleLike(string $id): void
+    {
+        if (! Auth::check()) {
+            $this->redirect(route('patient.phone'), navigate: true);
+
+            return;
+        }
+
         if (! array_key_exists($id, $this->likeCounts)) {
             return;
         }
 
-        $this->likeCounts[$id]++;
+        $specialist = collect($this->specialists)->firstWhere('id', $id);
+        if ($specialist === null) {
+            return;
+        }
+
+        $doctorId = $specialist['doctor_database_id'] ?? null;
+        if (! filled($doctorId)) {
+            return;
+        }
+
+        $userId = (int) Auth::id();
+        $doctorId = (int) $doctorId;
+
+        $isLiked = DoctorFavorites::toggle($userId, $doctorId);
+
+        if ($isLiked) {
+            $this->likedByUser[$id] = true;
+            $this->likeCounts[$id]++;
+
+            Flux::toast(
+                variant: 'success',
+                text: __('specialist_results.like_saved'),
+            );
+
+            return;
+        }
+
+        $this->likedByUser[$id] = false;
+        $this->likeCounts[$id] = max(0, $this->likeCounts[$id] - 1);
+
+        Flux::toast(
+            variant: 'success',
+            text: __('specialist_results.like_removed'),
+        );
     }
 
     public function pickSlot(string $specialistId, string $slot): void
@@ -328,31 +562,62 @@ new #[Layout('layouts::patient')] #[Title('Specialists')] class extends Componen
      */
     public function availableSlots(array $specialist): array
     {
+        $doctorId = $specialist['doctor_database_id'] ?? null;
+        $duration = (int) ($this->selectedDuration !== ''
+            ? $this->selectedDuration
+            : ($specialist['session_minutes'] ?? 15));
+
+        if (is_int($doctorId) && $doctorId > 0) {
+            $doctor = Doctor::query()->find($doctorId);
+
+            if (! $doctor instanceof Doctor) {
+                return [];
+            }
+
+            /** @var DoctorAvailabilityService $availability */
+            $availability = app(DoctorAvailabilityService::class);
+
+            if ($this->instantBooking) {
+                return $availability->availableSlotsWithinInstantWindow($doctor, $duration);
+            }
+
+            return $availability->availableSlots($doctor, $this->selectedDate, $duration);
+        }
+
         $slots = $this->slotsForSelectedDate($specialist);
         $timezone = $this->patientTimezone();
 
         $selectedDate = Carbon::parse($this->selectedDate, $timezone)->startOfDay();
         $today = now()->timezone($timezone)->startOfDay();
-
-        if (! $selectedDate->equalTo($today)) {
-            return $slots;
-        }
-
         $now = now()->timezone($timezone);
 
         return collect($slots)
-            ->filter(function (string $slot) use ($selectedDate, $now, $timezone): bool {
+            ->filter(function (string $slot) use ($selectedDate, $today, $now, $timezone): bool {
                 try {
                     $slotAt = Carbon::createFromFormat(
                         'Y-m-d H:i',
                         $selectedDate->format('Y-m-d').' '.$slot,
                         $timezone
                     );
-
-                    return $slotAt->greaterThan($now);
                 } catch (\Throwable) {
                     return false;
                 }
+
+                if ($this->instantBooking) {
+                    if (! $selectedDate->equalTo($today)) {
+                        return false;
+                    }
+
+                    $windowEnd = $now->copy()->addMinutes(app(DoctorAvailabilityService::class)->instantWindowMinutes());
+
+                    return $slotAt->greaterThan($now) && $slotAt->lessThanOrEqualTo($windowEnd);
+                }
+
+                if ($selectedDate->equalTo($today)) {
+                    return $slotAt->greaterThan($now);
+                }
+
+                return true;
             })
             ->values()
             ->all();
@@ -442,18 +707,49 @@ new #[Layout('layouts::patient')] #[Title('Specialists')] class extends Componen
     {
         return Session::has('session_filter_preferences');
     }
+
+    public function pageHeading(): string
+    {
+        return $this->instantBooking
+            ? (string) __('specialist_results.page_heading_instant')
+            : (string) __('specialist_results.page_heading');
+    }
+
+    public function pageSubtitle(): string
+    {
+        if ($this->instantBooking) {
+            return (string) __('specialist_results.page_sub_instant', [
+                'minutes' => app(DoctorAvailabilityService::class)->instantWindowMinutes(),
+            ]);
+        }
+
+        return $this->hasSavedFilters
+            ? (string) __('specialist_results.page_sub_with_filters')
+            : (string) __('specialist_results.page_sub_default');
+    }
+
+    public function profilePhotoUrl(): ?string
+    {
+        $user = Auth::user();
+
+        if ($user === null || ! filled($user->profile_photo_path)) {
+            return null;
+        }
+
+        return Storage::disk('public')->url((string) $user->profile_photo_path);
+    }
 }; ?>
 
-<div class="relative mx-auto w-full max-w-7xl space-y-6 px-3 py-5 pb-28 sm:px-5 sm:py-6 sm:pb-14">
-    <header class="space-y-2">
-        <flux:heading size="xl" class="font-semibold text-zinc-900">
-            {{ __('specialist_results.page_heading') }}
-        </flux:heading>
-        <flux:text class="text-zinc-600">
-            {{ $this->hasSavedFilters ? __('specialist_results.page_sub_with_filters') : __('specialist_results.page_sub_default') }}
-        </flux:text>
-    </header>
+<div class="patient-luxury-specialists bg-slate-50 pb-[calc(4.75rem+env(safe-area-inset-bottom))] sm:bg-transparent sm:pb-14" data-test="patient-luxury-specialists">
+    @include('partials.patient-luxury-page-header', [
+        'title' => $this->pageHeading(),
+        'subtitle' => $this->pageSubtitle(),
+        'profilePhotoUrl' => $this->profilePhotoUrl(),
+        'userName' => auth()->user()?->name,
+        'testId' => 'patient-specialists-header',
+    ])
 
+    <div class="relative mx-auto w-full max-w-7xl space-y-6 px-6 py-4 sm:px-5 sm:py-6">
     <section class="space-y-4 rounded-3xl border border-zinc-200/80 bg-white/95 p-4 shadow-[0_12px_28px_-20px_rgba(2,6,23,0.35)] backdrop-blur sm:p-5">
         <div class="flex items-center gap-2.5 sm:gap-3">
             <div class="relative flex-1">
@@ -475,7 +771,7 @@ new #[Layout('layouts::patient')] #[Title('Specialists')] class extends Componen
             </button>
         </div>
 
-        <div class="grid grid-cols-4 gap-2 sm:grid-cols-8 sm:gap-2.5">
+        <div @class(['grid grid-cols-4 gap-2 sm:grid-cols-8 sm:gap-2.5', 'hidden' => $this->instantBooking])>
             @foreach ($this->dayOptions as $day)
                 <button
                     type="button"
@@ -493,6 +789,12 @@ new #[Layout('layouts::patient')] #[Title('Specialists')] class extends Componen
                 </button>
             @endforeach
         </div>
+
+        @if ($this->instantBooking)
+            <div class="rounded-2xl border border-emerald-100 bg-emerald-50/80 px-4 py-3 text-sm font-medium text-emerald-800">
+                {{ __('specialist_results.instant_window_hint', ['minutes' => app(\App\Services\DoctorAvailabilityService::class)->instantWindowMinutes()]) }}
+            </div>
+        @endif
 
         <div class="flex flex-wrap justify-center gap-2 pt-0.5">
             @foreach ($this->durationOptions as $minutes)
@@ -603,6 +905,7 @@ new #[Layout('layouts::patient')] #[Title('Specialists')] class extends Componen
                 @include('partials.patient-specialist-result-card', [
                     'specialist' => $specialist,
                     'likes' => $this->likeCounts[$specialist['id']] ?? (int) $specialist['likes'],
+                    'likedByUser' => $this->likedByUser[$specialist['id']] ?? false,
                     'selectedDate' => $this->selectedDate,
                     'availableSlots' => $this->availableSlots($specialist),
                     'displayTimezone' => $this->patientTimezone(),

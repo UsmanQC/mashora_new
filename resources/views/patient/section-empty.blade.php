@@ -1,6 +1,32 @@
 <x-layouts::patient>
-    <div class="mx-auto max-w-3xl px-4 py-6 sm:px-6 lg:px-8">
-        <header class="flex items-center gap-3">
+@php
+    $user = auth()->user();
+    $profilePhotoUrl = $user !== null && filled($user->profile_photo_path)
+        ? \Illuminate\Support\Facades\Storage::disk('public')->url((string) $user->profile_photo_path)
+        : null;
+    $subtitleKey = $subtitleKey ?? (
+        str_starts_with($titleKey, 'patient.menu.')
+            ? $titleKey.'_sub'
+            : null
+    );
+    $pageSlug = str_replace('.', '-', str_replace('patient.menu.', '', $titleKey));
+@endphp
+
+<div class="patient-luxury-section-empty bg-slate-50 pb-[calc(4.75rem+env(safe-area-inset-bottom))] sm:bg-transparent sm:pb-12" data-test="patient-luxury-section-empty-{{ $pageSlug }}">
+    <div class="sm:hidden">
+        @include('partials.patient-luxury-page-header', [
+            'title' => __($titleKey),
+            'subtitle' => filled($subtitleKey) ? __($subtitleKey) : null,
+            'profilePhotoUrl' => $profilePhotoUrl,
+            'userName' => $user?->name,
+            'backUrl' => route('patient.menu'),
+            'backLabel' => __('patient.nav.menu'),
+            'testId' => 'patient-section-empty-header-'.$pageSlug,
+        ])
+    </div>
+
+    <div class="mx-auto max-w-3xl px-6 pt-5 sm:px-6 sm:py-6 lg:px-8">
+        <header class="hidden items-center gap-3 sm:flex">
             <a
                 href="{{ route('patient.menu') }}"
                 wire:navigate
@@ -27,7 +53,7 @@
         </header>
 
         <section
-            class="mt-12 flex flex-col items-center pb-16 text-center sm:mt-16"
+            class="flex flex-col items-center rounded-3xl border border-slate-100/80 bg-white px-6 py-14 text-center shadow-[0_8px_32px_0_rgba(0,0,0,0.03)] sm:mt-12 sm:rounded-none sm:border-0 sm:bg-transparent sm:py-0 sm:shadow-none sm:pb-16"
             aria-labelledby="patient-empty-record-heading"
         >
             @include('partials.patient-empty-record-illustration')
@@ -41,4 +67,5 @@
             </p>
         </section>
     </div>
+</div>
 </x-layouts::patient>

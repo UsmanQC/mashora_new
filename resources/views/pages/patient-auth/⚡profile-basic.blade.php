@@ -75,7 +75,7 @@ new #[Layout('layouts::patient-auth')] #[Title('A few more details')] class exte
             :label="__('patient_auth.email_optional')" />
 
         <flux:field>
-            <flux:label>{{ __('patient_auth.gender') }}</flux:label>
+            <flux:label>{{ __('patient_auth.gender') }} @include('partials.required-field-mark')</flux:label>
             <div class="patient-gender-segmented">
                 <flux:radio.group variant="segmented" wire:model.live="gender" class="w-full">
                     <flux:radio value="male" :label="__('patient_auth.gender_male')" />

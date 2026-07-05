@@ -7,21 +7,21 @@ return [
     | Doctor missed appointment grace period
     |--------------------------------------------------------------------------
     |
-    | Minutes after the scheduled session end time before an unpaid start
-    | (status new/rescheduled) is marked as missed for patient resolution.
+    | Minutes after the scheduled session start time before an unstarted session
+    | (status new/rescheduled, no actual_start_at) is marked as missed for patient
+    | reschedule or refund.
     |
     */
 
-    'doctor_missed_grace_minutes' => (int) env('APPOINTMENT_DOCTOR_MISSED_GRACE_MINUTES', 15),
+    'doctor_missed_grace_minutes' => (int) env('APPOINTMENT_DOCTOR_MISSED_GRACE_MINUTES', 5),
 
     /*
     |--------------------------------------------------------------------------
     | Relaxed session limits (testing)
     |--------------------------------------------------------------------------
     |
-    | When true: doctors may start sessions before the scheduled time, overdue
-    | sessions are not auto-marked as missed, and calls are not auto-disconnected
-    | when extend_at passes.
+    | When true: doctors may start sessions before the scheduled time, and calls are not
+    | auto-disconnected when extend_at passes. Missed-session marking still runs.
     |
     */
 
@@ -55,10 +55,23 @@ return [
     |--------------------------------------------------------------------------
     |
     | Days after the parent session date when a doctor may offer a free
-    | follow-up using their available working hours.
+    | follow-up using their available working hours. Also defines how long
+    | post-session chat stays open for doctors and patients.
     |
     */
 
     'follow_up_window_days' => (int) env('APPOINTMENT_FOLLOW_UP_WINDOW_DAYS', 14),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Instant consultation window
+    |--------------------------------------------------------------------------
+    |
+    | Minutes from now within which a doctor must have a free slot to appear
+    | in instant booking results.
+    |
+    */
+
+    'instant_window_minutes' => (int) env('APPOINTMENT_INSTANT_WINDOW_MINUTES', 60),
 
 ];

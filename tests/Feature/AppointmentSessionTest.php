@@ -61,6 +61,7 @@ test('doctor starting session broadcasts patient session started event', functio
         'status' => 'new',
         'duration' => 30,
         'appointment_date' => now()->toDateString(),
+        'start_time' => now()->format('H:i:s'),
         'scheduled_at' => now(),
     ]);
 
@@ -135,7 +136,7 @@ test('patient conversation shows attend-only call ui without outbound call butto
         ->assertDontSee('id="btn-patient-video"', false)
         ->assertSee('id="incoming-call-accept"', false)
         ->assertSee('id="incoming-call-banner"', false)
-        ->assertSee('id="patient-session-join-call-btn"', false)
+        ->assertDontSee('id="patient-session-join-call-btn"', false)
         ->assertSee('id="patient-agora-toggle-mic"', false)
         ->assertSee('id="patient-agora-toggle-video"', false)
         ->assertSee(__('patient.appointments.mic'), false)

@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Degree;
+use App\Models\Doctor;
 use App\Models\User;
 use App\Support\SpecialistCatalog;
 use Database\Seeders\CommunicationSeeder;
@@ -30,7 +31,11 @@ test('patient with completed profile sees catalog specialists when no session fi
     $this->actingAs($user)
         ->get(route('patient.schedule.specialists'))
         ->assertSuccessful()
+        ->assertSee('data-test="patient-luxury-specialists"', false)
+        ->assertSee('data-test="patient-specialists-header"', false)
+        ->assertSee('data-test="patient-navbar-language-switch"', false)
         ->assertSee(__('specialist_results.page_heading'), false)
+        ->assertSee(__('specialist_results.page_sub_default'), false)
         ->assertSee('Nada Alghamdi', false)
         ->assertSee('Dr. Khalid Mohammed', false);
 });
@@ -88,6 +93,34 @@ test('session filter preferences narrow which specialists are listed', function 
         ->assertSee('Dr. Khalid Mohammed', false)
         ->assertDontSee('Dr. Fatima Noor', false)
         ->assertDontSee('Nada Alghamdi', false);
+});
+
+test('specialist result card renders doctor profile photo when available', function () {
+    app()->setLocale('en');
+
+    $this->seed([
+        DurationSeeder::class,
+        CommunicationSeeder::class,
+        DoctorSeeder::class,
+    ]);
+
+    $doctor = Doctor::query()->where('name', 'Dr. Test Doctor')->firstOrFail();
+    $doctor->update(['profile_photo_path' => 'doctors/test-profile.jpg']);
+
+    $specialist = collect(SpecialistCatalog::all())
+        ->first(fn (array $card): bool => ($card['id'] ?? '') === 'doctor-'.$doctor->id);
+
+    expect($specialist)->not->toBeNull();
+
+    $photoUrl = $doctor->fresh()->profilePhotoUrl();
+    expect($photoUrl)->not->toBeNull();
+
+    $html = view('partials.patient-specialist-result-card', [
+        'specialist' => $specialist,
+        'likes' => 0,
+    ])->render();
+
+    expect($html)->toContain($photoUrl);
 });
 
 test('specialists page shows empty state when no catalog entry matches filters', function () {

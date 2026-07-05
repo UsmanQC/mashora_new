@@ -14,6 +14,10 @@ final class PatientPortalBackNavigation
                 'url' => auth()->check() ? route('patient.home') : route('home'),
                 'label' => __('patient_auth.back'),
             ],
+            request()->routeIs('patient.schedule.instant') => [
+                'url' => route('patient.schedule.filter', ['instant' => 1]),
+                'label' => __('patient_auth.back'),
+            ],
             request()->routeIs('patient.schedule.specialists') => [
                 'url' => route('patient.schedule.filter'),
                 'label' => __('patient_auth.back'),

@@ -24,6 +24,7 @@ class EnsureDoctorProfileCompleted
 
         if ($request->routeIs([
             'doctor.register.basic.info',
+            'doctor.register.bank-account',
             'doctor.register.duration',
             'doctor.register.working-hours',
             'doctor.logout',

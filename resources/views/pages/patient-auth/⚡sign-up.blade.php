@@ -92,25 +92,31 @@ new #[Layout('layouts::patient-auth')] #[Title('Your details')] class extends Co
 
     <form wire:submit="registerPatient" class="patient-auth-form space-y-2 sm:space-y-3">
         <div class="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-x-3 sm:gap-y-2">
-            <flux:input
-                wire:model.blur="name"
-                type="text"
-                autocomplete="name"
-                required
-                :label="__('patient_auth.full_name')"
-            />
+            <flux:field>
+                <flux:label>{{ __('patient_auth.full_name') }} @include('partials.required-field-mark')</flux:label>
+                <flux:input
+                    wire:model.blur="name"
+                    type="text"
+                    autocomplete="name"
+                    required
+                />
+                <flux:error name="name" />
+            </flux:field>
 
-            <flux:input
-                wire:model.blur="email"
-                type="email"
-                autocomplete="email"
-                required
-                :label="__('patient_auth.email')"
-            />
+            <flux:field>
+                <flux:label>{{ __('patient_auth.email') }} @include('partials.required-field-mark')</flux:label>
+                <flux:input
+                    wire:model.blur="email"
+                    type="email"
+                    autocomplete="email"
+                    required
+                />
+                <flux:error name="email" />
+            </flux:field>
         </div>
 
         <flux:field>
-            <flux:label>{{ __('patient_auth.gender') }}</flux:label>
+            <flux:label>{{ __('patient_auth.gender') }} @include('partials.required-field-mark')</flux:label>
             <div class="patient-gender-segmented">
                 <flux:radio.group variant="segmented" wire:model.live="gender" class="w-full">
                     <flux:radio value="male" :label="__('patient_auth.gender_male')" />
@@ -121,15 +127,17 @@ new #[Layout('layouts::patient-auth')] #[Title('Your details')] class extends Co
         </flux:field>
 
         <div class="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-x-3 sm:gap-y-2">
-            <flux:input wire:model="password" viewable required type="password" :label="__('patient_auth.password')" />
+            <flux:field>
+                <flux:label>{{ __('patient_auth.password') }} @include('partials.required-field-mark')</flux:label>
+                <flux:input wire:model="password" viewable required type="password" />
+                <flux:error name="password" />
+            </flux:field>
 
-            <flux:input
-                wire:model="password_confirmation"
-                viewable
-                required
-                type="password"
-                :label="__('patient_auth.password_confirm')"
-            />
+            <flux:field>
+                <flux:label>{{ __('patient_auth.password_confirm') }} @include('partials.required-field-mark')</flux:label>
+                <flux:input wire:model="password_confirmation" viewable required type="password" />
+                <flux:error name="password_confirmation" />
+            </flux:field>
         </div>
 
         @error('phone')

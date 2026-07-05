@@ -14,7 +14,6 @@
                 <a
                     id="patient-global-call-join-btn"
                     href="#"
-                    wire:navigate
                     class="inline-flex shrink-0 min-h-10 items-center justify-center rounded-xl bg-[#10B981] px-4 py-2 text-sm font-semibold text-white shadow-md shadow-emerald-900/20 transition hover:brightness-95"
                 >
                     {{ __('patient.appointments.join_call') }}
@@ -48,7 +47,7 @@
                     }
 
                     if (patientConversationPathAppointmentId() === appointmentId) {
-                        hideGlobalJoinBanner(appointmentId);
+                        window.dispatchEvent(new CustomEvent('mashora:incoming-call', { detail: data }));
 
                         return;
                     }
@@ -59,8 +58,42 @@
 
                     text.textContent = label;
                     btn.href = template.replace('__ID__', String(appointmentId));
+                    btn.removeAttribute('wire:navigate');
                     banner.dataset.appointmentId = String(appointmentId);
                     banner.classList.remove('hidden');
+                }
+
+                function bindGlobalJoinButton() {
+                    const btn = document.getElementById('patient-global-call-join-btn');
+                    if (!btn || btn.dataset.bound === '1') {
+                        return;
+                    }
+
+                    btn.dataset.bound = '1';
+                    btn.addEventListener('click', (event) => {
+                        const banner = document.getElementById('patient-global-call-join-banner');
+                        const appointmentId = Number(banner?.dataset.appointmentId || 0);
+                        const conversationAppointmentId = patientConversationPathAppointmentId();
+
+                        if (conversationAppointmentId > 0 && conversationAppointmentId === appointmentId) {
+                            event.preventDefault();
+                            const acceptBtn = document.getElementById('incoming-call-accept');
+                            acceptBtn?.click();
+
+                            return;
+                        }
+
+                        if (!btn.getAttribute('href') || btn.getAttribute('href') === '#') {
+                            return;
+                        }
+
+                        event.preventDefault();
+                        if (window.Livewire?.navigate) {
+                            window.Livewire.navigate(btn.getAttribute('href'));
+                        } else {
+                            window.location.href = btn.getAttribute('href');
+                        }
+                    });
                 }
 
                 function hideGlobalJoinBanner(appointmentId) {
@@ -170,11 +203,14 @@
                 }
 
                 document.addEventListener('DOMContentLoaded', () => {
+                    bindGlobalJoinButton();
                     restoreGlobalJoinBannerFromStorage().catch(() => {});
                 });
                 document.addEventListener('livewire:navigated', () => {
+                    bindGlobalJoinButton();
                     restoreGlobalJoinBannerFromStorage().catch(() => {});
                 });
+                bindGlobalJoinButton();
                 restoreGlobalJoinBannerFromStorage().catch(() => {});
             })();
         </script>

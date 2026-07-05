@@ -75,8 +75,8 @@ final class AppointmentWalletService
 
     /**
      * Refund a doctor-cancelled appointment: full session total to the patient wallet,
-     * full session total debited from the doctor wallet (including commission share),
-     * and platform commission waived on the booking record.
+     * only the doctor's share debited from the doctor wallet, and platform commission
+     * waived on the booking record (Awaan only keeps share on completed sessions).
      */
     public function refundToPatient(Appointment $appointment): void
     {
@@ -86,16 +86,17 @@ final class AppointmentWalletService
             return;
         }
 
-        $refund = (float) $appointment->total;
+        $patientRefund = (float) $appointment->total;
+        $doctorReversal = (float) $appointment->doctor_share;
 
-        if ($refund <= 0) {
+        if ($patientRefund <= 0) {
             return;
         }
 
         $patient = $appointment->user;
 
         if ($patient instanceof User) {
-            $patient->depositFloat($refund, [
+            $patient->depositFloat($patientRefund, [
                 'type' => 'appointment_refund',
                 'appointment_id' => $appointment->id,
                 'appointment_number' => $appointment->appointment_number,
@@ -104,12 +105,12 @@ final class AppointmentWalletService
 
         $doctor = $appointment->doctor;
 
-        if ($doctor instanceof Doctor) {
-            $doctor->forceWithdrawFloat($refund, [
+        if ($doctor instanceof Doctor && $doctorReversal > 0) {
+            $doctor->forceWithdrawFloat($doctorReversal, [
                 'type' => 'appointment_refund_reversal',
                 'appointment_id' => $appointment->id,
                 'appointment_number' => $appointment->appointment_number,
-                'doctor_share' => (float) $appointment->doctor_share,
+                'doctor_share' => $doctorReversal,
                 'mashora_share' => (float) $appointment->mashora_share,
             ]);
         }

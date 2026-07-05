@@ -34,12 +34,12 @@ test('doctor cancel refunds appointment total to patient wallet', function (): v
     $appointment->refresh();
 
     expect((float) $patient->fresh()->balanceFloat)->toBe(150.0)
-        ->and((float) $doctor->fresh()->balanceFloat)->toBe(-45.0)
+        ->and((float) $doctor->fresh()->balanceFloat)->toBe(0.0)
         ->and((float) $appointment->doctor_share)->toBe(0.0)
         ->and((float) $appointment->mashora_share)->toBe(0.0);
 });
 
-test('doctor cancel debits full appointment total from doctor wallet not only doctor share', function (): void {
+test('doctor cancel debits only doctor share from doctor wallet on refund', function (): void {
     $patient = User::factory()->create(['profile_completed' => true]);
     $doctor = Doctor::factory()->create(['profile_completed' => true, 'commission' => 30]);
 
@@ -57,7 +57,7 @@ test('doctor cancel debits full appointment total from doctor wallet not only do
     app(AppointmentWalletService::class)->refundToPatient($appointment->fresh());
 
     expect((float) $patient->fresh()->balanceFloat)->toBe(112.0)
-        ->and((float) $doctor->fresh()->balanceFloat)->toBe(-26.6);
+        ->and((float) $doctor->fresh()->balanceFloat)->toBe(0.0);
 });
 
 test('doctor cancel refund is idempotent and does not double credit patient', function (): void {
@@ -80,7 +80,7 @@ test('doctor cancel refund is idempotent and does not double credit patient', fu
     $wallet->refundToPatient($appointment->fresh());
 
     expect((float) $patient->fresh()->balanceFloat)->toBe(150.0)
-        ->and((float) $doctor->fresh()->balanceFloat)->toBe(-45.0);
+        ->and((float) $doctor->fresh()->balanceFloat)->toBe(0.0);
 });
 
 test('unpaid appointment is not refunded when doctor cancels', function (): void {
@@ -152,7 +152,7 @@ test('wallet only booking refunded in full when doctor cancels via portal', func
     $appointment->refresh();
 
     expect((float) $patient->fresh()->balanceFloat)->toBe(300.0)
-        ->and((float) $doctor->fresh()->balanceFloat)->toBe(-45.0)
+        ->and((float) $doctor->fresh()->balanceFloat)->toBe(0.0)
         ->and((float) $appointment->doctor_share)->toBe(0.0)
         ->and((float) $appointment->mashora_share)->toBe(0.0);
 });

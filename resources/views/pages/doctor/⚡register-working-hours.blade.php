@@ -176,7 +176,7 @@ new #[Layout('layouts::doctor')] #[Title('Working hours')] class extends Compone
 <div class="mx-auto max-w-xl space-y-8">
     <div class="space-y-2">
         <flux:text class="text-sm font-medium text-zinc-500">
-            {{ __('doctor.auth.onboarding_progress', ['current' => 5, 'total' => 5]) }}
+            {{ __('doctor.auth.onboarding_progress', ['current' => 6, 'total' => 6]) }}
         </flux:text>
         <flux:heading size="xl" class="font-semibold text-zinc-900">{{ __('doctor.auth.working_hours_title') }}</flux:heading>
         <flux:text class="text-zinc-600">{{ __('doctor.auth.working_hours_subtitle') }}</flux:text>

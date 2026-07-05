@@ -37,6 +37,10 @@ Route::middleware('auth:doctor')->group(function (): void {
         ->middleware('doctor.active')
         ->name('register.basic.info');
 
+    Route::livewire('register/bank-account', 'pages::doctor.register-bank-account')
+        ->middleware('doctor.active')
+        ->name('register.bank-account');
+
     Route::livewire('register/duration', 'pages::doctor.register-duration')
         ->middleware('doctor.active')
         ->name('register.duration');

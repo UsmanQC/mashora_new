@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\PatientMood;
 use App\Models\User;
+use App\Support\PatientMoodImage;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Carbon;
 
@@ -38,5 +39,23 @@ final class PatientMoodLogService
     public function hasMoodForToday(User $user): bool
     {
         return $this->hasMoodForDate($user, $this->todayDate());
+    }
+
+    /**
+     * @param  value-of<PatientMoodImage::MOOD_KEYS>  $moodKey
+     */
+    public function logMoodForToday(User $user, string $moodKey, ?string $comments = null, bool $isShared = false): ?PatientMood
+    {
+        if ($this->hasMoodForToday($user)) {
+            return null;
+        }
+
+        return PatientMood::query()->create([
+            'user_id' => $user->getKey(),
+            'mood' => $moodKey,
+            'comments' => $comments,
+            'date' => $this->todayDate(),
+            'is_shared' => $isShared,
+        ]);
     }
 }

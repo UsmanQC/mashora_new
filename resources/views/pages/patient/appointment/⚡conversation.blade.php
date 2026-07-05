@@ -4,7 +4,10 @@ use App\Events\AppointmentChatMessageSent;
 use App\Models\Appointment;
 use App\Models\ChMessage;
 use App\Models\User;
+use App\Services\AppointmentMissedService;
+use App\Services\PatientMissedAppointmentService;
 use App\Support\DoctorAgoraChannel;
+use Flux\Flux;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Title;
@@ -31,9 +34,67 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
     {
         abort_unless((int) $appointment->user_id === (int) auth()->id(), 403);
 
-        $this->appointment = $appointment;
+        app(AppointmentMissedService::class)->processDueMissedAppointments();
+
+        $this->appointment = $appointment->fresh() ?? $appointment;
         $this->refreshAgoraCredentials();
         $this->loadMessages();
+    }
+
+    public function canResolveMissed(): bool
+    {
+        return app(PatientMissedAppointmentService::class)->canResolve($this->appointment);
+    }
+
+    public bool $showRefundModal = false;
+
+    public function promptRefundMissed(int $appointmentId): void
+    {
+        if ((int) $this->appointment->id !== $appointmentId) {
+            abort(404);
+        }
+
+        if (! $this->canResolveMissed()) {
+            Flux::toast(variant: 'warning', text: __('patient.missed.not_eligible'));
+
+            return;
+        }
+
+        $this->showRefundModal = true;
+    }
+
+    public function dismissRefundMissedModal(): void
+    {
+        $this->showRefundModal = false;
+    }
+
+    public function confirmRefundMissed(): void
+    {
+        $user = auth()->user();
+        if (! $user instanceof User) {
+            abort(403);
+        }
+
+        if (! $this->canResolveMissed()) {
+            Flux::toast(variant: 'warning', text: __('patient.missed.not_eligible'));
+            $this->dismissRefundMissedModal();
+
+            return;
+        }
+
+        app(PatientMissedAppointmentService::class)->refund($user, $this->appointment);
+
+        $this->appointment->refresh();
+        $this->dismissRefundMissedModal();
+
+        Flux::toast(
+            variant: 'success',
+            text: __('patient.missed.refund_success', [
+                'amount' => number_format((float) $this->appointment->total, 2),
+            ]),
+        );
+
+        $this->redirectRoute('patient.appointments', ['tab' => 'missed'], navigate: true);
     }
 
     public function sendMessage(): void
@@ -106,6 +167,8 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
             return;
         }
 
+        app(AppointmentMissedService::class)->processDueMissedAppointments();
+
         $this->appointment->refresh();
 
         if ((string) $this->appointment->status === 'in_process') {
@@ -141,14 +204,43 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
             }
         }
     }
+
+    public function profilePhotoUrl(): ?string
+    {
+        $user = auth()->user();
+
+        if (! $user instanceof User || ! filled($user->profile_photo_path)) {
+            return null;
+        }
+
+        return \Illuminate\Support\Facades\Storage::disk('public')->url((string) $user->profile_photo_path);
+    }
+
+    public function conversationHeaderSubtitle(): string
+    {
+        return __('patient.appointments.status_'.$this->appointment->status);
+    }
 }; ?>
 
 <div
     id="patient-conversation-root"
-    class="space-y-5"
+    class="patient-luxury-conversation bg-slate-50 pb-[calc(4.75rem+env(safe-area-inset-bottom))] sm:bg-transparent sm:space-y-5 sm:pb-0"
+    data-test="patient-luxury-conversation"
     @if (! in_array($appointment->status, ['in_process', 'completed', 'cancelled', 'not_attended'], true)) wire:poll.3s="refreshAppointmentSession" @endif
 >
-    <header class="relative overflow-hidden rounded-2xl border border-zinc-200/80 bg-gradient-to-br from-white via-white to-[#f7f9ff] p-4 shadow-sm shadow-zinc-200/60 ring-1 ring-zinc-100 sm:p-5">
+    <div class="sm:hidden">
+        @include('partials.patient-luxury-page-header', [
+            'title' => $appointment->doctor?->displayName() ?: __('patient.appointments.title'),
+            'subtitle' => $this->conversationHeaderSubtitle(),
+            'profilePhotoUrl' => $this->profilePhotoUrl(),
+            'userName' => auth()->user()?->name,
+            'testId' => 'patient-luxury-conversation-header',
+            'backUrl' => route('patient.appointments'),
+            'backLabel' => __('patient.appointments.title'),
+        ])
+    </div>
+
+    <header class="relative hidden overflow-hidden rounded-2xl border border-zinc-200/80 bg-gradient-to-br from-white via-white to-[#f7f9ff] p-4 shadow-sm shadow-zinc-200/60 ring-1 ring-zinc-100 sm:block sm:p-5">
         <div class="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#10B981] via-[#34d399] to-[#059669] opacity-85"></div>
         <div class="flex flex-wrap items-center justify-between gap-3">
         <div class="flex items-center gap-3">
@@ -164,34 +256,41 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 <p id="patient-conversation-status-label" class="mt-0.5 text-xs text-zinc-500">{{ __('patient.appointments.status_'.$appointment->status) }}</p>
             </div>
         </div>
-
-        <div class="flex items-center gap-2">
-            @if ($appointment->allowsPatientCalls())
-                <span
-                    id="patient-call-started-chip"
-                    class="hidden inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700"
-                >
-                    <span id="patient-call-chip-label">{{ __('patient.appointments.call_in_progress') }}</span>
-                    <span id="patient-call-chip-duration" class="font-mono tabular-nums">00:00</span>
-                </span>
-                @if ($appointment->allowsPatientCalls())
-                    <span
-                        id="patient-waiting-for-call-chip"
-                        @class([
-                            'rounded-full border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-[11px] font-semibold text-zinc-600',
-                            'hidden' => $appointment->status !== 'in_process',
-                        ])
-                    >
-                        {{ __('patient.appointments.waiting_for_specialist_call') }}
-                    </span>
-                @endif
-            @endif
-        </div>
         </div>
     </header>
 
+    @if ($appointment->allowsPatientCalls())
+        <div class="flex flex-wrap items-center gap-2 px-6 pt-3 sm:px-0 sm:pt-0">
+            <span
+                id="patient-call-started-chip"
+                class="hidden inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700"
+            >
+                <span id="patient-call-chip-label">{{ __('patient.appointments.call_in_progress') }}</span>
+                <span id="patient-call-chip-duration" class="font-mono tabular-nums">00:00</span>
+            </span>
+            <span
+                id="patient-waiting-for-call-chip"
+                @class([
+                    'rounded-full border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-[11px] font-semibold text-zinc-600',
+                    'hidden' => $appointment->status !== 'in_process',
+                ])
+            >
+                {{ __('patient.appointments.waiting_for_specialist_call') }}
+            </span>
+        </div>
+    @endif
+
+    @if ($this->canResolveMissed())
+        <div class="px-6 sm:px-0">
+            <div class="rounded-2xl border border-orange-200/90 bg-gradient-to-r from-orange-50 to-amber-50/80 px-4 py-4 shadow-sm">
+                @include('partials.patient-luxury-missed-resolution', ['appointment' => $appointment])
+            </div>
+        </div>
+    @endif
+
     <div
         id="patient-conversation-metrics"
+        wire:key="patient-conversation-metrics-{{ $appointment->id }}-{{ $appointment->status }}-{{ $appointment->actual_start_at?->timestamp ?? 0 }}"
         class="hidden"
         data-status="{{ $appointment->status }}"
         data-session-start="{{ $appointment->actual_start_at?->toIso8601String() }}"
@@ -211,6 +310,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
         data-relaxed-session-limits="{{ config('appointments.relaxed_session_limits') ? '1' : '0' }}"
     ></div>
 
+    <div class="space-y-4 px-6 pt-4 sm:space-y-5 sm:px-0 sm:pt-0">
     @if (in_array($appointment->status, ['new', 'rescheduled'], true) && ! $appointment->isChatOpen())
         <flux:callout id="patient-chat-locked-callout" variant="secondary" icon="clock" class="border-zinc-200">
             {{ __('patient.appointments.chat_locked_until_doctor_starts') }}
@@ -230,7 +330,8 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
     <div
         id="patient-session-live-banner"
         @class([
-            'rounded-xl border border-emerald-200 bg-gradient-to-r from-emerald-50 to-white px-4 py-3 shadow-sm shadow-emerald-900/5 ring-1 ring-emerald-100',
+            'max-sm:hidden rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50 to-white px-4 py-3 shadow-sm shadow-emerald-900/5 ring-1 ring-emerald-100',
+            'hidden sm:block' => $appointment->status === 'in_process',
             'hidden' => $appointment->status !== 'in_process',
         ])
     >
@@ -239,34 +340,23 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 <p class="text-sm font-semibold text-emerald-950">{{ __('patient.appointments.session_live_banner_title') }}</p>
                 <p class="mt-0.5 text-sm text-emerald-800">{{ __('patient.appointments.session_live_banner_body') }}</p>
             </div>
-            <div class="flex shrink-0 flex-col gap-2 sm:flex-row sm:items-center">
-                @if ($appointment->allowsPatientCalls())
-                    <button
-                        type="button"
-                        id="patient-session-join-call-btn"
-                        class="inline-flex min-h-10 items-center justify-center rounded-xl bg-[#10B981] px-4 py-2 text-sm font-semibold text-white shadow-md shadow-emerald-900/20 transition hover:brightness-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2"
-                    >
-                        {{ __('patient.appointments.join_call') }}
-                    </button>
-                @endif
-                <a
-                    href="#patient-chat-panel"
-                    class="inline-flex min-h-10 items-center justify-center rounded-xl border border-emerald-300 bg-white px-4 py-2 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-50"
-                >
-                    {{ __('patient.appointments.open_session_chat') }}
-                </a>
-            </div>
+            <a
+                href="#patient-chat-panel"
+                class="inline-flex min-h-10 shrink-0 items-center justify-center rounded-xl border border-emerald-300 bg-white px-4 py-2.5 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-50"
+            >
+                {{ __('patient.appointments.open_session_chat') }}
+            </a>
         </div>
     </div>
 
-    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:max-w-xl">
-        <div class="rounded-xl border border-zinc-200/80 bg-gradient-to-br from-white to-zinc-50 px-3 py-2 shadow-sm">
-            <p class="text-[11px] font-semibold uppercase tracking-wide text-zinc-400">{{ __('patient.appointments.session_elapsed_label') }}</p>
-            <p id="patient-timer-session-elapsed" class="mt-0.5 font-mono text-lg font-semibold tabular-nums text-zinc-900">{{ $this->formattedAppointmentTime() }}</p>
+    <div class="grid grid-cols-2 gap-2 sm:gap-3 lg:max-w-xl">
+        <div class="rounded-2xl border border-slate-100 bg-white px-3 py-2.5 shadow-sm sm:rounded-xl sm:border-zinc-200/80 sm:bg-gradient-to-br sm:from-white sm:to-zinc-50">
+            <p class="text-[10px] font-semibold uppercase tracking-wide text-slate-400 sm:text-[11px]">{{ __('patient.appointments.session_elapsed_label') }}</p>
+            <p id="patient-timer-session-elapsed" class="mt-0.5 font-mono text-base font-bold tabular-nums text-slate-900 sm:text-lg sm:font-semibold">{{ $this->formattedAppointmentTime() }}</p>
         </div>
-        <div id="patient-wrap-session-remaining" class="rounded-xl border border-zinc-200/80 bg-gradient-to-br from-white to-zinc-50 px-3 py-2 shadow-sm">
-            <p class="text-[11px] font-semibold uppercase tracking-wide text-zinc-400">{{ __('patient.appointments.session_remaining_label') }}</p>
-            <p id="patient-timer-session-remaining" class="mt-0.5 font-mono text-lg font-semibold tabular-nums text-[#047857]">--:--</p>
+        <div id="patient-wrap-session-remaining" class="rounded-2xl border border-slate-100 bg-white px-3 py-2.5 shadow-sm sm:rounded-xl sm:border-zinc-200/80 sm:bg-gradient-to-br sm:from-white sm:to-zinc-50">
+            <p class="text-[10px] font-semibold uppercase tracking-wide text-slate-400 sm:text-[11px]">{{ __('patient.appointments.session_remaining_label') }}</p>
+            <p id="patient-timer-session-remaining" class="mt-0.5 font-mono text-base font-bold tabular-nums text-[#047857] sm:text-lg sm:font-semibold">--:--</p>
         </div>
     </div>
 
@@ -277,8 +367,45 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
     @endif
 
     <div
+        id="incoming-call-banner"
+        class="hidden rounded-2xl border border-emerald-300 bg-gradient-to-r from-emerald-50 via-emerald-50/95 to-white px-4 py-3 shadow-md shadow-emerald-900/10 ring-1 ring-inset ring-emerald-200/80 max-sm:fixed max-sm:inset-x-6 max-sm:bottom-[calc(4.75rem+env(safe-area-inset-bottom))] max-sm:z-40 max-sm:shadow-lg sm:px-5"
+        role="alert"
+        data-test="patient-incoming-call-banner"
+    >
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div class="flex min-w-0 items-start gap-2.5">
+                <span class="relative mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white shadow-sm shadow-emerald-900/25">
+                    <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60"></span>
+                    <flux:icon name="video-camera" variant="mini" class="relative size-4" />
+                </span>
+                <div class="min-w-0">
+                    <p class="text-sm font-semibold text-emerald-950">{{ __('patient.appointments.incoming_call_title') }}</p>
+                    <p id="incoming-call-label" class="mt-0.5 text-sm text-emerald-800"></p>
+                </div>
+            </div>
+            <div class="flex shrink-0 flex-col gap-2 max-sm:w-full sm:flex-row sm:items-center">
+                <button
+                    type="button"
+                    id="incoming-call-accept"
+                    class="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#10B981] px-4 py-2.5 text-sm font-semibold text-white shadow-md shadow-emerald-900/20 transition hover:brightness-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 sm:min-h-10 sm:w-auto"
+                >
+                    <flux:icon name="video-camera" variant="mini" class="size-4" />
+                    {{ __('patient.appointments.join_call') }}
+                </button>
+                <button
+                    type="button"
+                    id="incoming-call-dismiss"
+                    class="inline-flex min-h-10 w-full items-center justify-center rounded-xl border border-emerald-300 bg-white px-4 py-2 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 sm:w-auto"
+                >
+                    {{ __('patient.appointments.dismiss_call') }}
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div
         id="patient-chat-panel"
-        class="overflow-hidden rounded-3xl border border-zinc-200/90 bg-white shadow-[0_20px_55px_-32px_rgba(15,23,42,0.35)] ring-1 ring-zinc-100"
+        class="overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-[0_8px_32px_0_rgba(0,0,0,0.03)] ring-1 ring-slate-100 sm:border-zinc-200/90 sm:shadow-[0_20px_55px_-32px_rgba(15,23,42,0.35)] sm:ring-zinc-100"
         data-appointment-id="{{ $appointment->id }}"
         data-notify-url="{{ route('patient.appointments.realtime.notify-call', $appointment) }}"
         data-pending-call-url="{{ route('patient.appointments.realtime.pending-call', $appointment) }}"
@@ -286,42 +413,8 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
         data-token-url="{{ route('patient.appointments.realtime.agora-token', $appointment) }}"
         data-csrf="{{ csrf_token() }}"
     >
-        <div class="grid min-h-[34rem] grid-cols-1 lg:grid-cols-12">
-            <div class="flex min-h-[30rem] flex-col border-zinc-200 lg:col-span-8 lg:border-e">
-                <div
-                    id="incoming-call-banner"
-                    class="hidden shrink-0 border-b border-emerald-300 bg-gradient-to-r from-emerald-50 via-emerald-50/95 to-white px-4 py-3 shadow-md shadow-emerald-900/10 ring-1 ring-inset ring-emerald-200/80 sm:px-5"
-                    role="alert"
-                >
-                    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                        <div class="flex min-w-0 items-start gap-2.5">
-                            <span class="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white shadow-sm shadow-emerald-900/25">
-                                <flux:icon name="video-camera" variant="mini" class="size-4" />
-                            </span>
-                            <div class="min-w-0">
-                                <p class="text-sm font-semibold text-emerald-950">{{ __('patient.appointments.incoming_call_title') }}</p>
-                                <p id="incoming-call-label" class="mt-0.5 text-sm text-emerald-800"></p>
-                            </div>
-                        </div>
-                        <div class="flex shrink-0 items-center gap-2">
-                            <button
-                                type="button"
-                                id="incoming-call-accept"
-                                class="inline-flex min-h-10 items-center justify-center rounded-xl bg-[#10B981] px-4 py-2 text-sm font-semibold text-white shadow-md shadow-emerald-900/20 transition hover:brightness-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2"
-                            >
-                                {{ __('patient.appointments.join_call') }}
-                            </button>
-                            <button
-                                type="button"
-                                id="incoming-call-dismiss"
-                                class="inline-flex min-h-10 items-center justify-center rounded-xl border border-emerald-300 bg-white px-4 py-2 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2"
-                            >
-                                {{ __('patient.appointments.dismiss_call') }}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
+        <div class="grid min-h-[34rem] grid-cols-1 max-sm:min-h-[min(32rem,calc(100dvh-18rem))] lg:grid-cols-12">
+            <div class="flex min-h-[30rem] flex-col border-zinc-200 max-sm:min-h-[min(28rem,calc(100dvh-20rem))] lg:col-span-8 lg:border-e">
                 <div id="patient-chat-messages" class="min-h-0 flex-1 space-y-3 overflow-y-auto bg-gradient-to-b from-zinc-50/90 via-zinc-50/70 to-zinc-100/70 px-4 py-4 sm:px-5">
             @forelse ($messages as $msg)
                 <div @class(['flex', 'justify-end' => $msg['send_by'] === 'patient', 'justify-start' => $msg['send_by'] !== 'patient']) wire:key="patient-chat-{{ $msg['id'] }}">
@@ -392,6 +485,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
             </aside>
         </div>
     </div>
+    </div>
 
     @include('partials.video-call-overlay', [
         'overlayId' => 'patient-agora-overlay',
@@ -425,6 +519,51 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
         data-agora-ready="{{ $agoraAppId !== '' ? '1' : '0' }}"
         data-appointment-status="{{ $appointment->status }}"
     ></div>
+
+    <flux:modal wire:model.self="showRefundModal" class="max-w-md rounded-2xl shadow-xl" :closable="true">
+        <div class="px-6 py-8 sm:px-8">
+            <div class="mx-auto flex size-16 items-center justify-center rounded-full bg-[#10B981]/10 text-[#10B981]">
+                <flux:icon name="banknotes" variant="outline" class="size-8" />
+            </div>
+
+            <flux:heading size="lg" class="mt-5 text-center font-semibold text-zinc-900">
+                {{ __('patient.missed.refund_modal.title') }}
+            </flux:heading>
+
+            <flux:text class="mt-2 text-center text-sm leading-relaxed text-zinc-600">
+                {{ __('patient.missed.refund_modal.body') }}
+            </flux:text>
+
+            <div class="mt-5 rounded-xl border border-zinc-200/90 bg-zinc-50 px-4 py-3 text-sm">
+                <p class="font-semibold text-zinc-900">{{ $appointment->doctor?->displayName() }}</p>
+                @if ((float) $appointment->total > 0)
+                    <p class="mt-2 text-xs font-medium text-[#047857]">
+                        {{ __('patient.missed.refund_modal.refund_note', ['amount' => number_format((float) $appointment->total, 2)]) }}
+                    </p>
+                @endif
+            </div>
+
+            <div class="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <flux:button type="button" variant="ghost" class="w-full sm:w-auto" wire:click="dismissRefundMissedModal">
+                    {{ __('patient.missed.refund_modal.dismiss') }}
+                </flux:button>
+                <flux:button
+                    type="button"
+                    class="w-full !bg-[#10B981] !text-white hover:!brightness-95 sm:w-auto"
+                    wire:click="confirmRefundMissed"
+                    wire:loading.attr="disabled"
+                    wire:target="confirmRefundMissed"
+                >
+                    <span wire:loading.remove wire:target="confirmRefundMissed">
+                        {{ __('patient.missed.refund_modal.confirm') }}
+                    </span>
+                    <span wire:loading wire:target="confirmRefundMissed">
+                        {{ __('patient.missed.refund_modal.confirming') }}
+                    </span>
+                </flux:button>
+            </div>
+        </div>
+    </flux:modal>
 </div>
 
 @push('scripts')
@@ -468,6 +607,8 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 boot.__bindCallControlButtons?.();
                 boot.__restorePendingCall?.();
                 boot.__syncCallOverlay?.();
+                boot.__observeSessionMetrics?.();
+                startSessionTimers();
 
                 return;
             }
@@ -494,7 +635,11 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
             let appointmentStatus = boot.dataset.appointmentStatus || 'new';
             const messagesWrap = document.getElementById('patient-chat-messages');
             const seen = new Set();
-            const metrics = document.getElementById('patient-conversation-metrics');
+
+            function metricsEl() {
+                return document.getElementById('patient-conversation-metrics');
+            }
+
             let sessionTimerId = null;
             let sessionEndedDisconnectHandled = false;
 
@@ -561,9 +706,9 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
 
             const labelVideo = @js(__('patient.appointments.video_call'));
             const labelVoice = @js(__('patient.appointments.voice_call'));
-            const labelConnecting = metrics?.dataset.labelConnecting || 'Connecting…';
-            const labelCallFailed = metrics?.dataset.labelCallFailed || 'Could not join the call.';
-            const labelNoActiveCall = metrics?.dataset.labelNoActiveCall || 'No active call yet.';
+            const labelConnecting = metricsEl()?.dataset.labelConnecting || 'Connecting…';
+            const labelCallFailed = metricsEl()?.dataset.labelCallFailed || 'Could not join the call.';
+            const labelNoActiveCall = metricsEl()?.dataset.labelNoActiveCall || 'No active call yet.';
             const waitingChip = document.getElementById('patient-waiting-for-call-chip');
 
             function showCallToast(text, variant = 'danger') {
@@ -604,18 +749,18 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                     const message = String(error?.message || '');
 
                     if (message.includes('denied by system')) {
-                        return metrics?.dataset.labelSystemMediaPermission
-                            || metrics?.dataset.labelCameraPermission
+                        return metricsEl()?.dataset.labelSystemMediaPermission
+                            || metricsEl()?.dataset.labelCameraPermission
                             || fallback;
                     }
 
                     if (mode === 'audio') {
-                        return metrics?.dataset.labelMicPermission
-                            || metrics?.dataset.labelCameraPermission
+                        return metricsEl()?.dataset.labelMicPermission
+                            || metricsEl()?.dataset.labelCameraPermission
                             || fallback;
                     }
 
-                    return metrics?.dataset.labelCameraPermission || fallback;
+                    return metricsEl()?.dataset.labelCameraPermission || fallback;
                 }
 
                 const message = error?.message || '';
@@ -711,7 +856,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                         }
 
                         if (Date.now() - startedAt >= timeoutMs) {
-                            reject(new Error(metrics?.dataset.labelAgoraSdkMissing || 'Agora SDK missing'));
+                            reject(new Error(metricsEl()?.dataset.labelAgoraSdkMissing || 'Agora SDK missing'));
 
                             return;
                         }
@@ -817,11 +962,12 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                     chip.classList.toggle('hidden', !activeMode);
                 }
 
-                const joinSessionBtn = document.getElementById('patient-session-join-call-btn');
+                const sessionLiveBanner = document.getElementById('patient-session-live-banner');
                 const hasIncomingCall = Boolean(incomingPayload)
                     || (incomingBanner && !incomingBanner.classList.contains('hidden'));
-                if (joinSessionBtn) {
-                    joinSessionBtn.classList.toggle('hidden', Boolean(activeMode) || hasIncomingCall);
+
+                if (sessionLiveBanner && sessionActive) {
+                    sessionLiveBanner.classList.toggle('sm:hidden', hasIncomingCall);
                 }
             }
 
@@ -933,9 +1079,12 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
             }
 
             function tickSessionTimers() {
+                const metrics = metricsEl();
                 const elapsedEl = document.getElementById('patient-timer-session-elapsed');
                 const remainingEl = document.getElementById('patient-timer-session-remaining');
-                if (!metrics || !elapsedEl || !remainingEl) return;
+                if (!metrics || !elapsedEl || !remainingEl) {
+                    return;
+                }
 
                 const status = metrics.dataset.status || '';
                 const startIso = metrics.dataset.sessionStart || '';
@@ -969,6 +1118,35 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 sessionTimerId = setInterval(tickSessionTimers, 1000);
             }
 
+            function replayActiveVideoTracks() {
+                const localTrack = boot.__localVideo || localVideo;
+                if (localTrack) {
+                    try {
+                        localTrack.stop();
+                        localTrack.play('patient-agora-local');
+                    } catch (error) {
+                        console.error('Failed to replay local video track', error);
+                    }
+                }
+
+                if (!agoraClient) {
+                    return;
+                }
+
+                agoraClient.remoteUsers.forEach((user) => {
+                    if (!user.videoTrack) {
+                        return;
+                    }
+
+                    try {
+                        user.videoTrack.stop();
+                        user.videoTrack.play('patient-agora-remote');
+                    } catch (error) {
+                        console.error('Failed to replay remote video track', error);
+                    }
+                });
+            }
+
             function showOverlay(show) {
                 if (!overlay) {
                     return;
@@ -976,6 +1154,14 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
 
                 overlay.classList.toggle('hidden', !show);
                 overlay.setAttribute('aria-hidden', show ? 'false' : 'true');
+
+                if (show) {
+                    window.requestAnimationFrame(() => {
+                        window.requestAnimationFrame(() => {
+                            replayActiveVideoTracks();
+                        });
+                    });
+                }
             }
 
             function assignLocalTracks(audio, video = null) {
@@ -1174,7 +1360,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
             }
 
             function maybeEndCallWhenSessionExpired(leftSeconds) {
-                if (metrics?.dataset.relaxedSessionLimits === '1') {
+                if (metricsEl()?.dataset.relaxedSessionLimits === '1') {
                     return;
                 }
 
@@ -1189,7 +1375,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 }
 
                 sessionEndedDisconnectHandled = true;
-                const endedMessage = metrics?.dataset.sessionEnded || 'Session time has ended.';
+                const endedMessage = metricsEl()?.dataset.sessionEnded || 'Session time has ended.';
 
                 leaveCall()
                     .then(() => {
@@ -1230,13 +1416,18 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
             function applySessionStartedPayload(data) {
                 appointmentStatus = data.status || 'in_process';
                 boot.dataset.appointmentStatus = appointmentStatus;
+                const metrics = metricsEl();
                 if (metrics) {
                     metrics.dataset.status = data.status || 'in_process';
                     metrics.dataset.sessionStart = data.actual_start_at || '';
                     metrics.dataset.sessionEnd = data.extend_at || '';
                 }
 
-                document.getElementById('patient-session-live-banner')?.classList.remove('hidden');
+                const liveBanner = document.getElementById('patient-session-live-banner');
+                if (liveBanner) {
+                    liveBanner.classList.remove('hidden');
+                    liveBanner.classList.add('max-sm:hidden', 'sm:block');
+                }
                 document.getElementById('patient-chat-locked-callout')?.classList.add('hidden');
 
                 const waitingChipEl = document.getElementById('patient-waiting-for-call-chip');
@@ -1253,7 +1444,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                     Livewire.dispatch('patient-session-started', { appointmentId });
                 }
 
-                showCallToast(metrics?.dataset.sessionStartedWaiting || @js(__('patient.appointments.session_started_waiting')), 'success');
+                showCallToast(metricsEl()?.dataset.sessionStartedWaiting || @js(__('patient.appointments.session_started_waiting')), 'success');
                 startSessionTimers();
                 refreshCallUiState();
             }
@@ -1452,9 +1643,10 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                     camTrack = null;
 
                     markCallConnected(effectiveMode);
+                    replayActiveVideoTracks();
 
                     if (cameraUnavailable && effectiveMode === 'video') {
-                        showCallToast(metrics?.dataset.labelCameraUnavailable || labelCallFailed, 'warning');
+                        showCallToast(metricsEl()?.dataset.labelCameraUnavailable || labelCallFailed, 'warning');
                     }
 
                     subscribeExistingRemoteUsers(client, effectiveMode).catch((error) => {
@@ -1548,12 +1740,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                         bootEl.__dismissIncoming?.();
                     }
 
-                    if (event.target.closest('#patient-session-join-call-btn')) {
-                        event.preventDefault();
-                        bootEl.__joinSessionCall?.();
-                    }
-
-                    if (event.target.closest('#patient-agora-leave')) {
+                    if (event.target.closest('#patient-agora-leave, [data-video-call-leave="patient-agora-leave"]')) {
                         event.preventDefault();
                         bootEl.__leaveCall?.().catch((error) => console.error(error));
                     }
@@ -1673,7 +1860,10 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                         succeed(() => {
                             const bootEl = document.getElementById('patient-conversation-bootstrap');
                             bootEl?.__bindCallControlButtons?.();
+                            bootEl?.__mountOverlayToBody?.();
                             bootEl?.__syncCallOverlay?.();
+                            bootEl?.__observeSessionMetrics?.();
+                            startSessionTimers();
                         });
                     });
                 };
@@ -1684,6 +1874,33 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                     document.addEventListener('livewire:init', registerHook);
                 }
             }
+
+            function observeSessionMetrics() {
+                const metrics = metricsEl();
+                if (!metrics) {
+                    return;
+                }
+
+                if (boot.__sessionMetricsObserver) {
+                    boot.__sessionMetricsObserver.disconnect();
+                    boot.__sessionMetricsObserver = null;
+                }
+
+                const sessionObserver = new MutationObserver(() => {
+                    syncPatientSessionFromDom(boot);
+                    refreshCallUiState();
+                    startSessionTimers();
+                });
+
+                sessionObserver.observe(metrics, {
+                    attributes: true,
+                    attributeFilter: ['data-status', 'data-session-start', 'data-session-end'],
+                });
+
+                boot.__sessionMetricsObserver = sessionObserver;
+            }
+
+            boot.__observeSessionMetrics = observeSessionMetrics;
 
             registerPatientConversationMorphHook();
 
@@ -1698,10 +1915,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                     startSessionTimers();
                 });
                 sessionObserver.observe(boot, { attributes: true, attributeFilter: ['data-appointment-status'] });
-
-                if (metrics) {
-                    sessionObserver.observe(metrics, { attributes: true, attributeFilter: ['data-status', 'data-session-start', 'data-session-end'] });
-                }
+                observeSessionMetrics();
             }
 
             window.__patientConversationInitLock = false;

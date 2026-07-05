@@ -128,7 +128,7 @@ test('patient can request refund for doctor missed appointment', function () {
     app(PatientMissedAppointmentService::class)->refund($user, $appointment);
 
     expect((float) $user->fresh()->balanceFloat)->toBe(150.0)
-        ->and((float) $doctor->fresh()->balanceFloat)->toBe(-45.0);
+        ->and((float) $doctor->fresh()->balanceFloat)->toBe(0.0);
 });
 
 test('patient can reschedule doctor missed appointment', function () {

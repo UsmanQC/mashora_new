@@ -1,9 +1,16 @@
 <?php
 
+use App\Models\Appointment;
+use App\Models\Notification;
 use App\Models\PatientMood;
+use App\Models\User;
+use App\Services\PatientMoodLogService;
 use App\Support\PatientMoodImage;
+use Flux\Flux;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\On;
@@ -12,6 +19,12 @@ use Livewire\Component;
 
 new #[Layout('layouts::patient')] #[Title('Home')] class extends Component
 {
+    public ?string $pendingMoodKey = null;
+
+    public string $moodNoteQuick = '';
+
+    public bool $shareWithTherapistQuick = false;
+
     /**
      * @return list<array{iso: string, is_today: bool, label: string, mood_key: string|null}>
      */
@@ -65,6 +78,107 @@ new #[Layout('layouts::patient')] #[Title('Home')] class extends Component
         return $days;
     }
 
+    #[Computed]
+    public function greetingLabel(): string
+    {
+        $hour = (int) now()->format('G');
+
+        if ($hour < 12) {
+            return __('patient.home_luxury.greeting_morning');
+        }
+
+        if ($hour < 17) {
+            return __('patient.home_luxury.greeting_afternoon');
+        }
+
+        return __('patient.home_luxury.greeting_evening');
+    }
+
+    #[Computed]
+    public function hasLoggedMoodToday(): bool
+    {
+        $user = Auth::user();
+
+        if ($user === null) {
+            return false;
+        }
+
+        return app(PatientMoodLogService::class)->hasMoodForToday($user);
+    }
+
+    #[Computed]
+    public function todayMoodKey(): ?string
+    {
+        $user = Auth::user();
+
+        if ($user === null) {
+            return null;
+        }
+
+        return app(PatientMoodLogService::class)->moodKeyForToday($user);
+    }
+
+    /**
+     * @return list<array{key: string, label: string, image_url: string|null, emoji: string}>
+     */
+    #[Computed]
+    public function moodOptions(): array
+    {
+        return collect(PatientMoodImage::MOOD_KEYS)
+            ->map(static fn (string $key): array => [
+                'key' => $key,
+                'label' => __('patient.mood_selector_options.'.$key),
+                'image_url' => PatientMoodImage::url($key),
+                'emoji' => PatientMoodImage::emoji($key),
+            ])
+            ->all();
+    }
+
+    #[Computed]
+    public function activeSessionAppointment(): ?Appointment
+    {
+        $user = Auth::user();
+
+        if ($user === null) {
+            return null;
+        }
+
+        return Appointment::query()
+            ->where('user_id', $user->getKey())
+            ->where('status', 'in_process')
+            ->with('doctor')
+            ->latest('id')
+            ->first();
+    }
+
+    #[Computed]
+    public function unreadNotificationCount(): int
+    {
+        $user = Auth::user();
+
+        if (! $user instanceof User) {
+            return 0;
+        }
+
+        return Notification::query()
+            ->where('userable_type', User::class)
+            ->where('userable_id', $user->getKey())
+            ->whereNull('read_at')
+            ->count();
+    }
+
+    #[Computed]
+    public function profilePhotoUrl(): ?string
+    {
+        $user = Auth::user();
+
+        if ($user === null || ! filled($user->profile_photo_path)) {
+            return null;
+        }
+
+        return Storage::disk('public')->url((string) $user->profile_photo_path);
+    }
+
     public function selectMoodDay(string $iso): void
     {
         if (! Auth::check()) {
@@ -76,10 +190,110 @@ new #[Layout('layouts::patient')] #[Title('Home')] class extends Component
         $this->dispatch('open-patient-mood-picker', dateIso: $iso);
     }
 
+    public function pickMoodQuick(string $key): void
+    {
+        if (! Auth::check()) {
+            $this->redirect(route('patient.phone'), navigate: true);
+
+            return;
+        }
+
+        if (! in_array($key, PatientMoodImage::MOOD_KEYS, true)) {
+            return;
+        }
+
+        $user = Auth::user();
+
+        if ($user === null) {
+            return;
+        }
+
+        if (app(PatientMoodLogService::class)->hasMoodForToday($user)) {
+            $this->dispatch('open-patient-mood-picker', dateIso: now()->toDateString());
+
+            return;
+        }
+
+        $this->pendingMoodKey = $key;
+        $this->resetValidation(['pendingMoodKey', 'moodNoteQuick']);
+    }
+
+    public function cancelMoodQuick(): void
+    {
+        $this->pendingMoodKey = null;
+        $this->moodNoteQuick = '';
+        $this->shareWithTherapistQuick = false;
+        $this->resetValidation(['pendingMoodKey', 'moodNoteQuick']);
+    }
+
+    public function saveMoodQuick(): void
+    {
+        $user = Auth::user();
+
+        if ($user === null) {
+            return;
+        }
+
+        /** @var PatientMoodLogService $moodLog */
+        $moodLog = app(PatientMoodLogService::class);
+
+        if ($moodLog->hasMoodForToday($user)) {
+            $this->cancelMoodQuick();
+            $this->dispatch('open-patient-mood-picker', dateIso: now()->toDateString());
+
+            return;
+        }
+
+        $validated = $this->validate([
+            'pendingMoodKey' => ['required', Rule::in(PatientMoodImage::MOOD_KEYS)],
+            'moodNoteQuick' => ['nullable', 'string', 'max:5000'],
+            'shareWithTherapistQuick' => ['boolean'],
+        ], [
+            'pendingMoodKey.required' => __('patient.mood_tracker_select_mood'),
+            'pendingMoodKey.in' => __('patient.mood_tracker_select_mood'),
+        ]);
+
+        $comments = (($validated['moodNoteQuick'] ?? '') !== '')
+            ? trim((string) $validated['moodNoteQuick'])
+            : null;
+
+        $record = $moodLog->logMoodForToday(
+            $user,
+            $validated['pendingMoodKey'],
+            $comments,
+            (bool) ($validated['shareWithTherapistQuick'] ?? false),
+        );
+
+        if ($record === null) {
+            $this->cancelMoodQuick();
+            $this->dispatch('open-patient-mood-picker', dateIso: now()->toDateString());
+
+            return;
+        }
+
+        $label = __('patient.mood_selector_options.'.$validated['pendingMoodKey']);
+
+        Flux::toast(variant: 'success', text: __('patient.mood_logged_toast', ['mood' => $label]));
+
+        $this->cancelMoodQuick();
+        $this->refreshMoodState();
+        $this->dispatch('patient-mood-saved');
+    }
+
+    public function selectMoodQuick(string $key): void
+    {
+        $this->pickMoodQuick($key);
+    }
+
     #[On('patient-mood-saved')]
     public function refreshMoodWeek(): void
     {
-        unset($this->moodWeekDays);
+        $this->refreshMoodState();
+    }
+
+    protected function refreshMoodState(): void
+    {
+        unset($this->moodWeekDays, $this->todayMoodKey, $this->moodOptions, $this->hasLoggedMoodToday);
     }
 
     /**
@@ -98,7 +312,7 @@ new #[Layout('layouts::patient')] #[Title('Home')] class extends Component
 <div class="relative w-full pb-4">
     <div
         wire:loading.flex
-        wire:target="selectMoodDay"
+        wire:target="selectMoodDay,pickMoodQuick,saveMoodQuick,cancelMoodQuick"
         class="absolute inset-0 z-20 items-center justify-center rounded-2xl bg-[#10B981]"
         aria-hidden="true"
     >
@@ -108,7 +322,9 @@ new #[Layout('layouts::patient')] #[Title('Home')] class extends Component
         ])
     </div>
 
-    <div class="space-y-5 sm:space-y-6">
+    @include('partials.patient-luxury-home-mobile')
+
+    <div class="hidden space-y-5 sm:block sm:space-y-6">
         <section class="rounded-2xl border border-zinc-200/80 bg-white p-5 shadow-sm ring-1 ring-zinc-900/[0.04]">
             <flux:heading level="2" size="xl" class="font-semibold tracking-tight text-[#047857]">
                 @if (auth()->check())
@@ -173,85 +389,6 @@ new #[Layout('layouts::patient')] #[Title('Home')] class extends Component
                 @endforeach
             </div>
         </section>
-        {{--
-        <section class="grid gap-4 sm:grid-cols-2 sm:gap-5">
-            <div
-                class="relative flex min-h-[10.5rem] flex-col justify-between overflow-hidden rounded-2xl bg-gradient-to-br from-amber-400 via-orange-500 to-orange-600 p-5 text-white shadow-[0_12px_40px_-12px_rgba(249,115,22,0.55)] sm:min-h-44"
-            >
-                <div class="pointer-events-none absolute -end-8 -top-8 size-32 rounded-full bg-white/10 blur-2xl" aria-hidden="true"></div>
-                <flux:text class="relative z-0 text-[0.9375rem] leading-relaxed font-medium text-white/95">
-                    {{ $this->dailyThought['text'] }}
-                </flux:text>
-                <div class="relative z-0 flex items-center justify-end gap-2 pt-4">
-                    <div
-                        class="contents"
-                        x-data='{
-                            thought: @json(__('patient.daily_balance')),
-                            title: @json(__('patient.thought_badge')),
-                            url: @json(route('patient.home')),
-                            async shareThought() {
-                                const payload = { title: this.title, text: this.thought, url: this.url };
-                                if (navigator.share) {
-                                    try {
-                                        await navigator.share(payload);
-                                    } catch (e) {
-                                        if (e?.name !== "AbortError") {
-                                            await this.copyThought(payload.text, payload.url);
-                                        }
-                                    }
-                                    return;
-                                }
-                                await this.copyThought(payload.text, payload.url);
-                            },
-                            async copyThought(text, url) {
-                                if (!navigator.clipboard?.writeText) {
-                                    alert(@json(__('patient.share_failed')));
-                                    return;
-                                }
-                                await navigator.clipboard.writeText(text + "\\n" + url);
-                            }
-                        }'
-                    >
-                        <flux:button
-                            type="button"
-                            variant="ghost"
-                            class="shrink-0 rounded-full! border border-white/20! bg-white/10! px-3! text-white! backdrop-blur-sm hover:[&]:bg-white/20"
-                            icon="share"
-                            x-on:click.prevent="shareThought()"
-                        >
-                            {{ __('patient.share') }}
-                        </flux:button>
-                    </div>
-                </div>
-            </div>
-
-            <a
-                href="{{ auth()->check() ? route('patient.menu') : route('patient.phone') }}"
-                wire:navigate
-                class="relative flex min-h-[10.5rem] flex-col justify-between overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-400 via-teal-500 to-emerald-600 p-5 text-white shadow-[0_12px_40px_-12px_rgba(16,185,129,0.45)] outline-none transition hover:brightness-[1.02] focus-visible:ring-2 focus-visible:ring-teal-200/70 sm:min-h-44"
-                title="{{ __('patient.metrics_description') }}"
-            >
-                <div class="pointer-events-none absolute -end-6 -top-6 size-28 rounded-full bg-white/10 blur-2xl" aria-hidden="true"></div>
-                <div class="relative z-0">
-                    <flux:text class="text-[0.6875rem] font-bold uppercase tracking-[0.14em] text-white/80">
-                        {{ __('patient.metrics_title') }}
-                    </flux:text>
-                    <flux:heading size="lg" class="mt-2 text-balance text-lg font-semibold text-white sm:text-xl">
-                        {{ __('patient.metrics_heading') }}
-                    </flux:heading>
-                </div>
-                <flux:text class="relative z-0 mt-2 text-sm leading-relaxed text-emerald-50/95">
-                    {{ __('patient.metrics_description') }}
-                </flux:text>
-                <span class="relative z-0 mt-4 inline-flex w-fit items-center rounded-full border border-white/25 bg-white/15 px-3 py-1 text-xs font-semibold text-white backdrop-blur-sm">
-                    {{ __('patient.view_all') }}
-                </span>
-                @guest
-                    <flux:text class="sr-only">{{ __('patient.metrics_sign_in_prompt') }}</flux:text>
-                @endguest
-            </a>
-        </section>
-        --}}
 
         {{-- Session actions --}}
         <section class="space-y-3">
@@ -261,7 +398,7 @@ new #[Layout('layouts::patient')] #[Title('Home')] class extends Component
             <div class="grid gap-3 sm:grid-cols-3 sm:gap-4">
                 <a
                     href="{{ route('patient.schedule.filter') }}"
-                    wire:navigate
+                    wire:navigate="false"
                     class="group relative flex items-center gap-3 overflow-hidden rounded-2xl border border-zinc-200/80 bg-white p-3.5 shadow-sm ring-1 ring-zinc-900/[0.03] transition hover:border-orange-200 hover:shadow-md active:scale-[0.995] sm:flex-col sm:items-start sm:p-4"
                 >
                     <span class="absolute inset-y-3 start-0 w-1 rounded-full bg-orange-500 sm:hidden" aria-hidden="true"></span>
@@ -287,8 +424,8 @@ new #[Layout('layouts::patient')] #[Title('Home')] class extends Component
                 </a>
 
                 <a
-                    href="{{ auth()->check() ? route('patient.schedule.filter') : route('patient.phone') }}"
-                    wire:navigate
+                    href="{{ route('patient.schedule.filter', ['instant' => 1]) }}"
+                    wire:navigate="false"
                     class="group relative flex items-center gap-3 overflow-hidden rounded-2xl border border-zinc-200/80 bg-white p-3.5 shadow-sm ring-1 ring-zinc-900/[0.03] transition hover:border-emerald-200 hover:shadow-md active:scale-[0.995] sm:flex-col sm:items-start sm:p-4"
                 >
                     <span class="absolute inset-y-3 start-0 w-1 rounded-full bg-[#10B981] sm:hidden" aria-hidden="true"></span>

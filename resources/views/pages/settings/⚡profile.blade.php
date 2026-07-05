@@ -5,19 +5,24 @@ use App\Concerns\ProfileValidationRules;
 use Flux\Flux;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
+use Livewire\WithFileUploads;
 
 new #[Layout('layouts::patient')] #[Title('Personal profile')] class extends Component {
     use PasswordValidationRules;
     use ProfileValidationRules;
+    use WithFileUploads;
 
     public string $name = '';
 
     public string $email = '';
+
+    public mixed $profile_photo = null;
 
     public string $current_password = '';
 
@@ -41,7 +46,20 @@ new #[Layout('layouts::patient')] #[Title('Personal profile')] class extends Com
     {
         $user = Auth::user();
 
-        $validated = $this->validate($this->profileRules($user->id));
+        $validated = $this->validate([
+            ...$this->profileRules($user->id),
+            'profile_photo' => ['nullable', 'image', 'max:2048'],
+        ]);
+
+        if ($this->profile_photo) {
+            $oldPath = $user->profile_photo_path;
+            $newPath = $this->profile_photo->store('patients', 'public');
+            $user->profile_photo_path = $newPath;
+
+            if (filled($oldPath) && Storage::disk('public')->exists((string) $oldPath)) {
+                Storage::disk('public')->delete((string) $oldPath);
+            }
+        }
 
         $user->fill($validated);
 
@@ -50,6 +68,8 @@ new #[Layout('layouts::patient')] #[Title('Personal profile')] class extends Com
         }
 
         $user->save();
+
+        $this->profile_photo = null;
 
         Flux::toast(variant: 'success', text: __('Profile updated.'));
     }
@@ -102,11 +122,26 @@ new #[Layout('layouts::patient')] #[Title('Personal profile')] class extends Com
     {
         return Auth::user() instanceof MustVerifyEmail && ! Auth::user()->hasVerifiedEmail();
     }
+
+    public function profilePhotoUrl(): ?string
+    {
+        $user = Auth::user();
+
+        if ($user === null || ! filled($user->profile_photo_path)) {
+            return null;
+        }
+
+        return Storage::disk('public')->url((string) $user->profile_photo_path);
+    }
 }; ?>
 
 @php
     $user = Auth::user();
-    $profileFields = collect([filled($name), filled($email)]);
+    $profileFields = collect([
+        filled($name),
+        filled($email),
+        filled($user->profile_photo_path) || $profile_photo !== null,
+    ]);
     $profileCompletion = (int) round(($profileFields->filter()->count() / max(1, $profileFields->count())) * 100);
     $passwordRequirementsTooltip = implode("\n", [
         __('patient.settings_page.password_tooltip_intro'),
@@ -117,57 +152,102 @@ new #[Layout('layouts::patient')] #[Title('Personal profile')] class extends Com
     ]);
 @endphp
 
-<div class="mx-auto max-w-2xl space-y-6 px-4 py-8 pb-28 sm:pb-10">
-    <div class="flex items-start justify-between gap-4">
-        <div>
-            <flux:heading size="xl" class="font-semibold text-[#10B981]">{{ __('patient.settings_page.page_title') }}</flux:heading>
-            <flux:text class="mt-1 text-zinc-600">{{ __('patient.settings_page.page_subtitle') }}</flux:text>
-        </div>
-        <flux:button :href="route('patient.menu')" wire:navigate variant="ghost" size="sm" icon="arrow-left">
-            {{ __('patient.empty_state.menu_crumb') }}
-        </flux:button>
+<div class="patient-luxury-settings-profile bg-slate-50 pb-[calc(4.75rem+env(safe-area-inset-bottom))] sm:bg-transparent sm:pb-12" data-test="patient-luxury-settings-profile">
+    <div class="sm:hidden">
+        @include('partials.patient-luxury-page-header', [
+            'title' => __('patient.settings_page.page_title'),
+            'subtitle' => __('patient.settings_page.page_subtitle'),
+            'profilePhotoUrl' => $this->profilePhotoUrl(),
+            'userName' => $user->name,
+            'backUrl' => route('patient.menu'),
+            'backLabel' => __('patient.nav.menu'),
+            'testId' => 'patient-settings-profile-header',
+        ])
     </div>
 
-    <div class="rounded-2xl border border-[#10B981]/20 bg-gradient-to-br from-[#10B981]/8 via-white to-white p-6 shadow-sm">
-        <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div class="flex min-w-0 items-center gap-4">
-                <flux:avatar :name="$user->name" circle size="2xl" class="ring-2 ring-[#10B981]/15" />
-                <div class="min-w-0">
-                    <p class="truncate text-lg font-semibold text-zinc-900">{{ $user->name }}</p>
-                    <p class="truncate text-sm text-zinc-500">{{ $user->email }}</p>
-                    <div class="mt-2 flex flex-wrap items-center gap-2">
-                        @if ($this->hasUnverifiedEmail)
-                            <span class="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800">
-                                {{ __('patient.settings_page.unverified') }}
-                            </span>
-                        @else
-                            <span class="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-800">
-                                {{ __('patient.settings_page.verified') }}
-                            </span>
-                        @endif
-                        @if ($user->created_at)
-                            <span class="text-xs text-zinc-500">
-                                {{ __('patient.settings_page.member_since', ['date' => $user->created_at->locale(app()->getLocale())->translatedFormat('M Y')]) }}
-                            </span>
-                        @endif
+    <div class="mx-auto max-w-2xl space-y-5 px-6 pt-5 sm:space-y-6 sm:px-4 sm:py-8 sm:pb-10">
+        <div class="hidden items-start justify-between gap-4 sm:flex">
+            <div>
+                <flux:heading size="xl" class="font-semibold text-[#10B981]">{{ __('patient.settings_page.page_title') }}</flux:heading>
+                <flux:text class="mt-1 text-zinc-600">{{ __('patient.settings_page.page_subtitle') }}</flux:text>
+            </div>
+            <flux:button :href="route('patient.menu')" wire:navigate variant="ghost" size="sm" icon="arrow-left">
+                {{ __('patient.empty_state.menu_crumb') }}
+            </flux:button>
+        </div>
+
+        <form wire:submit="updateProfileInformation" class="space-y-5">
+        <div class="rounded-3xl border border-slate-100/80 bg-gradient-to-br from-[#10B981]/8 via-white to-white p-5 shadow-[0_8px_32px_0_rgba(0,0,0,0.03)] sm:rounded-2xl sm:border-[#10B981]/20 sm:p-6 sm:shadow-sm">
+            <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div class="flex min-w-0 items-center gap-4">
+                    <label class="group relative flex size-20 shrink-0 cursor-pointer items-center justify-center rounded-full bg-white shadow-md ring-2 ring-[#10B981]/15 transition hover:ring-[#10B981]/30 sm:size-24" data-test="patient-profile-photo-upload">
+                        <input
+                            type="file"
+                            wire:model.live="profile_photo"
+                            accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
+                            class="sr-only"
+                        />
+
+                        <span class="contents" wire:loading.remove wire:target="profile_photo">
+                            @if ($profile_photo)
+                                <img src="{{ $profile_photo->temporaryUrl() }}" alt="" class="size-full rounded-full object-cover" />
+                            @elseif (filled($this->profilePhotoUrl()))
+                                <img src="{{ $this->profilePhotoUrl() }}" alt="" class="size-full rounded-full object-cover" />
+                            @else
+                                <flux:avatar :name="$user->name" circle size="2xl" class="ring-0" />
+                            @endif
+                        </span>
+
+                        <span
+                            class="absolute inset-0 flex items-center justify-center rounded-full bg-white/80 backdrop-blur-[1px]"
+                            wire:loading
+                            wire:target="profile_photo"
+                        >
+                            <flux:icon name="arrow-path" variant="solid" class="size-5 animate-spin text-[#10B981]" />
+                        </span>
+
+                        <span class="absolute -bottom-0.5 -end-0.5 flex size-8 items-center justify-center rounded-full border border-zinc-200/90 bg-white shadow-sm">
+                            <flux:icon name="camera" variant="solid" class="size-4 text-[#10B981]" />
+                        </span>
+                    </label>
+                    <div class="min-w-0">
+                        <p class="truncate text-lg font-semibold text-zinc-900">{{ $user->name }}</p>
+                        <p class="truncate text-sm text-zinc-500">{{ $user->email }}</p>
+                        <flux:text class="mt-1 text-xs text-zinc-500">{{ __('patient.settings_page.profile_photo_help') }}</flux:text>
+                        <flux:error name="profile_photo" />
+                        <div class="mt-2 flex flex-wrap items-center gap-2">
+                            @if ($this->hasUnverifiedEmail)
+                                <span class="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800">
+                                    {{ __('patient.settings_page.unverified') }}
+                                </span>
+                            @else
+                                <span class="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-800">
+                                    {{ __('patient.settings_page.verified') }}
+                                </span>
+                            @endif
+                            @if ($user->created_at)
+                                <span class="text-xs text-zinc-500">
+                                    {{ __('patient.settings_page.member_since', ['date' => $user->created_at->locale(app()->getLocale())->translatedFormat('M Y')]) }}
+                                </span>
+                            @endif
+                        </div>
                     </div>
                 </div>
+                <div class="shrink-0 rounded-xl border border-[#10B981]/15 bg-white/80 px-4 py-3 text-center shadow-sm">
+                    <p class="text-[0.65rem] font-semibold uppercase tracking-wide text-zinc-500">{{ __('patient.settings_page.completeness') }}</p>
+                    <p class="mt-1 text-2xl font-bold tabular-nums text-[#10B981]">{{ $profileCompletion }}%</p>
+                </div>
             </div>
-            <div class="shrink-0 rounded-xl border border-[#10B981]/15 bg-white/80 px-4 py-3 text-center shadow-sm">
-                <p class="text-[0.65rem] font-semibold uppercase tracking-wide text-zinc-500">{{ __('patient.settings_page.completeness') }}</p>
-                <p class="mt-1 text-2xl font-bold tabular-nums text-[#10B981]">{{ $profileCompletion }}%</p>
-            </div>
+            <flux:text class="mt-4 text-sm text-zinc-600">{{ __('patient.settings_page.hero_hint') }}</flux:text>
         </div>
-        <flux:text class="mt-4 text-sm text-zinc-600">{{ __('patient.settings_page.hero_hint') }}</flux:text>
-    </div>
 
-    <div class="rounded-2xl border border-zinc-200/90 bg-white p-5 shadow-sm sm:p-6">
+    <div class="rounded-3xl border border-slate-100/80 bg-white p-5 shadow-[0_8px_32px_0_rgba(0,0,0,0.03)] sm:rounded-2xl sm:border-zinc-200/90 sm:p-6 sm:shadow-sm">
         <div class="mb-5 border-b border-zinc-100 pb-4">
             <flux:heading size="lg" class="font-semibold text-zinc-900">{{ __('patient.settings_page.account_heading') }}</flux:heading>
             <flux:text class="mt-1 text-sm text-zinc-600">{{ __('patient.settings_page.account_sub') }}</flux:text>
         </div>
 
-        <form wire:submit="updateProfileInformation" class="space-y-5">
+        <div class="space-y-5">
             <div class="grid gap-4 sm:grid-cols-2">
                 <flux:field class="sm:col-span-2">
                     <flux:label>{{ __('Name') }}</flux:label>
@@ -214,10 +294,11 @@ new #[Layout('layouts::patient')] #[Title('Personal profile')] class extends Com
                 </flux:button>
                 <span class="text-xs text-zinc-500">{{ __('patient.settings_page.save_hint') }}</span>
             </div>
-        </form>
+        </div>
     </div>
+        </form>
 
-    <div class="rounded-2xl border border-zinc-200/90 bg-white p-5 shadow-sm sm:p-6">
+    <div class="rounded-3xl border border-slate-100/80 bg-white p-5 shadow-[0_8px_32px_0_rgba(0,0,0,0.03)] sm:rounded-2xl sm:border-zinc-200/90 sm:p-6 sm:shadow-sm">
         <div class="mb-5 flex items-start justify-between gap-3 border-b border-zinc-100 pb-4">
             <div>
                 <flux:heading size="lg" class="font-semibold text-zinc-900">{{ __('patient.settings_page.security_heading') }}</flux:heading>
@@ -290,5 +371,6 @@ new #[Layout('layouts::patient')] #[Title('Personal profile')] class extends Com
                 </flux:button>
             </div>
         </form>
+    </div>
     </div>
 </div>

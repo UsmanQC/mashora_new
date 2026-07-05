@@ -25,6 +25,29 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
     #[Url]
     public string $tab = 'ongoing';
 
+    public string $mobileSegment = 'upcoming';
+
+    /**
+     * @return array<string, list<string>>
+     */
+    protected function mobileSegmentStatuses(): array
+    {
+        return [
+            'upcoming' => ['new', 'in_process', 'pending_follow_up', 'rescheduled'],
+            'previous' => ['completed', 'not_attended', 'cancelled'],
+        ];
+    }
+
+    public function selectMobileSegment(string $segment): void
+    {
+        if (! array_key_exists($segment, $this->mobileSegmentStatuses())) {
+            return;
+        }
+
+        $this->mobileSegment = $segment;
+        $this->resetPage();
+    }
+
     /**
      * @return array<string, list<string>>
      */
@@ -43,6 +66,10 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
     {
         if (! array_key_exists($this->tab, $this->tabStatuses())) {
             $this->tab = 'ongoing';
+        }
+
+        if (in_array($this->tab, ['missed', 'completed', 'cancelled'], true)) {
+            $this->mobileSegment = 'previous';
         }
 
         app(AppointmentMissedService::class)->processDueMissedAppointments();
@@ -67,7 +94,10 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
         abort_unless(is_int($userId), 403);
 
         return Appointment::query()
-            ->with('doctor:id,name,name_ar')
+            ->with([
+                'doctor:id,name,name_ar,profile_photo_path',
+                'doctor.specialities:id,title,title_ar',
+            ])
             ->where('user_id', $userId);
     }
 
@@ -83,6 +113,199 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
         }
 
         return $query->paginate(10);
+    }
+
+    public function getMobileAppointmentsProperty(): LengthAwarePaginator
+    {
+        $query = $this->baseQuery()
+            ->whereIn('status', $this->mobileSegmentStatuses()[$this->mobileSegment]);
+
+        if ($this->mobileSegment === 'upcoming') {
+            $query->orderBy('appointment_date')->orderBy('start_time');
+        } else {
+            $query->orderByDesc('appointment_date')->orderByDesc('start_time');
+        }
+
+        return $query->paginate(10);
+    }
+
+    /**
+     * @return Collection<string, int>
+     */
+    public function getMobileSegmentCountsProperty(): Collection
+    {
+        $counts = $this->baseQuery()
+            ->whereIn('status', array_merge(...array_values($this->mobileSegmentStatuses())))
+            ->selectRaw('status, COUNT(*) as aggregate')
+            ->groupBy('status')
+            ->pluck('aggregate', 'status')
+            ->map(fn ($count): int => (int) $count);
+
+        return collect([
+            'upcoming' => collect($this->mobileSegmentStatuses()['upcoming'])
+                ->sum(fn (string $status): int => (int) ($counts[$status] ?? 0)),
+            'previous' => collect($this->mobileSegmentStatuses()['previous'])
+                ->sum(fn (string $status): int => (int) ($counts[$status] ?? 0)),
+        ]);
+    }
+
+    public function headerDateLabel(): string
+    {
+        return now()->locale(app()->getLocale())->translatedFormat('j F Y');
+    }
+
+    public function headerSubtitle(): string
+    {
+        $count = (int) ($this->mobileSegmentCounts['upcoming'] ?? 0);
+
+        return trans_choice('patient.appointments.luxury.header_subtitle', $count, [
+            'count' => $count,
+            'date' => $this->headerDateLabel(),
+        ]);
+    }
+
+    public function profilePhotoUrl(): ?string
+    {
+        $user = Auth::user();
+
+        if ($user === null || ! filled($user->profile_photo_path)) {
+            return null;
+        }
+
+        return \Illuminate\Support\Facades\Storage::disk('public')->url((string) $user->profile_photo_path);
+    }
+
+    public function doctorSpecialtyLabel(Appointment $appointment): string
+    {
+        $speciality = $appointment->doctor?->specialities?->first();
+
+        if ($speciality === null) {
+            return __('patient.appointments.specialist_label');
+        }
+
+        if (app()->getLocale() === 'ar' && filled($speciality->title_ar)) {
+            return (string) $speciality->title_ar;
+        }
+
+        return (string) ($speciality->title ?? $speciality->title_ar ?? __('patient.appointments.specialist_label'));
+    }
+
+    public function doctorPhotoUrl(Appointment $appointment): ?string
+    {
+        return $appointment->doctor?->profilePhotoUrl();
+    }
+
+    public function luxuryStatusLabel(Appointment $appointment): string
+    {
+        if ($appointment->isDoctorMissed()) {
+            return __('patient.appointments.status_missed');
+        }
+
+        if (in_array($appointment->status, ['new', 'rescheduled'], true) && ! $appointment->is_follow_up) {
+            return __('patient.appointments.luxury.status_confirmed');
+        }
+
+        return $this->statusLabelFor($appointment);
+    }
+
+    public function luxuryStatusBadgeClasses(Appointment $appointment): string
+    {
+        if (in_array($appointment->status, ['new', 'rescheduled'], true) && ! $appointment->is_follow_up) {
+            return 'bg-emerald-50 text-emerald-600';
+        }
+
+        return match ((string) $appointment->status) {
+            'in_process' => 'bg-amber-50 text-amber-600',
+            'pending_follow_up' => 'bg-violet-50 text-violet-600',
+            'completed' => 'bg-slate-100 text-slate-600',
+            'not_attended' => 'bg-orange-50 text-orange-600',
+            'cancelled' => 'bg-rose-50 text-rose-600',
+            default => 'bg-emerald-50 text-emerald-600',
+        };
+    }
+
+    public function sessionTypeLabel(Appointment $appointment): string
+    {
+        if ($appointment->appointment_type === 'instant') {
+            return __('patient.appointments.luxury.session_instant');
+        }
+
+        return __('patient.appointments.luxury.session_video');
+    }
+
+    public function formattedLuxurySessionSchedule(Appointment $appointment): string
+    {
+        $startsAt = $appointment->sessionStartsAt();
+
+        if ($startsAt === null) {
+            return trim($this->formattedSessionDate($appointment).'، '.$this->formattedSessionTime($appointment), ' ،');
+        }
+
+        $startsAt = $startsAt->locale(app()->getLocale());
+
+        $dayLabel = $startsAt->isToday()
+            ? __('patient.today')
+            : ($startsAt->isTomorrow()
+                ? __('patient.appointments.luxury.tomorrow')
+                : $startsAt->translatedFormat('d M'));
+
+        return $dayLabel.(app()->getLocale() === 'ar' ? '، ' : ', ').$startsAt->translatedFormat('g:i A');
+    }
+
+    public function appointmentCardUrl(Appointment $appointment): ?string
+    {
+        if ($appointment->status === 'in_process' && $appointment->allowsPatientCalls()) {
+            return route('patient.appointments.conversation', ['appointment' => $appointment->id]);
+        }
+
+        if ($this->canOpenChat($appointment)) {
+            return route('patient.appointments.conversation', ['appointment' => $appointment->id]);
+        }
+
+        return null;
+    }
+
+    public function processMissedAppointments(): void
+    {
+        app(AppointmentMissedService::class)->processDueMissedAppointments();
+
+        unset(
+            $this->appointments,
+            $this->tabCounts,
+            $this->mobileAppointments,
+            $this->mobileSegmentCounts,
+            $this->unresolvedMissedCount,
+        );
+    }
+
+    public function mobileEmptyMessage(): string
+    {
+        return $this->mobileSegment === 'upcoming'
+            ? __('patient.appointments.luxury.empty_upcoming')
+            : __('patient.appointments.luxury.empty_previous');
+    }
+
+    #[On('patient-appointment-session-started')]
+    public function onPatientAppointmentSessionStarted(): void
+    {
+        unset(
+            $this->appointments,
+            $this->tabCounts,
+            $this->mobileAppointments,
+            $this->mobileSegmentCounts,
+            $this->unresolvedMissedCount,
+        );
+    }
+
+    public function getUnresolvedMissedCountProperty(): int
+    {
+        return $this->baseQuery()
+            ->where('status', 'not_attended')
+            ->where('cancel_status', 'doctor_missed')
+            ->where('is_follow_up', false)
+            ->get()
+            ->filter(fn (Appointment $appointment): bool => app(PatientMissedAppointmentService::class)->canResolve($appointment))
+            ->count();
     }
 
     /**
@@ -311,15 +534,12 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
             ]),
         );
     }
-
-    #[On('patient-appointment-session-started')]
-    public function onPatientAppointmentSessionStarted(): void
-    {
-        unset($this->appointments, $this->tabCounts);
-    }
 }; ?>
 
-<div id="patient-appointments-root" class="space-y-5">
+<div wire:poll.60s="processMissedAppointments">
+    @include('partials.patient-luxury-appointments-mobile')
+
+    <div id="patient-appointments-root" class="hidden space-y-5 sm:block">
     @if (filled(config('broadcasting.connections.pusher.key')) && config('broadcasting.default') !== 'pusher')
         <flux:callout variant="warning" icon="exclamation-triangle" class="border-amber-200">
             {{ __('patient.appointments.realtime_misconfigured') }}
@@ -459,6 +679,7 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
             @endif
         </section>
     </div>
+    </div>
 
     <flux:modal wire:model.self="showRefundModal" class="max-w-md rounded-2xl shadow-xl" :closable="true">
         <div class="px-6 py-8 sm:px-8">
@@ -530,40 +751,50 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
         data-notify-base="{{ route('patient.appointments.realtime.notify-call', ['appointment' => '__ID__']) }}"
     ></div>
 
-    <div id="patient-inline-call-overlay" class="fixed inset-0 z-[210] hidden bg-zinc-950/90 backdrop-blur-sm">
-        <div class="mx-auto flex h-full w-full max-w-6xl flex-col p-3 sm:p-5">
-            <div class="flex items-center justify-between rounded-xl border border-white/10 bg-zinc-900/80 px-4 py-3 text-white">
-                <div>
-                    <p class="text-xs uppercase tracking-wide text-zinc-300">{{ __('patient.appointments.call_in_progress') }}</p>
-                    <p id="patient-inline-call-state" class="text-sm font-semibold text-white">{{ __('patient.appointments.session_started_join_now') }}</p>
+    <div id="patient-inline-call-overlay" class="video-call-overlay fixed inset-0 z-[210] hidden" aria-hidden="true" role="dialog" aria-modal="true">
+        <div class="absolute inset-0 bg-zinc-950/95 backdrop-blur-md" aria-hidden="true"></div>
+        <div class="relative flex h-full min-h-0 flex-col">
+            <div class="flex shrink-0 items-center justify-between gap-3 border-b border-white/10 bg-zinc-900/95 px-4 py-3 text-white">
+                <div class="min-w-0">
+                    <p class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-emerald-300">
+                        <span class="relative flex size-2">
+                            <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#10B981] opacity-60"></span>
+                            <span class="relative inline-flex size-2 rounded-full bg-[#10B981]"></span>
+                        </span>
+                        {{ __('patient.appointments.call_in_progress') }}
+                    </p>
+                    <p id="patient-inline-call-state" class="truncate text-sm font-semibold text-white">{{ __('patient.appointments.session_started_join_now') }}</p>
                 </div>
-                <button type="button" id="patient-inline-call-end" class="rounded-xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700">
+                <button type="button" id="patient-inline-call-end" class="inline-flex shrink-0 items-center gap-2 rounded-xl bg-rose-600 px-3 py-2 text-xs font-semibold text-white shadow-lg shadow-rose-900/35 transition hover:bg-rose-500">
+                    <flux:icon name="x-mark" variant="mini" class="size-4" />
                     {{ __('patient.appointments.end_call') }}
                 </button>
             </div>
 
-            <div class="mt-3 grid min-h-0 flex-1 grid-cols-1 gap-3 md:grid-cols-[1fr_18rem]">
-                <div class="min-h-[50vh] overflow-hidden rounded-2xl border border-white/10 bg-black">
-                    <div id="patient-inline-call-remote" class="h-full w-full"></div>
+            <div class="relative min-h-0 flex-1 bg-black">
+                <div id="patient-inline-call-remote" class="absolute inset-0 h-full w-full"></div>
+                <div class="absolute end-3 top-3 z-10 w-28 overflow-hidden rounded-2xl border border-white/20 bg-zinc-900/90 shadow-2xl ring-1 ring-white/10 sm:w-36">
+                    <div id="patient-inline-call-local" class="aspect-video w-full bg-zinc-800"></div>
                 </div>
-                <div class="flex flex-col gap-3">
-                    <div class="rounded-xl border border-white/10 bg-zinc-900/80 px-3 py-2 text-xs text-zinc-200">
-                        <p id="patient-inline-doctor-name" class="font-semibold text-white">—</p>
-                        <p id="patient-inline-session-time" class="mt-0.5 text-zinc-300">—</p>
-                    </div>
-                    <div class="overflow-hidden rounded-xl border border-white/10 bg-zinc-900">
-                        <div id="patient-inline-call-local" class="aspect-video w-full"></div>
-                    </div>
-                    <div class="grid grid-cols-2 gap-2">
-                        <button type="button" id="patient-inline-video" class="inline-flex items-center justify-center rounded-lg bg-white/10 px-3 py-2 text-xs font-semibold text-white hover:bg-white/20">
-                            {{ __('patient.appointments.video_call') }}
-                        </button>
-                        <button type="button" id="patient-inline-audio" class="inline-flex items-center justify-center rounded-lg bg-white/10 px-3 py-2 text-xs font-semibold text-white hover:bg-white/20">
-                            {{ __('patient.appointments.voice_call') }}
-                        </button>
-                    </div>
-                    <a id="patient-inline-open-chat" href="#" wire:navigate class="inline-flex items-center justify-center rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-xs font-semibold text-white hover:bg-white/20">
-                        {{ __('patient.appointments.join_session') }}
+            </div>
+
+            <div class="shrink-0 border-t border-white/10 bg-zinc-900/95 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+                <div class="mb-3 rounded-xl border border-white/10 bg-zinc-800/80 px-3 py-2 text-xs text-zinc-200">
+                    <p id="patient-inline-doctor-name" class="font-semibold text-white">—</p>
+                    <p id="patient-inline-session-time" class="mt-0.5 text-zinc-400">—</p>
+                </div>
+                <div class="grid grid-cols-3 gap-2">
+                    <button type="button" id="patient-inline-video" class="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl bg-white/10 px-2 py-2 text-[11px] font-semibold text-white transition hover:bg-white/20">
+                        <flux:icon name="video-camera" variant="mini" class="size-4" />
+                        {{ __('patient.appointments.video_call') }}
+                    </button>
+                    <button type="button" id="patient-inline-audio" class="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl bg-white/10 px-2 py-2 text-[11px] font-semibold text-white transition hover:bg-white/20">
+                        <flux:icon name="phone" variant="mini" class="size-4" />
+                        {{ __('patient.appointments.voice_call') }}
+                    </button>
+                    <a id="patient-inline-open-chat" href="#" wire:navigate class="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl border border-[#10B981]/40 bg-[#10B981]/20 px-2 py-2 text-[11px] font-semibold text-emerald-100 transition hover:bg-[#10B981]/30">
+                        <flux:icon name="chat-bubble-left-right" variant="mini" class="size-4" />
+                        {{ __('patient.appointments.open_chat') }}
                     </a>
                 </div>
             </div>
@@ -683,6 +914,38 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
             const endBtn = document.getElementById('patient-inline-call-end');
             const openChat = document.getElementById('patient-inline-open-chat');
             const callState = document.getElementById('patient-inline-call-state');
+
+            if (overlay && overlay.parentElement !== document.body) {
+                document.body.appendChild(overlay);
+            }
+
+            function replayInlineVideoTracks() {
+                if (localVideo) {
+                    try {
+                        localVideo.stop();
+                        localVideo.play('patient-inline-call-local');
+                    } catch (error) {
+                        console.error('Failed to replay inline local video', error);
+                    }
+                }
+
+                if (!agoraClient) {
+                    return;
+                }
+
+                agoraClient.remoteUsers.forEach((user) => {
+                    if (!user.videoTrack) {
+                        return;
+                    }
+
+                    try {
+                        user.videoTrack.stop();
+                        user.videoTrack.play('patient-inline-call-remote');
+                    } catch (error) {
+                        console.error('Failed to replay inline remote video', error);
+                    }
+                });
+            }
             const payloadByAppointment = new Map();
             let currentAppointmentId = 0;
             let agoraClient = null;
@@ -913,6 +1176,11 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
                     }
                     if (overlay) {
                         overlay.classList.remove('hidden');
+                        window.requestAnimationFrame(() => {
+                            window.requestAnimationFrame(() => {
+                                replayInlineVideoTracks();
+                            });
+                        });
                     }
                 } catch (error) {
                     console.error(error);

@@ -47,7 +47,7 @@
                     }
 
                     const localPreview = options.localPreviewId
-                        ? document.getElementById(options.localPreviewId)?.closest('.absolute')
+                        ? document.getElementById(options.localPreviewId)?.closest('.video-call-local-preview, .absolute')
                         : null;
 
                     if (localPreview) {

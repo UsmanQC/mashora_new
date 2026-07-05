@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Speciality;
 use App\Models\User;
 use Database\Seeders\DegreeSeeder;
 use Database\Seeders\SpecialitySeeder;
@@ -16,11 +17,30 @@ beforeEach(function () {
 });
 
 test('guest can open schedule session filter page', function () {
+    app()->setLocale('en');
+
     $this->get(route('patient.schedule.filter'))
         ->assertSuccessful()
         ->assertSee('session-filter-mobile', false)
-        ->assertSee('data-test="patient-portal-back"', false)
-        ->assertSee(route('home'), false);
+        ->assertSee('data-test="patient-schedule-filter-header"', false)
+        ->assertSee(__('session_filter.scheduled_title'), false)
+        ->assertSee(__('session_filter.mobile_steps.degree'), false);
+});
+
+test('mobile filter header updates when step changes', function () {
+    $user = User::factory()->create(['profile_completed' => true]);
+
+    Livewire::actingAs($user)
+        ->test('pages::patient.schedule-session')
+        ->assertSee(__('session_filter.mobile_steps.degree'), false)
+        ->set('mobileStep', 3)
+        ->assertSee(__('session_filter.mobile_steps.language'), false)
+        ->assertSee(__('session_filter.scheduled_step_of', [
+            'step' => __('session_filter.mobile_steps.language'),
+            'current' => 3,
+            'total' => 4,
+        ]), false)
+        ->assertDontSee(__('session_filter.mobile_steps.degree'), false);
 });
 
 test('mobile filter swipe back goes to previous step before leaving', function () {
@@ -53,8 +73,11 @@ test('authenticated patient can open schedule session filter page', function () 
 
     $this->actingAs($user)->get(route('patient.schedule.filter'))
         ->assertSuccessful()
-        ->assertSee(__('session_filter.title'), false)
-        ->assertSee(__('session_filter.subtitle'), false)
+        ->assertSee('data-test="patient-schedule-filter-header"', false)
+        ->assertSee('data-test="patient-navbar-language-switch"', false)
+        ->assertSee(__('session_filter.mobile_steps.degree'), false)
+        ->assertSee(__('session_filter.scheduled_title'), false)
+        ->assertSee(__('session_filter.scheduled_subtitle'), false)
         ->assertSee(__('session_filter.filter_heading'), false)
         ->assertSee('session-filter-chip', false)
         ->assertSee('Obsessive', false)
@@ -119,7 +142,8 @@ test('mobile wizard auto advances when selecting an option', function () {
         ->assertSet('mobileStep', 2)
         ->assertSet('degree_id', '1')
         ->call('selectMobileGender', 'both')
-        ->assertSet('mobileStep', 3);
+        ->assertSet('mobileStep', 3)
+        ->assertSet('durationMinutes', '30');
 });
 
 test('mobile wizard advances step by step when required fields are chosen', function () {
@@ -136,12 +160,9 @@ test('mobile wizard advances step by step when required fields are chosen', func
         ->set('genderPreference', 'both')
         ->call('goToNextMobileStep')
         ->assertSet('mobileStep', 3)
-        ->set('durationMinutes', '30')
-        ->call('goToNextMobileStep')
-        ->assertSet('mobileStep', 4)
         ->set('languagePreference', 'both')
         ->call('goToNextMobileStep')
-        ->assertSet('mobileStep', 5);
+        ->assertSet('mobileStep', 4);
 });
 
 test('mobile wizard can finish from subspecialties step', function () {
@@ -153,9 +174,87 @@ test('mobile wizard can finish from subspecialties step', function () {
         ->set('genderPreference', 'both')
         ->set('durationMinutes', '30')
         ->set('languagePreference', 'both')
-        ->set('mobileStep', 5)
+        ->set('mobileStep', 4)
+        ->assertSee('data-test="session-filter-mobile-skip"', false)
+        ->assertSee('data-test="session-filter-mobile-finish"', false)
         ->call('goToNextMobileStep')
         ->assertRedirect(route('patient.schedule.specialists'));
+});
+
+test('mobile wizard can skip gender preference step', function () {
+    $user = User::factory()->create(['profile_completed' => true]);
+
+    Livewire::actingAs($user)
+        ->test('pages::patient.schedule-session')
+        ->set('degree_id', '1')
+        ->set('mobileStep', 2)
+        ->assertSee('data-test="session-filter-mobile-skip-gender"', false)
+        ->call('skipMobileGenderStep')
+        ->assertSet('genderPreference', 'both')
+        ->assertSet('mobileStep', 3);
+});
+
+test('mobile wizard can skip language step', function () {
+    $user = User::factory()->create(['profile_completed' => true]);
+
+    Livewire::actingAs($user)
+        ->test('pages::patient.schedule-session')
+        ->set('degree_id', '1')
+        ->set('genderPreference', 'both')
+        ->set('durationMinutes', '30')
+        ->set('mobileStep', 3)
+        ->assertSee('data-test="session-filter-mobile-skip-language"', false)
+        ->call('skipMobileLanguageStep')
+        ->assertSet('languagePreference', 'both')
+        ->assertSet('mobileStep', 4);
+});
+
+test('patient can choose all specialist types with all button', function () {
+    app()->setLocale('en');
+
+    $user = User::factory()->create(['profile_completed' => true]);
+
+    Livewire::actingAs($user)
+        ->test('pages::patient.schedule-session')
+        ->assertSee('data-test="session-filter-select-all-specialists"', false)
+        ->call('selectMobileDegree', 'all')
+        ->assertSet('degree_id', 'all')
+        ->assertSet('mobileStep', 2)
+        ->set('genderPreference', 'both')
+        ->set('durationMinutes', '30')
+        ->set('languagePreference', 'both')
+        ->call('proceedNext')
+        ->assertRedirect(route('patient.schedule.specialists'));
+
+    expect(session('session_filter_preferences'))->toMatchArray([
+        'degree_id' => 'all',
+        'gender_preference' => 'both',
+        'duration_minutes' => '30',
+        'language_preference' => 'both',
+        'subspecialties' => [],
+    ]);
+});
+
+test('patient can select all subspecialties with all button', function () {
+    app()->setLocale('en');
+
+    $user = User::factory()->create(['profile_completed' => true]);
+
+    $allIds = Speciality::query()
+        ->where('status', true)
+        ->orderBy('id')
+        ->pluck('id')
+        ->map(fn ($id) => (string) $id)
+        ->all();
+
+    Livewire::actingAs($user)
+        ->test('pages::patient.schedule-session')
+        ->assertSet('subspecialties', [])
+        ->assertSee('data-test="session-filter-select-all-subspecialties"', false)
+        ->assertSee(__('session_filter.select_all'), false)
+        ->call('selectAllSubspecialties')
+        ->assertSet('subspecialtiesExpanded', true)
+        ->assertSet('subspecialties', $allIds);
 });
 
 test('schedule filter page includes mobile wizard markup', function () {
@@ -167,5 +266,9 @@ test('schedule filter page includes mobile wizard markup', function () {
         ->assertSuccessful()
         ->assertSee('session-filter-mobile', false)
         ->assertSee('session-filter-mobile-option', false)
-        ->assertSee(__('session_filter.step_of', ['current' => 1, 'total' => 5]), false);
+        ->assertSee(__('session_filter.scheduled_step_of', [
+            'step' => __('session_filter.mobile_steps.degree'),
+            'current' => 1,
+            'total' => 4,
+        ]), false);
 });

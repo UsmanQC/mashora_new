@@ -5,6 +5,7 @@
 
 <link rel="icon" href="{{ asset('images/favicon-awaan.png') }}" type="image/png">
 
+@include('partials.thmanyah-font')
 @fonts
 
 @vite(['resources/css/app.css', 'resources/js/app.js'])

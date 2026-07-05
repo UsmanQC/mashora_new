@@ -5,6 +5,7 @@ use App\Services\PatientWalletService;
 use Bavix\Wallet\Models\Transaction;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
@@ -51,20 +52,44 @@ new #[Layout('layouts::patient')] #[Title('Wallet')] class extends Component
     {
         return app(PatientWalletService::class)->transactionAmountSigned($transaction);
     }
+
+    public function profilePhotoUrl(): ?string
+    {
+        $user = Auth::user();
+
+        if ($user === null || ! filled($user->profile_photo_path)) {
+            return null;
+        }
+
+        return Storage::disk('public')->url((string) $user->profile_photo_path);
+    }
 }; ?>
 
-<div class="mx-auto max-w-2xl space-y-6 px-4 py-8">
-    <div class="flex items-start justify-between gap-4">
-        <div>
-            <flux:heading size="xl" class="font-semibold text-[#10B981]">{{ __('patient.wallet.title') }}</flux:heading>
-            <flux:text class="mt-1 text-zinc-600">{{ __('patient.wallet.subtitle') }}</flux:text>
-        </div>
-        <flux:button :href="route('patient.menu')" wire:navigate variant="ghost" size="sm" icon="arrow-left">
-            {{ __('patient.empty_state.menu_crumb') }}
-        </flux:button>
+<div class="patient-luxury-wallet bg-slate-50 pb-[calc(4.75rem+env(safe-area-inset-bottom))] sm:bg-transparent sm:pb-12" data-test="patient-luxury-wallet">
+    <div class="sm:hidden">
+        @include('partials.patient-luxury-page-header', [
+            'title' => __('patient.wallet.title'),
+            'subtitle' => __('patient.wallet.subtitle'),
+            'profilePhotoUrl' => $this->profilePhotoUrl(),
+            'userName' => auth()->user()?->name,
+            'backUrl' => route('patient.menu'),
+            'backLabel' => __('patient.nav.menu'),
+            'testId' => 'patient-wallet-header',
+        ])
     </div>
 
-    <div class="rounded-2xl border border-[#10B981]/25 bg-gradient-to-br from-[#10B981]/10 to-white p-6 shadow-sm">
+    <div class="mx-auto max-w-2xl space-y-5 px-6 pt-5 sm:space-y-6 sm:px-4 sm:py-8">
+        <div class="hidden items-start justify-between gap-4 sm:flex">
+            <div>
+                <flux:heading size="xl" class="font-semibold text-[#10B981]">{{ __('patient.wallet.title') }}</flux:heading>
+                <flux:text class="mt-1 text-zinc-600">{{ __('patient.wallet.subtitle') }}</flux:text>
+            </div>
+            <flux:button :href="route('patient.menu')" wire:navigate variant="ghost" size="sm" icon="arrow-left">
+                {{ __('patient.empty_state.menu_crumb') }}
+            </flux:button>
+        </div>
+
+        <div class="rounded-3xl border border-slate-100/80 bg-gradient-to-br from-[#10B981]/10 via-white to-white p-5 shadow-[0_8px_32px_0_rgba(0,0,0,0.03)] sm:rounded-2xl sm:border-[#10B981]/25 sm:p-6 sm:shadow-sm">
         <p class="text-sm font-semibold uppercase tracking-wide text-zinc-500">{{ __('patient.wallet.available_balance') }}</p>
         <p class="mt-2 text-4xl font-bold tabular-nums text-[#10B981]">
             {{ number_format($this->balance, 2) }}
@@ -74,7 +99,7 @@ new #[Layout('layouts::patient')] #[Title('Wallet')] class extends Component
     </div>
 
     <div class="grid gap-3 sm:grid-cols-2">
-        <div class="rounded-2xl border border-zinc-200/90 bg-white p-4 shadow-sm">
+        <div class="rounded-3xl border border-slate-100/80 bg-white p-4 shadow-[0_4px_20px_-2px_rgba(0,0,0,0.03)] sm:rounded-2xl sm:border-zinc-200/90 sm:shadow-sm">
             <div class="flex items-start gap-3">
                 <div class="flex size-10 shrink-0 items-center justify-center rounded-full bg-emerald-100">
                     <flux:icon name="arrow-down" class="size-5 text-emerald-600" />
@@ -87,7 +112,7 @@ new #[Layout('layouts::patient')] #[Title('Wallet')] class extends Component
                 </div>
             </div>
         </div>
-        <div class="rounded-2xl border border-zinc-200/90 bg-white p-4 shadow-sm">
+        <div class="rounded-3xl border border-slate-100/80 bg-white p-4 shadow-[0_4px_20px_-2px_rgba(0,0,0,0.03)] sm:rounded-2xl sm:border-zinc-200/90 sm:shadow-sm">
             <div class="flex items-start gap-3">
                 <div class="flex size-10 shrink-0 items-center justify-center rounded-full bg-rose-100">
                     <flux:icon name="arrow-up" class="size-5 text-rose-600" />
@@ -102,7 +127,7 @@ new #[Layout('layouts::patient')] #[Title('Wallet')] class extends Component
         </div>
     </div>
 
-    <div class="rounded-2xl border border-zinc-200/90 bg-white p-5 shadow-sm">
+    <div class="rounded-3xl border border-slate-100/80 bg-white p-5 shadow-[0_8px_32px_0_rgba(0,0,0,0.03)] sm:rounded-2xl sm:border-zinc-200/90 sm:shadow-sm">
         <flux:heading size="lg" class="font-semibold text-zinc-900">{{ __('patient.wallet.transactions_title') }}</flux:heading>
 
         @if ($this->transactions->isEmpty())
@@ -130,5 +155,6 @@ new #[Layout('layouts::patient')] #[Title('Wallet')] class extends Component
                 @endforeach
             </div>
         @endif
+    </div>
     </div>
 </div>

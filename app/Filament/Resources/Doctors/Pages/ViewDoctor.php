@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Doctors\Pages;
 
+use App\Filament\Resources\Doctors\Actions\ChangeDoctorStatusAction;
 use App\Filament\Resources\Doctors\DoctorResource;
 use Filament\Actions\EditAction;
 use Filament\Resources\Pages\ViewRecord;
@@ -13,6 +14,7 @@ class ViewDoctor extends ViewRecord
     protected function getHeaderActions(): array
     {
         return [
+            ChangeDoctorStatusAction::make(),
             EditAction::make(),
         ];
     }

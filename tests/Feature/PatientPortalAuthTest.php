@@ -32,7 +32,8 @@ test('guest can open patient phone entry screen', function () {
         ->assertSee('intlTelInput.css', false)
         ->assertSee('intlTelInput.min.js', false)
         ->assertSee('patientPhoneField', false)
-        ->assertSee('Thmanyah Sans', false);
+        ->assertSee('Thmanyah Sans', false)
+        ->assertSee('fonts/thmanyah/thmanyah.css', false);
 });
 
 test('guest can switch patient locale from auth pages', function () {
@@ -153,6 +154,37 @@ test('patient can verify otp and reach sign up', function () {
         ));
 
     expect(session('patient_otp_verified_phone'))->toBe($phone);
+});
+
+test('patient sign up requires profile fields', function () {
+    $phone = '966512400005';
+
+    session(['patient_otp_verified_phone' => $phone]);
+
+    Livewire::withQueryParams(['phone' => $phone])
+        ->test('pages::patient-auth.sign-up')
+        ->call('registerPatient')
+        ->assertHasErrors([
+            'name' => 'required',
+            'email' => 'required',
+            'gender' => 'required',
+            'password' => 'required',
+        ]);
+});
+
+test('patient sign up requires gender selection', function () {
+    $phone = '966512400004';
+
+    session(['patient_otp_verified_phone' => $phone]);
+
+    Livewire::withQueryParams(['phone' => $phone])
+        ->test('pages::patient-auth.sign-up')
+        ->set('name', 'Test Patient')
+        ->set('email', 'patient-missing-gender@example.com')
+        ->set('password', 'Password123!')
+        ->set('password_confirmation', 'Password123!')
+        ->call('registerPatient')
+        ->assertHasErrors(['gender' => 'required']);
 });
 
 test('patient can complete sign up with profile details and reach dashboard', function () {

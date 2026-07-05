@@ -117,6 +117,16 @@ class User extends Authenticatable implements Wallet, WalletFloat
     }
 
     /**
+     * Favourite specialists saved from the patient portal.
+     *
+     * @return HasMany<Like, $this>
+     */
+    public function likes(): HasMany
+    {
+        return $this->hasMany(Like::class);
+    }
+
+    /**
      * @return MorphMany<Notification, $this>
      */
     public function notifications(): MorphMany
