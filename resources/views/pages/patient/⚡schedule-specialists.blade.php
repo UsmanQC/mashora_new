@@ -77,10 +77,18 @@ new #[Layout('layouts::patient')] #[Title('Specialists')] class extends Componen
                 return;
             }
 
-            $this->applyPreferencesFromSession();
+            $this->applyPreferencesFromSession(forInstant: true);
         } elseif (request()->routeIs('patient.schedule.specialists') && ! $this->isLivewireUpdateRequest()) {
             $this->instantBooking = false;
             Session::forget('instant_booking');
+
+            if (! $this->hasCompletedFilterPreferences()) {
+                $this->redirect(route('patient.schedule.filter'));
+
+                return;
+            }
+
+            $this->applyPreferencesFromSession(forInstant: false);
         } elseif (Session::get('instant_booking')) {
             $this->instantBooking = true;
         }
@@ -251,9 +259,15 @@ new #[Layout('layouts::patient')] #[Title('Specialists')] class extends Componen
             && filled($preferences['language_preference'] ?? null);
     }
 
-    protected function applyPreferencesFromSession(): void
+    protected function applyPreferencesFromSession(bool $forInstant = true): void
     {
-        Session::put('instant_booking', true);
+        if ($forInstant) {
+            Session::put('instant_booking', true);
+            $this->instantBooking = true;
+        } else {
+            Session::forget('instant_booking');
+            $this->instantBooking = false;
+        }
 
         $preferences = Session::get('session_filter_preferences');
 
@@ -261,7 +275,7 @@ new #[Layout('layouts::patient')] #[Title('Specialists')] class extends Componen
             return;
         }
 
-        $preferences['instant_booking'] = true;
+        $preferences['instant_booking'] = $forInstant;
         Session::put('session_filter_preferences', $preferences);
 
         $this->filterGender = (string) ($preferences['gender_preference'] ?? 'both');

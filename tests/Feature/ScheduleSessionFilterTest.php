@@ -16,12 +16,14 @@ beforeEach(function () {
 });
 
 test('guest can open schedule session filter page', function () {
+    app()->setLocale('en');
+
     $this->get(route('patient.schedule.filter'))
         ->assertSuccessful()
         ->assertSee('session-filter-mobile', false)
         ->assertSee('data-test="patient-schedule-filter-header"', false)
-        ->assertSee(__('session_filter.mobile_steps.degree'), false)
-        ->assertSee(__('session_filter.step_of', ['current' => 1, 'total' => 5]), false);
+        ->assertSee(__('session_filter.scheduled_title'), false)
+        ->assertSee(__('session_filter.mobile_steps.degree'), false);
 });
 
 test('mobile filter header updates when step changes', function () {
@@ -32,7 +34,11 @@ test('mobile filter header updates when step changes', function () {
         ->assertSee(__('session_filter.mobile_steps.degree'), false)
         ->set('mobileStep', 3)
         ->assertSee(__('session_filter.mobile_steps.duration'), false)
-        ->assertSee(__('session_filter.step_of', ['current' => 3, 'total' => 5]), false)
+        ->assertSee(__('session_filter.scheduled_step_of', [
+            'step' => __('session_filter.mobile_steps.duration'),
+            'current' => 3,
+            'total' => 5,
+        ]), false)
         ->assertDontSee(__('session_filter.mobile_steps.degree'), false);
 });
 
@@ -69,7 +75,8 @@ test('authenticated patient can open schedule session filter page', function () 
         ->assertSee('data-test="patient-schedule-filter-header"', false)
         ->assertSee('data-test="patient-navbar-language-switch"', false)
         ->assertSee(__('session_filter.mobile_steps.degree'), false)
-        ->assertSee(__('session_filter.subtitle'), false)
+        ->assertSee(__('session_filter.scheduled_title'), false)
+        ->assertSee(__('session_filter.scheduled_subtitle'), false)
         ->assertSee(__('session_filter.filter_heading'), false)
         ->assertSee('session-filter-chip', false)
         ->assertSee('Obsessive', false)
@@ -169,6 +176,8 @@ test('mobile wizard can finish from subspecialties step', function () {
         ->set('durationMinutes', '30')
         ->set('languagePreference', 'both')
         ->set('mobileStep', 5)
+        ->assertSee('data-test="session-filter-mobile-skip"', false)
+        ->assertSee('data-test="session-filter-mobile-finish"', false)
         ->call('goToNextMobileStep')
         ->assertRedirect(route('patient.schedule.specialists'));
 });
@@ -182,5 +191,9 @@ test('schedule filter page includes mobile wizard markup', function () {
         ->assertSuccessful()
         ->assertSee('session-filter-mobile', false)
         ->assertSee('session-filter-mobile-option', false)
-        ->assertSee(__('session_filter.step_of', ['current' => 1, 'total' => 5]), false);
+        ->assertSee(__('session_filter.scheduled_step_of', [
+            'step' => __('session_filter.mobile_steps.degree'),
+            'current' => 1,
+            'total' => 5,
+        ]), false);
 });

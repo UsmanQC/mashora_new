@@ -398,7 +398,7 @@ new #[Layout('layouts::patient')] #[Title('Home')] class extends Component
             <div class="grid gap-3 sm:grid-cols-3 sm:gap-4">
                 <a
                     href="{{ route('patient.schedule.filter') }}"
-                    wire:navigate
+                    wire:navigate="false"
                     class="group relative flex items-center gap-3 overflow-hidden rounded-2xl border border-zinc-200/80 bg-white p-3.5 shadow-sm ring-1 ring-zinc-900/[0.03] transition hover:border-orange-200 hover:shadow-md active:scale-[0.995] sm:flex-col sm:items-start sm:p-4"
                 >
                     <span class="absolute inset-y-3 start-0 w-1 rounded-full bg-orange-500 sm:hidden" aria-hidden="true"></span>
@@ -424,7 +424,7 @@ new #[Layout('layouts::patient')] #[Title('Home')] class extends Component
                 </a>
 
                 <a
-                    href="{{ auth()->check() ? route('patient.schedule.filter', ['instant' => 1]) : route('patient.phone') }}"
+                    href="{{ route('patient.schedule.filter', ['instant' => 1]) }}"
                     wire:navigate="false"
                     class="group relative flex items-center gap-3 overflow-hidden rounded-2xl border border-zinc-200/80 bg-white p-3.5 shadow-sm ring-1 ring-zinc-900/[0.03] transition hover:border-emerald-200 hover:shadow-md active:scale-[0.995] sm:flex-col sm:items-start sm:p-4"
                 >

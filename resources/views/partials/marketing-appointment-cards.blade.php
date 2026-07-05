@@ -2,7 +2,7 @@
     $isRtl = app()->getLocale() === 'ar';
     $chevronIcon = $isRtl ? 'chevron-left' : 'chevron-right';
     $isAuthenticated = auth()->check();
-    $scheduledUrl = route('patient.phone');
+    $scheduledUrl = route('patient.schedule.filter');
     $instantUrl = route('patient.schedule.filter', ['instant' => 1]);
     $ongoingUrl = $isAuthenticated ? route('patient.appointments') : route('patient.phone');
 
@@ -60,6 +60,9 @@
         @foreach ($cards as $card)
             <a
                 href="{{ $card['url'] }}"
+                @if (($card['icon'] ?? '') === 'calendar-days' || ($card['icon'] ?? '') === 'zap')
+                    wire:navigate="false"
+                @endif
                 class="marketing-appt-card group relative flex items-center gap-3 overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-3.5 shadow-[0_4px_24px_-12px_rgba(15,23,42,0.14)] ring-1 ring-slate-900/[0.02] transition-all duration-300 {{ $card['hover'] }} hover:-translate-y-0.5 hover:shadow-[0_12px_32px_-14px_rgba(15,23,42,0.18)] active:scale-[0.985] focus:outline-none focus-visible:ring-2 {{ $card['ring'] }} opacity-0 animate-fade-in-up sm:min-h-[10.5rem] sm:flex-col sm:items-start sm:p-4"
                 style="animation-delay: {{ $card['delay'] }};"
             >

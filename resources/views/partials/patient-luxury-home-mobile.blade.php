@@ -242,8 +242,8 @@
             @endif
 
             <a
-                href="{{ $isAuthenticated ? $filterUrl : $phoneEntry }}"
-                wire:navigate
+                href="{{ $filterUrl }}"
+                wire:navigate="false"
                 class="patient-luxury-action-card group block rounded-3xl border border-slate-100 bg-white p-5 shadow-[0_4px_20px_-2px_rgba(0,0,0,0.03)] transition-colors hover:border-emerald-200"
             >
                 <div class="flex items-center justify-between">

@@ -74,6 +74,9 @@ return [
     'instant_subtitle' => 'Choose your preferences — we will only show specialists with a free slot in the next :minutes minutes.',
     'instant_window_hint' => 'Only specialists available within the next :minutes minutes will be shown.',
     'instant_step_of' => ':step · Step :current of :total',
+    'scheduled_title' => 'Scheduled session',
+    'scheduled_subtitle' => 'Choose your preferences, pick a doctor and time, then sign in to pay.',
+    'scheduled_step_of' => ':step · Step :current of :total',
     'mobile_steps' => [
         'degree' => 'Specialist type',
         'gender' => 'Gender preference',

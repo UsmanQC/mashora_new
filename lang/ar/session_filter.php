@@ -74,6 +74,9 @@ return [
     'instant_subtitle' => 'اختر تفضيلاتك — سنعرض فقط المختصين المتاحين خلال :minutes دقيقة القادمة.',
     'instant_window_hint' => 'سيتم عرض المختصين المتاحين خلال :minutes دقيقة القادمة فقط.',
     'instant_step_of' => ':step · الخطوة :current من :total',
+    'scheduled_title' => 'جلسة مجدولة',
+    'scheduled_subtitle' => 'اختر تفضيلاتك، ثم المختص والوقت المناسب، وبعدها سجّل الدخول للدفع.',
+    'scheduled_step_of' => ':step · الخطوة :current من :total',
     'mobile_steps' => [
         'degree' => 'نوع المختص',
         'gender' => 'تفضيل الجنس',

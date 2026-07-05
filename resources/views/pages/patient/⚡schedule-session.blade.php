@@ -55,6 +55,12 @@ new #[Layout('layouts::patient')] #[Title('Schedule a session')] class extends C
         }
 
         Session::forget('instant_booking');
+
+        $preferences = Session::get('session_filter_preferences');
+        if (is_array($preferences)) {
+            $preferences['instant_booking'] = false;
+            Session::put('session_filter_preferences', $preferences);
+        }
     }
 
     public function mobileStepsTotal(): int
@@ -86,7 +92,7 @@ new #[Layout('layouts::patient')] #[Title('Schedule a session')] class extends C
             return (string) __('session_filter.instant_title');
         }
 
-        return $this->mobileStepTitle();
+        return (string) __('session_filter.scheduled_title');
     }
 
     public function mobileHeaderSubtitle(): string
@@ -99,7 +105,8 @@ new #[Layout('layouts::patient')] #[Title('Schedule a session')] class extends C
             ]);
         }
 
-        return (string) __('session_filter.step_of', [
+        return (string) __('session_filter.scheduled_step_of', [
+            'step' => $this->mobileStepTitle(),
             'current' => $this->mobileStep,
             'total' => $this->mobileStepsTotal(),
         ]);
@@ -555,23 +562,41 @@ new #[Layout('layouts::patient')] #[Title('Schedule a session')] class extends C
                     {{ __('session_filter.skip_all') }}
                 </button>
             @elseif ($mobileStep === $this->mobileStepsTotal())
-                <div class="pointer-events-auto mx-auto flex w-full max-w-md items-center gap-2">
-                    <flux:button variant="ghost" size="sm" wire:click="goToPreviousMobileStep" type="button" class="shrink-0 !px-2" wire:loading.attr="disabled" icon="arrow-left">
-                        {{ __('session_filter.back') }}
+                <div class="pointer-events-auto mx-auto w-full max-w-md space-y-2.5">
+                    <flux:button
+                        variant="primary"
+                        size="sm"
+                        wire:click="goToNextMobileStep"
+                        type="button"
+                        class="!min-h-11 w-full !rounded-full !border-[#10B981] !bg-[#10B981] !px-4 !text-sm !font-bold !text-black shadow-sm shadow-[#10B981]/20 hover:!brightness-[0.97]"
+                        wire:loading.attr="disabled"
+                        data-test="session-filter-mobile-finish"
+                    >
+                        {{ __('session_filter.finish') }}
                     </flux:button>
-                    <div class="ms-auto flex items-center gap-2">
-                        <flux:button variant="ghost" size="sm" wire:click="skipSubspecialtiesStep" type="button" class="!px-3" wire:loading.attr="disabled">
-                            {{ __('session_filter.skip') }}
-                        </flux:button>
-                        <flux:button
-                            variant="primary"
-                            size="sm"
-                            wire:click="goToNextMobileStep"
+
+                    <div class="grid grid-cols-2 gap-2">
+                        <button
                             type="button"
-                            class="!min-h-10 !rounded-full !border-[#10B981] !bg-[#10B981] !px-4 !text-black shadow-sm shadow-[#10B981]/20 hover:!brightness-[0.97]"
+                            wire:click="skipSubspecialtiesStep"
                             wire:loading.attr="disabled"
+                            class="inline-flex min-h-11 w-full items-center justify-center rounded-full border border-zinc-300 bg-white px-4 text-sm font-semibold text-zinc-700 shadow-sm transition hover:border-zinc-400 hover:bg-zinc-50 active:scale-[0.98] disabled:opacity-70"
+                            data-test="session-filter-mobile-skip"
                         >
-                            {{ __('session_filter.finish') }}
+                            {{ __('session_filter.skip') }}
+                        </button>
+
+                        <flux:button
+                            variant="ghost"
+                            size="sm"
+                            wire:click="goToPreviousMobileStep"
+                            type="button"
+                            class="!min-h-11 w-full !rounded-full !border !border-zinc-200 !bg-white !px-3 !text-sm !font-semibold !text-zinc-700 hover:!bg-zinc-50"
+                            wire:loading.attr="disabled"
+                            icon="arrow-left"
+                            data-test="session-filter-mobile-back"
+                        >
+                            {{ __('session_filter.back') }}
                         </flux:button>
                     </div>
                 </div>
@@ -595,10 +620,10 @@ new #[Layout('layouts::patient')] #[Title('Schedule a session')] class extends C
                 </span>
                 <div class="min-w-0 flex-1">
                     <p class="text-sm font-semibold text-zinc-900 sm:text-base lg:text-lg">
-                        {{ $instantBooking ? __('session_filter.instant_title') : __('session_filter.title') }}
+                        {{ $instantBooking ? __('session_filter.instant_title') : __('session_filter.scheduled_title') }}
                     </p>
                     <p class="mt-0.5 text-xs text-zinc-600 sm:text-sm">
-                        {{ $instantBooking ? __('session_filter.instant_subtitle', ['minutes' => config('appointments.instant_window_minutes', 60)]) : __('session_filter.subtitle') }}
+                        {{ $instantBooking ? __('session_filter.instant_subtitle', ['minutes' => config('appointments.instant_window_minutes', 60)]) : __('session_filter.scheduled_subtitle') }}
                     </p>
                 </div>
             </div>
