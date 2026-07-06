@@ -5,6 +5,7 @@ use App\Models\Appointment;
 use App\Models\ChMessage;
 use App\Models\User;
 use App\Services\AppointmentMissedService;
+use App\Services\AppointmentSessionService;
 use App\Services\PatientMissedAppointmentService;
 use App\Support\DoctorAgoraChannel;
 use Flux\Flux;
@@ -141,6 +142,40 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 'from_id' => $m->from_id !== null ? (int) $m->from_id : null,
             ])
             ->all();
+    }
+
+    public function approveSessionStart(AppointmentSessionService $sessions): void
+    {
+        if ($this->appointment->user_id !== auth()->id()) {
+            abort(403);
+        }
+
+        if (! $sessions->approveStart($this->appointment)) {
+            Flux::toast(variant: 'warning', text: __('patient.appointments.session_start_request_cannot_approve'));
+
+            return;
+        }
+
+        $this->appointment->refresh();
+
+        Flux::toast(variant: 'success', text: __('patient.appointments.session_start_request_approved'));
+    }
+
+    public function declineSessionStart(AppointmentSessionService $sessions): void
+    {
+        if ($this->appointment->user_id !== auth()->id()) {
+            abort(403);
+        }
+
+        if (! $sessions->clearStartRequest($this->appointment)) {
+            Flux::toast(variant: 'warning', text: __('patient.appointments.session_start_request_cannot_decline'));
+
+            return;
+        }
+
+        $this->appointment->refresh();
+
+        Flux::toast(variant: 'success', text: __('patient.appointments.session_start_request_declined'));
     }
 
     protected function refreshAgoraCredentials(): void
@@ -311,6 +346,25 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
     ></div>
 
     <div class="space-y-4 px-6 pt-4 sm:space-y-5 sm:px-0 sm:pt-0">
+    @if ($appointment->isSessionStartRequestPending())
+        <flux:callout variant="warning" icon="question-mark-circle" class="border-amber-200 bg-amber-50 text-amber-950">
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div class="min-w-0">
+                    <p class="text-sm font-semibold">{{ __('patient.appointments.session_start_request_pending') }}</p>
+                    <p class="mt-1 text-sm text-amber-900">{{ __('patient.appointments.session_start_request_banner') }}</p>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    <flux:button type="button" size="sm" variant="primary" wire:click="approveSessionStart" wire:loading.attr="disabled">
+                        {{ __('patient.appointments.session_start_request_approve') }}
+                    </flux:button>
+                    <flux:button type="button" size="sm" variant="ghost" wire:click="declineSessionStart" wire:loading.attr="disabled">
+                        {{ __('patient.appointments.session_start_request_decline') }}
+                    </flux:button>
+                </div>
+            </div>
+        </flux:callout>
+    @endif
+
     @if (in_array($appointment->status, ['new', 'rescheduled'], true) && ! $appointment->isChatOpen())
         <flux:callout id="patient-chat-locked-callout" variant="secondary" icon="clock" class="border-zinc-200">
             {{ __('patient.appointments.chat_locked_until_doctor_starts') }}

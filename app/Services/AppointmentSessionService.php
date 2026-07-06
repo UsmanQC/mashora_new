@@ -2,8 +2,10 @@
 
 namespace App\Services;
 
+use App\Events\AppointmentSessionStartApproved;
 use App\Events\AppointmentSessionStarted;
 use App\Events\PatientAppointmentSessionStarted;
+use App\Events\PatientSessionStartRequested;
 use App\Models\Appointment;
 use App\Models\Doctor;
 
@@ -11,6 +13,7 @@ final class AppointmentSessionService
 {
     public function __construct(
         private readonly PatientAppointmentNotifier $patientNotifier,
+        private readonly DoctorAppointmentNotifier $doctorNotifier,
     ) {}
 
     /**
@@ -24,6 +27,23 @@ final class AppointmentSessionService
             return false;
         }
 
+        if ($appointment->isSessionStartRequestPending()) {
+            return false;
+        }
+
+        if ($appointment->isSessionStartApproved()) {
+            return true;
+        }
+
+        if ((bool) config('appointments.relaxed_session_limits', false)) {
+            return true;
+        }
+
+        return $appointment->isSessionStartDue();
+    }
+
+    public function canDoctorStartWithoutPatientApproval(Appointment $appointment): bool
+    {
         if ((bool) config('appointments.relaxed_session_limits', false)) {
             return true;
         }
@@ -40,10 +60,86 @@ final class AppointmentSessionService
         return (string) $appointment->status === 'in_process';
     }
 
+    public function requestStart(Doctor $doctor, Appointment $appointment): bool
+    {
+        if ((int) $appointment->doctor_id !== (int) $doctor->id) {
+            abort(403);
+        }
+
+        if (! in_array((string) $appointment->status, self::STARTABLE_STATUSES, true)) {
+            return false;
+        }
+
+        if ($appointment->isSessionStartRequestPending() || $appointment->isSessionStartApproved()) {
+            return false;
+        }
+
+        $appointment->update(['session_start_requested_at' => now()]);
+
+        $this->patientNotifier->notifySessionStartRequest($appointment, $doctor);
+        $this->broadcastSessionStartRequested($appointment);
+
+        return true;
+    }
+
+    public function broadcastSessionStartRequested(Appointment $appointment): void
+    {
+        if ($appointment->user_id === null) {
+            return;
+        }
+
+        broadcast(new PatientSessionStartRequested(
+            (int) $appointment->user_id,
+            (int) $appointment->id,
+        ));
+    }
+
+    public function approveStart(Appointment $appointment): bool
+    {
+        if (! $appointment->isSessionStartRequestPending()) {
+            return false;
+        }
+
+        $appointment->update(['session_start_approved_at' => now()]);
+
+        broadcast(new AppointmentSessionStartApproved((int) $appointment->id));
+
+        $appointment->loadMissing('doctor');
+        $doctor = $appointment->doctor;
+
+        if ($doctor instanceof Doctor) {
+            $this->doctorNotifier->notifySessionStartApproved($appointment, $doctor);
+        }
+
+        return true;
+    }
+
+    public function clearStartRequest(Appointment $appointment): bool
+    {
+        if (! $appointment->hasSessionStartRequest()) {
+            return false;
+        }
+
+        $appointment->update([
+            'session_start_requested_at' => null,
+            'session_start_approved_at' => null,
+        ]);
+
+        return true;
+    }
+
     public function start(Doctor $doctor, Appointment $appointment): bool
     {
         if ((int) $appointment->doctor_id !== (int) $doctor->id) {
             abort(403);
+        }
+
+        if ($appointment->isSessionStartRequestPending()) {
+            return false;
+        }
+
+        if (! $appointment->isSessionStartApproved() && ! $this->canDoctorStartWithoutPatientApproval($appointment)) {
+            return $this->requestStart($doctor, $appointment);
         }
 
         if (! $this->canDoctorStart($appointment)) {

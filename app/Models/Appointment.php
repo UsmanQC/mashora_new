@@ -41,6 +41,8 @@ class Appointment extends Model
             'actual_start_at' => 'datetime',
             'actual_end_at' => 'datetime',
             'extend_at' => 'datetime',
+            'session_start_requested_at' => 'datetime',
+            'session_start_approved_at' => 'datetime',
             'patient_confirmed_at' => 'datetime',
             'amount' => 'decimal:2',
             'discount' => 'decimal:2',
@@ -89,8 +91,8 @@ class Appointment extends Model
         'actual_start_at',
         'actual_end_at',
         'extend_at',
-        'extend_duration',
-        'invoice_id',
+        'session_start_requested_at',
+        'session_start_approved_at',
     ];
 
     /**
@@ -167,7 +169,23 @@ class Appointment extends Model
 
         $now ??= now()->timezone(config('app.timezone'));
 
-        return $now->greaterThanOrEqualTo($startsAt);
+        return $now->greaterThanOrEqualTo($startsAt->copy()->subHour());
+    }
+
+    public function hasSessionStartRequest(): bool
+    {
+        return $this->session_start_requested_at !== null;
+    }
+
+    public function isSessionStartRequestPending(): bool
+    {
+        return $this->session_start_requested_at !== null
+            && $this->session_start_approved_at === null;
+    }
+
+    public function isSessionStartApproved(): bool
+    {
+        return $this->session_start_approved_at !== null;
     }
 
     public function sessionEndsAt(): ?Carbon
@@ -260,6 +278,23 @@ class Appointment extends Model
         }
 
         return $now->lessThanOrEqualTo($this->chatOpenUntil());
+    }
+
+    public function isDoctorChatOpen(?CarbonInterface $now = null): bool
+    {
+        if ($this->isChatOpen($now)) {
+            return true;
+        }
+
+        if (! in_array((string) $this->status, ['new', 'rescheduled'], true)) {
+            return false;
+        }
+
+        if ((bool) config('appointments.relaxed_session_limits', false)) {
+            return true;
+        }
+
+        return $this->isSessionStartDue($now);
     }
 
     public function allowsPatientCalls(): bool

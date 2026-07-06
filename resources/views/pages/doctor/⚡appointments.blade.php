@@ -121,7 +121,7 @@ new #[Layout('layouts::doctor')] #[Title('Appointments')] class extends Componen
 
     public function sessionStartsAtIso(Appointment $appointment): ?string
     {
-        return $appointment->sessionStartsAt()?->toIso8601String();
+        return $appointment->sessionStartsAt()?->copy()->subHour()->toIso8601String();
     }
 
     public function canOpenSessionNow(Appointment $appointment): bool
@@ -135,7 +135,7 @@ new #[Layout('layouts::doctor')] #[Title('Appointments')] class extends Componen
 
     public function canOpenChat(Appointment $appointment): bool
     {
-        return $appointment->isChatOpen();
+        return $appointment->isDoctorChatOpen();
     }
 
     public function statusLabelFor(Appointment $appointment): string

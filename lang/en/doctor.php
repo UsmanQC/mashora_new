@@ -612,6 +612,11 @@ return [
 
     'conversation' => [
         'start_session' => 'Start session',
+        'start_session_pending' => 'Request pending',
+        'request_session_start' => 'Request patient approval',
+        'session_start_request_sent' => 'Start request sent. The patient will be notified to approve or decline.',
+        'session_started_toast' => 'Session started.',
+        'waiting_for_patient_approval' => 'Waiting for patient approval before the session can begin.',
         'video' => 'Video',
         'voice' => 'Voice',
         'video_call' => 'Video call',
@@ -645,6 +650,8 @@ return [
         'status_rescheduled' => 'Rescheduled',
         'status_not_attended' => 'Missed',
         'chat_locked_until_started' => 'Start the session to enable messaging and calls.',
+        'chat_locked_until_one_hour' => 'Messaging opens one hour before the scheduled session time.',
+        'chat_open_before_session' => 'You can message the patient now. Start the session to enable video and voice calls.',
         'session_not_started' => 'Start the session before placing a call.',
         'agora_required' => 'Add Agora App ID and certificate in .env to start calls.',
         'agora_configure_hint' => 'Video and voice need Agora: set AGORA_APP_ID and AGORA_APP_CERTIFICATE in your .env file, then reload this page.',
@@ -671,5 +678,7 @@ return [
         'chat_message_body' => ':preview',
         'appointment_booked_title' => 'New appointment',
         'appointment_booked_body' => ':patient booked a session on :date at :time.',
+        'session_start_approved_title' => 'Patient approved early start',
+        'session_start_approved_body' => ':patient approved your request to start the session early. You can start it now.',
     ],
 ];

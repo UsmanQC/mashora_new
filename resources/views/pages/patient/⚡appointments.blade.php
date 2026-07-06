@@ -3,6 +3,7 @@
 use App\Models\Appointment;
 use App\Models\User;
 use App\Services\AppointmentMissedService;
+use App\Services\AppointmentSessionService;
 use App\Services\AppointmentWalletService;
 use App\Services\PatientMissedAppointmentService;
 use Carbon\Carbon;
@@ -533,6 +534,44 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
                 'amount' => number_format((float) $appointment->total, 2),
             ]),
         );
+    }
+
+    public function approveSessionStart(int $appointmentId, AppointmentSessionService $sessions): void
+    {
+        $user = Auth::user();
+        abort_unless($user instanceof User, 403);
+
+        $appointment = $this->baseQuery()->findOrFail($appointmentId);
+
+        if (! $sessions->approveStart($appointment)) {
+            Flux::toast(variant: 'warning', text: __('patient.appointments.session_start_request_cannot_approve'));
+
+            return;
+        }
+
+        Flux::toast(variant: 'success', text: __('patient.appointments.session_start_request_approved'));
+    }
+
+    public function declineSessionStart(int $appointmentId, AppointmentSessionService $sessions): void
+    {
+        $user = Auth::user();
+        abort_unless($user instanceof User, 403);
+
+        $appointment = $this->baseQuery()->findOrFail($appointmentId);
+
+        if (! $sessions->clearStartRequest($appointment)) {
+            Flux::toast(variant: 'warning', text: __('patient.appointments.session_start_request_cannot_decline'));
+
+            return;
+        }
+
+        Flux::toast(variant: 'success', text: __('patient.appointments.session_start_request_declined'));
+    }
+
+    #[On('session-start-requested')]
+    public function refreshAfterSessionStartRequest(): void
+    {
+        // Re-render appointment cards when a realtime start request arrives.
     }
 }; ?>
 
@@ -1228,6 +1267,12 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
                     }
 
                     showSessionJoin(appointmentId);
+                });
+
+                window.addEventListener('mashora:session-start-requested', () => {
+                    if (window.Livewire) {
+                        window.Livewire.dispatch('session-start-requested');
+                    }
                 });
             }
 

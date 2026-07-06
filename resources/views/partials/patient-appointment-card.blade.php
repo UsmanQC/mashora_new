@@ -5,11 +5,13 @@
     $showTimer = $component->shouldShowStartTimer($appointment);
     $canJoinSession = $status === 'in_process' && $appointment->allowsPatientCalls();
     $canOpenChat = $component->canOpenChat($appointment);
+    $sessionStartPending = $appointment->isSessionStartRequestPending();
     $awaitingDoctor = in_array($status, ['new', 'rescheduled'], true)
-        && (! $appointment->is_follow_up || $appointment->allowsPatientCalls());
+        && (! $appointment->is_follow_up || $appointment->allowsPatientCalls())
+        && ! $sessionStartPending;
     $canResolveMissed = $component->canResolveMissed($appointment);
     $hasMissedRefund = $component->hasMissedRefund($appointment);
-    $hasAction = $appointment->status === 'pending_follow_up' || $canJoinSession || $canOpenChat || $awaitingDoctor || $canResolveMissed || ($appointment->isDoctorMissed() && $hasMissedRefund);
+    $hasAction = $appointment->status === 'pending_follow_up' || $canJoinSession || $canOpenChat || $sessionStartPending || $awaitingDoctor || $canResolveMissed || ($appointment->isDoctorMissed() && $hasMissedRefund);
     $doctorName = $appointment->doctor?->displayName() ?: __('patient.appointments.title');
 @endphp
 
@@ -111,6 +113,29 @@
                     >
                         {{ __('patient.appointments.join_session') }}
                     </flux:button>
+                @elseif ($sessionStartPending)
+                    <div class="rounded-xl border border-amber-200/90 bg-gradient-to-r from-amber-50 to-orange-50/80 px-3.5 py-3">
+                        <p class="text-sm font-semibold text-amber-950">{{ __('patient.appointments.session_start_request_pending') }}</p>
+                        <p class="mt-1 text-xs leading-relaxed text-amber-900/90">{{ __('patient.appointments.session_start_request_banner') }}</p>
+                        <div class="mt-3 flex flex-col gap-2 sm:flex-row">
+                            <flux:button
+                                type="button"
+                                wire:click="approveSessionStart({{ $appointment->id }})"
+                                wire:loading.attr="disabled"
+                                class="flex-1 !rounded-xl !bg-[#10B981] !py-2.5 !text-white hover:!brightness-95"
+                            >
+                                {{ __('patient.appointments.session_start_request_approve') }}
+                            </flux:button>
+                            <flux:button
+                                type="button"
+                                wire:click="declineSessionStart({{ $appointment->id }})"
+                                wire:loading.attr="disabled"
+                                class="flex-1 !rounded-xl !border-amber-300 !bg-white !py-2.5 !text-amber-900 hover:!bg-amber-50"
+                            >
+                                {{ __('patient.appointments.session_start_request_decline') }}
+                            </flux:button>
+                        </div>
+                    </div>
                 @elseif ($canOpenChat)
                     <flux:button
                         :href="route('patient.appointments.conversation', ['appointment' => $appointment->id])"

@@ -12,6 +12,114 @@ use Livewire\Livewire;
 
 uses(RefreshDatabase::class);
 
+test('doctor can chat within one hour before scheduled session', function () {
+    config(['appointments.relaxed_session_limits' => false]);
+
+    $user = User::factory()->create();
+    $doctor = Doctor::factory()->create(['profile_completed' => true]);
+
+    $appointment = Appointment::factory()->create([
+        'doctor_id' => $doctor->id,
+        'user_id' => $user->id,
+        'status' => 'new',
+        'scheduled_at' => null,
+        'appointment_date' => now()->toDateString(),
+        'start_time' => now()->addMinutes(30)->format('H:i:s'),
+    ]);
+
+    expect($appointment->isDoctorChatOpen())->toBeTrue()
+        ->and($appointment->isChatOpen())->toBeFalse();
+
+    Livewire::actingAs($doctor, 'doctor')
+        ->test('pages::doctor.appointment.conversation', ['appointment' => $appointment])
+        ->set('draft', 'Hello, see you soon')
+        ->call('sendMessage');
+
+    expect(ChMessage::query()->where('appointment_id', $appointment->id)->count())->toBe(1);
+});
+
+test('doctor cannot chat more than one hour before scheduled session', function () {
+    config(['appointments.relaxed_session_limits' => false]);
+
+    $user = User::factory()->create();
+    $doctor = Doctor::factory()->create(['profile_completed' => true]);
+
+    $appointment = Appointment::factory()->create([
+        'doctor_id' => $doctor->id,
+        'user_id' => $user->id,
+        'status' => 'new',
+        'scheduled_at' => null,
+        'appointment_date' => now()->addDay()->toDateString(),
+        'start_time' => '10:00:00',
+    ]);
+
+    expect($appointment->isDoctorChatOpen())->toBeFalse();
+
+    Livewire::actingAs($doctor, 'doctor')
+        ->test('pages::doctor.appointment.conversation', ['appointment' => $appointment])
+        ->set('draft', 'Too early message')
+        ->call('sendMessage');
+
+    expect(ChMessage::query()->where('appointment_id', $appointment->id)->count())->toBe(0);
+});
+
+test('patient cannot chat before doctor starts session even within one hour window', function () {
+    config(['appointments.relaxed_session_limits' => false]);
+
+    $user = User::factory()->create();
+    $doctor = Doctor::factory()->create();
+
+    $appointment = Appointment::factory()->create([
+        'doctor_id' => $doctor->id,
+        'user_id' => $user->id,
+        'status' => 'new',
+        'scheduled_at' => null,
+        'appointment_date' => now()->toDateString(),
+        'start_time' => now()->addMinutes(30)->format('H:i:s'),
+    ]);
+
+    expect($appointment->isDoctorChatOpen())->toBeTrue()
+        ->and($appointment->isChatOpen())->toBeFalse();
+
+    Livewire::actingAs($user)
+        ->test('pages::patient.appointment.conversation', ['appointment' => $appointment])
+        ->set('draft', 'Patient early message')
+        ->call('sendMessage');
+
+    expect(ChMessage::query()->where('appointment_id', $appointment->id)->count())->toBe(0);
+});
+
+test('doctor pre session chat message notifies patient', function () {
+    app()->setLocale('en');
+    config(['appointments.relaxed_session_limits' => false]);
+
+    $user = User::factory()->create();
+    $doctor = Doctor::factory()->create(['name' => 'Test Doctor', 'profile_completed' => true]);
+
+    $appointment = Appointment::factory()->create([
+        'doctor_id' => $doctor->id,
+        'user_id' => $user->id,
+        'status' => 'new',
+        'scheduled_at' => null,
+        'appointment_date' => now()->toDateString(),
+        'start_time' => now()->addMinutes(30)->format('H:i:s'),
+    ]);
+
+    Livewire::actingAs($doctor, 'doctor')
+        ->test('pages::doctor.appointment.conversation', ['appointment' => $appointment])
+        ->set('draft', 'Preparing for our session')
+        ->call('sendMessage');
+
+    $notification = Notification::query()
+        ->where('userable_type', User::class)
+        ->where('userable_id', $user->id)
+        ->where('type', 'appointment_chat_message')
+        ->first();
+
+    expect($notification)->not->toBeNull()
+        ->and($notification->message)->toContain('Preparing for our session');
+});
+
 test('completed appointment chat stays open within follow up window', function () {
     $user = User::factory()->create();
     $doctor = Doctor::factory()->create();

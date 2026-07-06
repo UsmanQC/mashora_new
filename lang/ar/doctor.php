@@ -613,6 +613,11 @@ return [
 
     'conversation' => [
         'start_session' => 'بدء الجلسة',
+        'start_session_pending' => 'الطلب قيد الانتظار',
+        'request_session_start' => 'طلب موافقة المريض',
+        'session_start_request_sent' => 'تم إرسال طلب البدء. سيتلقى المريض إشعارًا للموافقة أو الرفض.',
+        'session_started_toast' => 'بدأت الجلسة.',
+        'waiting_for_patient_approval' => 'بانتظار موافقة المريض قبل بدء الجلسة.',
         'video' => 'فيديو',
         'voice' => 'صوت',
         'video_call' => 'مكالمة فيديو',
@@ -646,6 +651,8 @@ return [
         'status_rescheduled' => 'أعيد جدولتها',
         'status_not_attended' => 'فائت',
         'chat_locked_until_started' => 'ابدأ الجلسة لتفعيل المراسلة والمكالمات.',
+        'chat_locked_until_one_hour' => 'تفتح المراسلة قبل ساعة من موعد الجلسة المحدد.',
+        'chat_open_before_session' => 'يمكنك مراسلة المريض الآن. ابدأ الجلسة لتفعيل مكالمات الفيديو والصوت.',
         'session_not_started' => 'ابدأ الجلسة قبل إجراء مكالمة.',
         'agora_required' => 'أضف معرّف Agora والشهادة في ملف .env لبدء المكالمات.',
         'agora_configure_hint' => 'الفيديو والصوت يحتاجان Agora: عيّن AGORA_APP_ID و AGORA_APP_CERTIFICATE في ملف .env ثم أعد تحميل الصفحة.',
@@ -672,5 +679,7 @@ return [
         'chat_message_body' => ':preview',
         'appointment_booked_title' => 'موعد جديد',
         'appointment_booked_body' => 'حجز :patient جلسة في :date الساعة :time.',
+        'session_start_approved_title' => 'وافق المريض على البدء المبكر',
+        'session_start_approved_body' => 'وافق :patient على طلبك لبدء الجلسة مبكرًا. يمكنك بدء الجلسة الآن.',
     ],
 ];

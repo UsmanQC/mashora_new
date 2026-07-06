@@ -229,6 +229,39 @@ final class PatientAppointmentNotifier
         ]);
     }
 
+    public function notifySessionStartRequest(Appointment $appointment, Doctor $doctor): void
+    {
+        $user = $this->patientUser($appointment);
+        if ($user === null) {
+            return;
+        }
+
+        $startsAt = $this->appointmentStartsAt($appointment);
+        $locale = app()->getLocale();
+        $title = __('patient.notifications.session_start_request_title', locale: $locale);
+        $message = __('patient.notifications.session_start_request_message', [
+            'doctor' => $doctor->displayName(),
+            'time' => $startsAt?->locale($locale)->translatedFormat('g:i a') ?? '--',
+            'date' => $startsAt?->locale($locale)->translatedFormat('d M Y') ?? '--',
+        ], locale: $locale);
+
+        Notification::query()->create([
+            'type' => 'session_start_request',
+            'title' => $title,
+            'message' => $message,
+            'userable_type' => User::class,
+            'userable_id' => $user->id,
+            'senderable_type' => Doctor::class,
+            'senderable_id' => $doctor->id,
+            'action' => route('patient.appointments.conversation', $appointment),
+        ]);
+
+        $this->push->sendToUser($user, $title, $message, [
+            'type' => 'session_start_request',
+            'appointment_id' => (string) $appointment->id,
+        ]);
+    }
+
     public function notifySessionStarted(Appointment $appointment, Doctor $doctor): void
     {
         $user = $this->patientUser($appointment);
