@@ -276,7 +276,7 @@ new #[Layout('layouts::patient')] #[Title('Choose appointment')] class extends C
                 <flux:button :href="route('patient.appointments', ['tab' => 'missed'])" wire:navigate variant="ghost">
                     {{ __('patient.missed.back') }}
                 </flux:button>
-                <flux:button type="submit" variant="primary" class="!bg-[#10B981] !text-white hover:!brightness-95">
+                <flux:button type="submit" variant="primary" class="!rounded-full !bg-[#10B981] !text-white hover:!brightness-95">
                     {{ __('patient.scheduled_appointment.choose_appointment') }}
                 </flux:button>
             </div>
@@ -291,7 +291,7 @@ new #[Layout('layouts::patient')] #[Title('Choose appointment')] class extends C
                 form="payment-missed-reschedule-form"
                 wire:loading.attr="disabled"
                 wire:target="save"
-                class="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#10B981] py-4 text-base font-bold text-white shadow-[0_8px_25px_-5px_rgba(16,185,129,0.3)] transition active:scale-[0.98] hover:bg-[#059669] disabled:opacity-70"
+                class="flex w-full items-center justify-center gap-2 rounded-full bg-[#10B981] py-4 text-base font-bold text-white shadow-[0_8px_25px_-5px_rgba(16,185,129,0.3)] transition active:scale-[0.98] hover:bg-[#059669] disabled:opacity-70"
                 data-test="patient-payment-missed-reschedule-submit"
             >
                 <span wire:loading.remove wire:target="save">{{ __('patient.scheduled_appointment.choose_appointment') }}</span>
