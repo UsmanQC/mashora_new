@@ -64,7 +64,7 @@
                         'shrink-0 rounded-lg px-3 py-2 text-xs font-semibold whitespace-nowrap transition',
                         $isActive
                             ? 'border border-slate-100 bg-white text-slate-900 shadow-sm'
-                            : 'font-medium text-slate-500 hover:text-slate-700',
+                            : 'font-semibold text-slate-900 hover:text-slate-900',
                     ])
                 >
                     {{ $filterLabel }}

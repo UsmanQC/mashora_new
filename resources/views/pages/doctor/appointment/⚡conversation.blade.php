@@ -1088,6 +1088,10 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                     leaveMobile?.classList.toggle('hidden', !show);
                     leaveMobile?.classList.toggle('inline-flex', show);
 
+                    document.querySelectorAll('#doctor-consultation-inline-video .doctor-consultation-call-controls__btn:not(.hidden)').forEach((btn) => {
+                        btn.classList.add('inline-flex');
+                    });
+
                     return;
                 }
 
@@ -1177,6 +1181,10 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                 document.getElementById('agora-toggle-video')?.classList.add('hidden');
                 document.getElementById('agora-toggle-mic-mobile')?.classList.add('hidden');
                 document.getElementById('agora-toggle-video-mobile')?.classList.add('hidden');
+                document.getElementById('agora-leave-btn-mobile')?.classList.add('hidden');
+                document.getElementById('agora-toggle-mic-mobile')?.classList.remove('inline-flex');
+                document.getElementById('agora-toggle-video-mobile')?.classList.remove('inline-flex');
+                document.getElementById('agora-leave-btn-mobile')?.classList.remove('inline-flex');
             }
 
             async function postEndCall() {

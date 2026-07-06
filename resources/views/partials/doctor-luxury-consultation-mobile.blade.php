@@ -64,8 +64,12 @@
                 <p class="px-1 py-0.5 text-center text-[0.5625rem] font-semibold text-zinc-300">{{ __('doctor.conversation.you') }}</p>
             </div>
 
-            <div class="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex justify-center px-4 pb-4 pt-10">
-                <div class="pointer-events-auto flex items-center gap-2 rounded-full border border-white/10 bg-zinc-900/85 px-3 py-2 shadow-xl backdrop-blur-md">
+            <div class="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex justify-center px-4 pb-4 pt-12">
+                <div
+                    class="doctor-consultation-call-controls pointer-events-auto flex items-center justify-center gap-3 rounded-full border border-white/10 bg-zinc-900/90 px-3 py-2 shadow-xl backdrop-blur-md"
+                    role="toolbar"
+                    aria-label="{{ __('doctor.conversation.call_in_progress') }}"
+                >
                     <button
                         type="button"
                         id="agora-toggle-mic-mobile"
@@ -73,10 +77,18 @@
                         data-label-off="{{ __('doctor.conversation.mic_muted') }}"
                         aria-pressed="false"
                         disabled
-                        class="video-call-control hidden size-11 items-center justify-center rounded-full border border-white/15 bg-zinc-800/90 text-white transition hover:bg-zinc-700/90 disabled:opacity-50"
+                        class="doctor-consultation-call-controls__btn video-call-control hidden"
                         title="{{ __('doctor.conversation.mic') }}"
                     >
-                        <flux:icon name="microphone" variant="mini" class="size-5" />
+                        <flux:icon name="microphone" variant="mini" class="size-5 shrink-0" />
+                    </button>
+                    <button
+                        type="button"
+                        id="agora-leave-btn-mobile"
+                        class="doctor-consultation-call-controls__btn doctor-consultation-call-controls__btn--leave hidden"
+                        aria-label="{{ __('doctor.conversation.end_call') }}"
+                    >
+                        <flux:icon name="phone-x-mark" variant="mini" class="size-5 shrink-0" />
                     </button>
                     <button
                         type="button"
@@ -85,18 +97,10 @@
                         data-label-off="{{ __('doctor.conversation.camera_off') }}"
                         aria-pressed="false"
                         disabled
-                        class="video-call-control hidden size-11 items-center justify-center rounded-full border border-white/15 bg-zinc-800/90 text-white transition hover:bg-zinc-700/90 disabled:opacity-50"
+                        class="doctor-consultation-call-controls__btn video-call-control hidden"
                         title="{{ __('doctor.conversation.camera') }}"
                     >
-                        <flux:icon name="video-camera" variant="mini" class="size-5" />
-                    </button>
-                    <button
-                        type="button"
-                        id="agora-leave-btn-mobile"
-                        class="hidden size-11 items-center justify-center rounded-full bg-rose-600 text-white shadow-lg transition hover:bg-rose-500"
-                        aria-label="{{ __('doctor.conversation.end_call') }}"
-                    >
-                        <flux:icon name="phone-x-mark" variant="mini" class="size-5" />
+                        <flux:icon name="video-camera" variant="mini" class="size-5 shrink-0" />
                     </button>
                 </div>
             </div>
@@ -105,11 +109,11 @@
         <div class="px-4 pt-4">
             @if (in_array($appointment->status, ['new', 'rescheduled'], true))
                 @if ($appointment->isSessionStartRequestPending())
-                    <flux:button type="button" variant="primary" icon="clock" class="mb-3 w-full cursor-not-allowed opacity-70" disabled>
+                    <flux:button type="button" variant="primary" icon="clock" class="doctor-luxury-btn-primary mb-3 w-full cursor-not-allowed opacity-70" disabled>
                         {{ __('doctor.conversation.start_session_pending') }}
                     </flux:button>
                 @elseif ($this->canPressStartSession($sessions))
-                    <flux:button type="button" variant="primary" icon="play" class="mb-3 w-full" wire:click="startSession" wire:loading.attr="disabled">
+                    <flux:button type="button" variant="primary" icon="play" class="doctor-luxury-btn-primary mb-3 w-full" wire:click="startSession" wire:loading.attr="disabled">
                         {{ __('doctor.conversation.start_session') }}
                     </flux:button>
                 @endif
@@ -122,7 +126,7 @@
                         id="btn-agora-video-mobile"
                         onclick="window.mashoraDoctorStartVideoCall?.(event)"
                         @disabled($agoraAppId === '')
-                        class="inline-flex min-h-10 flex-1 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-800 shadow-sm transition hover:border-[#047857]/30 disabled:opacity-45"
+                        class="inline-flex min-h-10 flex-1 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-900 shadow-sm transition hover:border-[#047857]/30 disabled:opacity-45"
                     >
                         <flux:icon name="video-camera" variant="mini" class="size-5" />
                         <span class="btn-label">{{ __('doctor.conversation.video') }}</span>
@@ -132,7 +136,7 @@
                         id="btn-agora-audio-mobile"
                         onclick="window.mashoraDoctorStartAudioCall?.(event)"
                         @disabled($agoraAppId === '')
-                        class="inline-flex min-h-10 flex-1 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-800 shadow-sm transition hover:border-[#047857]/30 disabled:opacity-45"
+                        class="inline-flex min-h-10 flex-1 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-900 shadow-sm transition hover:border-[#047857]/30 disabled:opacity-45"
                     >
                         <flux:icon name="phone" variant="mini" class="size-5" />
                         <span class="btn-label">{{ __('doctor.conversation.voice') }}</span>
@@ -159,8 +163,8 @@
                             type="button"
                             @click="tab = '{{ $key }}'"
                             :class="tab === '{{ $key }}'
-                                ? 'bg-white text-[#047857] shadow-sm ring-1 ring-slate-200/80'
-                                : 'text-slate-500 hover:text-slate-800'"
+                                ? 'bg-white text-slate-900 shadow-sm ring-1 ring-slate-200/80'
+                                : 'text-slate-900 hover:text-slate-900'"
                             class="rounded-xl px-2 py-2.5 text-xs font-bold transition"
                         >
                             {{ $label }}
@@ -243,7 +247,7 @@
                     {{ __('doctor.consultation.prescribe') }}
                 </a>
                 <flux:dropdown position="top">
-                    <flux:button variant="outline" icon="ellipsis-horizontal" class="!min-h-12 !min-w-12 !rounded-2xl" />
+                    <flux:button variant="outline" icon="ellipsis-horizontal" class="doctor-luxury-btn-muted !min-h-12 !min-w-12 !rounded-2xl !text-slate-900" />
                     <flux:menu>
                         <flux:menu.item :href="route('doctor.appointments.diagnosis', $appointment)" wire:navigate icon="document-text">
                             {{ __('doctor.workspace.tab_diagnosis') }}

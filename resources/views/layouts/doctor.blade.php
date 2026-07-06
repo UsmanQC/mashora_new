@@ -51,6 +51,7 @@
         @class([
             'min-h-svh antialiased',
             'bg-slate-50' => $doctorLuxuryMobileNav,
+            'doctor-luxury-mobile-active' => $doctorLuxuryMobileNav,
         ])
     >
         <aside

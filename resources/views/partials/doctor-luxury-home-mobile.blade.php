@@ -179,7 +179,7 @@
                             <span class="flex size-10 items-center justify-center rounded-xl bg-[#10B981]/10 text-[#047857]">
                                 <flux:icon :name="$action['icon']" variant="outline" class="size-5" />
                             </span>
-                            <span class="text-center text-[0.625rem] font-semibold leading-tight text-slate-700">{{ $action['label'] }}</span>
+                            <span class="text-center text-[0.625rem] font-semibold leading-tight text-slate-900">{{ $action['label'] }}</span>
                         </a>
                     @endforeach
                 </div>
