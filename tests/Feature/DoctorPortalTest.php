@@ -895,9 +895,45 @@ test('prescription page lets doctor toggle prescription_not_needed', function ()
     Livewire::actingAs($doctor, 'doctor')
         ->test('pages::doctor.appointment.prescription', ['appointment' => $appointment])
         ->set('prescriptionNotNeeded', true)
-        ->assertSet('showCompleteAppointmentModal', true);
+        ->assertSet('showCompleteAppointmentModal', true)
+        ->assertSee(__('doctor.complete_modal.title'), false)
+        ->call('dismissCompleteAppointmentModal')
+        ->assertSet('showCompleteAppointmentModal', false)
+        ->assertSet('prescriptionNotNeeded', false);
 
-    expect($appointment->fresh()->prescription_not_needed)->toBeTrue();
+    expect($appointment->fresh()->prescription_not_needed)->toBeFalse();
+});
+
+test('prescription no medication toggle opens complete modal and can mark session complete', function () {
+    $user = User::factory()->create();
+    $doctor = Doctor::factory()->create([
+        'profile_completed' => true,
+        'phone' => '966511122313',
+    ]);
+    $appointment = Appointment::factory()->create([
+        'doctor_id' => $doctor->id,
+        'user_id' => $user->id,
+        'status' => 'in_process',
+        'prescription_not_needed' => false,
+        'appointment_date' => now()->toDateString(),
+        'scheduled_at' => now(),
+    ]);
+
+    Diagnosis::create([
+        'appointment_id' => $appointment->id,
+        'diagnosis_name' => 'Example diagnosis',
+    ]);
+
+    Livewire::actingAs($doctor, 'doctor')
+        ->test('pages::doctor.appointment.prescription', ['appointment' => $appointment])
+        ->set('prescriptionNotNeeded', true)
+        ->assertSet('showCompleteAppointmentModal', true)
+        ->call('confirmCompleteAppointment')
+        ->assertRedirect(route('doctor.appointments.follow-up', $appointment));
+
+    expect($appointment->fresh())
+        ->prescription_not_needed->toBeTrue()
+        ->status->toBe('completed');
 });
 
 test('doctor can add and remove a medication via the prescription page', function () {

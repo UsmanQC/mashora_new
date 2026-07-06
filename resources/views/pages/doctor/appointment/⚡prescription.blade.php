@@ -19,6 +19,8 @@ new #[Layout('layouts::doctor')] #[Title('Prescription')] class extends Componen
 
     public bool $prescriptionNotNeeded = false;
 
+    public bool $completeModalFromPrescriptionToggle = false;
+
     public bool $showMedicationModal = false;
 
     public ?int $editingMedicationId = null;
@@ -53,18 +55,83 @@ new #[Layout('layouts::doctor')] #[Title('Prescription')] class extends Componen
 
     public function updatedPrescriptionNotNeeded(bool $value): void
     {
-        $this->appointment->forceFill(['prescription_not_needed' => $value])->save();
+        if ($value) {
+            $this->appointment->forceFill(['prescription_not_needed' => true])->save();
+            $this->completeModalFromPrescriptionToggle = true;
+            $this->requestCompleteAppointment();
+
+            return;
+        }
+
+        $this->appointment->forceFill(['prescription_not_needed' => false])->save();
 
         Flux::toast(
             variant: 'success',
-            text: $value
-                ? __('doctor.prescription_form.prescription_toggle_on')
-                : __('doctor.prescription_form.prescription_toggle_off'),
+            text: __('doctor.prescription_form.prescription_toggle_off'),
         );
+    }
 
-        if ($value) {
-            $this->requestCompleteAppointment();
+    public function dismissCompleteAppointmentModal(): void
+    {
+        $this->revertPrescriptionToggleIfModalCancelled();
+
+        $this->showCompleteAppointmentModal = false;
+        $this->appointmentPendingCompleteId = null;
+    }
+
+    public function updatedShowCompleteAppointmentModal(bool $value): void
+    {
+        if (! $value) {
+            $this->revertPrescriptionToggleIfModalCancelled();
+            $this->appointmentPendingCompleteId = null;
         }
+    }
+
+    public function confirmCompleteAppointment(): void
+    {
+        $this->completeModalFromPrescriptionToggle = false;
+
+        $id = $this->appointmentPendingCompleteId;
+        $this->showCompleteAppointmentModal = false;
+        $this->appointmentPendingCompleteId = null;
+
+        if ($id === null) {
+            return;
+        }
+
+        $doctor = $this->doctorForAppointmentCompletion();
+        if ($doctor === null) {
+            abort(403);
+        }
+
+        $appointment = Appointment::query()
+            ->where('doctor_id', $doctor->id)
+            ->whereKey($id)
+            ->first();
+
+        if ($appointment === null) {
+            return;
+        }
+
+        $result = app(\App\Services\AppointmentCompletionService::class)->attemptCompletion($appointment);
+
+        match ($result) {
+            \App\Services\AppointmentCompletionService::MISSING_DIAGNOSIS => $this->showDiagnosisRequiredModal = true,
+            \App\Services\AppointmentCompletionService::MISSING_PRESCRIPTION => $this->showPrescriptionRequiredModal = true,
+            \App\Services\AppointmentCompletionService::COMPLETED => $this->redirectAfterAppointmentCompletion($appointment->fresh()),
+            default => null,
+        };
+    }
+
+    private function revertPrescriptionToggleIfModalCancelled(): void
+    {
+        if (! $this->completeModalFromPrescriptionToggle) {
+            return;
+        }
+
+        $this->prescriptionNotNeeded = false;
+        $this->appointment->forceFill(['prescription_not_needed' => false])->save();
+        $this->completeModalFromPrescriptionToggle = false;
     }
 
     public function openCreateMedication(): void
@@ -175,10 +242,7 @@ new #[Layout('layouts::doctor')] #[Title('Prescription')] class extends Componen
 }; ?>
 
 <div class="space-y-8">
-    @include('partials.doctor-appointment-workspace-header', [
-        'appointment' => $appointment,
-        'active' => $prescriptionNotNeeded ? 'complete' : 'prescription',
-    ])
+    @include('partials.doctor-appointment-workspace-header', ['appointment' => $appointment, 'active' => 'prescription'])
 
     <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
