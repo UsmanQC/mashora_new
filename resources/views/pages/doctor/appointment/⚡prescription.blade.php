@@ -61,6 +61,10 @@ new #[Layout('layouts::doctor')] #[Title('Prescription')] class extends Componen
                 ? __('doctor.prescription_form.prescription_toggle_on')
                 : __('doctor.prescription_form.prescription_toggle_off'),
         );
+
+        if ($value) {
+            $this->requestCompleteAppointment();
+        }
     }
 
     public function openCreateMedication(): void
@@ -171,7 +175,10 @@ new #[Layout('layouts::doctor')] #[Title('Prescription')] class extends Componen
 }; ?>
 
 <div class="space-y-8">
-    @include('partials.doctor-appointment-workspace-header', ['appointment' => $appointment, 'active' => 'prescription'])
+    @include('partials.doctor-appointment-workspace-header', [
+        'appointment' => $appointment,
+        'active' => $prescriptionNotNeeded ? 'complete' : 'prescription',
+    ])
 
     <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>

@@ -894,7 +894,8 @@ test('prescription page lets doctor toggle prescription_not_needed', function ()
 
     Livewire::actingAs($doctor, 'doctor')
         ->test('pages::doctor.appointment.prescription', ['appointment' => $appointment])
-        ->set('prescriptionNotNeeded', true);
+        ->set('prescriptionNotNeeded', true)
+        ->assertSet('showCompleteAppointmentModal', true);
 
     expect($appointment->fresh()->prescription_not_needed)->toBeTrue();
 });
