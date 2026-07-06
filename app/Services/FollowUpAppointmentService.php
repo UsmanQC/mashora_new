@@ -214,6 +214,15 @@ final class FollowUpAppointmentService
             abort(404);
         }
 
+        if ($appointment->requiresPatientPayment() && $appointment->isPaymentExpired()) {
+            app(DoctorScheduledAppointmentService::class)->expireDuePayments();
+            $appointment->refresh();
+
+            if ($appointment->isPatientPaymentMissed()) {
+                abort(410);
+            }
+        }
+
         if ($appointment->patient_confirmed_at !== null) {
             return $appointment;
         }

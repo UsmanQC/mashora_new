@@ -113,6 +113,10 @@ Route::livewire('patient/appointments/{appointment}/missed-reschedule', 'pages::
     ->middleware(['patient.profile'])
     ->name('patient.appointments.missed-reschedule');
 
+Route::livewire('patient/appointments/{appointment}/payment-missed-reschedule', 'pages::patient.appointment.payment-missed-reschedule')
+    ->middleware(['patient.profile'])
+    ->name('patient.appointments.payment-missed-reschedule');
+
 Route::view('patient/menu', 'patient.menu')
     ->middleware(['auth', 'patient.profile'])
     ->name('patient.menu');

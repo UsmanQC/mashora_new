@@ -44,6 +44,7 @@ class Appointment extends Model
             'session_start_requested_at' => 'datetime',
             'session_start_approved_at' => 'datetime',
             'patient_confirmed_at' => 'datetime',
+            'payment_expires_at' => 'datetime',
             'amount' => 'decimal:2',
             'discount' => 'decimal:2',
             'tax' => 'decimal:2',
@@ -60,6 +61,7 @@ class Appointment extends Model
         'user_id',
         'parent_id',
         'patient_confirmed_at',
+        'payment_expires_at',
         'is_follow_up',
         'scheduled_at',
         'appointment_date',
@@ -233,6 +235,34 @@ class Appointment extends Model
     public function isPendingFollowUp(): bool
     {
         return $this->status === 'pending_follow_up';
+    }
+
+    public function requiresPatientPayment(): bool
+    {
+        return $this->isPendingFollowUp()
+            && ! $this->is_follow_up
+            && (float) $this->total > 0
+            && $this->patient_confirmed_at === null;
+    }
+
+    public function isPaymentExpired(): bool
+    {
+        if ($this->payment_expires_at === null) {
+            return false;
+        }
+
+        return $this->payment_expires_at->isPast();
+    }
+
+    public function paymentExpiresAtIso(): ?string
+    {
+        return $this->payment_expires_at?->toIso8601String();
+    }
+
+    public function isPatientPaymentMissed(): bool
+    {
+        return $this->status === 'cancelled'
+            && $this->cancel_status === 'patient_payment_missed';
     }
 
     public function isUpcomingFollowUp(): bool

@@ -416,6 +416,24 @@ return [
         'back_to_appointments' => 'Back to appointments',
     ],
 
+    'scheduled_appointment' => [
+        'title' => 'Schedule new appointment',
+        'subtitle' => 'Book a paid session for this patient within :days days after their follow-up.',
+        'option_body' => 'Pick a date and time. The patient receives a notification and has one hour to pay and confirm.',
+        'date_label' => 'Appointment date',
+        'time_label' => 'Available time',
+        'price_hint' => 'Session fee: :amount SAR. The patient must pay within :minutes minutes.',
+        'submit' => 'Send payment request',
+        'success' => 'Payment request sent for :date at :time. The patient has :minutes minutes to pay.',
+        'not_eligible' => 'This session is not eligible for a new paid appointment.',
+        'slot_unavailable' => 'That time slot is no longer available.',
+        'price_missing' => 'Set your session price in working hours before scheduling a paid appointment.',
+        'pending_title' => 'Awaiting patient payment',
+        'pending_body' => 'The patient was notified and has :minutes minutes to pay and confirm.',
+        'scheduled_title' => 'New appointment booked',
+        'scheduled_body' => 'The patient confirmed and paid for the next session.',
+    ],
+
     'medical_history' => [
         'title' => 'Patient medical history',
         'subtitle' => 'Previous completed sessions for this patient.',

@@ -64,6 +64,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Doctor-scheduled paid appointment payment window
+    |--------------------------------------------------------------------------
+    |
+    | Minutes the patient has to confirm and pay after the doctor schedules a
+    | new paid appointment following a follow-up session.
+    |
+    */
+
+    'doctor_scheduled_payment_grace_minutes' => (int) env('APPOINTMENT_DOCTOR_SCHEDULED_PAYMENT_GRACE_MINUTES', 60),
+
+    /*
+    |--------------------------------------------------------------------------
     | Instant consultation window
     |--------------------------------------------------------------------------
     |

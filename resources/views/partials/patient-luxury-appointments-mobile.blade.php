@@ -16,6 +16,26 @@
     ])
 
     <main class="space-y-5 px-6 pt-5">
+        @if ($this->unresolvedPaymentMissedCount > 0)
+            <div
+                class="rounded-2xl border border-violet-200/90 bg-violet-50 px-4 py-3.5 shadow-sm"
+                data-test="patient-payment-missed-action-banner"
+            >
+                <p class="text-xs font-semibold leading-relaxed text-violet-950">
+                    {{ trans_choice('patient.scheduled_appointment.missed_action_banner', $this->unresolvedPaymentMissedCount, ['count' => $this->unresolvedPaymentMissedCount]) }}
+                </p>
+                <button
+                    type="button"
+                    wire:click="selectMobileSegment('upcoming')"
+                    wire:loading.attr="disabled"
+                    class="mt-3 inline-flex min-h-9 w-full items-center justify-center gap-2 rounded-xl bg-violet-600 px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-violet-700"
+                >
+                    <flux:icon name="calendar-days" variant="mini" class="size-4" />
+                    {{ __('patient.scheduled_appointment.choose_appointment') }}
+                </button>
+            </div>
+        @endif
+
         @if ($this->unresolvedMissedCount > 0)
             <div
                 class="rounded-2xl border border-orange-200/90 bg-orange-50 px-4 py-3.5 shadow-sm"
@@ -130,8 +150,9 @@
                         $doctorName = $appointment->doctor?->displayName() ?: __('patient.appointments.specialist_label');
                         $isLive = $appointment->status === 'in_process';
                         $canResolveMissed = $this->canResolveMissed($appointment);
+                        $canResolvePaymentMissed = $this->canResolvePaymentMissed($appointment);
                     @endphp
-                    @if ($cardUrl && ! $canResolveMissed)
+                    @if ($cardUrl && ! $canResolveMissed && ! $canResolvePaymentMissed)
                         <a
                             href="{{ $cardUrl }}"
                             wire:navigate

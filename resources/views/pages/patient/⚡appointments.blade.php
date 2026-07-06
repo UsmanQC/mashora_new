@@ -5,7 +5,9 @@ use App\Models\User;
 use App\Services\AppointmentMissedService;
 use App\Services\AppointmentSessionService;
 use App\Services\AppointmentWalletService;
+use App\Services\DoctorScheduledAppointmentService;
 use App\Services\PatientMissedAppointmentService;
+use App\Services\PatientPaymentMissedAppointmentService;
 use Carbon\Carbon;
 use Flux\Flux;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -104,8 +106,19 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
 
     public function getAppointmentsProperty(): LengthAwarePaginator
     {
-        $query = $this->baseQuery()
-            ->whereIn('status', $this->tabStatuses()[$this->tab]);
+        $query = $this->baseQuery();
+
+        if ($this->tab === 'missed') {
+            $query->where(function ($builder): void {
+                $builder->where('status', 'not_attended')
+                    ->orWhere(function ($nested): void {
+                        $nested->where('status', 'cancelled')
+                            ->where('cancel_status', 'patient_payment_missed');
+                    });
+            });
+        } else {
+            $query->whereIn('status', $this->tabStatuses()[$this->tab]);
+        }
 
         if (in_array($this->tab, ['ongoing', 'rescheduled'], true)) {
             $query->orderBy('appointment_date')->orderBy('start_time');
@@ -118,8 +131,23 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
 
     public function getMobileAppointmentsProperty(): LengthAwarePaginator
     {
-        $query = $this->baseQuery()
-            ->whereIn('status', $this->mobileSegmentStatuses()[$this->mobileSegment]);
+        $query = $this->baseQuery();
+
+        if ($this->mobileSegment === 'upcoming') {
+            $query->where(function ($builder): void {
+                $builder->whereIn('status', $this->mobileSegmentStatuses()['upcoming'])
+                    ->orWhere(function ($nested): void {
+                        $nested->where('status', 'cancelled')
+                            ->where('cancel_status', 'patient_payment_missed');
+                    });
+            });
+        } else {
+            $query->whereIn('status', $this->mobileSegmentStatuses()['previous'])
+                ->where(function ($builder): void {
+                    $builder->where('cancel_status', '!=', 'patient_payment_missed')
+                        ->orWhereNull('cancel_status');
+                });
+        }
 
         if ($this->mobileSegment === 'upcoming') {
             $query->orderBy('appointment_date')->orderBy('start_time');
@@ -144,9 +172,17 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
 
         return collect([
             'upcoming' => collect($this->mobileSegmentStatuses()['upcoming'])
-                ->sum(fn (string $status): int => (int) ($counts[$status] ?? 0)),
-            'previous' => collect($this->mobileSegmentStatuses()['previous'])
-                ->sum(fn (string $status): int => (int) ($counts[$status] ?? 0)),
+                ->sum(fn (string $status): int => (int) ($counts[$status] ?? 0))
+                + $this->baseQuery()
+                    ->where('status', 'cancelled')
+                    ->where('cancel_status', 'patient_payment_missed')
+                    ->count(),
+            'previous' => max(0, collect($this->mobileSegmentStatuses()['previous'])
+                ->sum(fn (string $status): int => (int) ($counts[$status] ?? 0))
+                - $this->baseQuery()
+                    ->where('status', 'cancelled')
+                    ->where('cancel_status', 'patient_payment_missed')
+                    ->count()),
         ]);
     }
 
@@ -198,6 +234,10 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
 
     public function luxuryStatusLabel(Appointment $appointment): string
     {
+        if ($appointment->isPatientPaymentMissed()) {
+            return __('patient.scheduled_appointment.missed_status');
+        }
+
         if ($appointment->isDoctorMissed()) {
             return __('patient.appointments.status_missed');
         }
@@ -269,6 +309,7 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
     public function processMissedAppointments(): void
     {
         app(AppointmentMissedService::class)->processDueMissedAppointments();
+        app(DoctorScheduledAppointmentService::class)->expireDuePayments();
 
         unset(
             $this->appointments,
@@ -309,6 +350,14 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
             ->count();
     }
 
+    public function getUnresolvedPaymentMissedCountProperty(): int
+    {
+        return $this->baseQuery()
+            ->where('status', 'cancelled')
+            ->where('cancel_status', 'patient_payment_missed')
+            ->count();
+    }
+
     /**
      * @return Collection<string, int>
      */
@@ -325,8 +374,14 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
             'ongoing' => (int) ($counts['new'] ?? 0) + (int) ($counts['in_process'] ?? 0) + (int) ($counts['pending_follow_up'] ?? 0),
             'rescheduled' => (int) ($counts['rescheduled'] ?? 0),
             'completed' => (int) ($counts['completed'] ?? 0),
-            'missed' => (int) ($counts['not_attended'] ?? 0),
-            'cancelled' => (int) ($counts['cancelled'] ?? 0),
+            'missed' => (int) ($counts['not_attended'] ?? 0) + $this->baseQuery()
+                ->where('status', 'cancelled')
+                ->where('cancel_status', 'patient_payment_missed')
+                ->count(),
+            'cancelled' => max(0, (int) ($counts['cancelled'] ?? 0) - $this->baseQuery()
+                ->where('status', 'cancelled')
+                ->where('cancel_status', 'patient_payment_missed')
+                ->count()),
         ]);
     }
 
@@ -346,6 +401,10 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
 
     public function statusLabelFor(Appointment $appointment): string
     {
+        if ($appointment->isPatientPaymentMissed()) {
+            return __('patient.scheduled_appointment.missed_status');
+        }
+
         if ($appointment->isPatientRefunded()) {
             return __('patient.appointments.status_refunded');
         }
@@ -436,6 +495,23 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
         }
 
         return $appointment->sessionStartsAt() !== null;
+    }
+
+    public function shouldShowPaymentTimer(Appointment $appointment): bool
+    {
+        return $appointment->requiresPatientPayment()
+            && ! $appointment->isPaymentExpired()
+            && $appointment->payment_expires_at !== null;
+    }
+
+    public function paymentExpiresAtIso(Appointment $appointment): ?string
+    {
+        return $appointment->paymentExpiresAtIso();
+    }
+
+    public function canResolvePaymentMissed(Appointment $appointment): bool
+    {
+        return app(PatientPaymentMissedAppointmentService::class)->canReschedule($appointment);
     }
 
     public function sessionStartsAtIso(Appointment $appointment): ?string
@@ -903,6 +979,49 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
 
                     this.label = timeLabel;
                     this.ariaLabel = this.labels.startsIn.replace(':time', timeLabel);
+                },
+            };
+        }
+
+        function paymentDeadlineTimer(isoExpires, expiredLabel) {
+            return {
+                label: '',
+                interval: null,
+                expiredLabel: expiredLabel || 'Expired',
+                start() {
+                    this.tick();
+                    this.interval = setInterval(() => this.tick(), 1000);
+                },
+                tick() {
+                    if (! isoExpires) {
+                        this.label = '';
+
+                        return;
+                    }
+
+                    const diff = new Date(isoExpires).getTime() - Date.now();
+
+                    if (diff <= 0) {
+                        this.label = this.expiredLabel;
+
+                        if (this.interval) {
+                            clearInterval(this.interval);
+                            this.interval = null;
+                        }
+
+                        return;
+                    }
+
+                    const totalSeconds = Math.floor(diff / 1000);
+                    const hours = Math.floor(totalSeconds / 3600);
+                    const minutes = Math.floor((totalSeconds % 3600) / 60);
+                    const seconds = totalSeconds % 60;
+
+                    if (hours > 0) {
+                        this.label = `${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+                    } else {
+                        this.label = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+                    }
                 },
             };
         }

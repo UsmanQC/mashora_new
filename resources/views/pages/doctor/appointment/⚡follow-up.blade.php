@@ -3,6 +3,7 @@
 use App\Models\Appointment;
 use App\Models\Doctor;
 use App\Services\DoctorAvailabilityService;
+use App\Services\DoctorScheduledAppointmentService;
 use App\Services\FollowUpAppointmentService;
 use App\Support\AppTimezone;
 use Carbon\Carbon;
@@ -20,6 +21,10 @@ new #[Layout('layouts::doctor')] #[Title('Follow Up')] class extends Component
     public string $newDate = '';
 
     public string $selectedTime = '';
+
+    public string $paidNewDate = '';
+
+    public string $paidSelectedTime = '';
 
     public int $durationMinutes = 15;
 
@@ -59,11 +64,13 @@ new #[Layout('layouts::doctor')] #[Title('Follow Up')] class extends Component
             );
 
             $this->newDate = $firstAvailable ?? $preferredDate;
+            $this->paidNewDate = $this->newDate;
 
             return;
         }
 
         $this->newDate = $preferredDate;
+        $this->paidNewDate = $preferredDate;
     }
 
     protected function doctor(): Doctor
@@ -87,6 +94,90 @@ new #[Layout('layouts::doctor')] #[Title('Follow Up')] class extends Component
         }
 
         $this->selectedTime = '';
+    }
+
+    public function updatedPaidNewDate(?string $value = null): void
+    {
+        if ($value !== null && $value !== '') {
+            try {
+                $this->paidNewDate = Carbon::parse($value, AppTimezone::name())->format('Y-m-d');
+            } catch (\Throwable) {
+                $this->paidNewDate = '';
+            }
+        }
+
+        $this->paidSelectedTime = '';
+    }
+
+    public function getCanSchedulePaidAppointmentProperty(): bool
+    {
+        return app(DoctorScheduledAppointmentService::class)->parentCanSchedulePaidAppointment($this->appointment);
+    }
+
+    public function getPendingPaidAppointmentProperty(): ?Appointment
+    {
+        return app(DoctorScheduledAppointmentService::class)->pendingPaidAppointmentFor($this->appointment);
+    }
+
+    public function getExistingPaidAppointmentProperty(): ?Appointment
+    {
+        return app(DoctorScheduledAppointmentService::class)->existingPaidAppointmentFor($this->appointment);
+    }
+
+    public function paidSessionPrice(): float
+    {
+        $durationRow = $this->doctor()->durations()->where('durations.duration', $this->durationMinutes)->first();
+
+        return round((float) ($durationRow?->pivot->price ?? 0), 2);
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function getPaidAvailableSlotsProperty(): array
+    {
+        if ($this->paidNewDate === '') {
+            return [];
+        }
+
+        return app(DoctorAvailabilityService::class)->availableSlots(
+            $this->doctor(),
+            $this->paidNewDate,
+            $this->durationMinutes,
+        );
+    }
+
+    public function savePaidAppointment(): void
+    {
+        $this->validate([
+            'paidNewDate' => ['required', 'date', 'after_or_equal:'.$this->minDate(), 'before_or_equal:'.$this->maxDate()],
+            'paidSelectedTime' => ['required', 'string'],
+        ], [], [
+            'paidNewDate' => __('doctor.scheduled_appointment.date_label'),
+            'paidSelectedTime' => __('doctor.scheduled_appointment.time_label'),
+        ]);
+
+        try {
+            app(DoctorScheduledAppointmentService::class)->createPaid(
+                $this->doctor(),
+                $this->appointment,
+                $this->paidNewDate,
+                $this->paidSelectedTime,
+            );
+        } catch (ValidationException $exception) {
+            throw $exception;
+        }
+
+        Flux::toast(
+            variant: 'success',
+            text: __('doctor.scheduled_appointment.success', [
+                'date' => Carbon::parse($this->paidNewDate)->locale(app()->getLocale())->translatedFormat('d M Y'),
+                'time' => $this->displaySlot($this->paidSelectedTime),
+                'minutes' => DoctorScheduledAppointmentService::paymentGraceMinutes(),
+            ]),
+        );
+
+        $this->redirectRoute('doctor.appointments', navigate: true);
     }
 
     public function minDate(): string
@@ -301,9 +392,88 @@ new #[Layout('layouts::doctor')] #[Title('Follow Up')] class extends Component
         <flux:heading size="lg" class="font-semibold text-zinc-900">{{ __('doctor.follow_up.title') }}</flux:heading>
 
         @if ($appointment->is_follow_up)
-            <flux:callout variant="success" icon="check-circle" class="mt-6">
-                {{ __('doctor.follow_up.session_finished') }}
-            </flux:callout>
+            @if ($this->pendingPaidAppointment)
+                <flux:callout variant="warning" icon="clock" class="mt-6">
+                    <div class="space-y-2">
+                        <p class="font-semibold">{{ __('doctor.scheduled_appointment.pending_title') }}</p>
+                        <p class="text-sm">{{ __('doctor.scheduled_appointment.pending_body', ['minutes' => \App\Services\DoctorScheduledAppointmentService::paymentGraceMinutes()]) }}</p>
+                        <p class="text-sm font-medium">
+                            {{ $this->pendingPaidAppointment->appointment_date?->format('d/m/Y') }}
+                            {{ $this->displaySlot(substr((string) $this->pendingPaidAppointment->start_time, 0, 5)) }}
+                        </p>
+                    </div>
+                </flux:callout>
+            @elseif ($this->existingPaidAppointment)
+                <flux:callout variant="success" icon="check-circle" class="mt-6">
+                    <div class="space-y-2">
+                        <p class="font-semibold">{{ __('doctor.scheduled_appointment.scheduled_title') }}</p>
+                        <p class="text-sm">{{ __('doctor.scheduled_appointment.scheduled_body') }}</p>
+                        <p class="text-sm font-medium">
+                            {{ $this->existingPaidAppointment->appointment_date?->format('d/m/Y') }}
+                            {{ $this->displaySlot(substr((string) $this->existingPaidAppointment->start_time, 0, 5)) }}
+                            — {{ $this->followUpStatusLabel($this->existingPaidAppointment) }}
+                        </p>
+                    </div>
+                </flux:callout>
+            @elseif ($this->canSchedulePaidAppointment)
+                <flux:text class="mt-2 text-zinc-600">{{ __('doctor.scheduled_appointment.subtitle', ['days' => $this->windowDays()]) }}</flux:text>
+
+                <div class="mt-6 rounded-2xl border border-violet-200/80 bg-violet-50/40 p-5 shadow-sm sm:p-6">
+                    <flux:heading size="md" class="font-semibold text-violet-950">{{ __('doctor.scheduled_appointment.title') }}</flux:heading>
+                    <flux:text class="mt-1 text-sm text-violet-900/80">{{ __('doctor.scheduled_appointment.option_body') }}</flux:text>
+
+                    <form wire:submit="savePaidAppointment" class="mt-5 space-y-5">
+                        <flux:field>
+                            <flux:label>{{ __('doctor.scheduled_appointment.date_label') }}</flux:label>
+                            <flux:input wire:model.live="paidNewDate" type="date" min="{{ $this->minDate() }}" max="{{ $this->maxDate() }}" required />
+                            <flux:error name="paidNewDate" />
+                        </flux:field>
+
+                        <flux:field>
+                            <flux:label>{{ __('doctor.scheduled_appointment.time_label') }}</flux:label>
+                            @if ($this->paidAvailableSlots === [])
+                                <flux:callout variant="warning" icon="exclamation-circle" class="mt-2">
+                                    {{ __('doctor.follow_up.no_slots') }}
+                                </flux:callout>
+                            @else
+                                <div wire:key="paid-slots-{{ $paidNewDate }}" class="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+                                    @foreach ($this->paidAvailableSlots as $slot)
+                                        <button
+                                            type="button"
+                                            wire:click="$set('paidSelectedTime', '{{ $slot }}')"
+                                            @class([
+                                                'rounded-full border px-4 py-2 text-sm font-semibold transition',
+                                                'border-violet-700 bg-violet-700 text-white' => $paidSelectedTime === $slot,
+                                                'border-zinc-200 bg-white text-zinc-700 hover:border-violet-400' => $paidSelectedTime !== $slot,
+                                            ])
+                                        >
+                                            {{ $this->displaySlot($slot) }}
+                                        </button>
+                                    @endforeach
+                                </div>
+                            @endif
+                            <flux:error name="paidSelectedTime" />
+                        </flux:field>
+
+                        <flux:callout variant="secondary" icon="banknotes" class="text-sm">
+                            {{ __('doctor.scheduled_appointment.price_hint', [
+                                'amount' => number_format($this->paidSessionPrice(), 2),
+                                'minutes' => \App\Services\DoctorScheduledAppointmentService::paymentGraceMinutes(),
+                            ]) }}
+                        </flux:callout>
+
+                        <div class="flex justify-end">
+                            <flux:button type="submit" variant="primary" class="!bg-violet-700 !text-white hover:!brightness-95">
+                                {{ __('doctor.scheduled_appointment.submit') }}
+                            </flux:button>
+                        </div>
+                    </form>
+                </div>
+            @else
+                <flux:callout variant="success" icon="check-circle" class="mt-6">
+                    {{ __('doctor.follow_up.session_finished') }}
+                </flux:callout>
+            @endif
         @else
         <flux:text class="mt-2 text-zinc-600">{{ __('doctor.follow_up.subtitle', ['days' => $this->windowDays()]) }}</flux:text>
 
