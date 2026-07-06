@@ -461,7 +461,7 @@ test('doctor can request early session start before one hour window and patient 
         ->and($started->extend_at?->equalTo($started->actual_start_at->copy()->addMinutes(15)))->toBeTrue();
 });
 
-test('doctor can start session directly within one hour without patient approval', function () {
+test('doctor must request patient approval within one hour before scheduled time', function () {
     config(['appointments.relaxed_session_limits' => false]);
 
     $user = User::factory()->create();
@@ -475,6 +475,36 @@ test('doctor can start session directly within one hour without patient approval
         'scheduled_at' => null,
         'appointment_date' => now()->toDateString(),
         'start_time' => now()->addMinutes(30)->format('H:i:s'),
+    ]);
+
+    $service = app(AppointmentSessionService::class);
+
+    expect($service->canDoctorStart($appointment))->toBeFalse()
+        ->and($service->canDoctorStartWithoutPatientApproval($appointment))->toBeFalse()
+        ->and($appointment->isDoctorChatOpen())->toBeTrue();
+
+    Livewire::actingAs($doctor, 'doctor')
+        ->test('pages::doctor.appointment.conversation', ['appointment' => $appointment])
+        ->call('startSession');
+
+    expect($appointment->fresh()->session_start_requested_at)->not->toBeNull()
+        ->and($appointment->fresh()->status)->toBe('new');
+});
+
+test('doctor can start session directly at or after scheduled time without patient approval', function () {
+    config(['appointments.relaxed_session_limits' => false]);
+
+    $user = User::factory()->create();
+    $doctor = Doctor::factory()->create(['profile_completed' => true]);
+
+    $appointment = Appointment::factory()->create([
+        'doctor_id' => $doctor->id,
+        'user_id' => $user->id,
+        'status' => 'new',
+        'duration' => 15,
+        'scheduled_at' => null,
+        'appointment_date' => now()->toDateString(),
+        'start_time' => now()->subMinute()->format('H:i:s'),
     ]);
 
     Livewire::actingAs($doctor, 'doctor')
@@ -542,7 +572,7 @@ test('patient can approve session start from appointments list', function () {
     expect($appointment->fresh()->session_start_approved_at)->not->toBeNull();
 });
 
-test('doctor can start session within one hour before scheduled time', function () {
+test('doctor cannot start session before scheduled time without patient approval', function () {
     config(['appointments.relaxed_session_limits' => false]);
 
     $user = User::factory()->create();
@@ -559,7 +589,7 @@ test('doctor can start session within one hour before scheduled time', function 
 
     $service = app(AppointmentSessionService::class);
 
-    expect($service->canDoctorStart($appointment))->toBeTrue();
+    expect($service->canDoctorStart($appointment))->toBeFalse();
 });
 
 test('relaxed session limits allow doctor to start before scheduled time', function () {

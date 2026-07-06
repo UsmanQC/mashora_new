@@ -172,6 +172,19 @@ class Appointment extends Model
         return $now->greaterThanOrEqualTo($startsAt->copy()->subHour());
     }
 
+    public function isScheduledSessionTimeReached(?CarbonInterface $now = null): bool
+    {
+        $startsAt = $this->sessionStartsAt();
+
+        if ($startsAt === null) {
+            return true;
+        }
+
+        $now ??= now()->timezone(config('app.timezone'));
+
+        return $now->greaterThanOrEqualTo($startsAt);
+    }
+
     public function hasSessionStartRequest(): bool
     {
         return $this->session_start_requested_at !== null;

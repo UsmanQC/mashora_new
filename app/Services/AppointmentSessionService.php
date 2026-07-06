@@ -39,7 +39,7 @@ final class AppointmentSessionService
             return true;
         }
 
-        return $appointment->isSessionStartDue();
+        return $appointment->isScheduledSessionTimeReached();
     }
 
     public function canDoctorStartWithoutPatientApproval(Appointment $appointment): bool
@@ -48,7 +48,7 @@ final class AppointmentSessionService
             return true;
         }
 
-        return $appointment->isSessionStartDue();
+        return $appointment->isScheduledSessionTimeReached();
     }
 
     public function canPatientJoin(Appointment $appointment): bool
