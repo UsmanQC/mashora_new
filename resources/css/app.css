@@ -1396,6 +1396,23 @@ select:focus[data-flux-control] {
         color: #0f172a !important;
     }
 
+    .doctor-luxury-mobile-active .doctor-working-hours-time-input {
+        color: #0f172a !important;
+        -webkit-text-fill-color: #0f172a !important;
+        background-color: #ffffff !important;
+        color-scheme: light;
+    }
+
+    .doctor-luxury-mobile-active .doctor-working-hours-time-input::-webkit-datetime-edit,
+    .doctor-luxury-mobile-active .doctor-working-hours-time-input::-webkit-datetime-edit-fields-wrapper,
+    .doctor-luxury-mobile-active .doctor-working-hours-time-input::-webkit-datetime-edit-hour-field,
+    .doctor-luxury-mobile-active .doctor-working-hours-time-input::-webkit-datetime-edit-minute-field,
+    .doctor-luxury-mobile-active .doctor-working-hours-time-input::-webkit-datetime-edit-second-field,
+    .doctor-luxury-mobile-active .doctor-working-hours-time-input::-webkit-datetime-edit-ampm-field {
+        color: #0f172a !important;
+        -webkit-text-fill-color: #0f172a !important;
+    }
+
     .doctor-luxury-mobile-active .doctor-consultation-inline-video button,
     .doctor-luxury-mobile-active .doctor-consultation-call-controls__btn {
         color: #fff !important;
