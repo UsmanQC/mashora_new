@@ -9,6 +9,7 @@ use App\Support\AppTimezone;
 use Carbon\Carbon;
 use Flux\Flux;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
@@ -180,20 +181,54 @@ new #[Layout('layouts::patient')] #[Title('Choose appointment')] class extends C
 
         $this->redirectRoute('patient.follow-up.confirm', $updated, navigate: true);
     }
+
+    public function profilePhotoUrl(): ?string
+    {
+        $user = Auth::user();
+
+        if ($user === null || ! filled($user->profile_photo_path)) {
+            return null;
+        }
+
+        return Storage::disk('public')->url((string) $user->profile_photo_path);
+    }
+
+    public function pageTitle(): string
+    {
+        return __('patient.scheduled_appointment.missed_title');
+    }
+
+    public function pageSubtitle(): string
+    {
+        return __('patient.scheduled_appointment.missed_subtitle');
+    }
 }; ?>
 
-<div class="mx-auto max-w-2xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
-    <div>
-        <flux:heading size="xl" class="font-semibold text-orange-600">{{ __('patient.scheduled_appointment.missed_title') }}</flux:heading>
-        <flux:text class="mt-2 text-zinc-600">{{ __('patient.scheduled_appointment.missed_subtitle') }}</flux:text>
+<div class="patient-luxury-payment-missed-reschedule bg-slate-50 pb-[calc(8.5rem+env(safe-area-inset-bottom))] sm:bg-transparent sm:pb-12" data-test="patient-luxury-payment-missed-reschedule">
+    <div class="sm:hidden">
+        @include('partials.patient-luxury-page-header', [
+            'title' => $this->pageTitle(),
+            'subtitle' => $this->pageSubtitle(),
+            'profilePhotoUrl' => $this->profilePhotoUrl(),
+            'userName' => auth()->user()?->name,
+            'backUrl' => route('patient.appointments', ['tab' => 'missed']),
+            'backLabel' => __('patient.appointments.title'),
+            'testId' => 'patient-payment-missed-reschedule-header',
+        ])
     </div>
 
-    <flux:callout variant="warning" icon="exclamation-triangle">
+    <div class="mx-auto max-w-2xl space-y-5 px-6 pt-5 sm:space-y-6 sm:px-6 sm:py-8 lg:px-8">
+        <div class="hidden sm:block">
+            <flux:heading size="xl" class="font-semibold text-orange-600">{{ $this->pageTitle() }}</flux:heading>
+            <flux:text class="mt-2 text-zinc-600">{{ $this->pageSubtitle() }}</flux:text>
+        </div>
+
+    <flux:callout variant="warning" icon="exclamation-triangle" class="border-amber-200 bg-amber-50 text-amber-950 [&_[data-slot=heading]]:text-amber-950 [&_[data-slot=text]]:text-amber-900">
         {{ __('patient.scheduled_appointment.missed_hint') }}
     </flux:callout>
 
-    <div class="rounded-2xl border border-zinc-200/90 bg-white p-5 shadow-sm sm:p-6">
-        <form wire:submit="save" class="space-y-5">
+    <div class="rounded-3xl border border-slate-100/80 bg-white p-5 shadow-[0_8px_32px_0_rgba(0,0,0,0.03)] sm:rounded-2xl sm:border-zinc-200/90 sm:p-6 sm:shadow-sm">
+        <form wire:submit="save" class="space-y-5" id="payment-missed-reschedule-form">
             <flux:field>
                 <flux:label>{{ __('patient.scheduled_appointment.date_label') }}</flux:label>
                 <flux:input wire:model.live="newDate" type="date" min="{{ $this->minDate() }}" required />
@@ -203,7 +238,7 @@ new #[Layout('layouts::patient')] #[Title('Choose appointment')] class extends C
             <flux:field>
                 <flux:label>{{ __('patient.scheduled_appointment.time_label') }}</flux:label>
                 @if ($this->availableSlots === [])
-                    <flux:callout variant="warning" icon="exclamation-circle" class="mt-2">
+                    <flux:callout variant="warning" icon="exclamation-circle" class="mt-2 border-amber-200 bg-amber-50 text-amber-950 [&_[data-slot=heading]]:text-amber-950 [&_[data-slot=text]]:text-amber-900">
                         <div class="space-y-2">
                             <p>{{ __('patient.missed.no_slots') }}</p>
                             @if ($weekday = $this->selectedWeekdayLabel())
@@ -225,8 +260,8 @@ new #[Layout('layouts::patient')] #[Title('Choose appointment')] class extends C
                                 wire:click="$set('selectedTime', '{{ $slot }}')"
                                 @class([
                                     'rounded-full border px-4 py-2 text-sm font-semibold transition',
-                                    'border-violet-700 bg-violet-700 text-white' => $selectedTime === $slot,
-                                    'border-zinc-200 bg-white text-zinc-700 hover:border-violet-400' => $selectedTime !== $slot,
+                                    'border-[#10B981] bg-[#10B981] text-white' => $selectedTime === $slot,
+                                    'border-zinc-200 bg-white text-zinc-700 hover:border-[#10B981]/50' => $selectedTime !== $slot,
                                 ])
                             >
                                 {{ $this->displaySlot($slot) }}
@@ -237,14 +272,31 @@ new #[Layout('layouts::patient')] #[Title('Choose appointment')] class extends C
                 <flux:error name="selectedTime" />
             </flux:field>
 
-            <div class="flex flex-col gap-3 sm:flex-row sm:justify-end">
+            <div class="hidden flex-col gap-3 sm:flex sm:flex-row sm:justify-end">
                 <flux:button :href="route('patient.appointments', ['tab' => 'missed'])" wire:navigate variant="ghost">
                     {{ __('patient.missed.back') }}
                 </flux:button>
-                <flux:button type="submit" variant="primary" class="!bg-violet-600 !text-white hover:!brightness-95">
+                <flux:button type="submit" variant="primary" class="!bg-[#10B981] !text-white hover:!brightness-95">
                     {{ __('patient.scheduled_appointment.choose_appointment') }}
                 </flux:button>
             </div>
         </form>
+    </div>
+    </div>
+
+    <div class="pointer-events-none fixed inset-x-0 bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-40 sm:hidden">
+        <div class="patient-luxury-booking-glass-bar pointer-events-auto px-6 py-4">
+            <button
+                type="submit"
+                form="payment-missed-reschedule-form"
+                wire:loading.attr="disabled"
+                wire:target="save"
+                class="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#10B981] py-4 text-base font-bold text-white shadow-[0_8px_25px_-5px_rgba(16,185,129,0.3)] transition active:scale-[0.98] hover:bg-[#059669] disabled:opacity-70"
+                data-test="patient-payment-missed-reschedule-submit"
+            >
+                <span wire:loading.remove wire:target="save">{{ __('patient.scheduled_appointment.choose_appointment') }}</span>
+                <span wire:loading wire:target="save">{{ __('patient_booking.payment_processing') }}</span>
+            </button>
+        </div>
     </div>
 </div>
