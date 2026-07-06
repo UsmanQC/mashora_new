@@ -8,6 +8,7 @@ use App\Models\Diagnosis;
 use App\Services\AppointmentSessionService;
 use App\Support\DoctorAgoraChannel;
 use Flux\Flux;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Str;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
@@ -61,6 +62,20 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
         return $birthDate->age.__('doctor.consultation.age_suffix');
     }
 
+    public function patientGenderLabel(): ?string
+    {
+        $gender = strtolower((string) ($this->appointment->user?->gender ?? ''));
+
+        if ($gender === '') {
+            return null;
+        }
+
+        $key = 'doctor.register.gender_'.$gender;
+        $label = __($key);
+
+        return $label !== $key ? $label : ucfirst($gender);
+    }
+
     public function patientMetaLine(): string
     {
         $parts = array_filter([
@@ -68,12 +83,31 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                 ? __('doctor.consultation.mrn', ['number' => $this->appointment->appointment_number])
                 : null,
             $this->patientAgeLabel(),
-            filled($this->appointment->user?->gender)
-                ? __('doctor.register.gender_'.$this->appointment->user->gender)
-                : null,
+            $this->patientGenderLabel(),
         ]);
 
         return $parts !== [] ? implode(' · ', $parts) : '—';
+    }
+
+    /**
+     * @return EloquentCollection<int, Appointment>
+     */
+    #[Computed]
+    public function patientMedicalHistories(): EloquentCollection
+    {
+        if ($this->appointment->user_id === null) {
+            return new EloquentCollection;
+        }
+
+        return Appointment::query()
+            ->with(['diagnosis', 'medications'])
+            ->withCount('medications')
+            ->where('user_id', $this->appointment->user_id)
+            ->where('id', '!=', $this->appointment->id)
+            ->where('status', 'completed')
+            ->orderByDesc('scheduled_at')
+            ->limit(6)
+            ->get();
     }
 
     #[Computed]
@@ -806,11 +840,6 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                     callDurationDisplay.textContent = formatted;
                 }
 
-                const mobileRecTimer = document.getElementById('doctor-consultation-rec-timer');
-                if (mobileRecTimer) {
-                    mobileRecTimer.textContent = formatted;
-                }
-
                 const durationEl = overlayDurationEl();
                 if (durationEl) {
                     durationEl.textContent = formatted;
@@ -937,6 +966,40 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
 
                 const row = document.createElement('div');
                 const isDoctor = payload.send_by === 'doctor';
+                const mobileChat = isConsultationMobile() && wrap.id === 'doctor-chat-messages-mobile';
+
+                if (mobileChat) {
+                    row.className = isDoctor ? 'flex flex-row-reverse gap-2' : 'flex gap-2';
+
+                    const stack = document.createElement('div');
+                    stack.className = 'min-w-0 max-w-[78%]'.concat(isDoctor ? ' text-end' : '');
+
+                    const bubble = document.createElement('div');
+                    bubble.className = isDoctor
+                        ? 'inline-block rounded-2xl rounded-br-md bg-[#047857] px-3.5 py-2 text-sm text-white shadow-sm'
+                        : 'inline-block rounded-2xl rounded-bl-md border border-slate-100 bg-slate-50 px-3.5 py-2 text-sm text-slate-800 shadow-sm';
+
+                    const text = document.createElement('p');
+                    text.className = 'whitespace-pre-wrap break-words text-start';
+                    text.textContent = payload.body || '';
+                    bubble.appendChild(text);
+                    stack.appendChild(bubble);
+
+                    if (payload.created_at) {
+                        const time = document.createElement('time');
+                        time.className = 'mt-1 block text-[0.625rem] text-slate-400'.concat(isDoctor ? ' text-end' : '');
+                        const d = new Date(payload.created_at);
+                        time.textContent = d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+                        stack.appendChild(time);
+                    }
+
+                    row.appendChild(stack);
+                    wrap.appendChild(row);
+                    wrap.scrollTop = wrap.scrollHeight;
+
+                    return;
+                }
+
                 row.className = isDoctor ? 'flex justify-end' : 'flex justify-start';
 
                 const bubble = document.createElement('div');

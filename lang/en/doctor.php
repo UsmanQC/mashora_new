@@ -809,7 +809,12 @@ return [
         'prescribe' => 'Prescribe',
         'current_medications' => 'Current medications',
         'session_chat' => 'Session chat',
-        'chat_placeholder' => 'Message patient during the call…',
+        'chat_placeholder' => 'Message during the call…',
+        'chat_subtitle' => 'Text the patient while you consult',
+        'chat_you' => 'You',
+        'chat_empty_title' => 'Start the conversation',
+        'history_visit' => 'Past visit',
+        'history_meds_count' => '{0} No medications|{1} :count medication|[2,*] :count medications',
     ],
 
     'notifications' => [

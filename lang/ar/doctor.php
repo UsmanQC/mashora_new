@@ -810,7 +810,12 @@ return [
         'prescribe' => 'وصفة',
         'current_medications' => 'الأدوية الحالية',
         'session_chat' => 'محادثة الجلسة',
-        'chat_placeholder' => 'راسل المريض أثناء المكالمة…',
+        'chat_placeholder' => 'راسل المريض أثناء الاستشارة…',
+        'chat_subtitle' => 'تواصل نصيًا مع المريض أثناء الجلسة',
+        'chat_you' => 'أنت',
+        'chat_empty_title' => 'ابدأ المحادثة',
+        'history_visit' => 'زيارة سابقة',
+        'history_meds_count' => '{0} لا أدوية|{1} :count دواء|[2,*] :count أدوية',
     ],
 
     'notifications' => [

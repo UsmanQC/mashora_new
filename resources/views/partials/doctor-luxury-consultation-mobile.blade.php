@@ -3,6 +3,7 @@
     $diagnosis = $appointment->diagnosis;
     $medicationLabels = $this->medicationLabels;
     $priorSummary = $this->priorVisitSummary;
+    $medicalHistories = $this->patientMedicalHistories;
 @endphp
 
 <div
@@ -11,7 +12,7 @@
     x-data="{ tab: 'summary' }"
 >
     <header class="shrink-0 border-b border-slate-100 bg-white px-4 pb-3 pt-[max(2rem,env(safe-area-inset-top))]">
-        <div class="flex items-center justify-between gap-3">
+        <div class="flex items-center gap-3">
             <a
                 href="{{ route('doctor.appointments') }}"
                 wire:navigate
@@ -23,28 +24,14 @@
             <h1 class="min-w-0 flex-1 text-center text-base font-bold tracking-tight text-slate-900">
                 {{ __('doctor.consultation.title') }}
             </h1>
-            <div
-                id="doctor-consultation-rec-badge"
-                @class([
-                    'inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[0.625rem] font-bold uppercase tracking-wide',
-                    'bg-rose-50 text-rose-700 ring-1 ring-rose-200/80' => $appointment->status === 'in_process',
-                    'invisible bg-transparent text-transparent ring-0' => $appointment->status !== 'in_process',
-                ])
-            >
-                <span class="size-1.5 rounded-full bg-rose-500" aria-hidden="true"></span>
-                <span>{{ __('doctor.consultation.rec') }}</span>
-                <span id="doctor-consultation-rec-timer" class="font-mono tabular-nums">00:00</span>
-            </div>
+            <div class="size-10 shrink-0" aria-hidden="true"></div>
         </div>
     </header>
 
-    <div class="doctor-luxury-scroll min-h-0 flex-1 overflow-y-auto overscroll-y-auto">
+    <div class="doctor-luxury-scroll min-h-0 flex-1 overflow-y-auto overscroll-y-auto pb-2">
         <div
             id="doctor-consultation-inline-video"
-            @class([
-                'doctor-consultation-inline-video relative mx-4 mt-4 overflow-hidden rounded-3xl bg-gradient-to-br from-[#064e3b] via-[#047857] to-[#059669] shadow-[0_8px_30px_-4px_rgba(4,120,87,0.35)]',
-                'aspect-[4/3]' => true,
-            ])
+            class="doctor-consultation-inline-video relative mx-4 mt-4 aspect-[4/3] overflow-hidden rounded-3xl bg-gradient-to-br from-[#064e3b] via-[#047857] to-[#059669] shadow-[0_8px_30px_-4px_rgba(4,120,87,0.35)]"
             data-test="doctor-consultation-inline-video"
         >
             <div
@@ -161,26 +148,10 @@
                 </div>
             </div>
 
-            <div class="mt-3 grid grid-cols-5 gap-2 rounded-2xl border border-slate-100 bg-white p-3 shadow-sm">
-                @foreach ([
-                    ['label' => __('doctor.consultation.vital_bp'), 'value' => '—'],
-                    ['label' => __('doctor.consultation.vital_hr'), 'value' => '—'],
-                    ['label' => __('doctor.consultation.vital_spo2'), 'value' => '—'],
-                    ['label' => __('doctor.consultation.vital_temp'), 'value' => '—'],
-                    ['label' => __('doctor.consultation.vital_bmi'), 'value' => '—'],
-                ] as $vital)
-                    <div class="text-center">
-                        <p class="text-sm font-bold tabular-nums text-slate-900">{{ $vital['value'] }}</p>
-                        <p class="mt-0.5 text-[0.5625rem] font-semibold uppercase tracking-wide text-slate-400">{{ $vital['label'] }}</p>
-                    </div>
-                @endforeach
-            </div>
-
             <div class="mt-4 rounded-2xl bg-slate-100/80 p-1">
-                <div class="grid grid-cols-4 gap-1">
+                <div class="grid grid-cols-3 gap-1">
                     @foreach ([
                         'summary' => __('doctor.consultation.tab_summary'),
-                        'soap' => __('doctor.consultation.tab_soap'),
                         'history' => __('doctor.consultation.tab_history'),
                         'notes' => __('doctor.consultation.tab_notes'),
                     ] as $key => $label)
@@ -190,7 +161,7 @@
                             :class="tab === '{{ $key }}'
                                 ? 'bg-white text-[#047857] shadow-sm ring-1 ring-slate-200/80'
                                 : 'text-slate-500 hover:text-slate-800'"
-                            class="rounded-xl px-2 py-2 text-[0.6875rem] font-bold transition"
+                            class="rounded-xl px-2 py-2.5 text-xs font-bold transition"
                         >
                             {{ $label }}
                         </button>
@@ -198,7 +169,7 @@
                 </div>
             </div>
 
-            <div class="mt-3 min-h-[5.5rem] rounded-3xl border border-slate-100 bg-white p-4 shadow-sm">
+            <div class="mt-3 rounded-3xl border border-slate-100 bg-white p-4 shadow-sm">
                 <div x-show="tab === 'summary'" x-cloak>
                     @if ($priorSummary)
                         <div class="flex gap-3">
@@ -211,19 +182,54 @@
                         <p class="text-sm text-slate-500">{{ __('doctor.consultation.summary_empty') }}</p>
                     @endif
                 </div>
-                <div x-show="tab === 'soap'" x-cloak class="space-y-2 text-sm text-slate-700">
-                    <p><span class="font-semibold text-slate-900">{{ __('doctor.consultation.soap_subjective') }}:</span> {{ $diagnosis?->medical_history ?: '—' }}</p>
-                    <p><span class="font-semibold text-slate-900">{{ __('doctor.consultation.soap_assessment') }}:</span> {{ $diagnosis?->diagnosis_name ?: '—' }}</p>
-                    <p><span class="font-semibold text-slate-900">{{ __('doctor.consultation.soap_plan') }}:</span> {{ $diagnosis?->treatment_plan ?: '—' }}</p>
+
+                <div x-show="tab === 'history'" x-cloak class="space-y-3">
+                    @forelse ($medicalHistories as $entry)
+                        <div
+                            wire:key="consultation-history-{{ $entry->id }}"
+                            class="rounded-2xl border border-slate-100 bg-slate-50/80 p-3"
+                        >
+                            <div class="flex items-start justify-between gap-2">
+                                <p class="text-xs font-bold text-slate-900">
+                                    @if (filled($entry->appointment_number))
+                                        #{{ $entry->appointment_number }}
+                                    @else
+                                        {{ __('doctor.consultation.history_visit') }}
+                                    @endif
+                                </p>
+                                <time class="shrink-0 text-[0.625rem] font-medium text-slate-400">
+                                    {{ optional($entry->scheduled_at)->locale(app()->getLocale())->translatedFormat('d M Y') }}
+                                </time>
+                            </div>
+                            @if ($entry->diagnosis?->diagnosis_name)
+                                <p class="mt-1.5 text-sm font-semibold text-[#047857]">{{ $entry->diagnosis->diagnosis_name }}</p>
+                            @endif
+                            @if ($entry->diagnosis?->medical_history)
+                                <p class="mt-1 line-clamp-3 text-sm leading-relaxed text-slate-600">{{ $entry->diagnosis->medical_history }}</p>
+                            @endif
+                            @if ($entry->medications_count > 0)
+                                <p class="mt-2 text-[0.625rem] font-semibold uppercase tracking-wide text-slate-400">
+                                    {{ trans_choice('doctor.consultation.history_meds_count', $entry->medications_count, ['count' => $entry->medications_count]) }}
+                                </p>
+                            @endif
+                        </div>
+                    @empty
+                        <p class="text-sm text-slate-500">{{ __('doctor.consultation.history_empty') }}</p>
+                    @endforelse
+                    @if ($medicalHistories->isNotEmpty())
+                        <a
+                            href="{{ route('doctor.appointments.medical-history', $appointment) }}"
+                            wire:navigate
+                            class="inline-flex items-center gap-1 text-sm font-semibold text-[#047857]"
+                        >
+                            {{ __('doctor.consultation.open_history') }}
+                            <flux:icon name="arrow-right" variant="mini" class="size-4 rtl:rotate-180" />
+                        </a>
+                    @endif
                 </div>
-                <div x-show="tab === 'history'" x-cloak>
-                    <p class="text-sm text-slate-700">{{ $diagnosis?->medical_history ?: __('doctor.consultation.history_empty') }}</p>
-                    <a href="{{ route('doctor.appointments.medical-history', $appointment) }}" wire:navigate class="mt-3 inline-flex text-sm font-semibold text-[#047857]">
-                        {{ __('doctor.consultation.open_history') }}
-                    </a>
-                </div>
+
                 <div x-show="tab === 'notes'" x-cloak>
-                    <p class="whitespace-pre-line text-sm text-slate-700">{{ $diagnosis?->doctor_notes ?: __('doctor.consultation.notes_empty') }}</p>
+                    <p class="whitespace-pre-line text-sm leading-relaxed text-slate-700">{{ $diagnosis?->doctor_notes ?: __('doctor.consultation.notes_empty') }}</p>
                 </div>
             </div>
 
@@ -265,78 +271,112 @@
                     </div>
                 </div>
             @endif
-
-            <section class="mt-5 pb-2">
-                <h2 class="mb-2 text-[0.6875rem] font-bold uppercase tracking-wider text-slate-400">
-                    {{ __('doctor.consultation.session_chat') }}
-                </h2>
-                <div
-                    id="doctor-chat-panel-mobile"
-                    class="overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-sm"
-                    data-appointment-id="{{ $appointment->id }}"
-                    data-notify-url="{{ route('doctor.appointments.realtime.notify-call', $appointment) }}"
-                    data-end-call-url="{{ route('doctor.appointments.realtime.end-call', $appointment) }}"
-                    data-token-url="{{ route('doctor.appointments.realtime.agora-token', $appointment) }}"
-                    data-csrf="{{ csrf_token() }}"
-                >
-                    <div
-                        id="doctor-chat-messages-mobile"
-                        class="doctor-consultation-chat-messages max-h-52 space-y-2.5 overflow-y-auto px-3 py-3"
-                        wire:ignore.self
-                    >
-                        @forelse ($messages as $msg)
-                            <div
-                                wire:key="doc-chat-mobile-{{ $msg['id'] }}"
-                                @class([
-                                    'flex',
-                                    'justify-end' => $msg['send_by'] === 'doctor',
-                                    'justify-start' => $msg['send_by'] !== 'doctor',
-                                ])
-                            >
-                                <div
-                                    @class([
-                                        'max-w-[85%] rounded-2xl px-3 py-2 text-sm shadow-sm',
-                                        'bg-[#047857] text-white' => $msg['send_by'] === 'doctor',
-                                        'border border-slate-100 bg-slate-50 text-slate-800' => $msg['send_by'] !== 'doctor',
-                                    ])
-                                >
-                                    <p class="whitespace-pre-wrap break-words">{{ $msg['body'] }}</p>
-                                </div>
-                            </div>
-                        @empty
-                            <div class="doctor-consultation-chat-empty flex flex-col items-center justify-center py-8 text-center">
-                                <flux:icon name="chat-bubble-left-right" class="mb-2 size-6 text-slate-300" />
-                                <p class="text-xs text-slate-500">{{ __('doctor.conversation.empty_chat') }}</p>
-                            </div>
-                        @endforelse
-                    </div>
-                </div>
-            </section>
         </div>
     </div>
 
-    <div class="shrink-0 border-t border-slate-100 bg-white px-4 py-3 pb-[calc(5.5rem+env(safe-area-inset-bottom))]">
-        <form
-            wire:submit="sendMessage"
-            class="flex items-end gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-1.5 @if (! $appointment->isDoctorChatOpen()) pointer-events-none opacity-55 @endif"
+    <section
+        id="doctor-chat-panel-mobile"
+        class="doctor-consultation-chat shrink-0 border-t border-slate-200/80 bg-white shadow-[0_-8px_30px_-12px_rgba(15,23,42,0.12)]"
+        data-appointment-id="{{ $appointment->id }}"
+        data-notify-url="{{ route('doctor.appointments.realtime.notify-call', $appointment) }}"
+        data-end-call-url="{{ route('doctor.appointments.realtime.end-call', $appointment) }}"
+        data-token-url="{{ route('doctor.appointments.realtime.agora-token', $appointment) }}"
+        data-csrf="{{ csrf_token() }}"
+    >
+        <div class="flex items-center justify-between gap-3 border-b border-slate-100 px-4 py-2.5">
+            <div class="flex items-center gap-2">
+                <span class="flex size-8 items-center justify-center rounded-full bg-[#10B981]/10 text-[#047857]">
+                    <flux:icon name="chat-bubble-left-right" variant="mini" class="size-4" />
+                </span>
+                <div>
+                    <p class="text-sm font-bold text-slate-900">{{ __('doctor.consultation.session_chat') }}</p>
+                    <p class="text-[0.625rem] text-slate-500">{{ __('doctor.consultation.chat_subtitle') }}</p>
+                </div>
+            </div>
+            @if ($appointment->status === 'in_process')
+                <span class="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[0.625rem] font-bold text-emerald-700">
+                    <span class="size-1.5 animate-pulse rounded-full bg-emerald-500"></span>
+                    {{ __('doctor.conversation.live') }}
+                </span>
+            @endif
+        </div>
+
+        <div
+            id="doctor-chat-messages-mobile"
+            class="doctor-consultation-chat-messages max-h-44 space-y-3 overflow-y-auto px-4 py-3"
+            wire:ignore.self
         >
-            <flux:input
-                wire:model="draft"
-                type="text"
-                :placeholder="__('doctor.consultation.chat_placeholder')"
-                :disabled="! $appointment->isDoctorChatOpen()"
-                class="min-w-0 flex-1 !rounded-xl !border-0 !bg-transparent !shadow-none"
-            />
-            <flux:button
-                type="submit"
-                variant="primary"
-                icon="paper-airplane"
-                class="shrink-0 !rounded-xl"
-                wire:loading.attr="disabled"
-                :disabled="! $appointment->isDoctorChatOpen()"
-            />
-        </form>
-    </div>
+            @forelse ($messages as $msg)
+                <div
+                    wire:key="doc-chat-mobile-{{ $msg['id'] }}"
+                    @class([
+                        'flex gap-2',
+                        'flex-row-reverse' => $msg['send_by'] === 'doctor',
+                    ])
+                >
+                    @if ($msg['send_by'] !== 'doctor')
+                        <span class="flex size-7 shrink-0 items-center justify-center rounded-full bg-slate-200 text-[0.625rem] font-bold text-slate-600">
+                            {{ $this->patientInitials() }}
+                        </span>
+                    @endif
+                    <div @class(['min-w-0 max-w-[78%]', 'text-end' => $msg['send_by'] === 'doctor'])>
+                        <p @class([
+                            'mb-0.5 text-[0.625rem] font-semibold uppercase tracking-wide text-slate-400',
+                            'text-end' => $msg['send_by'] === 'doctor',
+                        ])>
+                            {{ $msg['send_by'] === 'doctor' ? __('doctor.consultation.chat_you') : $appointment->patient_name }}
+                        </p>
+                        <div
+                            @class([
+                                'inline-block rounded-2xl px-3.5 py-2 text-sm shadow-sm',
+                                'rounded-br-md bg-[#047857] text-white' => $msg['send_by'] === 'doctor',
+                                'rounded-bl-md border border-slate-100 bg-slate-50 text-slate-800' => $msg['send_by'] !== 'doctor',
+                            ])
+                        >
+                            <p class="whitespace-pre-wrap break-words text-start">{{ $msg['body'] }}</p>
+                        </div>
+                        @if ($msg['created_at'])
+                            <time @class(['mt-1 block text-[0.625rem] text-slate-400', 'text-end' => $msg['send_by'] === 'doctor'])>
+                                {{ \Illuminate\Support\Carbon::parse($msg['created_at'])->timezone(config('app.timezone'))->format('H:i') }}
+                            </time>
+                        @endif
+                    </div>
+                </div>
+            @empty
+                <div class="doctor-consultation-chat-empty flex flex-col items-center justify-center py-6 text-center">
+                    <div class="mb-2 flex size-12 items-center justify-center rounded-2xl bg-slate-100">
+                        <flux:icon name="chat-bubble-left-ellipsis" class="size-6 text-slate-400" />
+                    </div>
+                    <p class="text-sm font-medium text-slate-600">{{ __('doctor.consultation.chat_empty_title') }}</p>
+                    <p class="mt-0.5 text-xs text-slate-400">{{ __('doctor.conversation.empty_chat') }}</p>
+                </div>
+            @endforelse
+        </div>
+
+        <div class="border-t border-slate-100 bg-slate-50/80 px-4 py-3 pb-[calc(5.25rem+env(safe-area-inset-bottom))]">
+            <form
+                wire:submit="sendMessage"
+                class="doctor-consultation-chat-form flex items-center gap-2 rounded-full border border-slate-200 bg-white py-1 pe-1 ps-4 shadow-sm @if (! $appointment->isDoctorChatOpen()) pointer-events-none opacity-55 @endif"
+            >
+                <input
+                    wire:model="draft"
+                    type="text"
+                    placeholder="{{ __('doctor.consultation.chat_placeholder') }}"
+                    @disabled(! $appointment->isDoctorChatOpen())
+                    class="min-w-0 flex-1 border-0 bg-transparent text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-0"
+                />
+                <button
+                    type="submit"
+                    wire:loading.attr="disabled"
+                    @disabled(! $appointment->isDoctorChatOpen())
+                    class="flex size-10 shrink-0 items-center justify-center rounded-full bg-[#047857] text-white shadow-md transition hover:bg-[#059669] disabled:opacity-50"
+                    aria-label="{{ __('doctor.conversation.send') }}"
+                >
+                    <flux:icon name="paper-airplane" variant="mini" class="size-4 rtl:-scale-x-100" />
+                </button>
+            </form>
+        </div>
+    </section>
 
     <div class="pointer-events-none absolute -left-[9999px] top-0 h-0 w-0 overflow-hidden" aria-hidden="true">
         <div id="timer-session-elapsed-mobile">00:00</div>
