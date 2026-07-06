@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Doctor\DoctorAppointmentRealtimeController;
 use App\Http\Controllers\Doctor\DoctorInvoiceController;
+use App\Http\Controllers\Doctor\DoctorPrescriptionController;
 use App\Http\Controllers\Doctor\DoctorSessionController;
 use App\Models\Appointment;
 use Illuminate\Http\RedirectResponse;
@@ -70,6 +71,8 @@ Route::middleware('auth:doctor')->group(function (): void {
                 'appointments/{appointment}/prescription',
                 'pages::doctor.appointment.prescription',
             )->name('appointments.prescription');
+            Route::get('appointments/{appointment}/prescription/pdf', [DoctorPrescriptionController::class, 'download'])
+                ->name('appointments.prescription.pdf');
             Route::livewire(
                 'appointments/{appointment}/conversation',
                 'pages::doctor.appointment.conversation',

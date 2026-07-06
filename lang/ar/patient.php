@@ -100,6 +100,7 @@ return [
         'unit_days' => 'أيام',
         'unit_week' => 'أسابيع',
         'unit_month' => 'أشهر',
+        'download_pdf' => 'تحميل الوصفة',
     ],
 
     'settings_page' => [

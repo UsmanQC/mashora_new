@@ -100,6 +100,7 @@ return [
         'unit_days' => 'days',
         'unit_week' => 'weeks',
         'unit_month' => 'months',
+        'download_pdf' => 'Download prescription',
     ],
 
     'settings_page' => [

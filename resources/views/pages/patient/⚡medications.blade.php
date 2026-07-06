@@ -127,7 +127,7 @@ new #[Layout('layouts::patient')] #[Title('Medications')] class extends Componen
                         data-test="patient-prescription-card"
                     >
                         <div class="border-b border-slate-100 bg-slate-50/80 px-5 py-4">
-                            <div class="flex flex-wrap items-start justify-between gap-2">
+                            <div class="flex flex-wrap items-start justify-between gap-3">
                                 <div class="min-w-0">
                                     <p class="text-[10px] font-bold uppercase tracking-wide text-[#059669]">{{ __('patient.medications_page.session_label') }}</p>
                                     <p class="mt-1 text-sm font-bold text-slate-900">{{ $this->doctorName($appointment) }}</p>
@@ -135,7 +135,20 @@ new #[Layout('layouts::patient')] #[Title('Medications')] class extends Componen
                                         <p class="mt-1 text-xs text-slate-500">{{ $appointment->diagnosis->diagnosis_name }}</p>
                                     @endif
                                 </div>
-                                <p class="shrink-0 text-xs font-semibold tabular-nums text-slate-500">{{ $this->formattedSessionDate($appointment) }}</p>
+                                <div class="flex shrink-0 flex-col items-end gap-2">
+                                    <p class="text-xs font-semibold tabular-nums text-slate-500">{{ $this->formattedSessionDate($appointment) }}</p>
+                                    <flux:button
+                                        :href="route('patient.prescriptions.pdf', $appointment)"
+                                        size="sm"
+                                        variant="primary"
+                                        icon="arrow-down-tray"
+                                        class="!rounded-full !bg-[#10B981] !px-4 !text-white hover:!brightness-95"
+                                        target="_blank"
+                                        rel="noopener"
+                                    >
+                                        {{ __('patient.medications_page.download_pdf') }}
+                                    </flux:button>
+                                </div>
                             </div>
                         </div>
 

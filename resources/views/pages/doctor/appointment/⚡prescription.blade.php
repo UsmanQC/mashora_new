@@ -249,16 +249,51 @@ new #[Layout('layouts::doctor')] #[Title('Prescription')] class extends Componen
             <flux:heading size="xl" class="font-semibold text-zinc-900">{{ __('doctor.prescription_form.title') }}</flux:heading>
             <flux:text class="mt-1 text-zinc-600">{{ __('doctor.prescription_form.subtitle') }}</flux:text>
         </div>
-        <flux:button
-            type="button"
-            variant="primary"
-            icon="plus"
-            class="!bg-[#10B981] hover:!brightness-95"
-            wire:click="openCreateMedication"
-        >
-            {{ __('doctor.prescription_form.add_medication') }}
-        </flux:button>
+        <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
+            @if ($this->medications->isNotEmpty())
+                <flux:button
+                    :href="route('doctor.appointments.prescription.pdf', $appointment)"
+                    variant="outline"
+                    icon="arrow-down-tray"
+                    class="w-full !border-emerald-200 !text-emerald-800 hover:!bg-emerald-50 sm:w-auto"
+                    target="_blank"
+                    rel="noopener"
+                >
+                    {{ __('doctor.prescription_form.download_pdf') }}
+                </flux:button>
+            @endif
+            <flux:button
+                type="button"
+                variant="primary"
+                icon="plus"
+                class="w-full !bg-[#10B981] hover:!brightness-95 sm:w-auto"
+                wire:click="openCreateMedication"
+            >
+                {{ __('doctor.prescription_form.add_medication') }}
+            </flux:button>
+        </div>
     </div>
+
+    @if ($this->medications->isNotEmpty())
+        <div class="rounded-2xl border border-emerald-200/80 bg-gradient-to-r from-emerald-50 to-teal-50/60 px-4 py-3.5 shadow-sm">
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div class="min-w-0">
+                    <p class="text-sm font-semibold text-emerald-950">{{ __('doctor.prescription_form.download_pdf') }}</p>
+                    <p class="mt-0.5 text-xs text-emerald-900/80">{{ __('doctor.prescription_form.download_pdf_hint') }}</p>
+                </div>
+                <flux:button
+                    :href="route('doctor.appointments.prescription.pdf', $appointment)"
+                    variant="primary"
+                    icon="document-arrow-down"
+                    class="w-full shrink-0 !bg-[#047857] hover:!brightness-95 sm:w-auto"
+                    target="_blank"
+                    rel="noopener"
+                >
+                    {{ __('doctor.prescription_form.download_pdf') }}
+                </flux:button>
+            </div>
+        </div>
+    @endif
 
     <div class="rounded-2xl border border-zinc-200/90 bg-white p-5 shadow-sm sm:p-6">
         <div class="flex items-center justify-between gap-4">

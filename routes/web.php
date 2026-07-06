@@ -5,6 +5,7 @@ use App\Http\Controllers\AiChatbotController;
 use App\Http\Controllers\Patient\FollowUpPaymentController;
 use App\Http\Controllers\Patient\PatientAppointmentRealtimeController;
 use App\Http\Controllers\Patient\PatientPaymentController;
+use App\Http\Controllers\Patient\PatientPrescriptionController;
 use App\Http\Controllers\WebManifestController;
 use App\Support\SpecialistCatalog;
 use Illuminate\Http\Request;
@@ -152,6 +153,10 @@ Route::post('patient/follow-up/payment/execute/{appointment}', [FollowUpPaymentC
 Route::livewire('patient/medications', 'pages::patient.medications')
     ->middleware(['auth', 'patient.profile'])
     ->name('patient.medications');
+
+Route::get('patient/prescriptions/{appointment}/pdf', [PatientPrescriptionController::class, 'download'])
+    ->middleware(['auth', 'patient.profile'])
+    ->name('patient.prescriptions.pdf');
 
 Route::livewire('patient/favorites', 'pages::patient.favorites')
     ->middleware(['auth', 'patient.profile'])
