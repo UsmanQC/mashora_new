@@ -162,7 +162,7 @@ final class AppointmentSessionService
         $appointment->update([
             'status' => 'in_process',
             'actual_start_at' => now(),
-            'extend_at' => now()->addMinutes(max(1, (int) $appointment->duration)),
+            'extend_at' => now()->addMinutes($appointment->effectiveSessionDurationMinutes()),
         ]);
 
         $appointment->refresh();

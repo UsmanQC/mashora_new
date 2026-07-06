@@ -224,12 +224,21 @@ class Appointment extends Model
                 return null;
             }
 
-            $durationMinutes = max(1, (int) ($this->duration ?? 0));
+            $durationMinutes = $this->effectiveSessionDurationMinutes();
 
             return $startsAt->copy()->addMinutes($durationMinutes);
         } catch (\Throwable) {
             return null;
         }
+    }
+
+    public function effectiveSessionDurationMinutes(): int
+    {
+        if ($this->is_follow_up) {
+            return FollowUpAppointmentService::sessionDurationMinutes();
+        }
+
+        return max(1, (int) ($this->duration ?? 0));
     }
 
     public function isPendingFollowUp(): bool

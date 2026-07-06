@@ -45,6 +45,11 @@ final class FollowUpAppointmentService
         return max(1, (int) config('appointments.follow_up_window_days', 14));
     }
 
+    public static function sessionDurationMinutes(): int
+    {
+        return max(1, (int) config('appointments.follow_up_session_duration_minutes', 5));
+    }
+
     public function windowEnd(Appointment $parent): CarbonInterface
     {
         $timezone = config('app.timezone');
@@ -117,7 +122,7 @@ final class FollowUpAppointmentService
 
         $this->assertDateWithinWindow($parent, $date);
 
-        $durationMinutes = max(15, (int) $parent->duration);
+        $durationMinutes = self::sessionDurationMinutes();
         $slots = $this->availability->availableSlots($doctor, $date, $durationMinutes);
 
         if (! in_array($time, $slots, true)) {

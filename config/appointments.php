@@ -64,6 +64,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Follow-up session duration
+    |--------------------------------------------------------------------------
+    |
+    | Minutes allowed for a free follow-up video/voice session. Calls auto-end
+    | when this limit is reached (via extend_at on session start).
+    |
+    */
+
+    'follow_up_session_duration_minutes' => (int) env('APPOINTMENT_FOLLOW_UP_SESSION_DURATION_MINUTES', 5),
+
+    /*
+    |--------------------------------------------------------------------------
     | Doctor-scheduled paid appointment payment window
     |--------------------------------------------------------------------------
     |

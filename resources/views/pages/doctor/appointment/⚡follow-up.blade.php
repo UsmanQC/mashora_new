@@ -33,7 +33,7 @@ new #[Layout('layouts::doctor')] #[Title('Follow Up')] class extends Component
     public function mount(Appointment $appointment): void
     {
         $this->appointment = $appointment;
-        $this->durationMinutes = max(15, (int) $appointment->duration);
+        $this->durationMinutes = $this->resolveFollowUpPageDurationMinutes($appointment);
         $this->followUpNotNeeded = app(FollowUpAppointmentService::class)->parentDeclinedFollowUp($appointment);
 
         $followUpService = app(FollowUpAppointmentService::class);
@@ -71,6 +71,19 @@ new #[Layout('layouts::doctor')] #[Title('Follow Up')] class extends Component
 
         $this->newDate = $preferredDate;
         $this->paidNewDate = $preferredDate;
+    }
+
+    private function resolveFollowUpPageDurationMinutes(Appointment $appointment): int
+    {
+        if ($appointment->is_follow_up) {
+            $originalSession = $appointment->parent_id
+                ? Appointment::query()->find($appointment->parent_id)
+                : null;
+
+            return max(15, (int) ($originalSession?->duration ?? $appointment->duration));
+        }
+
+        return FollowUpAppointmentService::sessionDurationMinutes();
     }
 
     protected function doctor(): Doctor
