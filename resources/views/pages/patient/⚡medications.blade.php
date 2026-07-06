@@ -137,17 +137,28 @@ new #[Layout('layouts::patient')] #[Title('Medications')] class extends Componen
                                 </div>
                                 <div class="flex shrink-0 flex-col items-end gap-2">
                                     <p class="text-xs font-semibold tabular-nums text-slate-500">{{ $this->formattedSessionDate($appointment) }}</p>
-                                    <flux:button
-                                        :href="route('patient.prescriptions.pdf', $appointment)"
-                                        size="sm"
-                                        variant="primary"
-                                        icon="arrow-down-tray"
-                                        class="!rounded-full !bg-[#10B981] !px-4 !text-white hover:!brightness-95"
-                                        target="_blank"
-                                        rel="noopener"
-                                    >
-                                        {{ __('patient.medications_page.download_pdf') }}
-                                    </flux:button>
+                                    <div class="flex flex-wrap items-center justify-end gap-2">
+                                        <flux:button
+                                            :href="route('patient.prescriptions.preview', $appointment)"
+                                            size="sm"
+                                            variant="outline"
+                                            icon="eye"
+                                            class="!rounded-full !border-emerald-200 !px-4 !text-emerald-800 hover:!bg-emerald-50"
+                                            target="_blank"
+                                            rel="noopener"
+                                        >
+                                            {{ __('patient.medications_page.preview_pdf') }}
+                                        </flux:button>
+                                        <flux:button
+                                            :href="route('patient.prescriptions.pdf', $appointment)"
+                                            size="sm"
+                                            variant="primary"
+                                            icon="arrow-down-tray"
+                                            class="!rounded-full !bg-[#10B981] !px-4 !text-white hover:!brightness-95"
+                                        >
+                                            {{ __('patient.medications_page.download_pdf') }}
+                                        </flux:button>
+                                    </div>
                                 </div>
                             </div>
                         </div>

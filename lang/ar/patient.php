@@ -101,6 +101,7 @@ return [
         'unit_week' => 'أسابيع',
         'unit_month' => 'أشهر',
         'download_pdf' => 'تحميل الوصفة',
+        'preview_pdf' => 'معاينة الوصفة',
     ],
 
     'settings_page' => [

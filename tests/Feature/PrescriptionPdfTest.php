@@ -61,6 +61,17 @@ test('doctor can download prescription pdf when medications exist', function () 
     expect($response->headers->get('content-disposition'))->toContain('prescription-');
 });
 
+test('patient can preview own prescription pdf in browser', function () {
+    [, $patient, $appointment] = seedPrescriptionAppointment();
+
+    $response = $this->actingAs($patient)
+        ->get(route('patient.prescriptions.preview', $appointment));
+
+    $response->assertSuccessful();
+    expect($response->headers->get('content-type'))->toContain('application/pdf');
+    expect($response->headers->get('content-disposition'))->toContain('inline');
+});
+
 test('patient can download own prescription pdf', function () {
     [, $patient, $appointment] = seedPrescriptionAppointment();
 
@@ -69,6 +80,7 @@ test('patient can download own prescription pdf', function () {
 
     $response->assertSuccessful();
     expect($response->headers->get('content-type'))->toContain('application/pdf');
+    expect($response->headers->get('content-disposition'))->toContain('attachment');
 });
 
 test('doctor cannot download prescription pdf without medications', function () {
@@ -113,4 +125,17 @@ test('prescription page shows download button when medications exist', function 
         ->test('pages::doctor.appointment.prescription', ['appointment' => $appointment])
         ->assertSee(__('doctor.prescription_form.download_pdf'), false)
         ->assertSee(route('doctor.appointments.prescription.pdf', $appointment), false);
+});
+
+test('patient medications page shows preview and download actions', function () {
+    app()->setLocale('en');
+
+    [, $patient, $appointment] = seedPrescriptionAppointment();
+
+    Livewire::actingAs($patient)
+        ->test('pages::patient.medications')
+        ->assertSee(__('patient.medications_page.preview_pdf'), false)
+        ->assertSee(__('patient.medications_page.download_pdf'), false)
+        ->assertSee(route('patient.prescriptions.preview', $appointment), false)
+        ->assertSee(route('patient.prescriptions.pdf', $appointment), false);
 });

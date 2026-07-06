@@ -41,6 +41,11 @@ final class PrescriptionPdfService
         return $this->makePdf($appointment)->download($this->downloadFilename($appointment));
     }
 
+    public function streamResponse(Appointment $appointment): Response
+    {
+        return $this->makePdf($appointment)->stream($this->downloadFilename($appointment));
+    }
+
     public function durationLabel(Medication $medication): string
     {
         $duration = trim((string) ($medication->duration ?? ''));

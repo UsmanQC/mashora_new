@@ -154,6 +154,10 @@ Route::livewire('patient/medications', 'pages::patient.medications')
     ->middleware(['auth', 'patient.profile'])
     ->name('patient.medications');
 
+Route::get('patient/prescriptions/{appointment}/preview', [PatientPrescriptionController::class, 'preview'])
+    ->middleware(['auth', 'patient.profile'])
+    ->name('patient.prescriptions.preview');
+
 Route::get('patient/prescriptions/{appointment}/pdf', [PatientPrescriptionController::class, 'download'])
     ->middleware(['auth', 'patient.profile'])
     ->name('patient.prescriptions.pdf');
