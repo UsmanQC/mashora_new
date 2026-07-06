@@ -216,6 +216,8 @@ return [
         'date_label' => 'Date',
         'time_label' => 'Time',
         'chat_locked_until_doctor_starts' => 'Your specialist will start the session. You can join the chat and call once it begins.',
+        'chat_locked_until_one_hour' => 'Chat opens one hour before your scheduled session time.',
+        'chat_open_before_session' => 'Chat is open. You can message your specialist now. The video session will begin after they start it.',
         'session_start_request_pending' => 'Approval requested',
         'session_start_request_banner' => 'Your specialist asked you to start the session early. Approve to join the call now or decline to wait for the scheduled time.',
         'session_start_request_approve' => 'Approve start',

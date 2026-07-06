@@ -8,7 +8,8 @@
     $sessionStartPending = $appointment->isSessionStartRequestPending();
     $awaitingDoctor = in_array($status, ['new', 'rescheduled'], true)
         && (! $appointment->is_follow_up || $appointment->allowsPatientCalls())
-        && ! $sessionStartPending;
+        && ! $sessionStartPending
+        && ! $canOpenChat;
     $canResolveMissed = $component->canResolveMissed($appointment);
     $hasMissedRefund = $component->hasMissedRefund($appointment);
     $hasAction = $appointment->status === 'pending_follow_up' || $canJoinSession || $canOpenChat || $sessionStartPending || $awaitingDoctor || $canResolveMissed || ($appointment->isDoctorMissed() && $hasMissedRefund);

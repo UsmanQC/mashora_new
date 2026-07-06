@@ -367,7 +367,11 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
 
     @if (in_array($appointment->status, ['new', 'rescheduled'], true) && ! $appointment->isChatOpen())
         <flux:callout id="patient-chat-locked-callout" variant="secondary" icon="clock" class="border-zinc-200">
-            {{ __('patient.appointments.chat_locked_until_doctor_starts') }}
+            {{ __('patient.appointments.chat_locked_until_one_hour') }}
+        </flux:callout>
+    @elseif (in_array($appointment->status, ['new', 'rescheduled'], true) && $appointment->isChatOpen())
+        <flux:callout variant="secondary" icon="chat-bubble-left-right" class="border-zinc-200 bg-white scheme-light !text-zinc-900">
+            <span class="text-sm text-zinc-900">{{ __('patient.appointments.chat_open_before_session') }}</span>
         </flux:callout>
     @elseif ($appointment->status === 'completed' && ! $appointment->isChatOpen())
         <flux:callout variant="secondary" icon="check-circle" class="border-zinc-200 bg-white scheme-light !text-zinc-900">

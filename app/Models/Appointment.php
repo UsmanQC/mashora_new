@@ -286,6 +286,14 @@ class Appointment extends Model
             return $now->lessThanOrEqualTo($this->chatOpenUntil());
         }
 
+        if (in_array((string) $this->status, ['new', 'rescheduled'], true)) {
+            if ((bool) config('appointments.relaxed_session_limits', false)) {
+                return true;
+            }
+
+            return $this->isSessionStartDue($now);
+        }
+
         if ((string) $this->status !== 'completed') {
             return false;
         }
@@ -295,19 +303,7 @@ class Appointment extends Model
 
     public function isDoctorChatOpen(?CarbonInterface $now = null): bool
     {
-        if ($this->isChatOpen($now)) {
-            return true;
-        }
-
-        if (! in_array((string) $this->status, ['new', 'rescheduled'], true)) {
-            return false;
-        }
-
-        if ((bool) config('appointments.relaxed_session_limits', false)) {
-            return true;
-        }
-
-        return $this->isSessionStartDue($now);
+        return $this->isChatOpen($now);
     }
 
     public function allowsPatientCalls(): bool

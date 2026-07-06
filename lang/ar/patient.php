@@ -219,6 +219,8 @@ return [
         'date_label' => 'التاريخ',
         'time_label' => 'الوقت',
         'chat_locked_until_doctor_starts' => 'سيبدأ الأخصائي الجلسة. يمكنك الانضمام للمحادثة والمكالمة بعد البدء.',
+        'chat_locked_until_one_hour' => 'تفتح المحادثة قبل ساعة من موعد جلستك المحدد.',
+        'chat_open_before_session' => 'المحادثة مفتوحة. يمكنك مراسلة الأخصائي الآن. ستبدأ جلسة الفيديو بعد أن يبدأها.',
         'session_start_request_pending' => 'تم طلب الموافقة',
         'session_start_request_banner' => 'طلب منك الأخصائي بدء الجلسة مبكرًا. وافق للانضمام الآن أو ارفض للانتظار حتى الوقت المحدد.',
         'session_start_request_approve' => 'الموافقة على البدء',
