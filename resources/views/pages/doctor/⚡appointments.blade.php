@@ -130,6 +130,10 @@ new #[Layout('layouts::doctor')] #[Title('Appointments')] class extends Componen
             return true;
         }
 
+        if (in_array((string) $appointment->status, ['new', 'rescheduled'], true)) {
+            return true;
+        }
+
         return app(AppointmentSessionService::class)->canDoctorStart($appointment);
     }
 
@@ -523,25 +527,14 @@ new #[Layout('layouts::doctor')] #[Title('Appointments')] class extends Componen
                             <td class="px-4 py-3 align-middle text-center">
                                 @if ($hasSessionActions)
                                     <div class="inline-flex flex-nowrap items-center justify-center gap-1.5">
-                                        <template x-if="ready">
-                                            <a
-                                                href="{{ $openSessionHref }}"
-                                                wire:navigate
-                                                class="inline-flex shrink-0 items-center justify-center gap-1 rounded-lg bg-[#047857] px-2 py-1.5 text-[0.6875rem] font-semibold whitespace-nowrap text-white shadow-sm transition hover:brightness-95"
-                                            >
-                                                <flux:icon name="video-camera" variant="mini" class="size-3.5 shrink-0" />
-                                                {{ __('doctor.appointments.open_session') }}
-                                            </a>
-                                        </template>
-                                        <template x-if="!ready">
-                                            <span
-                                                class="inline-flex shrink-0 cursor-not-allowed items-center justify-center gap-1 rounded-lg bg-zinc-200 px-2 py-1.5 text-[0.6875rem] font-semibold whitespace-nowrap text-zinc-500"
-                                                title="{{ __('doctor.appointments.open_session_wait') }}"
-                                            >
-                                                <flux:icon name="video-camera" variant="mini" class="size-3.5 shrink-0 opacity-60" />
-                                                {{ __('doctor.appointments.open_session') }}
-                                            </span>
-                                        </template>
+                                        <a
+                                            href="{{ $openSessionHref }}"
+                                            wire:navigate
+                                            class="inline-flex shrink-0 items-center justify-center gap-1 rounded-lg bg-[#047857] px-2 py-1.5 text-[0.6875rem] font-semibold whitespace-nowrap text-white shadow-sm transition hover:brightness-95"
+                                        >
+                                            <flux:icon name="video-camera" variant="mini" class="size-3.5 shrink-0" />
+                                            {{ __('doctor.appointments.open_session') }}
+                                        </a>
                                         <button
                                             type="button"
                                             wire:click="promptCancelAppointment({{ $row->id }})"

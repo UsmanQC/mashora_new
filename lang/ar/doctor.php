@@ -652,7 +652,7 @@ return [
         'status_not_attended' => 'فائت',
         'chat_locked_until_started' => 'ابدأ الجلسة لتفعيل المراسلة والمكالمات.',
         'chat_locked_until_one_hour' => 'تفتح المراسلة قبل ساعة من موعد الجلسة المحدد.',
-        'chat_open_before_session' => 'يمكنك مراسلة المريض الآن. ابدأ الجلسة لتفعيل مكالمات الفيديو والصوت.',
+        'chat_open_session_needs_approval' => 'يمكنك مراسلة المريض الآن. اطلب موافقة المريض لبدء الجلسة وتفعيل المكالمات.',
         'session_not_started' => 'ابدأ الجلسة قبل إجراء مكالمة.',
         'agora_required' => 'أضف معرّف Agora والشهادة في ملف .env لبدء المكالمات.',
         'agora_configure_hint' => 'الفيديو والصوت يحتاجان Agora: عيّن AGORA_APP_ID و AGORA_APP_CERTIFICATE في ملف .env ثم أعد تحميل الصفحة.',

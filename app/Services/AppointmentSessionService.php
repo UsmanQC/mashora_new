@@ -39,16 +39,12 @@ final class AppointmentSessionService
             return true;
         }
 
-        return $appointment->isScheduledSessionTimeReached();
+        return false;
     }
 
     public function canDoctorStartWithoutPatientApproval(Appointment $appointment): bool
     {
-        if ((bool) config('appointments.relaxed_session_limits', false)) {
-            return true;
-        }
-
-        return $appointment->isScheduledSessionTimeReached();
+        return (bool) config('appointments.relaxed_session_limits', false);
     }
 
     public function canPatientJoin(Appointment $appointment): bool

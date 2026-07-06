@@ -651,7 +651,7 @@ return [
         'status_not_attended' => 'Missed',
         'chat_locked_until_started' => 'Start the session to enable messaging and calls.',
         'chat_locked_until_one_hour' => 'Messaging opens one hour before the scheduled session time.',
-        'chat_open_before_session' => 'You can message the patient now. Start the session to enable video and voice calls.',
+        'chat_open_session_needs_approval' => 'You can message the patient now. Request patient approval to start the session and enable calls.',
         'session_not_started' => 'Start the session before placing a call.',
         'agora_required' => 'Add Agora App ID and certificate in .env to start calls.',
         'agora_configure_hint' => 'Video and voice need Agora: set AGORA_APP_ID and AGORA_APP_CERTIFICATE in your .env file, then reload this page.',

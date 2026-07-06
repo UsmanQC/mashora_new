@@ -69,6 +69,13 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
             || $sessions->canDoctorStartWithoutPatientApproval($this->appointment);
     }
 
+    public function canRequestSessionStart(): bool
+    {
+        return in_array((string) $this->appointment->status, ['new', 'rescheduled'], true)
+            && ! $this->appointment->isSessionStartRequestPending()
+            && ! $this->appointment->isSessionStartApproved();
+    }
+
     public function sendMessage(): void
     {
         if (! $this->appointment->isDoctorChatOpen()) {
@@ -214,9 +221,6 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
 
                         <div class="flex flex-wrap items-center gap-2 xl:justify-end">
                             @if (in_array($appointment->status, ['new', 'rescheduled'], true))
-                                @php
-                                    $sessionStartsAtIso = $appointment->sessionStartsAt()?->copy()->subHour()->toIso8601String();
-                                @endphp
                                 @if ($appointment->isSessionStartRequestPending())
                                     <div>
                                         <flux:button
@@ -234,33 +238,17 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                                     <flux:button type="button" variant="primary" icon="play" class="min-h-10 shadow-md shadow-[#047857]/20" wire:click="startSession" wire:loading.attr="disabled">
                                         {{ __('doctor.conversation.start_session') }}
                                     </flux:button>
-                                @else
-                                    <div
-                                        @if ($sessionStartsAtIso)
-                                            x-data="appointmentStartTimer(@js($sessionStartsAtIso))"
-                                            x-init="start()"
-                                        @else
-                                            x-data="{ ready: true, start() {} }"
-                                        @endif
+                                @elseif ($this->canRequestSessionStart())
+                                    <flux:button
+                                        type="button"
+                                        variant="primary"
+                                        icon="paper-airplane"
+                                        class="min-h-10 shadow-md shadow-[#047857]/20"
+                                        wire:click="startSession"
+                                        wire:loading.attr="disabled"
                                     >
-                                        <template x-if="ready">
-                                            <flux:button type="button" variant="primary" icon="play" class="min-h-10 shadow-md shadow-[#047857]/20" wire:click="startSession" wire:loading.attr="disabled">
-                                                {{ __('doctor.conversation.start_session') }}
-                                            </flux:button>
-                                        </template>
-                                        <template x-if="!ready">
-                                            <flux:button
-                                                type="button"
-                                                variant="primary"
-                                                icon="paper-airplane"
-                                                class="min-h-10 shadow-md shadow-[#047857]/20"
-                                                wire:click="startSession"
-                                                wire:loading.attr="disabled"
-                                            >
-                                                {{ __('doctor.conversation.request_session_start') }}
-                                            </flux:button>
-                                        </template>
-                                    </div>
+                                        {{ __('doctor.conversation.request_session_start') }}
+                                    </flux:button>
                                 @endif
                             @endif
                             @if ($appointment->status === 'in_process')
@@ -394,7 +382,7 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                     @if (in_array($appointment->status, ['new', 'rescheduled'], true) && ! $appointment->isDoctorChatOpen())
                         <p class="mt-2.5 text-center text-xs text-zinc-500">{{ __('doctor.conversation.chat_locked_until_one_hour') }}</p>
                     @elseif (in_array($appointment->status, ['new', 'rescheduled'], true) && ! $appointment->isChatOpen())
-                        <p class="mt-2.5 text-center text-xs text-zinc-500">{{ __('doctor.conversation.chat_open_before_session') }}</p>
+                        <p class="mt-2.5 text-center text-xs text-zinc-500">{{ __('doctor.conversation.chat_open_session_needs_approval') }}</p>
                     @elseif ($appointment->status === 'completed' && $appointment->isChatOpen())
                         <p class="mt-2.5 text-center text-xs text-zinc-900">
                             {{ __('doctor.conversation.chat_open_after_completed', [
