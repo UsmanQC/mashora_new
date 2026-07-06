@@ -316,6 +316,44 @@ test('doctor can save bank account from settings page', function () {
         ->and($account->iban_number)->toBe('SA4410000000123456789001');
 });
 
+test('doctor can upload optional bank attachment from settings page', function () {
+    Storage::fake('public');
+
+    $doctor = Doctor::factory()->create(['profile_completed' => true]);
+
+    $this->actingAs($doctor, 'doctor');
+
+    Livewire::test('pages::doctor.settings.bank-account')
+        ->set('account_holder_name', 'John Doe')
+        ->set('account_number', '123456789')
+        ->set('iban_number', 'SA4410000000123456789001')
+        ->set('attachment', UploadedFile::fake()->create('iban-letter.pdf', 120, 'application/pdf'))
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $account = BankAccount::query()->where('doctor_id', $doctor->id)->first();
+
+    expect($account)->not->toBeNull()
+        ->and($account->attachment_path)->not->toBeNull();
+
+    Storage::disk('public')->assertExists((string) $account->attachment_path);
+});
+
+test('doctor bank attachment rejects unsupported file types', function () {
+    Storage::fake('public');
+
+    $doctor = Doctor::factory()->create(['profile_completed' => true]);
+
+    $this->actingAs($doctor, 'doctor');
+
+    Livewire::test('pages::doctor.settings.bank-account')
+        ->set('account_number', '123456789')
+        ->set('iban_number', 'SA4410000000123456789001')
+        ->set('attachment', UploadedFile::fake()->create('notes.txt', 10, 'text/plain'))
+        ->call('save')
+        ->assertHasErrors(['attachment']);
+});
+
 test('doctor header notifications are dynamic and can be marked as read', function () {
     $doctor = Doctor::factory()->create(['profile_completed' => true]);
     Notification::query()->create([
