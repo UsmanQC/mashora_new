@@ -168,7 +168,7 @@
                     @foreach ([
                         ['href' => $nextUp ? route('doctor.appointments.conversation', $nextUp) : $appointmentsUrl, 'icon' => 'video-camera', 'label' => __('doctor.mobile.action_consult')],
                         ['href' => $appointmentsUrl, 'icon' => 'clipboard-document-list', 'label' => __('doctor.mobile.action_prescribe')],
-                        ['href' => $appointmentsUrl, 'icon' => 'plus', 'label' => __('doctor.mobile.action_book')],
+                        ['href' => $walletUrl, 'icon' => 'credit-card', 'label' => __('doctor.mobile.action_wallet')],
                         ['href' => $invoicesUrl, 'icon' => 'document-text', 'label' => __('doctor.mobile.action_invoice')],
                     ] as $action)
                         <a

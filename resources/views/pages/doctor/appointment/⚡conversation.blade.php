@@ -89,6 +89,51 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
         return $parts !== [] ? implode(' · ', $parts) : '—';
     }
 
+    public function appointmentDateLabel(): ?string
+    {
+        $date = $this->appointment->appointment_date ?? $this->appointment->scheduled_at;
+
+        if ($date === null) {
+            return null;
+        }
+
+        return \Illuminate\Support\Carbon::parse($date)
+            ->timezone(config('app.timezone'))
+            ->locale(app()->getLocale())
+            ->translatedFormat('D, d M Y');
+    }
+
+    public function appointmentTimeRangeLabel(): ?string
+    {
+        $startsAt = $this->appointment->sessionStartsAt();
+        $start = $startsAt?->timezone(config('app.timezone'))->format('h:i A');
+
+        if ($start === null && filled($this->appointment->formattedSessionStart())) {
+            $start = $this->appointment->formattedSessionStart();
+        }
+
+        $endsAt = (string) $this->appointment->status === 'in_process' && $this->appointment->extend_at !== null
+            ? $this->appointment->extend_at
+            : $this->appointment->sessionEndsAt();
+
+        $end = $endsAt?->timezone(config('app.timezone'))->format('h:i A');
+
+        if ($start !== null && $end !== null) {
+            return $start.' – '.$end;
+        }
+
+        return $start ?? $end;
+    }
+
+    public function appointmentEndsAtLabel(): ?string
+    {
+        $endsAt = (string) $this->appointment->status === 'in_process' && $this->appointment->extend_at !== null
+            ? $this->appointment->extend_at
+            : $this->appointment->sessionEndsAt();
+
+        return $endsAt?->timezone(config('app.timezone'))->format('h:i A');
+    }
+
     /**
      * @return EloquentCollection<int, Appointment>
      */
@@ -227,6 +272,33 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
 
         return $this->canStartSessionDirectly($sessions)
             || $this->canOfferSessionStart($sessions);
+    }
+
+    public function preSessionStatusMessage(AppointmentSessionService $sessions): string
+    {
+        if ((string) $this->appointment->status === 'in_process') {
+            return __('doctor.consultation.waiting_for_call');
+        }
+
+        if (! in_array((string) $this->appointment->status, ['new', 'rescheduled'], true)) {
+            return __('doctor.consultation.session_not_active');
+        }
+
+        if ($this->appointment->isSessionStartRequestPending()) {
+            return __('doctor.conversation.waiting_for_patient_approval');
+        }
+
+        if ($this->canPressStartSession($sessions)) {
+            return __('doctor.consultation.ready_to_start_hint');
+        }
+
+        if (! $this->appointment->isSessionStartDue()
+            && ! (bool) config('appointments.relaxed_session_limits', false)
+            && ! $this->appointment->isSessionStartApproved()) {
+            return __('doctor.conversation.session_start_wait_one_hour');
+        }
+
+        return __('doctor.card.open_session_wait');
     }
 
     public function sendMessage(): void
@@ -1076,6 +1148,7 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                 const idle = document.getElementById('doctor-consultation-video-idle');
                 const quality = document.getElementById('doctor-consultation-call-quality');
                 const leaveMobile = document.getElementById('agora-leave-btn-mobile');
+                const controlsWrap = document.getElementById('doctor-consultation-call-controls-wrap');
                 const el = document.getElementById('agora-call-overlay');
 
                 if (isConsultationMobile()) {
@@ -1087,6 +1160,13 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                     quality?.classList.toggle('inline-flex', show);
                     leaveMobile?.classList.toggle('hidden', !show);
                     leaveMobile?.classList.toggle('inline-flex', show);
+                    controlsWrap?.classList.toggle('hidden', !show);
+
+                    const chatToggle = document.getElementById('agora-toggle-chat-mobile');
+                    chatToggle?.classList.toggle('hidden', !show);
+                    chatToggle?.classList.toggle('inline-flex', show);
+
+                    window.dispatchEvent(new CustomEvent(show ? 'consultation-call-active' : 'consultation-call-ended'));
 
                     document.querySelectorAll('#doctor-consultation-inline-video .doctor-consultation-call-controls__btn:not(.hidden)').forEach((btn) => {
                         btn.classList.add('inline-flex');

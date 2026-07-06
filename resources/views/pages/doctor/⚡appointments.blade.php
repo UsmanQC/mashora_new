@@ -837,7 +837,7 @@ new #[Layout('layouts::doctor')] #[Title('Appointments')] class extends Componen
                 {{ __('doctor.appointments.cancel_modal.title') }}
             </flux:heading>
 
-            <flux:text class="mt-2 text-center text-sm leading-relaxed text-zinc-600">
+            <flux:text class="mt-2 text-center text-sm leading-relaxed text-slate-900">
                 @if ($this->pendingCancelAppointment instanceof \App\Models\Appointment && $this->cancelRequiresRefund($this->pendingCancelAppointment))
                     {{ __('doctor.appointments.cancel_modal.body') }}
                 @else
@@ -848,7 +848,7 @@ new #[Layout('layouts::doctor')] #[Title('Appointments')] class extends Componen
             @if ($this->pendingCancelAppointment instanceof \App\Models\Appointment)
                 <div class="mt-5 rounded-xl border border-zinc-200/90 bg-zinc-50 px-4 py-3 text-sm">
                     <p class="font-semibold text-zinc-900">{{ $this->pendingCancelAppointment->patient_name }}</p>
-                    <p class="mt-1 tabular-nums text-zinc-600">
+                    <p class="mt-1 tabular-nums text-slate-900">
                         {{ $this->pendingCancelAppointment->appointment_date?->format('d/m/Y') }}
                         ·
                         {{ \Illuminate\Support\Str::limit((string) $this->pendingCancelAppointment->start_time, 8, '') }}

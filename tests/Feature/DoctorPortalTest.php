@@ -1207,6 +1207,7 @@ test('doctor luxury mobile consultation shell is rendered', function () {
         ->assertOk()
         ->assertSee('data-test="doctor-luxury-consultation"', false)
         ->assertSee('data-test="doctor-consultation-inline-video"', false)
+        ->assertSee('data-test="doctor-consultation-chat-toggle"', false)
         ->assertSee('id="doctor-chat-panel-mobile"', false)
         ->assertSee('id="doctor-chat-messages-mobile"', false)
         ->assertSee(__('doctor.consultation.session_chat'), false);
