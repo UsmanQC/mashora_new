@@ -137,13 +137,13 @@ new #[Layout('layouts::patient')] #[Title('Medications')] class extends Componen
                                 </div>
                                 <div class="flex shrink-0 flex-col items-end gap-2">
                                     <p class="text-xs font-semibold tabular-nums text-slate-500">{{ $this->formattedSessionDate($appointment) }}</p>
-                                    <div class="flex flex-wrap items-center justify-end gap-2">
+                                    <div class="inline-flex overflow-hidden rounded-full border border-emerald-200/90 bg-white shadow-sm ring-1 ring-emerald-100/80">
                                         <flux:button
                                             :href="route('patient.prescriptions.preview', $appointment)"
                                             size="sm"
-                                            variant="outline"
+                                            variant="ghost"
                                             icon="eye"
-                                            class="!rounded-full !border-emerald-200 !px-4 !text-emerald-800 hover:!bg-emerald-50"
+                                            class="!rounded-none !border-0 !border-e !border-emerald-100 !bg-white !px-4 !py-2 !text-sm !font-semibold !text-[#047857] hover:!bg-emerald-50"
                                             target="_blank"
                                             rel="noopener"
                                         >
@@ -152,9 +152,9 @@ new #[Layout('layouts::patient')] #[Title('Medications')] class extends Componen
                                         <flux:button
                                             :href="route('patient.prescriptions.pdf', $appointment)"
                                             size="sm"
-                                            variant="primary"
+                                            variant="ghost"
                                             icon="arrow-down-tray"
-                                            class="!rounded-full !bg-[#10B981] !px-4 !text-white hover:!brightness-95"
+                                            class="!rounded-none !border-0 !bg-[#047857] !px-4 !py-2 !text-sm !font-semibold !text-white hover:!bg-[#065f46]"
                                         >
                                             {{ __('patient.medications_page.download_pdf') }}
                                         </flux:button>

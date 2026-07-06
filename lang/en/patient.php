@@ -100,8 +100,8 @@ return [
         'unit_days' => 'days',
         'unit_week' => 'weeks',
         'unit_month' => 'months',
-        'download_pdf' => 'Download prescription',
-        'preview_pdf' => 'Preview prescription',
+        'download_pdf' => 'Download',
+        'preview_pdf' => 'Preview',
     ],
 
     'settings_page' => [

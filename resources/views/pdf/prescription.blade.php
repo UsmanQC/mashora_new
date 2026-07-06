@@ -279,19 +279,15 @@
             <table class="patient-card" cellpadding="0" cellspacing="0">
                 <tr>
                     <td>
-                        <div class="field-label">{{ __('doctor.prescription_pdf.patient_id') }}</div>
-                        <div class="field-value">{{ $patient?->id ?? $appointment->user_id ?? '—' }}</div>
-                    </td>
-                    <td>
                         <div class="field-label">{{ __('doctor.prescription_pdf.patient_name') }}</div>
                         <div class="field-value">{{ $appointment->patient_name }}</div>
                     </td>
-                </tr>
-                <tr>
                     <td>
                         <div class="field-label">{{ __('doctor.prescription_pdf.appointment_number') }}</div>
                         <div class="field-value">{{ $appointment->appointment_number ?: '—' }}</div>
                     </td>
+                </tr>
+                <tr>
                     <td>
                         <div class="field-label">{{ __('doctor.prescription_pdf.date_of_birth') }}</div>
                         <div class="field-value">
@@ -302,13 +298,13 @@
                             @endif
                         </div>
                     </td>
-                </tr>
-                <tr>
                     <td>
                         <div class="field-label">{{ __('doctor.prescription_pdf.prescription_date') }}</div>
                         <div class="field-value">{{ $issuedAt->format('d/m/Y') }}</div>
                     </td>
-                    <td>
+                </tr>
+                <tr>
+                    <td colspan="2">
                         <div class="field-label">{{ __('doctor.prescription_pdf.session_date') }}</div>
                         <div class="field-value">
                             @if ($appointment->appointment_date)

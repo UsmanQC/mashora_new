@@ -100,8 +100,8 @@ return [
         'unit_days' => 'أيام',
         'unit_week' => 'أسابيع',
         'unit_month' => 'أشهر',
-        'download_pdf' => 'تحميل الوصفة',
-        'preview_pdf' => 'معاينة الوصفة',
+        'download_pdf' => 'تحميل',
+        'preview_pdf' => 'معاينة',
     ],
 
     'settings_page' => [
