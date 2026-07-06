@@ -46,6 +46,12 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
         $wasInProcess = (string) $this->appointment->status === 'in_process';
 
         if (! $sessions->start($doctor, $this->appointment)) {
+            if (! $this->appointment->isSessionStartDue()
+                && ! (bool) config('appointments.relaxed_session_limits', false)
+                && ! $this->appointment->isSessionStartApproved()) {
+                Flux::toast(variant: 'warning', text: __('doctor.conversation.session_start_wait_one_hour'));
+            }
+
             return;
         }
 
@@ -69,11 +75,19 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
             || $sessions->canDoctorStartWithoutPatientApproval($this->appointment);
     }
 
-    public function canRequestSessionStart(): bool
+    public function canOfferSessionStart(AppointmentSessionService $sessions): bool
     {
-        return in_array((string) $this->appointment->status, ['new', 'rescheduled'], true)
-            && ! $this->appointment->isSessionStartRequestPending()
-            && ! $this->appointment->isSessionStartApproved();
+        return $sessions->canDoctorOfferSessionStart($this->appointment);
+    }
+
+    public function canPressStartSession(AppointmentSessionService $sessions): bool
+    {
+        if ($this->appointment->isSessionStartRequestPending()) {
+            return false;
+        }
+
+        return $this->canStartSessionDirectly($sessions)
+            || $this->canOfferSessionStart($sessions);
     }
 
     public function sendMessage(): void
@@ -234,21 +248,22 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                                         </flux:button>
                                         <p class="mt-2 text-xs text-zinc-500">{{ __('doctor.conversation.waiting_for_patient_approval') }}</p>
                                     </div>
-                                @elseif ($this->canStartSessionDirectly(app(AppointmentSessionService::class)))
+                                @elseif ($this->canPressStartSession(app(AppointmentSessionService::class)))
                                     <flux:button type="button" variant="primary" icon="play" class="min-h-10 shadow-md shadow-[#047857]/20" wire:click="startSession" wire:loading.attr="disabled">
                                         {{ __('doctor.conversation.start_session') }}
                                     </flux:button>
-                                @elseif ($this->canRequestSessionStart())
+                                @else
                                     <flux:button
                                         type="button"
                                         variant="primary"
-                                        icon="paper-airplane"
-                                        class="min-h-10 shadow-md shadow-[#047857]/20"
-                                        wire:click="startSession"
-                                        wire:loading.attr="disabled"
+                                        icon="play"
+                                        class="min-h-10 cursor-not-allowed opacity-50"
+                                        disabled
+                                        title="{{ __('doctor.conversation.session_start_wait_one_hour') }}"
                                     >
-                                        {{ __('doctor.conversation.request_session_start') }}
+                                        {{ __('doctor.conversation.start_session') }}
                                     </flux:button>
+                                    <p class="mt-2 text-xs text-zinc-500">{{ __('doctor.conversation.session_start_wait_one_hour') }}</p>
                                 @endif
                             @endif
                             @if ($appointment->status === 'in_process')

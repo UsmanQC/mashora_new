@@ -56,6 +56,19 @@ final class AppointmentSessionService
         return (string) $appointment->status === 'in_process';
     }
 
+    public function canDoctorOfferSessionStart(Appointment $appointment): bool
+    {
+        if (! in_array((string) $appointment->status, self::STARTABLE_STATUSES, true)) {
+            return false;
+        }
+
+        if ((bool) config('appointments.relaxed_session_limits', false)) {
+            return true;
+        }
+
+        return $appointment->isSessionStartDue();
+    }
+
     public function requestStart(Doctor $doctor, Appointment $appointment): bool
     {
         if ((int) $appointment->doctor_id !== (int) $doctor->id) {
@@ -67,6 +80,10 @@ final class AppointmentSessionService
         }
 
         if ($appointment->isSessionStartRequestPending() || $appointment->isSessionStartApproved()) {
+            return false;
+        }
+
+        if (! $appointment->isSessionStartDue() && ! (bool) config('appointments.relaxed_session_limits', false)) {
             return false;
         }
 
