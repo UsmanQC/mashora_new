@@ -127,16 +127,17 @@ new #[Layout('layouts::patient')] #[Title('Medications')] class extends Componen
                         data-test="patient-prescription-card"
                     >
                         <div class="border-b border-slate-100 bg-slate-50/80 px-5 py-4">
-                            <div class="flex flex-wrap items-start justify-between gap-3">
-                                <div class="min-w-0">
+                            <div class="flex flex-col items-center gap-3 text-center sm:flex-row sm:items-start sm:justify-between sm:text-start">
+                                <div class="min-w-0 w-full sm:w-auto">
                                     <p class="text-[10px] font-bold uppercase tracking-wide text-[#059669]">{{ __('patient.medications_page.session_label') }}</p>
                                     <p class="mt-1 text-sm font-bold text-slate-900">{{ $this->doctorName($appointment) }}</p>
                                     @if (filled($appointment->diagnosis?->diagnosis_name))
                                         <p class="mt-1 text-xs text-slate-500">{{ $appointment->diagnosis->diagnosis_name }}</p>
                                     @endif
+                                    <p class="mt-2 text-xs font-semibold tabular-nums text-slate-500 sm:hidden">{{ $this->formattedSessionDate($appointment) }}</p>
                                 </div>
-                                <div class="flex shrink-0 flex-col items-end gap-2">
-                                    <p class="text-xs font-semibold tabular-nums text-slate-500">{{ $this->formattedSessionDate($appointment) }}</p>
+                                <div class="flex w-full flex-col items-center gap-2 sm:w-auto sm:items-end">
+                                    <p class="hidden text-xs font-semibold tabular-nums text-slate-500 sm:block">{{ $this->formattedSessionDate($appointment) }}</p>
                                     <div class="inline-flex overflow-hidden rounded-full border border-emerald-200/90 bg-white shadow-sm ring-1 ring-emerald-100/80">
                                         <flux:button
                                             :href="route('patient.prescriptions.preview', $appointment)"
