@@ -219,7 +219,7 @@ return [
         'tab_month' => 'Month',
         'tab_year' => 'Year',
         'tab_all' => 'All',
-        'stat_revenue' => 'Revenue',
+        'stat_revenue' => 'Your earnings',
         'stat_appointments' => 'Appointments',
         'stat_cases' => 'Cases',
         'stat_likes' => 'Favourites',

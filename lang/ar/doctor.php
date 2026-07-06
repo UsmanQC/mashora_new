@@ -220,7 +220,7 @@ return [
         'tab_month' => 'الشهر',
         'tab_year' => 'السنة',
         'tab_all' => 'الكل',
-        'stat_revenue' => 'الإيرادات',
+        'stat_revenue' => 'أرباحك',
         'stat_appointments' => 'المواعيد',
         'stat_cases' => 'الحالات',
         'stat_likes' => 'المفضلة',

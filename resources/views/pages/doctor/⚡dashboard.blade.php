@@ -158,7 +158,7 @@ new #[Layout('layouts::doctor')] #[Title('Dashboard')] class extends Component
         $sum = (float) $doctor->appointments()
             ->whereIn('status', self::REVENUE_STATUSES)
             ->tap(fn (Builder $q) => $this->scopeCreatedAtPeriod($q))
-            ->sum('total');
+            ->sum('doctor_share');
 
         return number_format($sum, 0, '.', ',');
     }

@@ -174,6 +174,8 @@ test('approved doctor dashboard includes formatted revenue total for revenue-eli
         'user_id' => $user->id,
         'status' => 'completed',
         'total' => 2500,
+        'doctor_share' => 1750,
+        'mashora_share' => 750,
         'created_at' => now(),
         'updated_at' => now(),
         'appointment_date' => now()->toDateString(),
@@ -182,7 +184,8 @@ test('approved doctor dashboard includes formatted revenue total for revenue-eli
     $this->actingAs($doctor, 'doctor')
         ->get(route('doctor.dashboard', ['period' => 'today']))
         ->assertOk()
-        ->assertSee('2,500');
+        ->assertSee('1,750')
+        ->assertDontSee('2,500');
 });
 
 test('authenticated doctor can view appointments ratings and settings pages', function () {
