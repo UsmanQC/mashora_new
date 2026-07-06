@@ -131,7 +131,7 @@
                                 type="button"
                                 wire:click="declineSessionStart({{ $appointment->id }})"
                                 wire:loading.attr="disabled"
-                                class="flex-1 !rounded-xl !border-amber-300 !bg-white !py-2.5 !text-amber-900 hover:!bg-amber-50"
+                                class="flex-1 !rounded-xl !border-zinc-300 !bg-white !py-2.5 !text-black hover:!bg-zinc-50"
                             >
                                 {{ __('patient.appointments.session_start_request_decline') }}
                             </flux:button>

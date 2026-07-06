@@ -357,7 +357,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                     <flux:button type="button" size="sm" variant="primary" wire:click="approveSessionStart" wire:loading.attr="disabled">
                         {{ __('patient.appointments.session_start_request_approve') }}
                     </flux:button>
-                    <flux:button type="button" size="sm" variant="ghost" wire:click="declineSessionStart" wire:loading.attr="disabled">
+                    <flux:button type="button" size="sm" variant="filled" class="!border !border-zinc-300 !bg-white !text-black shadow-sm hover:!bg-zinc-100" wire:click="declineSessionStart" wire:loading.attr="disabled">
                         {{ __('patient.appointments.session_start_request_decline') }}
                     </flux:button>
                 </div>
