@@ -4,9 +4,12 @@ use App\Events\AppointmentChatMessageSent;
 use App\Livewire\Concerns\CompletesDoctorAppointment;
 use App\Models\Appointment;
 use App\Models\ChMessage;
+use App\Models\Diagnosis;
 use App\Services\AppointmentSessionService;
 use App\Support\DoctorAgoraChannel;
 use Flux\Flux;
+use Illuminate\Support\Str;
+use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
@@ -32,8 +35,110 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
 
     public function mount(): void
     {
+        $this->appointment->loadMissing(['user', 'diagnosis', 'medications']);
+
         $this->refreshAgoraCredentials();
         $this->loadMessages();
+    }
+
+    public function patientInitials(): string
+    {
+        return Str::of($this->appointment->patient_name)
+            ->explode(' ')
+            ->take(2)
+            ->map(fn (string $word): string => Str::substr($word, 0, 1))
+            ->implode('');
+    }
+
+    public function patientAgeLabel(): ?string
+    {
+        $birthDate = $this->appointment->user?->birth_date;
+
+        if ($birthDate === null) {
+            return null;
+        }
+
+        return $birthDate->age.__('doctor.consultation.age_suffix');
+    }
+
+    public function patientMetaLine(): string
+    {
+        $parts = array_filter([
+            filled($this->appointment->appointment_number)
+                ? __('doctor.consultation.mrn', ['number' => $this->appointment->appointment_number])
+                : null,
+            $this->patientAgeLabel(),
+            filled($this->appointment->user?->gender)
+                ? __('doctor.register.gender_'.$this->appointment->user->gender)
+                : null,
+        ]);
+
+        return $parts !== [] ? implode(' · ', $parts) : '—';
+    }
+
+    #[Computed]
+    public function priorVisitSummary(): ?string
+    {
+        if ($this->appointment->user_id === null) {
+            return null;
+        }
+
+        $prior = Appointment::query()
+            ->with('diagnosis')
+            ->where('user_id', $this->appointment->user_id)
+            ->where('id', '!=', $this->appointment->id)
+            ->where('status', 'completed')
+            ->whereHas('diagnosis')
+            ->orderByDesc('scheduled_at')
+            ->first();
+
+        $diagnosis = $prior?->diagnosis;
+
+        if (! $diagnosis instanceof Diagnosis) {
+            return null;
+        }
+
+        return collect([
+            $diagnosis->diagnosis_name,
+            $diagnosis->medical_history,
+            $diagnosis->treatment_plan,
+        ])->filter(fn (?string $value): bool => filled($value))->first();
+    }
+
+    /**
+     * @return list<string>
+     */
+    #[Computed]
+    public function medicationLabels(): array
+    {
+        $labels = $this->appointment->medications
+            ->map(fn ($medication): string => trim(collect([$medication->name, $medication->dosage])->filter()->implode(' ')))
+            ->filter()
+            ->values()
+            ->all();
+
+        if ($labels !== []) {
+            return $labels;
+        }
+
+        if ($this->appointment->user_id === null) {
+            return [];
+        }
+
+        $prior = Appointment::query()
+            ->with('medications')
+            ->where('user_id', $this->appointment->user_id)
+            ->where('id', '!=', $this->appointment->id)
+            ->where('status', 'completed')
+            ->whereHas('medications')
+            ->orderByDesc('scheduled_at')
+            ->first();
+
+        return $prior?->medications
+            ->map(fn ($medication): string => trim(collect([$medication->name, $medication->dosage])->filter()->implode(' ')))
+            ->filter()
+            ->values()
+            ->all() ?? [];
     }
 
     public function startSession(AppointmentSessionService $sessions): void
@@ -153,8 +258,8 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
     }
 }; ?>
 
-<div class="space-y-5">
-    @include('partials.doctor-appointment-workspace-header', ['appointment' => $appointment, 'active' => 'conversation'])
+<div>
+    @include('partials.doctor-luxury-consultation-mobile')
 
     <div
         id="conversation-page-metrics"
@@ -177,6 +282,9 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
         data-session-ended="{{ __('doctor.conversation.session_time_ended') }}"
         data-relaxed-session-limits="{{ config('appointments.relaxed_session_limits') ? '1' : '0' }}"
     ></div>
+
+    <div class="hidden space-y-5 lg:block">
+    @include('partials.doctor-appointment-workspace-header', ['appointment' => $appointment, 'active' => 'conversation'])
 
     <div class="relative overflow-hidden rounded-3xl border border-zinc-200/90 bg-white shadow-[0_20px_55px_-32px_rgba(15,23,42,0.35)] ring-1 ring-zinc-100">
         <div class="pointer-events-none absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-[#2f49ca] via-[#10B981] to-[#6f86ff] opacity-85"></div>
@@ -447,6 +555,7 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
             </aside>
         </div>
     </div>
+    </div>
 
     @include('partials.video-call-overlay', [
         'overlayId' => 'agora-call-overlay',
@@ -518,7 +627,30 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
 
             const pusherKey = boot.dataset.pusherKey || '';
             const pusherCluster = boot.dataset.pusherCluster || 'mt1';
-            const csrfToken = document.querySelector('#doctor-chat-panel')?.dataset.csrf || '';
+
+            function isConsultationMobile() {
+                return window.matchMedia('(max-width: 1023px)').matches;
+            }
+
+            function agoraRemotePlayerId() {
+                return isConsultationMobile() ? 'agora-remote-player-mobile' : 'agora-remote-player';
+            }
+
+            function agoraLocalPlayerId() {
+                return isConsultationMobile() ? 'agora-local-player-mobile' : 'agora-local-player';
+            }
+
+            function chatPanelEl() {
+                return document.getElementById(isConsultationMobile() ? 'doctor-chat-panel-mobile' : 'doctor-chat-panel');
+            }
+
+            function chatMessagesEl() {
+                return document.getElementById(isConsultationMobile() ? 'doctor-chat-messages-mobile' : 'doctor-chat-messages');
+            }
+
+            const csrfToken = chatPanelEl()?.dataset.csrf
+                || document.querySelector('#doctor-chat-panel')?.dataset.csrf
+                || '';
             const seenMessageIds = new Set();
             const doctorId = Number(boot.dataset.doctorId || 0);
 
@@ -559,11 +691,11 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
             }
 
             function btnVideo() {
-                return document.getElementById('btn-agora-video');
+                return document.getElementById(isConsultationMobile() ? 'btn-agora-video-mobile' : 'btn-agora-video');
             }
 
             function btnAudio() {
-                return document.getElementById('btn-agora-audio');
+                return document.getElementById(isConsultationMobile() ? 'btn-agora-audio-mobile' : 'btn-agora-audio');
             }
 
             const btnIdleClass =
@@ -571,9 +703,9 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
             const btnActiveClass =
                 'inline-flex min-h-10 items-center gap-2 rounded-xl border-2 border-emerald-500 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-900 shadow-md shadow-emerald-900/10 ring-2 ring-emerald-500/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-45';
 
-            document.querySelectorAll('#doctor-chat-messages [wire\\:key^="doc-chat-"]').forEach((el) => {
+            document.querySelectorAll('#doctor-chat-messages-mobile [wire\\:key^="doc-chat-mobile-"], #doctor-chat-messages [wire\\:key^="doc-chat-"]').forEach((el) => {
                 const key = el.getAttribute('wire:key') || '';
-                const id = key.replace('doc-chat-', '');
+                const id = key.replace('doc-chat-mobile-', '').replace('doc-chat-', '');
                 if (id) seenMessageIds.add(id);
             });
 
@@ -627,8 +759,8 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
 
             function tickSessionTimers() {
                 const metrics = document.getElementById('conversation-page-metrics');
-                const elapsedEl = document.getElementById('timer-session-elapsed');
-                const remainingEl = document.getElementById('timer-session-remaining');
+                const elapsedEl = document.getElementById(isConsultationMobile() ? 'timer-session-elapsed-mobile' : 'timer-session-elapsed');
+                const remainingEl = document.getElementById(isConsultationMobile() ? 'timer-session-remaining-mobile' : 'timer-session-remaining');
                 if (!metrics || !elapsedEl) return;
 
                 const status = metrics.dataset.status || '';
@@ -672,6 +804,11 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
 
                 if (callDurationDisplay) {
                     callDurationDisplay.textContent = formatted;
+                }
+
+                const mobileRecTimer = document.getElementById('doctor-consultation-rec-timer');
+                if (mobileRecTimer) {
+                    mobileRecTimer.textContent = formatted;
                 }
 
                 const durationEl = overlayDurationEl();
@@ -786,7 +923,7 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
             startSessionTimers();
 
             function appendMessageRow(payload) {
-                const wrap = document.getElementById('doctor-chat-messages');
+                const wrap = chatMessagesEl();
                 if (!wrap || !payload.id) return;
                 if (seenMessageIds.has(payload.id)) return;
                 if (payload.send_by === 'doctor' && doctorId && Number(payload.from_id) === doctorId) {
@@ -794,7 +931,8 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                 }
                 seenMessageIds.add(payload.id);
 
-                const emptyCard = wrap.querySelector('.flex.flex-col.items-center.justify-center');
+                const emptyCard = wrap.querySelector('.doctor-consultation-chat-empty')
+                    || wrap.querySelector('.flex.flex-col.items-center.justify-center');
                 if (emptyCard) emptyCard.remove();
 
                 const row = document.createElement('div');
@@ -852,7 +990,7 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                 });
             }
 
-            const panel = document.getElementById('doctor-chat-panel');
+            const panel = chatPanelEl();
             const notifyUrl = panel?.dataset.notifyUrl || '';
             const endCallUrl = panel?.dataset.endCallUrl || '';
             const tokenUrl = panel?.dataset.tokenUrl || '';
@@ -871,8 +1009,29 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
             }
 
             function showOverlay(show) {
+                const inline = document.getElementById('doctor-consultation-inline-video');
+                const idle = document.getElementById('doctor-consultation-video-idle');
+                const quality = document.getElementById('doctor-consultation-call-quality');
+                const leaveMobile = document.getElementById('agora-leave-btn-mobile');
                 const el = document.getElementById('agora-call-overlay');
-                if (!el) return;
+
+                if (isConsultationMobile()) {
+                    el?.classList.add('hidden');
+                    el?.setAttribute('aria-hidden', 'true');
+                    inline?.classList.toggle('doctor-consultation-inline-video--live', show);
+                    idle?.classList.toggle('hidden', show);
+                    quality?.classList.toggle('hidden', !show);
+                    quality?.classList.toggle('inline-flex', show);
+                    leaveMobile?.classList.toggle('hidden', !show);
+                    leaveMobile?.classList.toggle('inline-flex', show);
+
+                    return;
+                }
+
+                if (!el) {
+                    return;
+                }
+
                 el.classList.toggle('hidden', !show);
                 el.setAttribute('aria-hidden', show ? 'false' : 'true');
             }
@@ -890,9 +1049,9 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
 
             function mediaControlOptions(mode = currentMode) {
                 return {
-                    micBtnId: 'agora-toggle-mic',
-                    videoBtnId: 'agora-toggle-video',
-                    localPreviewId: 'agora-local-player',
+                    micBtnId: isConsultationMobile() ? 'agora-toggle-mic-mobile' : 'agora-toggle-mic',
+                    videoBtnId: isConsultationMobile() ? 'agora-toggle-video-mobile' : 'agora-toggle-video',
+                    localPreviewId: agoraLocalPlayerId(),
                     localAudio: boot.__localAudio || localAudio,
                     localVideo: boot.__localVideo || localVideo,
                     mode,
@@ -905,8 +1064,8 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
 
             function showMediaControlsForMode(mode) {
                 window.MashoraAgoraMediaControls?.showControlsForMode(
-                    'agora-toggle-mic',
-                    'agora-toggle-video',
+                    isConsultationMobile() ? 'agora-toggle-mic-mobile' : 'agora-toggle-mic',
+                    isConsultationMobile() ? 'agora-toggle-video-mobile' : 'agora-toggle-video',
                     mode,
                 );
             }
@@ -941,8 +1100,8 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                     agoraClient = null;
                 }
                 currentMode = null;
-                const rp = document.getElementById('agora-remote-player');
-                const lp = document.getElementById('agora-local-player');
+                const rp = document.getElementById(agoraRemotePlayerId());
+                const lp = document.getElementById(agoraLocalPlayerId());
                 if (rp) {
                     rp.innerHTML = '';
                 }
@@ -953,6 +1112,8 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                 syncMediaControlUi(null);
                 document.getElementById('agora-toggle-mic')?.classList.add('hidden');
                 document.getElementById('agora-toggle-video')?.classList.add('hidden');
+                document.getElementById('agora-toggle-mic-mobile')?.classList.add('hidden');
+                document.getElementById('agora-toggle-video-mobile')?.classList.add('hidden');
             }
 
             async function postEndCall() {
@@ -1000,7 +1161,7 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                 client.on('user-published', async (user, mediaType) => {
                     await client.subscribe(user, mediaType);
                     if (mediaType === 'video') {
-                        user.videoTrack?.play('agora-remote-player');
+                        user.videoTrack?.play(agoraRemotePlayerId());
                     }
                     if (mediaType === 'audio') {
                         user.audioTrack?.play();
@@ -1009,7 +1170,7 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
 
                 client.on('user-unpublished', (user, mediaType) => {
                     if (mediaType === 'video') {
-                        const rp = document.getElementById('agora-remote-player');
+                        const rp = document.getElementById(agoraRemotePlayerId());
                         if (rp) {
                             rp.innerHTML = '';
                         }
@@ -1017,7 +1178,7 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                 });
 
                 client.on('user-left', () => {
-                    const rp = document.getElementById('agora-remote-player');
+                    const rp = document.getElementById(agoraRemotePlayerId());
                     if (rp) {
                         rp.innerHTML = '';
                     }
@@ -1033,7 +1194,7 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
 
                     if (user.hasVideo && mode === 'video') {
                         await client.subscribe(user, 'video');
-                        user.videoTrack?.play('agora-remote-player');
+                        user.videoTrack?.play(agoraRemotePlayerId());
                     }
                 }
             }
@@ -1169,8 +1330,8 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                 }
 
                 currentMode = null;
-                const rp = document.getElementById('agora-remote-player');
-                const lp = document.getElementById('agora-local-player');
+                const rp = document.getElementById(agoraRemotePlayerId());
+                const lp = document.getElementById(agoraLocalPlayerId());
                 if (rp) {
                     rp.innerHTML = '';
                 }
@@ -1241,7 +1402,7 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                     const audioTrack = await AgoraRTC.createMicrophoneAudioTrack();
                     const videoTrack = await AgoraRTC.createCameraVideoTrack();
                     assignLocalTracks(audioTrack, videoTrack);
-                    videoTrack.play('agora-local-player');
+                    videoTrack.play(agoraLocalPlayerId());
                     await client.publish([audioTrack, videoTrack]);
                     await subscribeExistingRemoteUsers(client, 'video');
                     currentMode = 'video';
@@ -1382,17 +1543,17 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                         return;
                     }
 
-                    if (event.target.closest('#agora-leave-btn, [data-video-call-leave="agora-leave-btn"]')) {
+                    if (event.target.closest('#agora-leave-btn, #agora-leave-btn-mobile, [data-video-call-leave="agora-leave-btn"]')) {
                         event.preventDefault();
                         bootEl.__leaveCall?.().catch((error) => console.error(error));
                     }
 
-                    if (event.target.closest('#agora-toggle-mic')) {
+                    if (event.target.closest('#agora-toggle-mic, #agora-toggle-mic-mobile')) {
                         event.preventDefault();
                         bootEl.__toggleMic?.();
                     }
 
-                    if (event.target.closest('#agora-toggle-video')) {
+                    if (event.target.closest('#agora-toggle-video, #agora-toggle-video-mobile')) {
                         event.preventDefault();
                         bootEl.__toggleVideo?.();
                     }

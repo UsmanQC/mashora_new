@@ -26,6 +26,39 @@ new #[Layout('layouts::doctor')] #[Title('Wallet')] class extends Component
         return app(DoctorWalletService::class)->balance($this->doctor());
     }
 
+    public function getPendingBalanceProperty(): float
+    {
+        return app(DoctorWalletService::class)->pendingPayoutBalance($this->doctor());
+    }
+
+    public function getTotalBalanceProperty(): float
+    {
+        return app(DoctorWalletService::class)->totalBalance($this->doctor());
+    }
+
+    public function getIncomeTrendPercentProperty(): ?float
+    {
+        return app(DoctorWalletService::class)->incomeTrendPercent($this->doctor());
+    }
+
+    /**
+     * @return list<array{key: string, label: string, income: float, is_current: bool, height_percent: float}>
+     */
+    public function getMonthlyIncomeChartProperty(): array
+    {
+        $points = app(DoctorWalletService::class)->monthlyIncomeChart($this->doctor());
+        $maxIncome = max(1.0, ...array_map(fn (array $point): float => max(0.0, $point['income']), $points));
+
+        return array_map(function (array $point) use ($maxIncome): array {
+            $normalized = max(0.0, $point['income']) / $maxIncome;
+
+            return [
+                ...$point,
+                'height_percent' => max(10.0, round($normalized * 100, 1)),
+            ];
+        }, $points);
+    }
+
     /**
      * @return array{income: float, refunded: float, refunded_count: int, paid_sessions: int, paid_out: float, balance: float}
      */
@@ -126,9 +159,47 @@ new #[Layout('layouts::doctor')] #[Title('Wallet')] class extends Component
     {
         return app(DoctorWalletService::class)->transactionAppointmentNumber($transaction);
     }
+
+    /**
+     * @return array{icon: string, icon_bg: string, amount_class: string}
+     */
+    public function transactionPresentation(Transaction $transaction): array
+    {
+        $amount = $this->transactionAmount($transaction);
+        $meta = is_array($transaction->meta) ? $transaction->meta : [];
+        $metaType = $meta['type'] ?? null;
+
+        $amountClass = $amount >= 0 ? 'text-emerald-600' : 'text-rose-600';
+
+        return match ($metaType) {
+            'appointment_earning' => [
+                'icon' => 'banknotes',
+                'icon_bg' => 'bg-emerald-50 text-emerald-600',
+                'amount_class' => $amountClass,
+            ],
+            'appointment_refund_reversal' => [
+                'icon' => 'arrow-uturn-left',
+                'icon_bg' => 'bg-rose-50 text-rose-600',
+                'amount_class' => $amountClass,
+            ],
+            'invoice_payout' => [
+                'icon' => 'arrow-down-tray',
+                'icon_bg' => 'bg-sky-50 text-sky-600',
+                'amount_class' => $amountClass,
+            ],
+            default => [
+                'icon' => $amount >= 0 ? 'plus-circle' : 'minus-circle',
+                'icon_bg' => $amount >= 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600',
+                'amount_class' => $amountClass,
+            ],
+        };
+    }
 }; ?>
 
-<div class="space-y-6">
+<div class="relative flex w-full min-h-0 flex-col max-lg:h-full max-lg:min-h-0 max-lg:flex-1 lg:block">
+    @include('partials.doctor-luxury-wallet-mobile')
+
+    <div class="hidden space-y-6 lg:block">
     <div class="flex items-center justify-between gap-3">
         <div>
             <flux:heading size="xl" class="font-semibold text-zinc-900">{{ __('doctor.wallet.title') }}</flux:heading>
@@ -384,5 +455,6 @@ new #[Layout('layouts::doctor')] #[Title('Wallet')] class extends Component
                 @endforeach
             </div>
         @endif
+    </div>
     </div>
 </div>

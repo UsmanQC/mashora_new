@@ -3,8 +3,10 @@
 use App\Livewire\Concerns\CompletesDoctorAppointment;
 use App\Models\Appointment;
 use App\Models\Doctor;
+use App\Models\Notification;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
@@ -90,7 +92,215 @@ new #[Layout('layouts::doctor')] #[Title('Dashboard')] class extends Component
         return Doctor::query()
             ->whereKey($doctor->id)
             ->withCount('likes')
+            ->with('specialities')
             ->first();
+    }
+
+    public function initialsFor(?string $name): string
+    {
+        if (! filled($name)) {
+            return '?';
+        }
+
+        $parts = preg_split('/\s+/u', trim((string) $name)) ?: [];
+
+        if (count($parts) >= 2) {
+            return mb_strtoupper(mb_substr($parts[0], 0, 1).mb_substr($parts[1], 0, 1));
+        }
+
+        return mb_strtoupper(mb_substr((string) $name, 0, 2));
+    }
+
+    #[Computed]
+    public function specialityLabel(): string
+    {
+        $speciality = $this->currentDoctor?->specialities->first();
+
+        if ($speciality === null) {
+            return '';
+        }
+
+        if (app()->getLocale() === 'ar' && filled($speciality->title_ar)) {
+            return (string) $speciality->title_ar;
+        }
+
+        return (string) ($speciality->title ?? $speciality->title_ar ?? '');
+    }
+
+    #[Computed]
+    public function unreadNotificationCount(): int
+    {
+        $doctor = $this->doctor();
+
+        if ($doctor === null) {
+            return 0;
+        }
+
+        return Notification::query()
+            ->where('userable_type', Doctor::class)
+            ->where('userable_id', $doctor->id)
+            ->whereNull('read_at')
+            ->count();
+    }
+
+    #[Computed]
+    public function todayEarningsFormatted(): string
+    {
+        $doctor = $this->doctor();
+
+        if ($doctor === null) {
+            return '0';
+        }
+
+        $sum = (float) $doctor->appointments()
+            ->whereIn('status', self::REVENUE_STATUSES)
+            ->whereDate('created_at', Carbon::now()->toDateString())
+            ->sum('doctor_share');
+
+        return number_format($sum, 0, '.', ',');
+    }
+
+    #[Computed]
+    public function todayCompletedAppointmentsCount(): int
+    {
+        $doctor = $this->doctor();
+
+        if ($doctor === null) {
+            return 0;
+        }
+
+        return $doctor->appointments()
+            ->where('status', 'completed')
+            ->whereDate('appointment_date', Carbon::now()->toDateString())
+            ->count();
+    }
+
+    #[Computed]
+    public function todayTotalAppointmentsCount(): int
+    {
+        $doctor = $this->doctor();
+
+        if ($doctor === null) {
+            return 0;
+        }
+
+        return $doctor->appointments()
+            ->whereDate('appointment_date', Carbon::now()->toDateString())
+            ->count();
+    }
+
+    #[Computed]
+    public function todayRemainingAppointmentsCount(): int
+    {
+        return max(0, $this->todayTotalAppointmentsCount - $this->todayCompletedAppointmentsCount);
+    }
+
+    #[Computed]
+    public function prescriptionPendingCount(): int
+    {
+        $doctor = $this->doctor();
+
+        if ($doctor === null) {
+            return 0;
+        }
+
+        return $doctor->appointments()
+            ->where('status', 'completed')
+            ->where('prescription_not_needed', false)
+            ->whereDoesntHave('medications')
+            ->count();
+    }
+
+    #[Computed]
+    public function activeTasksCount(): int
+    {
+        $doctor = $this->doctor();
+
+        if ($doctor === null) {
+            return 0;
+        }
+
+        return $doctor->appointments()
+            ->whereIn('status', self::UPCOMING_STATUSES)
+            ->count();
+    }
+
+    #[Computed]
+    public function nextUpAppointment(): ?Appointment
+    {
+        $doctor = $this->doctor();
+
+        if ($doctor === null) {
+            return null;
+        }
+
+        return $doctor->appointments()
+            ->whereIn('status', self::UPCOMING_STATUSES)
+            ->orderBy('scheduled_at')
+            ->orderBy('appointment_date')
+            ->orderBy('start_time')
+            ->first();
+    }
+
+    #[Computed]
+    public function nextUpMinutesUntil(): ?int
+    {
+        $appointment = $this->nextUpAppointment;
+
+        if ($appointment === null) {
+            return null;
+        }
+
+        $startsAt = $appointment->sessionStartsAt();
+
+        if ($startsAt === null) {
+            return null;
+        }
+
+        return (int) Carbon::now()->diffInMinutes($startsAt, false);
+    }
+
+    public function patientVisitNumber(Appointment $appointment): int
+    {
+        $doctor = $this->doctor();
+
+        if ($doctor === null || $appointment->user_id === null) {
+            return 1;
+        }
+
+        $priorCount = $doctor->appointments()
+            ->where('user_id', $appointment->user_id)
+            ->where('id', '!=', $appointment->id)
+            ->where(function (Builder $query) use ($appointment): void {
+                $query->where('appointment_date', '<', $appointment->appointment_date)
+                    ->orWhere(function (Builder $nested) use ($appointment): void {
+                        $nested->whereDate('appointment_date', $appointment->appointment_date)
+                            ->where('id', '<', $appointment->id);
+                    });
+            })
+            ->count();
+
+        return $priorCount + 1;
+    }
+
+    /**
+     * @return EloquentCollection<int, Notification>
+     */
+    #[Computed]
+    public function recentNotifications(): EloquentCollection
+    {
+        $doctor = $this->doctor();
+
+        if ($doctor === null) {
+            return new EloquentCollection;
+        }
+
+        return Notification::query()
+            ->where('userable_type', Doctor::class)
+            ->where('userable_id', $doctor->id)
+            ->latest()
+            ->limit(5)
+            ->get();
     }
 
     #[Computed]
@@ -233,7 +443,10 @@ new #[Layout('layouts::doctor')] #[Title('Dashboard')] class extends Component
     $doc = $this->currentDoctor;
 @endphp
 
-<div class="space-y-8" @if ($doc?->status === 'approved') wire:poll.45s @endif>
+<div class="relative w-full" @if ($doc?->status === 'approved') wire:poll.45s @endif>
+    @include('partials.doctor-luxury-home-mobile')
+
+    <div class="hidden space-y-8 lg:block">
     @if ($doc)
         <div class="relative overflow-hidden rounded-2xl border border-zinc-200/80 bg-white p-4 shadow-sm sm:p-5">
             <div class="pointer-events-none absolute end-0 top-0 h-20 w-56 bg-gradient-to-l from-[#10B981]/10 to-transparent"></div>
@@ -407,4 +620,5 @@ new #[Layout('layouts::doctor')] #[Title('Dashboard')] class extends Component
     @endif
 
     @include('partials.doctor-complete-appointment-modals')
+    </div>
 </div>

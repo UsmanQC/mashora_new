@@ -29,3 +29,13 @@ test('doctor menu sections are ordered with practice before finance', function (
         ->and($headings)->toContain(__('doctor.menu.group_account'))
         ->and($headings)->toContain(__('doctor.menu.group_help'));
 });
+
+test('doctor menu includes mobile more sections with practice and finance groups', function () {
+    $sections = DoctorMenu::mobileMoreSections();
+
+    $headings = collect($sections)->pluck('heading')->all();
+
+    expect($headings)->toContain(__('doctor.menu.group_practice'))
+        ->and($headings)->toContain(__('doctor.mobile.more_work'))
+        ->and($headings)->toContain(__('doctor.menu.group_finance'));
+});

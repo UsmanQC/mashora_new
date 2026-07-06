@@ -1094,6 +1094,103 @@ select:focus[data-flux-control] {
     transform: scale(0.98);
 }
 
+.doctor-luxury-schedule-days {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x;
+}
+
+.doctor-luxury-schedule-days::-webkit-scrollbar,
+.doctor-luxury-schedule-filters::-webkit-scrollbar {
+    display: none;
+}
+
+.doctor-luxury-schedule-filters {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    -webkit-overflow-scrolling: touch;
+}
+
+.doctor-luxury-schedule-day {
+    display: flex;
+    min-width: 3.25rem;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.125rem;
+    border-radius: 1rem;
+    border: 1px solid transparent;
+    background-color: #fff;
+    padding: 0.625rem 0.75rem;
+    color: #334155;
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.doctor-luxury-schedule-day.is-selected {
+    border-color: #047857;
+    background-color: #047857;
+    color: #fff;
+    box-shadow: 0 8px 24px -8px rgb(4 120 87 / 0.45);
+}
+
+.doctor-luxury-schedule-day.is-today:not(.is-selected) {
+    border-color: rgb(16 185 129 / 0.25);
+}
+
+.doctor-luxury-schedule-day__weekday {
+    font-size: 0.625rem;
+    font-weight: 600;
+    text-transform: capitalize;
+    opacity: 0.85;
+}
+
+.doctor-luxury-schedule-day__num {
+    font-size: 1rem;
+    font-weight: 700;
+    line-height: 1.1;
+}
+
+.doctor-luxury-schedule-day__dot {
+    margin-top: 0.125rem;
+    width: 0.25rem;
+    height: 0.25rem;
+    border-radius: 9999px;
+    background-color: #10b981;
+}
+
+.doctor-luxury-schedule-day.is-selected .doctor-luxury-schedule-day__dot {
+    background-color: #fff;
+}
+
+.doctor-wallet-income-chart {
+    min-height: 7rem;
+}
+
+.doctor-wallet-income-chart__bar {
+    min-height: 0.625rem;
+}
+
+.doctor-luxury-scroll {
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+    overscroll-behavior-y: contain;
+}
+
+.doctor-consultation-inline-video--live .doctor-consultation-video-idle {
+    display: none;
+}
+
+.doctor-consultation-inline-video--live .doctor-consultation-remote {
+    z-index: 1;
+}
+
+@media (max-width: 1023px) {
+    #agora-call-overlay {
+        display: none !important;
+    }
+}
+
 .patient-luxury-mood-row {
     scrollbar-width: none;
     -ms-overflow-style: none;

@@ -10,7 +10,49 @@
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         @include('partials.head')
     </head>
-    <body class="min-h-svh antialiased">
+    @php
+        $guestOnboardingRoutes = [
+            'doctor.welcome',
+            'doctor.login',
+            'doctor.verify-phone',
+            'doctor.register',
+            'doctor.register.basic.info',
+            'doctor.register.bank-account',
+            'doctor.register.duration',
+            'doctor.register.working-hours',
+            'doctor.account-status',
+        ];
+
+        $doctorLuxuryMobileNav = auth('doctor')->check() && ! request()->routeIs($guestOnboardingRoutes);
+
+        $doctorLuxuryMobileShell = request()->routeIs([
+            'doctor.dashboard',
+            'doctor.appointments',
+            'doctor.menu',
+            'doctor.settings.wallet',
+            'doctor.settings.invoices',
+            'doctor.settings.invoices.show',
+            'doctor.appointments.conversation',
+        ]);
+
+        $doctorLuxuryMobileHome = request()->routeIs('doctor.dashboard');
+        $doctorLuxuryMobileSchedule = request()->routeIs('doctor.appointments');
+        $doctorLuxuryMobileMore = request()->routeIs('doctor.menu');
+        $doctorLuxuryMobileWallet = request()->routeIs('doctor.settings.wallet');
+        $doctorLuxuryMobileConsultation = request()->routeIs('doctor.appointments.conversation');
+
+        $doctorLuxuryFullBleed = $doctorLuxuryMobileHome
+            || $doctorLuxuryMobileSchedule
+            || $doctorLuxuryMobileMore
+            || $doctorLuxuryMobileWallet
+            || $doctorLuxuryMobileConsultation;
+    @endphp
+    <body
+        @class([
+            'min-h-svh antialiased',
+            'bg-slate-50' => $doctorLuxuryMobileNav,
+        ])
+    >
         <aside
             class="portal-chrome-sidebar fixed inset-y-0 start-0 z-50 hidden w-64 min-h-0 flex-col overflow-hidden bg-[#10B981] text-white shadow-lg lg:flex"
             aria-label="{{ __('doctor.sidebar_label') }}"
@@ -27,7 +69,11 @@
         </aside>
 
         <div
-            class="flex min-h-svh min-w-0 flex-col lg:ps-64"
+            @class([
+                'flex min-w-0 flex-col lg:ps-64',
+                'h-svh max-h-svh min-h-0 overflow-hidden' => $doctorLuxuryFullBleed,
+                'min-h-svh' => ! $doctorLuxuryFullBleed,
+            ])
             x-data="{ doctorMenuOpen: false }"
             @keydown.escape.window="doctorMenuOpen = false"
         >
@@ -36,12 +82,16 @@
                     'doctor.dashboard',
                     'doctor.appointments',
                     'doctor.appointments.*',
+                    'doctor.menu',
                     'doctor.ratings',
                 );
             @endphp
 
             <header
-                class="sticky top-0 z-40 flex items-center justify-between gap-3 border-b border-zinc-200/80 bg-white/95 px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur lg:hidden"
+                @class([
+                    'sticky top-0 z-40 flex items-center justify-between gap-3 border-b border-zinc-200/80 bg-white/95 px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur lg:hidden',
+                    'hidden' => $doctorLuxuryMobileShell,
+                ])
             >
                 <div class="min-w-0 flex-1">
                     <a
@@ -84,60 +134,18 @@
                 </div>
             </header>
 
-            <main class="mx-auto w-full max-w-6xl flex-1 px-4 py-6 pb-28 sm:px-6 lg:pb-8">
+            <main @class([
+                'mx-auto w-full max-w-6xl flex-1 min-h-0',
+                'max-lg:flex max-lg:flex-col' => $doctorLuxuryFullBleed,
+                'px-0 py-0 max-lg:h-svh max-lg:max-h-svh max-lg:overflow-hidden lg:px-6 lg:py-6 lg:pb-8' => $doctorLuxuryFullBleed,
+                'px-0 py-0 lg:px-6 lg:py-6 lg:pb-8' => $doctorLuxuryMobileShell && ! $doctorLuxuryFullBleed,
+                'px-4 py-6 pb-28 lg:px-6 lg:pb-8' => ! $doctorLuxuryMobileShell && ! $doctorLuxuryMobileNav,
+                'px-4 py-6 pb-28 lg:px-6 lg:pb-8' => ! $doctorLuxuryMobileShell && $doctorLuxuryMobileNav,
+            ])>
                 {{ $slot }}
             </main>
 
-            <nav
-                class="fixed inset-x-0 bottom-0 z-40 flex border-t border-zinc-200 bg-white px-1 py-1.5 pb-[max(0.5rem,env(safe-area-inset-bottom))] lg:hidden"
-                aria-label="{{ __('doctor.mobile_nav_label') }}"
-            >
-                <div class="grid w-full grid-cols-4 gap-0.5">
-                    <flux:button
-                        :href="route('doctor.dashboard')"
-                        wire:navigate
-                        variant="ghost"
-                        size="sm"
-                        class="min-h-11 px-1 py-1.5 text-[0.65rem] leading-tight sm:text-xs {{ request()->routeIs('doctor.dashboard') ? '!bg-[#047857] !text-white' : 'text-zinc-600' }}"
-                        icon="home"
-                    >
-                        {{ __('doctor.nav.dashboard') }}
-                    </flux:button>
-                    <flux:button
-                        :href="route('doctor.appointments')"
-                        wire:navigate
-                        variant="ghost"
-                        size="sm"
-                        class="min-h-11 px-1 py-1.5 text-[0.65rem] leading-tight sm:text-xs {{ request()->routeIs('doctor.appointments', 'doctor.appointments.*') ? '!bg-[#047857] !text-white' : 'text-zinc-600' }}"
-                        icon="calendar-days"
-                    >
-                        {{ __('doctor.nav.appointments') }}
-                    </flux:button>
-                    <flux:button
-                        :href="route('doctor.ratings')"
-                        wire:navigate
-                        variant="ghost"
-                        size="sm"
-                        class="min-h-11 px-1 py-1.5 text-[0.65rem] leading-tight sm:text-xs {{ request()->routeIs('doctor.ratings') ? '!bg-[#047857] !text-white' : 'text-zinc-600' }}"
-                        icon="star"
-                    >
-                        {{ __('doctor.nav.ratings') }}
-                    </flux:button>
-                    <button
-                        type="button"
-                        data-test="doctor-mobile-menu-open"
-                        class="inline-flex min-h-11 flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-1.5 text-[0.65rem] font-medium leading-tight transition sm:text-xs {{ $doctorMenuRouteActive ? 'bg-[#047857] text-white' : 'text-zinc-600 hover:bg-zinc-50' }}"
-                        :class="doctorMenuOpen ? '!bg-[#047857] !text-white' : ''"
-                        :aria-expanded="doctorMenuOpen"
-                        aria-controls="doctor-mobile-menu-drawer"
-                        :aria-label="doctorMenuOpen ? @js(__('doctor.menu.close')) : @js(__('doctor.menu.open'))"
-                        @click="doctorMenuOpen = true"
-                    >
-                        <flux:icon name="bars-3" variant="outline" class="size-5 shrink-0" />
-                        <span>{{ __('doctor.nav.menu') }}</span>
-                    </button>
-                </div>
-            </nav>
+            @include('partials.doctor-luxury-dock')
 
             @include('partials.doctor-mobile-menu-drawer')
         </div>
