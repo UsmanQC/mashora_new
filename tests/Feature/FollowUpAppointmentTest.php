@@ -268,6 +268,8 @@ test('patient confirms free follow-up without payment', function () {
     $this->actingAs($user);
 
     Livewire::test('pages::patient.follow-up-confirm', ['appointment' => $followUp])
+        ->assertSee('data-test="patient-follow-up-confirm-header"', false)
+        ->assertSee(__('patient.follow_up.title'), false)
         ->call('confirmAndPay')
         ->assertRedirect(route('patient.appointments'));
 

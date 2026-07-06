@@ -73,11 +73,11 @@
             <span class="patient-luxury-dock-btn__label">{{ __('patient.nav.my_appointments') }}</span>
         </a>
 
-        <div class="relative -top-3.5 w-14 shrink-0">
+        <div class="relative -top-3.5 z-[55] w-14 shrink-0">
             <button
                 type="button"
                 data-open-ai-chatbot
-                class="patient-luxury-dock-fab mx-auto"
+                class="patient-luxury-dock-fab pointer-events-auto relative z-[55] mx-auto"
                 aria-label="{{ __('patient.nav.ai_assistant') }}"
                 data-test="patient-luxury-dock-chatbot"
             >

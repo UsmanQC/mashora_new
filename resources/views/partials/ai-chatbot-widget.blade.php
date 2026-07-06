@@ -135,7 +135,9 @@
                 type="button"
                 id="awaan-ai-chatbot-toggle"
                 @class([
-                    'pointer-events-auto hidden h-14 w-14 items-center justify-center rounded-full bg-primary text-white shadow-lg shadow-primary/30 transition hover:bg-primary-600 hover:shadow-xl',
+                    'hidden h-14 w-14 items-center justify-center rounded-full bg-primary text-white shadow-lg shadow-primary/30 transition hover:bg-primary-600 hover:shadow-xl',
+                    'pointer-events-none' => $isPatientDock,
+                    'pointer-events-auto' => ! $isPatientDock,
                     'sm:inline-flex' => ! $isPatientDock,
                 ])
                 aria-label="{{ __('ai_chatbot.open', [], $initialChatbotLocale) }}"
@@ -155,7 +157,14 @@
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
+        (function () {
+            let chatbotLifecycleAbort = null;
+
+            const initAwaanAiChatbotWidget = () => {
+            chatbotLifecycleAbort?.abort();
+            chatbotLifecycleAbort = new AbortController();
+            const { signal } = chatbotLifecycleAbort;
+
             const root = document.getElementById('awaan-ai-chatbot');
             if (!root) {
                 return;
@@ -799,10 +808,11 @@
                     }
 
                     applyLocale(nextLocale, { resetWelcome: true });
-                });
+                }, { signal });
             });
 
             window.openAwaanAiChatbot = openPanel;
+            window.toggleAwaanAiChatbot = togglePanel;
 
             document.addEventListener('click', (event) => {
                 const trigger = event.target.closest('[data-open-ai-chatbot]');
@@ -812,11 +822,11 @@
 
                 event.preventDefault();
                 togglePanel();
-            });
+            }, { signal });
 
-            toggle?.addEventListener('click', togglePanel);
+            toggle?.addEventListener('click', togglePanel, { signal });
 
-            closeBtn.addEventListener('click', closePanel);
+            closeBtn.addEventListener('click', closePanel, { signal });
 
             resetBtn.addEventListener('click', async () => {
                 exitBookingFlow();
@@ -833,7 +843,7 @@
                 } catch (error) {
                     // Ignore reset network errors; UI is already cleared locally.
                 }
-            });
+            }, { signal });
 
             form.addEventListener('submit', async (event) => {
                 event.preventDefault();
@@ -846,7 +856,18 @@
                 removeQuickActions();
                 input.value = '';
                 await sendUserMessage(message);
-            });
-        });
+            }, { signal });
+            };
+
+            const bootAwaanAiChatbotWidget = () => initAwaanAiChatbotWidget();
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', bootAwaanAiChatbotWidget, { once: true });
+            } else {
+                bootAwaanAiChatbotWidget();
+            }
+
+            document.addEventListener('livewire:navigated', bootAwaanAiChatbotWidget);
+        })();
     </script>
 @endif

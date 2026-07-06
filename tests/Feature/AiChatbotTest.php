@@ -2,6 +2,7 @@
 
 use App\Models\AiSetting;
 use App\Models\Faq;
+use App\Models\User;
 use App\Services\AiChatbot\AiChatbotToolManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -168,12 +169,17 @@ test('chatbot api accepts locale and returns localized errors', function () {
         ]);
 });
 
-test('patient portal never includes chatbot widget', function () {
+test('authenticated patient portal includes dock chatbot widget', function () {
     config(['ai_chatbot.enabled' => true]);
 
-    $this->get(route('patient.phone'))
+    $user = User::factory()->create(['profile_completed' => true]);
+
+    $this->actingAs($user)->get(route('patient.home'))
         ->assertSuccessful()
-        ->assertDontSee('id="awaan-ai-chatbot"', false);
+        ->assertSee('id="awaan-ai-chatbot"', false)
+        ->assertSee('data-test="patient-luxury-dock-chatbot"', false)
+        ->assertSee('data-open-ai-chatbot', false)
+        ->assertSee('livewire:navigated', false);
 });
 
 test('search faq tool returns active faqs', function () {
