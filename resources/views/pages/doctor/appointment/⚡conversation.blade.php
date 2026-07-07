@@ -455,7 +455,7 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                                             type="button"
                                             variant="primary"
                                             icon="clock"
-                                            class="min-h-10 cursor-not-allowed opacity-70"
+                                            class="min-h-10 !bg-[#047857] !text-white cursor-not-allowed opacity-70"
                                             disabled
                                         >
                                             {{ __('doctor.conversation.start_session_pending') }}
@@ -463,7 +463,7 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                                         <p class="mt-2 text-xs text-zinc-500">{{ __('doctor.conversation.waiting_for_patient_approval') }}</p>
                                     </div>
                                 @elseif ($this->canPressStartSession(app(AppointmentSessionService::class)))
-                                    <flux:button type="button" variant="primary" icon="play" class="min-h-10 shadow-md shadow-[#047857]/20" wire:click="startSession" wire:loading.attr="disabled">
+                                    <flux:button type="button" variant="primary" icon="play" class="min-h-10 !bg-[#047857] !text-white shadow-md shadow-[#047857]/20 hover:!brightness-95" wire:click="startSession" wire:loading.attr="disabled">
                                         {{ __('doctor.conversation.start_session') }}
                                     </flux:button>
                                 @else
@@ -471,7 +471,7 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                                         type="button"
                                         variant="primary"
                                         icon="play"
-                                        class="min-h-10 cursor-not-allowed opacity-50"
+                                        class="min-h-10 !bg-[#047857] !text-white cursor-not-allowed opacity-50"
                                         disabled
                                         title="{{ __('doctor.conversation.session_start_wait_one_hour') }}"
                                     >
@@ -532,7 +532,36 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                     </div>
                 @endif
 
+                <div x-data="{ chatMinimized: false }" class="flex min-h-0 flex-1 flex-col">
+                    <div class="flex shrink-0 items-center justify-between border-b border-zinc-200/90 bg-white px-4 py-2 sm:px-5">
+                        <p class="flex items-center gap-2 text-sm font-semibold text-zinc-900">
+                            <flux:icon name="chat-bubble-left-right" variant="mini" class="size-4 text-zinc-500" />
+                            {{ __('doctor.conversation.chat_panel_title') }}
+                        </p>
+                        <button
+                            type="button"
+                            x-on:click="chatMinimized = !chatMinimized"
+                            class="flex items-center gap-1.5 rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-600 shadow-sm transition hover:bg-zinc-50"
+                            data-test="doctor-chat-minimize-toggle"
+                        >
+                            <flux:icon x-show="!chatMinimized" name="chevron-down" variant="mini" class="size-3.5" />
+                            <flux:icon x-show="chatMinimized" x-cloak name="chevron-up" variant="mini" class="size-3.5" />
+                            <span x-text="chatMinimized ? @js(__('doctor.conversation.chat_expand')) : @js(__('doctor.conversation.chat_minimize'))"></span>
+                        </button>
+                    </div>
+
+                    <div x-show="chatMinimized" x-cloak class="shrink-0 px-4 py-3 text-center sm:px-5">
+                        <button
+                            type="button"
+                            x-on:click="chatMinimized = false"
+                            class="text-sm font-semibold text-[#047857] hover:underline"
+                        >
+                            {{ __('doctor.conversation.chat_minimized_hint') }}
+                        </button>
+                    </div>
+
                 <div
+                    x-show="!chatMinimized"
                     class="relative flex min-h-0 flex-1 flex-col bg-gradient-to-b from-zinc-50/90 via-zinc-50/70 to-zinc-100/80"
                     id="doctor-chat-panel"
                     data-appointment-id="{{ $appointment->id }}"
@@ -583,7 +612,7 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                     </div>
                 </div>
 
-                <div class="shrink-0 border-t border-zinc-200/90 bg-white px-4 py-3 pb-[max(0.85rem,env(safe-area-inset-bottom))] sm:px-5 lg:pb-3">
+                <div x-show="!chatMinimized" class="shrink-0 border-t border-zinc-200/90 bg-white px-4 py-3 pb-[max(0.85rem,env(safe-area-inset-bottom))] sm:px-5 lg:pb-3">
                     <form
                         wire:submit="sendMessage"
                         class="mx-auto flex max-w-4xl items-end gap-2 rounded-2xl border border-zinc-200/90 bg-gradient-to-r from-zinc-50/80 to-zinc-100/70 p-1.5 shadow-inner shadow-zinc-200/20 ring-1 ring-zinc-100/80 @if (! $appointment->isDoctorChatOpen()) pointer-events-none opacity-55 @endif"
@@ -621,6 +650,7 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                     @elseif ($appointment->status === 'completed')
                         <p class="mt-2.5 text-center text-xs text-zinc-500">{{ __('doctor.conversation.chat_closed_after_window') }}</p>
                     @endif
+                </div>
                 </div>
             </div>
 
