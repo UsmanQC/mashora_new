@@ -424,7 +424,12 @@
             </div>
         </div>
 
-        <div x-show="chatCardMinimized" x-cloak class="px-4 py-3 text-center">
+        <div
+            x-show="chatCardMinimized"
+            x-cloak
+            x-bind:class="callActive ? 'pb-[max(0.75rem,env(safe-area-inset-bottom))]' : 'pb-[calc(5.25rem+env(safe-area-inset-bottom))]'"
+            class="px-4 pt-3 text-center"
+        >
             <button type="button" x-on:click="chatCardMinimized = false" class="text-xs font-semibold text-[#047857]">
                 {{ __('doctor.consultation.chat_minimized_hint') }}
             </button>
