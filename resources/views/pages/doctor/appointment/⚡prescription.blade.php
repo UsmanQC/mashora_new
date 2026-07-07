@@ -319,7 +319,63 @@ new #[Layout('layouts::doctor')] #[Title('Prescription')] class extends Componen
                 <flux:text class="text-zinc-600">{{ __('doctor.prescription_form.no_medications') }}</flux:text>
             </div>
         @else
-            <div class="overflow-x-auto">
+            <div class="space-y-3 p-4 sm:hidden">
+                @foreach ($this->medications as $med)
+                    <div wire:key="med-mobile-{{ $med->id }}" class="rounded-xl border border-zinc-200/80 p-3.5">
+                        <div class="flex items-start justify-between gap-3">
+                            <p class="font-semibold text-zinc-900">{{ $med->name }}</p>
+                            <div class="flex shrink-0 items-center gap-1.5">
+                                <button
+                                    type="button"
+                                    wire:click="openEditMedication({{ $med->id }})"
+                                    class="flex size-8 items-center justify-center rounded-full bg-zinc-100 text-zinc-600"
+                                    aria-label="{{ __('doctor.prescription_form.edit_medication') }}"
+                                >
+                                    <flux:icon name="pencil-square" variant="mini" class="size-4" />
+                                </button>
+                                <button
+                                    type="button"
+                                    wire:click="deleteMedication({{ $med->id }})"
+                                    wire:confirm="{{ __('doctor.complete_modal.body') }}"
+                                    class="flex size-8 items-center justify-center rounded-full bg-rose-50 text-rose-600"
+                                    aria-label="{{ __('doctor.prescription_form.remove') }}"
+                                >
+                                    <flux:icon name="trash" variant="mini" class="size-4" />
+                                </button>
+                            </div>
+                        </div>
+
+                        <dl class="mt-2.5 grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
+                            <div>
+                                <dt class="font-semibold uppercase tracking-wide text-zinc-400">{{ __('doctor.prescription_form.col_dosage') }}</dt>
+                                <dd class="mt-0.5 text-zinc-700">{{ $med->dosage ?: '—' }}</dd>
+                            </div>
+                            <div>
+                                <dt class="font-semibold uppercase tracking-wide text-zinc-400">{{ __('doctor.prescription_form.col_usage') }}</dt>
+                                <dd class="mt-0.5 text-zinc-700">{{ $med->usage ?: '—' }}</dd>
+                            </div>
+                            <div>
+                                <dt class="font-semibold uppercase tracking-wide text-zinc-400">{{ __('doctor.prescription_form.col_frequency') }}</dt>
+                                <dd class="mt-0.5 text-zinc-700">{{ $med->frequency ?: '—' }}</dd>
+                            </div>
+                            <div>
+                                <dt class="font-semibold uppercase tracking-wide text-zinc-400">{{ __('doctor.prescription_form.col_duration') }}</dt>
+                                <dd class="mt-0.5 tabular-nums text-zinc-700">
+                                    {{ trim(($med->duration ?? '').' '.($med->duration_measurement ?? '')) ?: '—' }}
+                                </dd>
+                            </div>
+                        </dl>
+
+                        @if (filled($med->instructions))
+                            <p class="mt-2.5 border-t border-zinc-100 pt-2.5 text-xs italic text-zinc-600">
+                                {{ $med->instructions }}
+                            </p>
+                        @endif
+                    </div>
+                @endforeach
+            </div>
+
+            <div class="hidden overflow-x-auto sm:block">
                 <table class="min-w-full divide-y divide-zinc-200 text-sm">
                     <thead class="bg-zinc-50 text-xs uppercase tracking-wide text-zinc-500">
                         <tr>

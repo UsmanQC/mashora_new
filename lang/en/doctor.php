@@ -581,6 +581,14 @@ return [
         'download_pdf_hint' => 'Share or print the official prescription for this session.',
     ],
 
+    'prescriptions_list' => [
+        'title' => 'Prescriptions',
+        'status_prescribed' => 'Prescribed',
+        'status_pending' => 'Pending',
+        'status_not_needed' => 'Not needed',
+        'empty' => 'No prescriptions yet. They will appear here once you complete sessions.',
+    ],
+
     'prescription_pdf' => [
         'document_title' => 'Medical Prescription',
         'document_subtitle' => 'Electronic prescription issued via Awaan',

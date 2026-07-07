@@ -58,6 +58,7 @@ Route::middleware('auth:doctor')->group(function (): void {
         Route::livewire('dashboard', 'pages::doctor.dashboard')->name('dashboard');
         Route::livewire('appointments', 'pages::doctor.appointments')->name('appointments');
         Route::livewire('menu', 'pages::doctor.menu')->name('menu');
+        Route::livewire('prescriptions', 'pages::doctor.prescriptions')->name('prescriptions');
 
         Route::middleware('doctor.appointment')->group(function (): void {
             Route::livewire(

@@ -6,6 +6,7 @@
     $appointmentsUrl = route('doctor.appointments');
     $walletUrl = route('doctor.settings.wallet');
     $invoicesUrl = route('doctor.settings.invoices');
+    $prescriptionsUrl = route('doctor.prescriptions');
     $minutesUntil = $this->nextUpMinutesUntil;
 @endphp
 
@@ -167,7 +168,7 @@
                 <div class="grid grid-cols-4 gap-2">
                     @foreach ([
                         ['href' => $nextUp ? route('doctor.appointments.conversation', $nextUp) : $appointmentsUrl, 'icon' => 'video-camera', 'label' => __('doctor.mobile.action_consult')],
-                        ['href' => $appointmentsUrl, 'icon' => 'clipboard-document-list', 'label' => __('doctor.mobile.action_prescribe')],
+                        ['href' => $prescriptionsUrl, 'icon' => 'clipboard-document-list', 'label' => __('doctor.mobile.action_prescribe')],
                         ['href' => $walletUrl, 'icon' => 'credit-card', 'label' => __('doctor.mobile.action_wallet')],
                         ['href' => $invoicesUrl, 'icon' => 'document-text', 'label' => __('doctor.mobile.action_invoice')],
                     ] as $action)
@@ -193,7 +194,7 @@
                 <div class="overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-[0_4px_20px_-2px_rgba(0,0,0,0.03)]">
                     @foreach ([
                         [
-                            'href' => $appointmentsUrl,
+                            'href' => $prescriptionsUrl,
                             'icon' => 'clipboard-document-list',
                             'icon_bg' => 'bg-teal-50 text-teal-600',
                             'title' => __('doctor.mobile.prescription_requests'),

@@ -582,6 +582,14 @@ return [
         'download_pdf_hint' => 'شارك أو اطبع الوصفة الرسمية لهذه الجلسة.',
     ],
 
+    'prescriptions_list' => [
+        'title' => 'الوصفات الطبية',
+        'status_prescribed' => 'تمت الوصفة',
+        'status_pending' => 'قيد الانتظار',
+        'status_not_needed' => 'غير مطلوبة',
+        'empty' => 'لا توجد وصفات بعد. ستظهر هنا بعد إكمال الجلسات.',
+    ],
+
     'prescription_pdf' => [
         'document_title' => 'وصفة طبية',
         'document_subtitle' => 'وصفة إلكترونية صادرة عبر أوان',
