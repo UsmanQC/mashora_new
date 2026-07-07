@@ -119,6 +119,119 @@
             float: left !important;
         }
     }
+
+    /* Premium theme, layered on top of HyperPay's "plain" style per their
+       customization guide (plain + custom CSS is the recommended approach). */
+    .hyperpay-ltr .wpwl-form {
+        font-family: inherit !important;
+        max-width: 100% !important;
+    }
+
+    .hyperpay-ltr .wpwl-group {
+        margin-bottom: 1rem !important;
+    }
+
+    .hyperpay-ltr .wpwl-label {
+        display: block !important;
+        font-size: 0.6875rem !important;
+        font-weight: 600 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.03em !important;
+        color: #71717a !important;
+        margin-bottom: 0.375rem !important;
+    }
+
+    .hyperpay-ltr .wpwl-wrapper {
+        width: 100% !important;
+    }
+
+    .hyperpay-ltr .wpwl-control,
+    .hyperpay-ltr select.wpwl-control {
+        width: 100% !important;
+        min-height: 3rem !important;
+        padding: 0.75rem 1rem !important;
+        font-size: 16px !important;
+        font-family: inherit !important;
+        border: 1.5px solid #e4e4e7 !important;
+        border-radius: 0.875rem !important;
+        background-color: #ffffff !important;
+        box-shadow: none !important;
+        transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
+    }
+
+    .hyperpay-ltr .wpwl-control:focus,
+    .hyperpay-ltr select.wpwl-control:focus {
+        outline: none !important;
+        border-color: #10B981 !important;
+        box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15) !important;
+    }
+
+    .hyperpay-ltr .wpwl-control.wpwl-has-error,
+    .hyperpay-ltr .wpwl-wrapper.wpwl-has-error .wpwl-control {
+        border-color: #f43f5e !important;
+    }
+
+    .hyperpay-ltr .wpwl-control.wpwl-has-error:focus {
+        box-shadow: 0 0 0 3px rgba(244, 63, 94, 0.15) !important;
+    }
+
+    .hyperpay-ltr .wpwl-hint,
+    .hyperpay-ltr [class*="wpwl-hint-"] {
+        display: block !important;
+        margin-top: 0.375rem !important;
+        font-size: 0.75rem !important;
+        font-weight: 500 !important;
+        color: #e11d48 !important;
+    }
+
+    .hyperpay-ltr .wpwl-brand,
+    .hyperpay-ltr .wpwl-brand-card,
+    .hyperpay-ltr [class*="wpwl-brand-"] {
+        max-height: 1.75rem !important;
+        height: 1.75rem !important;
+        width: auto !important;
+        max-width: 3rem !important;
+        object-fit: contain !important;
+    }
+
+    .hyperpay-ltr .wpwl-button,
+    .hyperpay-ltr .wpwl-button-pay {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        width: 100% !important;
+        float: none !important;
+        clear: both !important;
+        min-height: 3rem !important;
+        margin: 0.5rem 0 0 !important;
+        padding: 0.75rem 1.5rem !important;
+        border: none !important;
+        border-radius: 999px !important;
+        background: #10B981 !important;
+        background-image: none !important;
+        color: #ffffff !important;
+        font-size: 0.9375rem !important;
+        font-weight: 700 !important;
+        box-shadow: 0 8px 25px -5px rgba(16, 185, 129, 0.3) !important;
+        transition: filter 0.15s ease !important;
+        cursor: pointer !important;
+    }
+
+    .hyperpay-ltr .wpwl-button:hover,
+    .hyperpay-ltr .wpwl-button-pay:hover {
+        filter: brightness(0.97) !important;
+    }
+
+    .hyperpay-ltr .wpwl-button:disabled,
+    .hyperpay-ltr .wpwl-button-pay:disabled {
+        opacity: 0.6 !important;
+        cursor: not-allowed !important;
+    }
+
+    .hyperpay-ltr .wpwl-spinner {
+        border-color: rgba(255, 255, 255, 0.35) !important;
+        border-top-color: #ffffff !important;
+    }
 </style>
 
 <script>

@@ -20,6 +20,18 @@
             style: 'plain',
             locale: @js(app()->getLocale() === 'ar' ? 'ar' : 'en'),
             paymentTarget: '_top',
+            iframeStyles: {
+                'card-number-placeholder': {
+                    'color': '#a1a1aa',
+                    'font-size': '16px',
+                    'font-family': 'system-ui, -apple-system, "Segoe UI", Arial, sans-serif',
+                },
+                'cvv-placeholder': {
+                    'color': '#a1a1aa',
+                    'font-size': '16px',
+                    'font-family': 'system-ui, -apple-system, "Segoe UI", Arial, sans-serif',
+                },
+            },
             applePay: {
                 displayName: @js(config('app.name')),
                 total: { label: @js(config('app.name')) },
