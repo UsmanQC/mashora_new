@@ -864,6 +864,8 @@ return [
         'chat_minimize' => 'Minimize chat',
         'chat_expand' => 'Expand chat',
         'chat_minimized_hint' => 'Chat minimized — tap to open',
+        'session_time_ended_title' => 'Session time has ended',
+        'session_time_ended_hint' => 'The video call is no longer available. You can still message the patient below.',
     ],
 
     'notifications' => [

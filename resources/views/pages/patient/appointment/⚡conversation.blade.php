@@ -1678,11 +1678,6 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 }
                 document.getElementById('patient-chat-locked-callout')?.classList.add('hidden');
 
-                const waitingChipEl = callUiEls().waiting;
-                if (waitingChipEl) {
-                    waitingChipEl.classList.remove('hidden');
-                }
-
                 const statusLabel = document.getElementById('patient-conversation-status-label');
                 if (statusLabel) {
                     statusLabel.textContent = @js(__('patient.appointments.status_in_process'));

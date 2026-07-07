@@ -301,6 +301,19 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
         return __('doctor.card.open_session_wait');
     }
 
+    public function sessionTimeExpired(): bool
+    {
+        if ((bool) config('appointments.relaxed_session_limits', false)) {
+            return false;
+        }
+
+        if ((string) $this->appointment->status !== 'in_process') {
+            return false;
+        }
+
+        return $this->appointment->extend_at !== null && $this->appointment->extend_at->isPast();
+    }
+
     public function sendMessage(): void
     {
         if (! $this->appointment->isDoctorChatOpen()) {
@@ -893,6 +906,34 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                     .catch(() => {});
             }
 
+            let sessionExpiredRefreshHandled = false;
+
+            function maybeRefreshWhenSessionExpires(leftSeconds) {
+                if (metricsEl?.dataset.relaxedSessionLimits === '1') {
+                    return;
+                }
+
+                if (leftSeconds > 0) {
+                    sessionExpiredRefreshHandled = false;
+
+                    return;
+                }
+
+                if (sessionExpiredRefreshHandled) {
+                    return;
+                }
+
+                sessionExpiredRefreshHandled = true;
+
+                if (window.Livewire) {
+                    const componentEl = document.querySelector('[wire\\:id]');
+                    const wireId = componentEl?.getAttribute('wire:id');
+                    if (wireId) {
+                        window.Livewire.find(wireId)?.$refresh();
+                    }
+                }
+            }
+
             function tickSessionTimers() {
                 const metrics = document.getElementById('conversation-page-metrics');
                 const elapsedEl = document.getElementById(isConsultationMobile() ? 'timer-session-elapsed-mobile' : 'timer-session-elapsed');
@@ -922,6 +963,7 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                     remainingEl.classList.toggle('text-rose-600', left <= 0);
                     remainingEl.classList.toggle('text-[#047857]', left > 300);
                     maybeEndCallWhenSessionExpired(left);
+                    maybeRefreshWhenSessionExpires(left);
                 }
             }
 

@@ -865,6 +865,8 @@ return [
         'chat_minimize' => 'تصغير المحادثة',
         'chat_expand' => 'توسيع المحادثة',
         'chat_minimized_hint' => 'المحادثة مصغّرة — اضغط للفتح',
+        'session_time_ended_title' => 'انتهى وقت الجلسة',
+        'session_time_ended_hint' => 'لم تعد مكالمة الفيديو متاحة. يمكنك متابعة مراسلة المريض أدناه.',
     ],
 
     'notifications' => [
