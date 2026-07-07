@@ -1368,7 +1368,7 @@ select:focus[data-flux-control] {
     }
 
     .doctor-luxury-mobile-active .doctor-luxury-schedule-filters [role='tab'],
-    .doctor-luxury-mobile-active .doctor-luxury-consultation .rounded-2xl.bg-slate-100\\/80 button {
+    .doctor-luxury-mobile-active .doctor-luxury-consultation .rounded-2xl.bg-slate-100\/80 button {
         color: #0f172a !important;
         -webkit-text-fill-color: #0f172a !important;
     }
