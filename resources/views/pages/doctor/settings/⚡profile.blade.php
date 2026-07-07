@@ -167,7 +167,10 @@ new #[Layout('layouts::doctor')] #[Title('Personal account')] class extends Comp
     $profileCompletion = (int) round(($profileFields->filter()->count() / max(1, $profileFields->count())) * 100);
 @endphp
 
-<div class="space-y-6">
+<div class="relative w-full">
+    @include('partials.doctor-luxury-profile-mobile')
+
+    <div class="hidden space-y-6 lg:block">
     <div class="flex items-center justify-between gap-3">
         <div>
             <flux:heading size="xl" class="font-semibold tracking-tight text-zinc-900">{{ __('Personal account') }}</flux:heading>
@@ -363,5 +366,6 @@ new #[Layout('layouts::doctor')] #[Title('Personal account')] class extends Comp
                 <flux:text class="text-sm font-medium text-emerald-600">{{ session('password_saved') }}</flux:text>
             @endif
         </form>
+    </div>
     </div>
 </div>

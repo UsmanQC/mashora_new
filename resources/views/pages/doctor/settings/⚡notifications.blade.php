@@ -73,7 +73,10 @@ new #[Layout('layouts::doctor')] #[Title('Notifications')] class extends Compone
     }
 }; ?>
 
-<div class="mx-auto max-w-2xl space-y-6">
+<div class="relative w-full">
+    @include('partials.doctor-luxury-notifications-mobile')
+
+    <div class="hidden max-w-2xl space-y-6 lg:mx-auto lg:block">
     <div class="flex flex-wrap items-start justify-between gap-3">
         <div>
             <flux:heading size="xl" class="font-semibold text-[#10B981]">{{ __('doctor.notifications.title') }}</flux:heading>
@@ -153,4 +156,5 @@ new #[Layout('layouts::doctor')] #[Title('Notifications')] class extends Compone
             </div>
         @endif
     @endif
+    </div>
 </div>

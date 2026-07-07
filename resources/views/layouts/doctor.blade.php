@@ -33,6 +33,14 @@
             'doctor.settings.invoices',
             'doctor.settings.invoices.show',
             'doctor.appointments.conversation',
+            'doctor.settings.working-hours',
+            'doctor.settings.duration',
+            'doctor.settings.bank-account',
+            'doctor.settings.profile',
+            'doctor.ratings',
+            'doctor.settings.notifications',
+            'doctor.settings.support',
+            'doctor.settings.privacy-policy',
         ]);
 
         $doctorLuxuryMobileHome = request()->routeIs('doctor.dashboard');
@@ -40,12 +48,30 @@
         $doctorLuxuryMobileMore = request()->routeIs('doctor.menu');
         $doctorLuxuryMobileWallet = request()->routeIs('doctor.settings.wallet');
         $doctorLuxuryMobileConsultation = request()->routeIs('doctor.appointments.conversation');
+        $doctorLuxuryMobileWorkingHours = request()->routeIs('doctor.settings.working-hours');
+        $doctorLuxuryMobileDuration = request()->routeIs('doctor.settings.duration');
+        $doctorLuxuryMobileBankAccount = request()->routeIs('doctor.settings.bank-account');
+        $doctorLuxuryMobileProfile = request()->routeIs('doctor.settings.profile');
+        $doctorLuxuryMobileRatings = request()->routeIs('doctor.ratings');
+        $doctorLuxuryMobileNotifications = request()->routeIs('doctor.settings.notifications');
+        $doctorLuxuryMobileSupport = request()->routeIs('doctor.settings.support');
+        $doctorLuxuryMobilePrivacyPolicy = request()->routeIs('doctor.settings.privacy-policy');
+        $doctorLuxuryMobileInvoices = request()->routeIs('doctor.settings.invoices');
 
         $doctorLuxuryFullBleed = $doctorLuxuryMobileHome
             || $doctorLuxuryMobileSchedule
             || $doctorLuxuryMobileMore
             || $doctorLuxuryMobileWallet
-            || $doctorLuxuryMobileConsultation;
+            || $doctorLuxuryMobileConsultation
+            || $doctorLuxuryMobileWorkingHours
+            || $doctorLuxuryMobileDuration
+            || $doctorLuxuryMobileBankAccount
+            || $doctorLuxuryMobileProfile
+            || $doctorLuxuryMobileRatings
+            || $doctorLuxuryMobileNotifications
+            || $doctorLuxuryMobileSupport
+            || $doctorLuxuryMobilePrivacyPolicy
+            || $doctorLuxuryMobileInvoices;
     @endphp
     <body
         @class([

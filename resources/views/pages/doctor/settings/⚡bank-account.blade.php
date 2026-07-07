@@ -60,7 +60,10 @@ new #[Layout('layouts::doctor')] #[Title('Bank account')] class extends Componen
     }
 }; ?>
 
-<div class="space-y-6">
+<div class="relative w-full">
+    @include('partials.doctor-luxury-bank-account-mobile')
+
+    <div class="hidden space-y-6 lg:block">
     <div class="flex items-center justify-between gap-3">
         <flux:heading size="xl" class="font-semibold text-zinc-900">{{ __('doctor.auth.bank_account_title') }}</flux:heading>
         <flux:button :href="route('doctor.dashboard')" wire:navigate variant="ghost" size="sm" icon="arrow-left">{{ __('doctor.auth.back') }}</flux:button>
@@ -107,5 +110,6 @@ new #[Layout('layouts::doctor')] #[Title('Bank account')] class extends Componen
                 <flux:text class="text-sm font-medium text-emerald-600">{{ session('bank_account_saved') }}</flux:text>
             @endif
         </form>
+    </div>
     </div>
 </div>

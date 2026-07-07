@@ -37,6 +37,16 @@ new #[Layout('layouts::doctor')] #[Title('Duration and price')] class extends Co
      */
     public array $selectedCommunications = [];
 
+    public function communicationIcon(string $communication): string
+    {
+        return match ($communication) {
+            'chat' => 'chat-bubble-left-right',
+            'voice_call' => 'phone',
+            'video_call' => 'video-camera',
+            default => 'signal',
+        };
+    }
+
     protected function doctor(): Doctor
     {
         $doctor = Auth::guard('doctor')->user();
@@ -72,6 +82,11 @@ new #[Layout('layouts::doctor')] #[Title('Duration and price')] class extends Co
         if ($this->selectedCommunications === []) {
             $this->selectedCommunications = ['chat', 'voice_call', 'video_call'];
         }
+    }
+
+    public function toggleInstantAppointment(): void
+    {
+        $this->acceptInstantAppointment = ! $this->acceptInstantAppointment;
     }
 
     public function save(): void
@@ -111,7 +126,10 @@ new #[Layout('layouts::doctor')] #[Title('Duration and price')] class extends Co
     }
 }; ?>
 
-<div class="space-y-6">
+<div class="relative w-full">
+    @include('partials.doctor-luxury-duration-mobile')
+
+    <div class="hidden space-y-6 lg:block">
     <div class="flex items-center justify-between gap-3">
         <flux:heading size="xl" class="font-semibold text-zinc-900">{{ __('Duration and price') }}</flux:heading>
         <flux:button :href="route('doctor.dashboard')" wire:navigate variant="ghost" size="sm" icon="arrow-left">{{ __('Back') }}</flux:button>
@@ -198,5 +216,6 @@ new #[Layout('layouts::doctor')] #[Title('Duration and price')] class extends Co
                 <flux:text class="text-sm font-medium text-emerald-600">{{ session('duration_saved') }}</flux:text>
             @endif
         </form>
+    </div>
     </div>
 </div>
