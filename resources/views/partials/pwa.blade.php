@@ -8,6 +8,7 @@
 <link rel="manifest" href="{{ route($manifestRoute) }}" />
 <meta name="description" content="{{ $appConfig['description'] }}" />
 <meta name="theme-color" content="{{ $themeColor }}" />
+<meta name="color-scheme" content="light only" />
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="default" />
