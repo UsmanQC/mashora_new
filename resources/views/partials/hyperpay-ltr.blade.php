@@ -105,8 +105,8 @@
     }
 
     .hyperpay-ltr .wpwl-wrapper-cardNumber .wpwl-control-cardNumber {
-        padding-left: 3.25rem !important;
-        padding-inline-start: 3.25rem !important;
+        padding-left: 1rem !important;
+        padding-inline-start: 1rem !important;
     }
 
     .hyperpay-ltr .wpwl-button-pay {
@@ -233,6 +233,48 @@
         border-color: rgba(255, 255, 255, 0.35) !important;
         border-top-color: #ffffff !important;
     }
+
+    /* Prioritize the brand/Apple Pay selector: visually reorder it to the
+       top of the form, ahead of the manual card fields, via flexbox order
+       (pure layout — does not touch widget config or payment logic). */
+    .hyperpay-ltr .wpwl-form,
+    .hyperpay-ltr .wpwl-form-card {
+        display: flex !important;
+        flex-direction: column !important;
+    }
+
+    .hyperpay-ltr .wpwl-group-brand {
+        order: -10 !important;
+        margin-bottom: 0 !important;
+    }
+
+    .hyperpay-ltr .hyperpay-or-divider {
+        order: -9 !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 0.75rem !important;
+        margin: 1.25rem 0 !important;
+        color: #a1a1aa !important;
+        font-size: 0.6875rem !important;
+        font-weight: 700 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.06em !important;
+    }
+
+    .hyperpay-ltr .hyperpay-or-divider span {
+        flex: 1 1 auto !important;
+        height: 1px !important;
+        background: #e4e4e7 !important;
+    }
+
+    .hyperpay-ltr .wpwl-group-cardNumber { order: 1 !important; }
+    .hyperpay-ltr .wpwl-group-expiry { order: 2 !important; }
+    .hyperpay-ltr .wpwl-group-cardHolder { order: 3 !important; }
+    .hyperpay-ltr .wpwl-group-cvv { order: 4 !important; }
+    .hyperpay-ltr .wpwl-group-submit,
+    .hyperpay-ltr .wpwl-group-button {
+        order: 5 !important;
+    }
 </style>
 
 <script>
@@ -299,6 +341,30 @@
             if (el.placeholder !== '') {
                 el.style.setProperty('--placeholder-color', placeholderColor);
             }
+        });
+
+        document.querySelectorAll('.hyperpay-ltr .wpwl-group-brand').forEach(function (el) {
+            var next = el.nextElementSibling;
+
+            if (next && next.classList && next.classList.contains('hyperpay-or-divider')) {
+                return;
+            }
+
+            var divider = document.createElement('div');
+            divider.className = 'hyperpay-or-divider';
+            divider.setAttribute('aria-hidden', 'true');
+
+            var lineLeft = document.createElement('span');
+            var label = document.createElement('em');
+            label.style.fontStyle = 'normal';
+            label.textContent = window.hyperpayOrLabel || 'OR';
+            var lineRight = document.createElement('span');
+
+            divider.appendChild(lineLeft);
+            divider.appendChild(label);
+            divider.appendChild(lineRight);
+
+            el.insertAdjacentElement('afterend', divider);
         });
     };
 

@@ -44,6 +44,7 @@ return [
 
     'checkout_accepts' => 'طرق الدفع المقبولة',
     'pay_through' => 'يمكنك الدفع من خلال',
+    'or_divider' => 'أو',
     'payment_brand_visa' => 'فيزا',
     'payment_brand_mastercard' => 'ماستركارد',
     'payment_brand_mada' => 'مدى',
