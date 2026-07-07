@@ -42,7 +42,6 @@ return [
     'icons' => [
         ['path' => 'images/pwa/icon-192.png', 'sizes' => '192x192', 'purpose' => 'any'],
         ['path' => 'images/pwa/icon-512.png', 'sizes' => '512x512', 'purpose' => 'any'],
-        ['path' => 'images/pwa/icon-512.png', 'sizes' => '512x512', 'purpose' => 'maskable'],
     ],
 
 ];
