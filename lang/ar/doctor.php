@@ -32,9 +32,10 @@ return [
         'open_consultation' => 'فتح الاستشارة',
         'today_glance' => 'لمحة عن اليوم',
         'todays_earnings' => 'أرباح اليوم',
-        'remaining' => ':count متبقية',
+        'appointments_done_label' => 'مكتملة',
+        'appointments_upcoming_label' => 'قادمة',
         'quick_actions' => 'إجراءات سريعة',
-        'action_consult' => 'استشارة',
+        'action_appointment' => 'المواعيد',
         'action_prescribe' => 'وصفة',
         'action_wallet' => 'المحفظة',
         'action_invoice' => 'فاتورة',
@@ -365,6 +366,12 @@ return [
         'pending_follow_up' => 'متابعات قادمة',
         'follow_up' => 'متابعة',
         'refunded' => 'مسترد',
+    ],
+
+    'appointments_week' => [
+        'title' => 'هذا الأسبوع',
+        'today' => 'اليوم',
+        'no_sessions' => 'لا توجد جلسات',
     ],
 
     'card' => [

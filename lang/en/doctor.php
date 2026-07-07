@@ -32,9 +32,10 @@ return [
         'open_consultation' => 'Open consultation',
         'today_glance' => 'Today at a glance',
         'todays_earnings' => 'Today\'s earnings',
-        'remaining' => ':count remaining',
+        'appointments_done_label' => 'Done',
+        'appointments_upcoming_label' => 'Upcoming',
         'quick_actions' => 'Quick actions',
-        'action_consult' => 'Consult',
+        'action_appointment' => 'Appointment',
         'action_prescribe' => 'Prescribe',
         'action_wallet' => 'Wallet',
         'action_invoice' => 'Invoice',
@@ -364,6 +365,12 @@ return [
         'pending_follow_up' => 'Upcoming Follow Ups',
         'follow_up' => 'Follow Up',
         'refunded' => 'Refunded',
+    ],
+
+    'appointments_week' => [
+        'title' => 'This week',
+        'today' => 'Today',
+        'no_sessions' => 'No sessions',
     ],
 
     'card' => [

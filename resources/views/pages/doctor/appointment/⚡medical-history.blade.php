@@ -44,9 +44,14 @@ new #[Layout('layouts::doctor')] #[Title('Medical history')] class extends Compo
 <div class="space-y-8">
     @include('partials.doctor-appointment-workspace-header', ['appointment' => $appointment, 'active' => 'medical_history'])
 
-    <div>
-        <flux:heading size="xl" class="font-semibold text-zinc-900">{{ __('doctor.medical_history.title') }}</flux:heading>
-        <flux:text class="mt-1 text-zinc-600">{{ __('doctor.medical_history.subtitle') }}</flux:text>
+    <div class="flex items-center gap-3">
+        <div class="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-[#10B981]/10 text-[#047857]">
+            <flux:icon name="clipboard-document-list" variant="outline" class="size-5" />
+        </div>
+        <div class="min-w-0">
+            <flux:heading size="xl" class="font-semibold text-zinc-900">{{ __('doctor.medical_history.title') }}</flux:heading>
+            <flux:text class="mt-0.5 text-zinc-600">{{ __('doctor.medical_history.subtitle') }}</flux:text>
+        </div>
     </div>
 
     @if ($this->medicalHistories->isEmpty())

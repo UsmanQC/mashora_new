@@ -42,6 +42,7 @@
             'doctor.settings.support',
             'doctor.settings.privacy-policy',
             'doctor.prescriptions',
+            'doctor.appointments.week',
         ]);
 
         $doctorLuxuryMobileHome = request()->routeIs('doctor.dashboard');
@@ -59,6 +60,7 @@
         $doctorLuxuryMobilePrivacyPolicy = request()->routeIs('doctor.settings.privacy-policy');
         $doctorLuxuryMobileInvoices = request()->routeIs('doctor.settings.invoices');
         $doctorLuxuryMobilePrescriptions = request()->routeIs('doctor.prescriptions');
+        $doctorLuxuryMobileAppointmentsWeek = request()->routeIs('doctor.appointments.week');
 
         $doctorLuxuryFullBleed = $doctorLuxuryMobileHome
             || $doctorLuxuryMobileSchedule
@@ -74,7 +76,8 @@
             || $doctorLuxuryMobileSupport
             || $doctorLuxuryMobilePrivacyPolicy
             || $doctorLuxuryMobileInvoices
-            || $doctorLuxuryMobilePrescriptions;
+            || $doctorLuxuryMobilePrescriptions
+            || $doctorLuxuryMobileAppointmentsWeek;
     @endphp
     <body
         @class([

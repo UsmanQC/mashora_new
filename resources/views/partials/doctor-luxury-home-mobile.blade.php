@@ -143,19 +143,27 @@
                         <p class="mt-0.5 text-[0.6875rem] text-slate-500">{{ __('doctor.mobile.todays_earnings') }}</p>
                     </div>
 
+                    @php
+                        $apptDone = $this->todayCompletedAppointmentsCount;
+                        $apptUpcoming = $this->todayRemainingAppointmentsCount;
+                    @endphp
                     <div class="rounded-3xl border border-slate-100 bg-white p-4 shadow-[0_4px_20px_-2px_rgba(0,0,0,0.03)]">
                         <div class="mb-3 flex size-9 items-center justify-center rounded-xl bg-[#10B981]/10 text-[#047857]">
                             <flux:icon name="calendar-days" variant="outline" class="size-[1.125rem]" />
                         </div>
-                        <p class="text-xl font-bold tabular-nums text-slate-900">
-                            {{ $this->todayCompletedAppointmentsCount }}
-                            <span class="text-sm font-semibold text-slate-400">/</span>
-                            {{ $this->todayTotalAppointmentsCount }}
-                        </p>
-                        <p class="mt-0.5 text-[0.6875rem] text-slate-500">{{ __('doctor.dashboard.stat_appointments') }}</p>
-                        <p class="mt-1 text-[0.625rem] font-medium text-slate-400">
-                            {{ __('doctor.mobile.remaining', ['count' => $this->todayRemainingAppointmentsCount]) }}
-                        </p>
+                        <p class="mb-3 text-[0.6875rem] text-slate-500">{{ __('doctor.dashboard.stat_appointments') }}</p>
+
+                        <div class="flex items-stretch gap-3">
+                            <div class="min-w-0 flex-1">
+                                <p class="text-xl font-bold tabular-nums text-[#047857]">{{ $apptDone }}</p>
+                                <p class="mt-0.5 text-[0.625rem] font-semibold text-slate-400">{{ __('doctor.mobile.appointments_done_label') }}</p>
+                            </div>
+                            <div class="w-px shrink-0 bg-slate-100"></div>
+                            <div class="min-w-0 flex-1">
+                                <p class="text-xl font-bold tabular-nums text-amber-600">{{ $apptUpcoming }}</p>
+                                <p class="mt-0.5 text-[0.625rem] font-semibold text-slate-400">{{ __('doctor.mobile.appointments_upcoming_label') }}</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -167,7 +175,7 @@
                 </h2>
                 <div class="grid grid-cols-4 gap-2">
                     @foreach ([
-                        ['href' => $nextUp ? route('doctor.appointments.conversation', $nextUp) : $appointmentsUrl, 'icon' => 'video-camera', 'label' => __('doctor.mobile.action_consult')],
+                        ['href' => route('doctor.appointments.week'), 'icon' => 'calendar-days', 'label' => __('doctor.mobile.action_appointment')],
                         ['href' => $prescriptionsUrl, 'icon' => 'clipboard-document-list', 'label' => __('doctor.mobile.action_prescribe')],
                         ['href' => $walletUrl, 'icon' => 'credit-card', 'label' => __('doctor.mobile.action_wallet')],
                         ['href' => $invoicesUrl, 'icon' => 'document-text', 'label' => __('doctor.mobile.action_invoice')],
