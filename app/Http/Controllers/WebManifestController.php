@@ -54,6 +54,9 @@ class WebManifestController extends Controller
             'icons' => $icons,
         ], 200, [
             'Content-Type' => 'application/manifest+json; charset=utf-8',
+            'Cache-Control' => 'no-cache, no-store, must-revalidate',
+            'Pragma' => 'no-cache',
+            'Expires' => '0',
         ]);
     }
 }

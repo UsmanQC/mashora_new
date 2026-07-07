@@ -5,7 +5,7 @@
     $manifestRoute = $pwaApp === 'doctor' ? 'manifest.doctor' : 'manifest';
 @endphp
 
-<link rel="manifest" href="{{ route($manifestRoute) }}" />
+<link rel="manifest" href="{{ route($manifestRoute) }}?v={{ config('pwa.cache_version') }}" />
 <meta name="description" content="{{ $appConfig['description'] }}" />
 <meta name="theme-color" content="{{ $themeColor }}" />
 <meta name="color-scheme" content="light only" />
