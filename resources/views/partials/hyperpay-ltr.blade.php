@@ -192,6 +192,7 @@
         width: auto !important;
         max-width: 3rem !important;
         object-fit: contain !important;
+        pointer-events: none !important;
     }
 
     .hyperpay-ltr .wpwl-button,
