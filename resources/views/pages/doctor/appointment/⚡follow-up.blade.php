@@ -398,7 +398,7 @@ new #[Layout('layouts::doctor')] #[Title('Follow Up')] class extends Component
     }
 }; ?>
 
-<div class="space-y-6">
+<div class="space-y-6 px-4 pb-28 pt-6 lg:px-0 lg:pb-0 lg:pt-0">
     @include('partials.doctor-appointment-workspace-header', ['appointment' => $appointment, 'active' => 'follow_up'])
 
     <div class="rounded-2xl border border-zinc-200/90 bg-white p-5 shadow-sm sm:p-6">

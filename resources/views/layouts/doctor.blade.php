@@ -43,6 +43,10 @@
             'doctor.settings.privacy-policy',
             'doctor.prescriptions',
             'doctor.appointments.week',
+            'doctor.appointments.medical-history',
+            'doctor.appointments.diagnosis',
+            'doctor.appointments.prescription',
+            'doctor.appointments.follow-up',
         ]);
 
         $doctorLuxuryMobileHome = request()->routeIs('doctor.dashboard');

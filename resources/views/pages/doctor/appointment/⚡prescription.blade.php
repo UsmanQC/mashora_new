@@ -241,7 +241,7 @@ new #[Layout('layouts::doctor')] #[Title('Prescription')] class extends Componen
     }
 }; ?>
 
-<div class="space-y-8">
+<div class="space-y-8 px-4 pb-28 pt-6 lg:px-0 lg:pb-0 lg:pt-0">
     @include('partials.doctor-appointment-workspace-header', ['appointment' => $appointment, 'active' => 'prescription'])
 
     <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">

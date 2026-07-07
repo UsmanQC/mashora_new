@@ -41,7 +41,7 @@ new #[Layout('layouts::doctor')] #[Title('Medical history')] class extends Compo
     }
 }; ?>
 
-<div class="space-y-8">
+<div class="space-y-8 px-4 pb-28 pt-6 lg:px-0 lg:pb-0 lg:pt-0">
     @include('partials.doctor-appointment-workspace-header', ['appointment' => $appointment, 'active' => 'medical_history'])
 
     <div class="flex items-center gap-3">

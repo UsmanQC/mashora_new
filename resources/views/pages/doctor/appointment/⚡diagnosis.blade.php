@@ -59,7 +59,7 @@ new #[Layout('layouts::doctor')] #[Title('Diagnosis')] class extends Component
     }
 }; ?>
 
-<div class="space-y-6">
+<div class="space-y-6 px-4 pb-28 pt-6 lg:px-0 lg:pb-0 lg:pt-0">
     @include('partials.doctor-appointment-workspace-header', ['appointment' => $appointment, 'active' => 'diagnosis'])
 
     <div class="flex items-start gap-3">
