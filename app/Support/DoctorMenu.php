@@ -78,24 +78,30 @@ final class DoctorMenu
                 'items' => [
                     self::mobileItem('doctor.menu.working_hours', 'doctor.menu.working_hours_sub', 'clock', 'doctor.settings.working-hours'),
                     self::mobileItem('doctor.menu.duration', 'doctor.menu.duration_sub', 'currency-dollar', 'doctor.settings.duration'),
-                    self::mobileItem('doctor.menu.profile', 'doctor.menu.profile_sub', 'user-circle', 'doctor.settings.profile'),
                 ],
             ],
-            [
-                'heading' => __('doctor.mobile.more_work'),
-                'items' => [
-                    self::mobileItem('doctor.mobile.more_patients', 'doctor.mobile.more_patients_sub', 'users', 'doctor.appointments', 'patients_count'),
-                    self::mobileItem('doctor.mobile.more_prescriptions', 'doctor.mobile.more_prescriptions_sub', 'clipboard-document-list', 'doctor.appointments', 'prescriptions_count', ['status' => 'completed']),
-                    self::mobileItem('doctor.menu.ratings', 'doctor.menu.ratings_sub', 'chart-bar', 'doctor.ratings'),
-                    self::mobileItem('doctor.menu.notifications', 'doctor.menu.notifications_sub', 'bell', 'doctor.settings.notifications', 'notifications_count'),
-                ],
-            ],
+            // 'WORK' group hidden on mobile for now — keep patients/prescriptions wired up, just not shown.
+            // [
+            //     'heading' => __('doctor.mobile.more_work'),
+            //     'items' => [
+            //         self::mobileItem('doctor.mobile.more_patients', 'doctor.mobile.more_patients_sub', 'users', 'doctor.appointments', 'patients_count'),
+            //         self::mobileItem('doctor.mobile.more_prescriptions', 'doctor.mobile.more_prescriptions_sub', 'clipboard-document-list', 'doctor.appointments', 'prescriptions_count', ['status' => 'completed']),
+            //     ],
+            // ],
             [
                 'heading' => __('doctor.menu.group_finance'),
                 'items' => [
                     self::mobileItem('doctor.menu.wallet', 'doctor.menu.wallet_sub', 'banknotes', 'doctor.settings.wallet'),
                     self::mobileItem('doctor.menu.invoices', 'doctor.menu.invoices_sub', 'document-text', 'doctor.settings.invoices'),
                     self::mobileItem('doctor.menu.bank_account', 'doctor.menu.bank_account_sub', 'credit-card', 'doctor.settings.bank-account'),
+                ],
+            ],
+            [
+                'heading' => __('doctor.menu.group_account'),
+                'items' => [
+                    self::mobileItem('doctor.menu.profile', 'doctor.menu.profile_sub', 'user-circle', 'doctor.settings.profile'),
+                    self::mobileItem('doctor.menu.ratings', 'doctor.menu.ratings_sub', 'chart-bar', 'doctor.ratings'),
+                    self::mobileItem('doctor.menu.notifications', 'doctor.menu.notifications_sub', 'bell', 'doctor.settings.notifications', 'notifications_count'),
                 ],
             ],
             [

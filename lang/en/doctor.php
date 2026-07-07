@@ -111,7 +111,7 @@ return [
         'grid_aria' => 'Doctor menu',
         'group_finance' => 'Finance',
         'group_practice' => 'Practice',
-        'group_account' => 'Account',
+        'group_account' => 'Account settings',
         'group_help' => 'Help & policies',
         'wallet' => 'Wallet',
         'wallet_sub' => 'Balance, earnings, and transaction history',

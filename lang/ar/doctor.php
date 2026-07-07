@@ -111,7 +111,7 @@ return [
         'grid_aria' => 'قائمة الطبيب',
         'group_finance' => 'المالية',
         'group_practice' => 'الممارسة',
-        'group_account' => 'الحساب',
+        'group_account' => 'إعدادات الحساب',
         'group_help' => 'المساعدة والسياسات',
         'wallet' => 'المحفظة',
         'wallet_sub' => 'الرصيد، الأرباح، وسجل الحركات',
