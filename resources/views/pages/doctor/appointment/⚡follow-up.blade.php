@@ -468,7 +468,7 @@ new #[Layout('layouts::doctor')] #[Title('Follow Up')] class extends Component
                             <flux:error name="paidSelectedTime" />
                         </flux:field>
 
-                        <flux:callout variant="secondary" icon="banknotes" class="text-sm [&_[data-slot=text]]:!text-black">
+                        <flux:callout variant="secondary" icon="banknotes" class="text-sm [&_[data-slot=content]]:!text-black">
                             {{ __('doctor.scheduled_appointment.price_hint', [
                                 'amount' => number_format($this->paidSessionPrice(), 2),
                                 'minutes' => \App\Services\DoctorScheduledAppointmentService::paymentGraceMinutes(),
