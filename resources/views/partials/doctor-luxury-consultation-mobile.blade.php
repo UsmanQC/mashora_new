@@ -9,13 +9,15 @@
 <div
     class="doctor-luxury-consultation relative flex h-svh max-h-svh min-h-0 flex-col overflow-hidden bg-slate-50 lg:hidden"
     data-test="doctor-luxury-consultation"
-    x-data="{ tab: 'summary', chatOpen: false, callActive: false, chatCardMinimized: false }"
+    wire:key="doctor-consultation-mobile-{{ $appointment->id }}"
+    x-data="{ tab: 'summary', chatOpen: false, callActive: false, chatCardMinimized: false, hasNewMessage: false }"
     x-bind:class="{
         'doctor-consultation--call-active': callActive,
         'doctor-consultation--chat-open': chatOpen,
     }"
     x-on:consultation-call-active.window="callActive = true; chatOpen = false"
     x-on:consultation-call-ended.window="callActive = false; chatOpen = false"
+    x-on:doctor-chat-message-received.window="if (chatCardMinimized) hasNewMessage = true"
 >
     <header class="shrink-0 border-b border-slate-100 bg-white px-4 pb-3 pt-[max(2rem,env(safe-area-inset-top))]">
         <div class="flex items-center gap-3">
@@ -413,13 +415,19 @@
                 </button>
                 <button
                     type="button"
-                    x-on:click="chatCardMinimized = !chatCardMinimized"
-                    class="flex size-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50"
+                    x-on:click="chatCardMinimized = !chatCardMinimized; hasNewMessage = false"
+                    class="relative flex size-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50"
                     x-bind:aria-label="chatCardMinimized ? @js(__('doctor.consultation.chat_expand')) : @js(__('doctor.consultation.chat_minimize'))"
                     data-test="doctor-chat-card-minimize-toggle-mobile"
                 >
                     <flux:icon x-show="!chatCardMinimized" name="chevron-down" variant="mini" class="size-4" />
                     <flux:icon x-show="chatCardMinimized" x-cloak name="chevron-up" variant="mini" class="size-4" />
+                    <span
+                        x-show="hasNewMessage"
+                        x-cloak
+                        class="absolute -top-0.5 -end-0.5 flex size-2.5 rounded-full bg-rose-500 ring-2 ring-white"
+                        aria-hidden="true"
+                    ></span>
                 </button>
             </div>
         </div>
@@ -430,8 +438,13 @@
             x-bind:class="callActive ? 'pb-[max(0.75rem,env(safe-area-inset-bottom))]' : 'pb-[calc(5.25rem+env(safe-area-inset-bottom))]'"
             class="px-4 pt-3 text-center"
         >
-            <button type="button" x-on:click="chatCardMinimized = false" class="text-xs font-semibold text-[#047857]">
-                {{ __('doctor.consultation.chat_minimized_hint') }}
+            <button
+                type="button"
+                x-on:click="chatCardMinimized = false; hasNewMessage = false"
+                class="inline-flex items-center gap-1.5 text-xs font-semibold text-[#047857]"
+            >
+                <span x-show="hasNewMessage" x-cloak class="flex size-1.5 shrink-0 rounded-full bg-rose-500"></span>
+                <span x-text="hasNewMessage ? @js(__('doctor.consultation.chat_new_message_hint')) : @js(__('doctor.consultation.chat_minimized_hint'))"></span>
             </button>
         </div>
 

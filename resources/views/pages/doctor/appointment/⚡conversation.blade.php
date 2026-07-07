@@ -1140,6 +1140,7 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                     row.appendChild(stack);
                     wrap.appendChild(row);
                     wrap.scrollTop = wrap.scrollHeight;
+                    window.dispatchEvent(new CustomEvent('doctor-chat-message-received'));
 
                     return;
                 }

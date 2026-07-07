@@ -819,7 +819,7 @@ return [
     ],
 
     'consultation' => [
-        'title' => 'Consultation',
+        'title' => 'Appointment',
         'back' => 'Back to schedule',
         'rec' => 'REC',
         'call_quality' => '1080p · Excellent',
@@ -864,6 +864,7 @@ return [
         'chat_minimize' => 'Minimize chat',
         'chat_expand' => 'Expand chat',
         'chat_minimized_hint' => 'Chat minimized — tap to open',
+        'chat_new_message_hint' => 'New message — tap to view',
         'session_time_ended_title' => 'Session time has ended',
         'session_time_ended_hint' => 'The video call is no longer available. You can still message the patient below.',
     ],
