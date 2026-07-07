@@ -53,7 +53,6 @@
         $doctorLuxuryMobileSchedule = request()->routeIs('doctor.appointments');
         $doctorLuxuryMobileMore = request()->routeIs('doctor.menu');
         $doctorLuxuryMobileWallet = request()->routeIs('doctor.settings.wallet');
-        $doctorLuxuryMobileConsultation = request()->routeIs('doctor.appointments.conversation');
         $doctorLuxuryMobileWorkingHours = request()->routeIs('doctor.settings.working-hours');
         $doctorLuxuryMobileDuration = request()->routeIs('doctor.settings.duration');
         $doctorLuxuryMobileBankAccount = request()->routeIs('doctor.settings.bank-account');
@@ -70,7 +69,6 @@
             || $doctorLuxuryMobileSchedule
             || $doctorLuxuryMobileMore
             || $doctorLuxuryMobileWallet
-            || $doctorLuxuryMobileConsultation
             || $doctorLuxuryMobileWorkingHours
             || $doctorLuxuryMobileDuration
             || $doctorLuxuryMobileBankAccount

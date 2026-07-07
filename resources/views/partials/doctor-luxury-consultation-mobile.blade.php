@@ -9,7 +9,7 @@
 <div
     class="doctor-luxury-consultation relative flex h-svh max-h-svh min-h-0 flex-col overflow-hidden bg-slate-50 lg:hidden"
     data-test="doctor-luxury-consultation"
-    x-data="{ tab: 'summary', chatOpen: false, callActive: false }"
+    x-data="{ tab: 'summary', chatOpen: false, callActive: false, chatCardMinimized: false }"
     x-bind:class="{
         'doctor-consultation--call-active': callActive,
         'doctor-consultation--chat-open': chatOpen,
@@ -396,10 +396,27 @@
                 >
                     <flux:icon name="x-mark" variant="mini" class="size-4" />
                 </button>
+                <button
+                    type="button"
+                    x-on:click="chatCardMinimized = !chatCardMinimized"
+                    class="flex size-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50"
+                    x-bind:aria-label="chatCardMinimized ? @js(__('doctor.consultation.chat_expand')) : @js(__('doctor.consultation.chat_minimize'))"
+                    data-test="doctor-chat-card-minimize-toggle-mobile"
+                >
+                    <flux:icon x-show="!chatCardMinimized" name="chevron-down" variant="mini" class="size-4" />
+                    <flux:icon x-show="chatCardMinimized" x-cloak name="chevron-up" variant="mini" class="size-4" />
+                </button>
             </div>
         </div>
 
+        <div x-show="chatCardMinimized" x-cloak class="px-4 py-3 text-center">
+            <button type="button" x-on:click="chatCardMinimized = false" class="text-xs font-semibold text-[#047857]">
+                {{ __('doctor.consultation.chat_minimized_hint') }}
+            </button>
+        </div>
+
         <div
+            x-show="!chatCardMinimized"
             id="doctor-chat-messages-mobile"
             class="doctor-consultation-chat-messages max-h-44 space-y-3 overflow-y-auto px-4 py-3"
             wire:ignore.self
@@ -451,7 +468,7 @@
             @endforelse
         </div>
 
-        <div class="border-t border-slate-100 bg-slate-50/80 px-4 py-3 pb-[calc(5.25rem+env(safe-area-inset-bottom))]">
+        <div x-show="!chatCardMinimized" class="border-t border-slate-100 bg-slate-50/80 px-4 py-3 pb-[calc(5.25rem+env(safe-area-inset-bottom))]">
             <form
                 wire:submit="sendMessage"
                 class="doctor-consultation-chat-form flex items-center gap-2 rounded-full border border-slate-200 bg-white py-1 pe-1 ps-4 shadow-sm @if (! $appointment->isDoctorChatOpen()) pointer-events-none opacity-55 @endif"

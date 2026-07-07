@@ -862,6 +862,9 @@ return [
         'review_while_waiting' => 'راجع الملخص والسجل أدناه أثناء الانتظار.',
         'open_chat' => 'فتح المحادثة',
         'close_chat' => 'إغلاق المحادثة',
+        'chat_minimize' => 'تصغير المحادثة',
+        'chat_expand' => 'توسيع المحادثة',
+        'chat_minimized_hint' => 'المحادثة مصغّرة — اضغط للفتح',
     ],
 
     'notifications' => [

@@ -861,6 +861,9 @@ return [
         'review_while_waiting' => 'Review summary and history below while you wait.',
         'open_chat' => 'Open chat',
         'close_chat' => 'Close chat',
+        'chat_minimize' => 'Minimize chat',
+        'chat_expand' => 'Expand chat',
+        'chat_minimized_hint' => 'Chat minimized — tap to open',
     ],
 
     'notifications' => [
