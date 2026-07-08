@@ -97,13 +97,7 @@
                                 <p class="text-sm font-bold text-slate-900">{{ $this->appointmentTimeRangeLabel() }}</p>
                             @endif
 
-                            @if ($appointment->status === 'in_process' && $this->sessionTimeExpired())
-                                <div class="mt-2 border-t border-slate-200/80 pt-2">
-                                    <p class="text-xs font-semibold text-slate-600">
-                                        {{ __('patient.appointments.session_finished') }}
-                                    </p>
-                                </div>
-                            @elseif ($appointment->status === 'in_process' && $this->appointmentEndsAtLabel())
+                            @if ($appointment->status === 'in_process' && ! $this->sessionTimeExpired() && $this->appointmentEndsAtLabel())
                                 <div
                                     id="patient-session-countdown-mobile"
                                     class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-slate-200/80 pt-2"
@@ -118,7 +112,7 @@
                                         </p>
                                     @endif
                                 </div>
-                            @elseif ($this->appointmentEndsAtLabel())
+                            @elseif ($appointment->status !== 'in_process' && $this->appointmentEndsAtLabel())
                                 <p class="mt-1 text-xs font-medium text-slate-500">
                                     {{ __('patient.appointments.luxury.ends_at', ['time' => $this->appointmentEndsAtLabel()]) }}
                                 </p>
@@ -130,31 +124,36 @@
 
             @if ($appointment->allowsPatientCalls())
                 <div class="flex flex-wrap items-center gap-2">
-                    <span
-                        id="patient-call-started-chip"
-                        class="hidden inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700"
-                    >
-                        <span id="patient-call-chip-label">{{ __('patient.appointments.call_in_progress') }}</span>
-                        <span id="patient-call-chip-duration" class="font-mono tabular-nums">00:00</span>
-                    </span>
-                    <span
-                        id="patient-session-finished-chip"
-                        @class([
-                            'inline-flex rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-semibold text-slate-600 shadow-sm',
-                            'hidden' => ! ($appointment->status === 'in_process' && $this->sessionTimeExpired()),
-                        ])
-                    >
-                        {{ __('patient.appointments.session_finished') }}
-                    </span>
-                    <span
-                        id="patient-waiting-for-call-chip"
-                        @class([
-                            'inline-flex rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-600 shadow-sm',
-                            'hidden' => $appointment->status !== 'in_process' || $this->sessionTimeExpired(),
-                        ])
-                    >
-                        {{ __('patient.appointments.waiting_for_specialist_call') }}
-                    </span>
+                    @if ($appointment->status === 'in_process' && $this->sessionTimeExpired())
+                        <span
+                            id="patient-session-finished-chip"
+                            class="inline-flex rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-semibold text-slate-600 shadow-sm"
+                        >
+                            {{ __('patient.appointments.session_finished') }}
+                        </span>
+                    @else
+                        <span
+                            id="patient-call-started-chip"
+                            class="hidden inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700"
+                        >
+                            <span id="patient-call-chip-label">{{ __('patient.appointments.call_in_progress') }}</span>
+                            <span id="patient-call-chip-duration" class="font-mono tabular-nums">00:00</span>
+                        </span>
+                        <span
+                            id="patient-session-finished-chip"
+                            class="hidden inline-flex rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-semibold text-slate-600 shadow-sm"
+                        >
+                            {{ __('patient.appointments.session_finished') }}
+                        </span>
+                        @if ($appointment->status === 'in_process')
+                            <span
+                                id="patient-waiting-for-call-chip"
+                                class="inline-flex rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-600 shadow-sm"
+                            >
+                                {{ __('patient.appointments.waiting_for_specialist_call') }}
+                            </span>
+                        @endif
+                    @endif
                 </div>
             @endif
 

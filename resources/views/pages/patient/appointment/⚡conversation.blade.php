@@ -449,31 +449,36 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
 
     @if ($appointment->allowsPatientCalls())
         <div class="hidden flex-wrap items-center gap-2 sm:flex">
-            <span
-                id="patient-call-started-chip-desktop"
-                class="hidden inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700"
-            >
-                <span id="patient-call-chip-label-desktop">{{ __('patient.appointments.call_in_progress') }}</span>
-                <span id="patient-call-chip-duration-desktop" class="font-mono tabular-nums">00:00</span>
-            </span>
-            <span
-                id="patient-session-finished-chip-desktop"
-                @class([
-                    'rounded-full border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-[11px] font-semibold text-zinc-600',
-                    'hidden' => ! ($appointment->status === 'in_process' && $this->sessionTimeExpired()),
-                ])
-            >
-                {{ __('patient.appointments.session_finished') }}
-            </span>
-            <span
-                id="patient-waiting-for-call-chip-desktop"
-                @class([
-                    'rounded-full border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-[11px] font-semibold text-zinc-600',
-                    'hidden' => $appointment->status !== 'in_process' || $this->sessionTimeExpired(),
-                ])
-            >
-                {{ __('patient.appointments.waiting_for_specialist_call') }}
-            </span>
+            @if ($appointment->status === 'in_process' && $this->sessionTimeExpired())
+                <span
+                    id="patient-session-finished-chip-desktop"
+                    class="rounded-full border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-[11px] font-semibold text-zinc-600"
+                >
+                    {{ __('patient.appointments.session_finished') }}
+                </span>
+            @else
+                <span
+                    id="patient-call-started-chip-desktop"
+                    class="hidden inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700"
+                >
+                    <span id="patient-call-chip-label-desktop">{{ __('patient.appointments.call_in_progress') }}</span>
+                    <span id="patient-call-chip-duration-desktop" class="font-mono tabular-nums">00:00</span>
+                </span>
+                <span
+                    id="patient-session-finished-chip-desktop"
+                    class="hidden rounded-full border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-[11px] font-semibold text-zinc-600"
+                >
+                    {{ __('patient.appointments.session_finished') }}
+                </span>
+                @if ($appointment->status === 'in_process')
+                    <span
+                        id="patient-waiting-for-call-chip-desktop"
+                        class="rounded-full border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-[11px] font-semibold text-zinc-600"
+                    >
+                        {{ __('patient.appointments.waiting_for_specialist_call') }}
+                    </span>
+                @endif
+            @endif
         </div>
     @endif
 
