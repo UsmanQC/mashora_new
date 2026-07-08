@@ -68,11 +68,11 @@
     </div>
 @elseif ($this->canResolvePaymentMissed($appointment))
     <div class="mt-3 ps-2" data-test="patient-payment-missed-resolution">
-        <p class="mb-2.5 text-xs leading-relaxed text-violet-900">{{ __('patient.scheduled_appointment.missed_card_body') }}</p>
+        <p class="mb-2.5 text-xs leading-relaxed text-emerald-900">{{ __('patient.scheduled_appointment.missed_card_body') }}</p>
         <a
             href="{{ route('patient.appointments.payment-missed-reschedule', $appointment) }}"
             wire:navigate
-            class="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-violet-700"
+            class="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-xl bg-[#10B981] px-4 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-[#059669]"
         >
             <flux:icon name="calendar-days" variant="mini" class="size-4" />
             {{ __('patient.scheduled_appointment.choose_appointment') }}

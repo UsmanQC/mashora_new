@@ -130,7 +130,7 @@
                         <flux:button
                             :href="route('patient.appointments.payment-missed-reschedule', $appointment)"
                             wire:navigate
-                            class="mt-3 w-full !rounded-xl !bg-violet-600 !py-2.5 !text-white hover:!brightness-95"
+                            class="mt-3 w-full !rounded-xl !bg-[#10B981] !py-2.5 !text-white hover:!brightness-95"
                             icon="calendar-days"
                         >
                             {{ __('patient.scheduled_appointment.choose_appointment') }}

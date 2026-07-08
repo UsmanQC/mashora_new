@@ -758,7 +758,8 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
             }
 
             if (boot.dataset.initialized === '1') {
-                boot.__leaveCall?.().catch(() => {});
+                // Soft re-init must not broadcast call.ended to the patient.
+                boot.__leaveCall?.(false).catch(() => {});
             }
 
             const pusherKey = boot.dataset.pusherKey || '';
@@ -1825,7 +1826,8 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
 
                 document.addEventListener('livewire:navigating', () => {
                     const bootEl = document.getElementById('doctor-conversation-bootstrap');
-                    bootEl?.__leaveCall?.(true).catch(() => {});
+                    // Do not notify remote — navigation / refresh must not end the call for the other party.
+                    bootEl?.__leaveCall?.(false).catch(() => {});
 
                     if (bootEl) {
                         delete bootEl.dataset.initialized;

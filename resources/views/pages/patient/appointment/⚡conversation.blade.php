@@ -877,10 +877,11 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
             if (boot.dataset.initialized === '1' && boot.dataset.boundAppointmentId === String(appointmentId)) {
                 boot.__mountOverlayToBody?.();
                 boot.__bindCallControlButtons?.();
-                boot.__restorePendingCall?.();
                 boot.__syncCallOverlay?.();
                 boot.__observeSessionMetrics?.();
+                boot.__syncSessionFromDom?.();
                 startSessionTimers();
+                boot.__restoreAndRejoinCall?.().catch(() => {});
 
                 return;
             }
@@ -890,7 +891,8 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
             teardownPatientConversationRealtime();
 
             if (boot.dataset.initialized === '1') {
-                boot.__leaveCall?.().catch(() => {});
+                // Soft re-init / appointment switch must not broadcast call.ended.
+                boot.__leaveCall?.(false).catch(() => {});
             }
 
             boot.dataset.initialized = '1';
@@ -1315,18 +1317,20 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
             }
 
             function syncPatientSessionFromDom(bootEl) {
-                const metricsEl = document.getElementById('patient-conversation-metrics');
-                const nextStatus = bootEl?.dataset.appointmentStatus || metricsEl?.dataset.status || appointmentStatus;
+                const metricsNode = document.getElementById('patient-conversation-metrics');
+                // Metrics are Livewire-managed; bootstrap is wire:ignore so prefer metrics status.
+                const nextStatus = metricsNode?.dataset.status || bootEl?.dataset.appointmentStatus || appointmentStatus;
                 const prevStatus = appointmentStatus;
                 const wasWaiting = appointmentStatus !== 'in_process' && nextStatus === 'in_process';
 
                 appointmentStatus = nextStatus;
+
                 if (bootEl && bootEl.dataset.appointmentStatus !== appointmentStatus) {
                     bootEl.dataset.appointmentStatus = appointmentStatus;
                 }
 
-                if (metricsEl && nextStatus === 'in_process' && metricsEl.dataset.status !== nextStatus) {
-                    metricsEl.dataset.status = nextStatus;
+                if (metricsNode && metricsNode.dataset.status !== appointmentStatus) {
+                    metricsNode.dataset.status = appointmentStatus;
                 }
 
                 if (prevStatus === 'in_process' && nextStatus === 'completed') {
@@ -1334,16 +1338,26 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                     incomingPayload = null;
                     incomingBannerEl()?.classList.add('hidden');
                     dismissIncomingAlert();
+
+                    if (activeMode) {
+                        leaveCallLocal().catch(() => {});
+                    }
+
                     window.dispatchEvent(new CustomEvent('mashora:call-ended', {
-                        detail: { appointment_id: appointmentId },
+                        detail: { appointment_id: appointmentId, status: nextStatus },
                     }));
+
+                    if (window.Livewire) {
+                        Livewire.dispatch('patient-session-completed', { appointmentId });
+                    }
                 }
 
                 if (wasWaiting && incomingLabelEl() && incomingBannerEl()) {
-                    showCallToast(metricsEl?.dataset.sessionStartedWaiting || 'Session started.', 'success');
+                    showCallToast(metricsNode?.dataset.sessionStartedWaiting || 'Session started.', 'success');
                     startSessionTimers();
-                    refreshCallUiState();
                 }
+
+                refreshCallUiState();
             }
 
             function tickSessionTimers() {
@@ -1916,6 +1930,8 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
             }
 
             async function restoreAndRejoinCall() {
+                syncPatientSessionFromDom(boot);
+
                 if (appointmentStatus !== 'in_process' || activeMode || callJoinInProgress) {
                     return;
                 }
@@ -1924,7 +1940,15 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 const restoredFromServer = await restorePendingCallFromServer();
 
                 if (! restoredFromStorage && ! restoredFromServer && ! incomingPayload?.agora_app_id) {
-                    clearPendingCallStorage();
+                    // Keep active-call storage when server pending was already consumed by join.
+                    try {
+                        if (! sessionStorage.getItem('mashora_active_call_' + appointmentId)) {
+                            clearPendingCallStorage();
+                        }
+                    } catch (_) {
+                        clearPendingCallStorage();
+                    }
+
                     incomingPayload = null;
                     incomingBannerEl()?.classList.add('hidden');
                     refreshCallUiState();
@@ -2107,6 +2131,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
             bindCallControlButtons();
             boot.__bindCallControlButtons = bindCallControlButtons;
             boot.__restorePendingCall = restorePendingCallFromStorage;
+            boot.__restoreAndRejoinCall = restoreAndRejoinCall;
 
             if (appointmentStatus === 'in_process') {
                 restoreAndRejoinCall().catch(() => {});
@@ -2259,6 +2284,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                             bootEl?.__mountOverlayToBody?.();
                             bootEl?.__syncCallOverlay?.();
                             bootEl?.__observeSessionMetrics?.();
+                            bootEl?.__syncSessionFromDom?.();
                             startSessionTimers();
                         });
                     });
@@ -2297,10 +2323,12 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
             }
 
             boot.__observeSessionMetrics = observeSessionMetrics;
+            boot.__syncSessionFromDom = () => syncPatientSessionFromDom(boot);
 
             registerPatientConversationMorphHook();
 
             startSessionTimers();
+            syncPatientSessionFromDom(boot);
             refreshCallUiState();
 
             if (boot.dataset.sessionObserved !== '1') {

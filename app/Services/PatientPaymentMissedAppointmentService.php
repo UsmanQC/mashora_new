@@ -7,6 +7,7 @@ use App\Models\Doctor;
 use App\Models\User;
 use App\Support\AppTimezone;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -17,11 +18,40 @@ final class PatientPaymentMissedAppointmentService
         private readonly PatientAppointmentNotifier $notifier,
     ) {}
 
+    public static function rescheduleWindowHours(): int
+    {
+        return max(1, (int) config('appointments.payment_missed_reschedule_window_hours', 24));
+    }
+
+    public function isWithinRescheduleWindow(Appointment $appointment): bool
+    {
+        if ($appointment->created_at === null) {
+            return false;
+        }
+
+        return $appointment->created_at->greaterThan(
+            now()->subHours(self::rescheduleWindowHours()),
+        );
+    }
+
     public function canReschedule(Appointment $appointment): bool
     {
         return $appointment->isPatientPaymentMissed()
             && ! $appointment->is_follow_up
-            && $appointment->parent_id !== null;
+            && $appointment->parent_id !== null
+            && $this->isWithinRescheduleWindow($appointment);
+    }
+
+    /**
+     * @param  Builder<Appointment>  $query
+     * @return Builder<Appointment>
+     */
+    public function constrainEligible(Builder $query): Builder
+    {
+        return $query
+            ->where('status', 'cancelled')
+            ->where('cancel_status', 'patient_payment_missed')
+            ->where('created_at', '>', now()->subHours(self::rescheduleWindowHours()));
     }
 
     public function assertCanReschedule(User $user, Appointment $appointment): void
