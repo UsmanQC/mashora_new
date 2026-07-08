@@ -420,6 +420,14 @@ class Appointment extends Model
         return $this->hasMany(ChMessage::class, 'appointment_id');
     }
 
+    /**
+     * @return HasMany<AppointmentRefundRequest, $this>
+     */
+    public function refundRequests(): HasMany
+    {
+        return $this->hasMany(AppointmentRefundRequest::class);
+    }
+
     public function isDoctorMissed(): bool
     {
         return $this->status === 'not_attended'
@@ -430,5 +438,10 @@ class Appointment extends Model
     {
         return $this->status === 'cancelled'
             && $this->cancel_status === 'patient_refunded';
+    }
+
+    public function hasRefundRequest(): bool
+    {
+        return $this->refundRequests()->exists();
     }
 }

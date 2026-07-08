@@ -80,24 +80,36 @@ final class AppointmentWalletService
      */
     public function refundToPatient(Appointment $appointment): void
     {
+        $this->refundAmountToPatient($appointment, (float) $appointment->total, 'appointment_refund');
+    }
+
+    public function refundAmountToPatient(
+        Appointment $appointment,
+        float $refundAmount,
+        string $transactionType = 'appointment_refund',
+    ): void {
         $appointment->loadMissing(['doctor', 'user']);
 
         if ($this->hasRefunded($appointment) || ! $this->appointmentWasPaid($appointment)) {
             return;
         }
 
-        $patientRefund = (float) $appointment->total;
-        $doctorReversal = (float) $appointment->doctor_share;
+        $appointmentTotal = (float) $appointment->total;
+        $patientRefund = min(max($refundAmount, 0), $appointmentTotal);
 
-        if ($patientRefund <= 0) {
+        if ($patientRefund <= 0 || $appointmentTotal <= 0) {
             return;
         }
+
+        $refundRatio = min(1, $patientRefund / $appointmentTotal);
+        $doctorReversal = round((float) $appointment->doctor_share * $refundRatio, 2);
+        $mashoraReversal = round((float) $appointment->mashora_share * $refundRatio, 2);
 
         $patient = $appointment->user;
 
         if ($patient instanceof User) {
             $patient->depositFloat($patientRefund, [
-                'type' => 'appointment_refund',
+                'type' => $transactionType,
                 'appointment_id' => $appointment->id,
                 'appointment_number' => $appointment->appointment_number,
             ]);
@@ -111,13 +123,13 @@ final class AppointmentWalletService
                 'appointment_id' => $appointment->id,
                 'appointment_number' => $appointment->appointment_number,
                 'doctor_share' => $doctorReversal,
-                'mashora_share' => (float) $appointment->mashora_share,
+                'mashora_share' => $mashoraReversal,
             ]);
         }
 
         $appointment->forceFill([
-            'doctor_share' => 0,
-            'mashora_share' => 0,
+            'doctor_share' => max(0, round((float) $appointment->doctor_share - $doctorReversal, 2)),
+            'mashora_share' => max(0, round((float) $appointment->mashora_share - $mashoraReversal, 2)),
         ])->save();
     }
 
@@ -149,8 +161,9 @@ final class AppointmentWalletService
             ->get()
             ->contains(function (Transaction $transaction) use ($appointment): bool {
                 $meta = is_array($transaction->meta) ? $transaction->meta : [];
+                $metaType = (string) ($meta['type'] ?? '');
 
-                return ($meta['type'] ?? null) === 'appointment_refund'
+                return str_starts_with($metaType, 'appointment_refund')
                     && (int) ($meta['appointment_id'] ?? 0) === (int) $appointment->id;
             });
     }

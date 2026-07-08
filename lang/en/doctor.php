@@ -885,5 +885,13 @@ return [
         'appointment_booked_body' => ':patient booked a session on :date at :time.',
         'session_start_approved_title' => 'Patient approved early start',
         'session_start_approved_body' => ':patient approved your request to start the session early. You can start it now.',
+        'refund_request_submitted_title' => 'Patient requested a refund',
+        'refund_request_submitted_body' => ':patient requested a refund of :amount SAR. Admin will review the request.',
+        'refund_request_approved_title' => 'Refund request approved',
+        'refund_request_approved_body' => 'Admin approved the refund request from :patient for :amount SAR.',
+        'refund_request_rejected_title' => 'Refund request rejected',
+        'refund_request_rejected_body' => 'Admin rejected the refund request from :patient.',
+        'refund_request_processed_title' => 'Refund processed',
+        'refund_request_processed_body' => 'Refund of :amount SAR for :patient was processed and credited to the patient wallet.',
     ],
 ];
