@@ -1827,15 +1827,22 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
             }
 
             boot.__syncCallOverlay = () => {
-                if (currentMode || boot.__currentMode) {
-                    const mode = currentMode || boot.__currentMode;
-                    currentMode = mode;
-                    showOverlay(true);
-                    showMediaControlsForMode(mode);
-                    syncMediaControlUi(mode);
-                    updateActiveCallOverlayUi();
-                    replayActiveVideoTracks();
+                const mode = currentMode || boot.__currentMode;
+                if (! mode) {
+                    return;
                 }
+
+                currentMode = mode;
+                boot.__currentMode = mode;
+                showOverlay(true);
+                showMediaControlsForMode(mode);
+                syncMediaControlUi(mode);
+                updateActiveCallOverlayUi();
+                window.requestAnimationFrame(() => {
+                    window.requestAnimationFrame(() => {
+                        replayActiveVideoTracks();
+                    });
+                });
             };
 
             function registerDoctorConversationMorphHook() {
@@ -1846,17 +1853,9 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                 window.__doctorConversationMorphHook = true;
 
                 const registerHook = () => {
-                    Livewire.hook('morph.updated', ({ el }) => {
+                    Livewire.hook('morph.updated', () => {
                         const bootEl = document.getElementById('doctor-conversation-bootstrap');
-                        if (! bootEl || ! bootEl.__currentMode) {
-                            return;
-                        }
-
-                        if (
-                            el?.id === 'doctor-consultation-inline-video'
-                            || el?.closest?.('#doctor-consultation-inline-video')
-                            || el?.querySelector?.('#doctor-consultation-inline-video, #agora-remote-player-mobile, #agora-local-player-mobile')
-                        ) {
+                        if (bootEl?.__currentMode) {
                             bootEl.__syncCallOverlay?.();
                         }
                     });
