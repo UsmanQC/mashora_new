@@ -549,9 +549,12 @@ new #[Layout('layouts::doctor')] #[Title('Follow Up')] class extends Component
             </flux:callout>
         @else
         <div class="mt-6 grid gap-6 lg:grid-cols-2 xl:grid-cols-12 xl:items-start">
-            <div class="rounded-2xl border border-emerald-200/80 bg-emerald-50/40 p-5 shadow-sm sm:p-6 xl:col-span-7">
-                <flux:heading size="md" class="font-semibold text-emerald-950">{{ __('doctor.follow_up.option_schedule_title') }}</flux:heading>
-                <flux:text class="mt-1 text-sm text-emerald-900/80">{{ __('doctor.follow_up.option_schedule_body') }}</flux:text>
+            <div
+                class="rounded-2xl border border-[#10B981]/50 bg-[#D1FAE5] p-5 text-black shadow-sm sm:p-6 xl:col-span-7 [&_[data-flux-description]]:text-black [&_[data-flux-label]]:text-black [&_[data-flux-text]]:text-black"
+                data-test="doctor-follow-up-schedule-box"
+            >
+                <flux:heading size="md" class="font-semibold text-black">{{ __('doctor.follow_up.option_schedule_title') }}</flux:heading>
+                <flux:text class="mt-1 text-sm text-black">{{ __('doctor.follow_up.option_schedule_body') }}</flux:text>
 
         <form wire:submit="save" class="mt-5 space-y-5">
             <flux:field>
