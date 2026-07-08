@@ -503,7 +503,11 @@ new #[Layout('layouts::doctor')] #[Title('Follow Up')] class extends Component
                 </div>
             </flux:callout>
         @elseif ($this->existingFollowUp)
-            <flux:callout variant="warning" icon="information-circle" class="mt-6">
+            <flux:callout
+                variant="success"
+                icon="information-circle"
+                class="mt-6 !border-[#10B981]/40 !bg-[#D1FAE5] [&_*]:!text-black"
+            >
                 <div class="space-y-2">
                     <p class="font-semibold">{{ __('doctor.follow_up.scheduled_title') }}</p>
                     <p class="text-sm">{{ __('doctor.follow_up.scheduled_body') }}</p>
