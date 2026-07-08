@@ -285,9 +285,19 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
         $this->appointment->refresh();
     }
 
+    #[On('doctor-session-completed')]
+    public function onDoctorSessionCompleted(int $appointmentId = 0): void
+    {
+        if ($appointmentId !== 0 && $appointmentId !== (int) $this->appointment->id) {
+            return;
+        }
+
+        $this->appointment->refresh();
+    }
+
     public function refreshAppointmentSessionState(): void
     {
-        if (! in_array((string) $this->appointment->status, ['new', 'rescheduled'], true)) {
+        if (! in_array((string) $this->appointment->status, ['new', 'rescheduled', 'in_process'], true)) {
             return;
         }
 
@@ -384,7 +394,7 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
     }
 }; ?>
 
-<div @if ($appointment->isSessionStartRequestPending()) wire:poll.5s="refreshAppointmentSessionState" @endif>
+<div @if (in_array($appointment->status, ['new', 'rescheduled', 'in_process'], true)) wire:poll.5s="refreshAppointmentSessionState" @endif>
     @include('partials.doctor-luxury-consultation-mobile')
 
     <div
@@ -1374,11 +1384,36 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                     return;
                 }
 
-                if (!currentMode) {
-                    return;
+                if (currentMode) {
+                    await leaveCallLocal();
                 }
 
-                await leaveCallLocal();
+                const nextStatus = data?.status || null;
+                const metrics = document.getElementById('conversation-page-metrics');
+
+                if (nextStatus && metrics) {
+                    metrics.dataset.status = nextStatus;
+                }
+
+                if (nextStatus === 'completed') {
+                    document.getElementById('btn-agora-video')?.classList.add('hidden');
+                    document.getElementById('btn-agora-audio')?.classList.add('hidden');
+                    document.getElementById('btn-agora-video-mobile')?.classList.add('hidden');
+                    document.getElementById('btn-agora-audio-mobile')?.classList.add('hidden');
+
+                    if (window.Livewire) {
+                        window.Livewire.dispatch('doctor-session-completed', {
+                            appointmentId,
+                        });
+
+                        const conversationRoot = boot.closest('[wire\\:id]');
+                        const wireId = conversationRoot?.getAttribute('wire:id');
+
+                        if (wireId) {
+                            window.Livewire.find(wireId)?.$refresh();
+                        }
+                    }
+                }
             }
 
             function registerRemoteUserHandlers(client, mode) {

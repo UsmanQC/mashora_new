@@ -73,11 +73,14 @@ class PatientAppointmentRealtimeController
     {
         abort_unless((int) $appointment->user_id === (int) auth()->id(), 403);
 
+        $appointment->refresh();
+
         self::clearPendingIncomingCall((int) auth()->id(), (int) $appointment->id);
 
         broadcast(new AppointmentCallEnded(
             (int) $appointment->id,
             (int) $appointment->user_id,
+            (string) $appointment->status,
         ));
 
         return response()->json(['ok' => true]);

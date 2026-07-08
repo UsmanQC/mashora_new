@@ -15,6 +15,7 @@ class AppointmentCallEnded implements ShouldBroadcastNow
     public function __construct(
         public int $appointmentId,
         public int $patientUserId,
+        public ?string $status = null,
     ) {}
 
     /**
@@ -40,6 +41,7 @@ class AppointmentCallEnded implements ShouldBroadcastNow
     {
         return [
             'appointment_id' => $this->appointmentId,
+            'status' => $this->status,
         ];
     }
 }

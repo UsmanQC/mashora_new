@@ -86,6 +86,8 @@ class DoctorAppointmentRealtimeController
             abort(403);
         }
 
+        $appointment->refresh();
+
         PatientAppointmentRealtimeController::clearPendingIncomingCall(
             (int) $appointment->user_id,
             (int) $appointment->id,
@@ -94,6 +96,7 @@ class DoctorAppointmentRealtimeController
         broadcast(new AppointmentCallEnded(
             (int) $appointment->id,
             (int) $appointment->user_id,
+            (string) $appointment->status,
         ));
 
         return response()->json(['ok' => true]);
