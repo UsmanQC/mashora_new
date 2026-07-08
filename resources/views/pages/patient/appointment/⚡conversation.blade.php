@@ -1250,8 +1250,6 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
             }
 
             function refreshCallUiState() {
-                syncPatientSessionFromDom(boot);
-
                 const sessionActive = callEnabled && appointmentStatus === 'in_process';
                 const ui = callUiEls();
                 const incomingBanner = incomingBannerEl();
@@ -1352,47 +1350,56 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
             }
 
             function syncPatientSessionFromDom(bootEl) {
-                const metricsNode = document.getElementById('patient-conversation-metrics');
-                // Metrics are Livewire-managed; bootstrap is wire:ignore so prefer metrics status.
-                const nextStatus = metricsNode?.dataset.status || bootEl?.dataset.appointmentStatus || appointmentStatus;
-                const prevStatus = appointmentStatus;
-                const wasWaiting = appointmentStatus !== 'in_process' && nextStatus === 'in_process';
-
-                appointmentStatus = nextStatus;
-
-                if (bootEl && bootEl.dataset.appointmentStatus !== appointmentStatus) {
-                    bootEl.dataset.appointmentStatus = appointmentStatus;
+                if (boot.__syncingSessionFromDom) {
+                    return;
                 }
 
-                if (metricsNode && metricsNode.dataset.status !== appointmentStatus) {
-                    metricsNode.dataset.status = appointmentStatus;
-                }
+                boot.__syncingSessionFromDom = true;
 
-                if (prevStatus === 'in_process' && nextStatus === 'completed') {
-                    clearPendingCallStorage();
-                    incomingPayload = null;
-                    incomingBannerEl()?.classList.add('hidden');
-                    dismissIncomingAlert();
+                try {
+                    const metricsNode = document.getElementById('patient-conversation-metrics');
+                    // Metrics are Livewire-managed; bootstrap is wire:ignore so prefer metrics status.
+                    const nextStatus = metricsNode?.dataset.status || bootEl?.dataset.appointmentStatus || appointmentStatus;
+                    const prevStatus = appointmentStatus;
+                    const wasWaiting = appointmentStatus !== 'in_process' && nextStatus === 'in_process';
 
-                    if (activeMode) {
-                        leaveCallLocal().catch(() => {});
+                    appointmentStatus = nextStatus;
+
+                    if (bootEl && bootEl.dataset.appointmentStatus !== appointmentStatus) {
+                        bootEl.dataset.appointmentStatus = appointmentStatus;
                     }
 
-                    window.dispatchEvent(new CustomEvent('mashora:call-ended', {
-                        detail: { appointment_id: appointmentId, status: nextStatus },
-                    }));
+                    // Do not write metrics.dataset.status here — Livewire owns it and MutationObserver
+                    // would recurse if we mirror the value back onto the same node.
 
-                    if (window.Livewire) {
-                        Livewire.dispatch('patient-session-completed', { appointmentId });
+                    if (prevStatus === 'in_process' && nextStatus === 'completed') {
+                        clearPendingCallStorage();
+                        incomingPayload = null;
+                        incomingBannerEl()?.classList.add('hidden');
+                        dismissIncomingAlert();
+
+                        if (activeMode) {
+                            leaveCallLocal().catch(() => {});
+                        }
+
+                        window.dispatchEvent(new CustomEvent('mashora:call-ended', {
+                            detail: { appointment_id: appointmentId, status: nextStatus },
+                        }));
+
+                        if (window.Livewire) {
+                            Livewire.dispatch('patient-session-completed', { appointmentId });
+                        }
                     }
-                }
 
-                if (wasWaiting && incomingLabelEl() && incomingBannerEl()) {
-                    showCallToast(metricsNode?.dataset.sessionStartedWaiting || 'Session started.', 'success');
-                    startSessionTimers();
-                }
+                    if (wasWaiting && incomingLabelEl() && incomingBannerEl()) {
+                        showCallToast(metricsNode?.dataset.sessionStartedWaiting || 'Session started.', 'success');
+                        startSessionTimers();
+                    }
 
-                refreshCallUiState();
+                    refreshCallUiState();
+                } finally {
+                    boot.__syncingSessionFromDom = false;
+                }
             }
 
             function tickSessionTimers() {
@@ -2407,7 +2414,6 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
 
                 const sessionObserver = new MutationObserver(() => {
                     syncPatientSessionFromDom(boot);
-                    refreshCallUiState();
                     startSessionTimers();
                 });
 
@@ -2426,13 +2432,11 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
 
             startSessionTimers();
             syncPatientSessionFromDom(boot);
-            refreshCallUiState();
 
             if (boot.dataset.sessionObserved !== '1') {
                 boot.dataset.sessionObserved = '1';
                 const sessionObserver = new MutationObserver(() => {
                     syncPatientSessionFromDom(boot);
-                    refreshCallUiState();
                     startSessionTimers();
                 });
                 sessionObserver.observe(boot, { attributes: true, attributeFilter: ['data-appointment-status'] });
