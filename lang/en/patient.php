@@ -299,6 +299,7 @@ return [
         ],
         'realtime_misconfigured' => 'Real-time alerts are misconfigured. Set BROADCAST_CONNECTION=pusher in .env (not log) and run php artisan config:clear.',
         'call_in_progress' => 'Call in progress',
+        'session_finished' => 'Session finished',
         'call_duration_label' => 'Call time',
         'you' => 'You',
         'end_call' => 'End call',

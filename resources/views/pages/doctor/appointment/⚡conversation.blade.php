@@ -904,11 +904,49 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
             let callTimerId = null;
             let callStartedAt = null;
             let sessionEndedDisconnectHandled = false;
+            let sessionExpiredUiShown = false;
             let agoraClient = null;
             let localAudio = null;
             let localVideo = null;
             let currentMode = null;
             let callJoinInProgress = false;
+
+            function showSessionExpiredUi() {
+                if (sessionExpiredUiShown) {
+                    return;
+                }
+
+                sessionExpiredUiShown = true;
+
+                const inline = document.getElementById('doctor-consultation-inline-video');
+                if (inline) {
+                    inline.classList.add('hidden');
+                    inline.setAttribute('aria-hidden', 'true');
+                }
+
+                document.getElementById('btn-agora-video-mobile')?.closest('.mb-3')?.classList.add('hidden');
+                document.getElementById('btn-agora-video-mobile')?.classList.add('hidden');
+                document.getElementById('btn-agora-audio-mobile')?.classList.add('hidden');
+                document.getElementById('btn-agora-video')?.classList.add('hidden');
+                document.getElementById('btn-agora-audio')?.classList.add('hidden');
+
+                window.dispatchEvent(new CustomEvent('consultation-call-ended'));
+            }
+
+            function syncSessionExpiryFromDom() {
+                if (metricsEl?.dataset.relaxedSessionLimits === '1') {
+                    return;
+                }
+
+                const endIso = metricsEl?.dataset.sessionEnd || '';
+                if (! endIso) {
+                    return;
+                }
+
+                if (new Date(endIso).getTime() <= Date.now()) {
+                    showSessionExpiredUi();
+                }
+            }
 
             function maybeEndCallWhenSessionExpired(leftSeconds) {
                 if (metricsEl?.dataset.relaxedSessionLimits === '1') {
@@ -917,9 +955,12 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
 
                 if (leftSeconds > 0) {
                     sessionEndedDisconnectHandled = false;
+                    sessionExpiredUiShown = false;
 
                     return;
                 }
+
+                showSessionExpiredUi();
 
                 if (!currentMode || sessionEndedDisconnectHandled) {
                     return;
@@ -930,6 +971,7 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
 
                 leaveCall()
                     .then(() => {
+                        showSessionExpiredUi();
                         if (window.Flux?.toast) {
                             window.Flux.toast({ text: endedMessage, variant: 'warning' });
                         }
@@ -1421,6 +1463,13 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                 document.getElementById('agora-toggle-mic-mobile')?.classList.remove('inline-flex');
                 document.getElementById('agora-toggle-video-mobile')?.classList.remove('inline-flex');
                 document.getElementById('agora-leave-btn-mobile')?.classList.remove('inline-flex');
+
+                const metrics = document.getElementById('conversation-page-metrics');
+                const endIso = metrics?.dataset.sessionEnd || '';
+                const relaxed = metrics?.dataset.relaxedSessionLimits === '1';
+                if (! relaxed && endIso && new Date(endIso).getTime() <= Date.now()) {
+                    showSessionExpiredUi();
+                }
             }
 
             async function postEndCall() {
@@ -1827,15 +1876,22 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
             }
 
             boot.__syncCallOverlay = () => {
-                if (currentMode || boot.__currentMode) {
-                    const mode = currentMode || boot.__currentMode;
-                    currentMode = mode;
-                    showOverlay(true);
-                    showMediaControlsForMode(mode);
-                    syncMediaControlUi(mode);
-                    updateActiveCallOverlayUi();
-                    replayActiveVideoTracks();
+                const mode = currentMode || boot.__currentMode;
+                if (! mode) {
+                    return;
                 }
+
+                currentMode = mode;
+                boot.__currentMode = mode;
+                showOverlay(true);
+                showMediaControlsForMode(mode);
+                syncMediaControlUi(mode);
+                updateActiveCallOverlayUi();
+                window.requestAnimationFrame(() => {
+                    window.requestAnimationFrame(() => {
+                        replayActiveVideoTracks();
+                    });
+                });
             };
 
             function registerDoctorConversationMorphHook() {
@@ -1846,17 +1902,9 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                 window.__doctorConversationMorphHook = true;
 
                 const registerHook = () => {
-                    Livewire.hook('morph.updated', ({ el }) => {
+                    Livewire.hook('morph.updated', () => {
                         const bootEl = document.getElementById('doctor-conversation-bootstrap');
-                        if (! bootEl || ! bootEl.__currentMode) {
-                            return;
-                        }
-
-                        if (
-                            el?.id === 'doctor-consultation-inline-video'
-                            || el?.closest?.('#doctor-consultation-inline-video')
-                            || el?.querySelector?.('#doctor-consultation-inline-video, #agora-remote-player-mobile, #agora-local-player-mobile')
-                        ) {
+                        if (bootEl?.__currentMode) {
                             bootEl.__syncCallOverlay?.();
                         }
                     });
@@ -1866,6 +1914,7 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                             const bootEl = document.getElementById('doctor-conversation-bootstrap');
                             bootEl?.__bindCallButtons?.();
                             bootEl?.__syncCallOverlay?.();
+                            bootEl?.__syncSessionExpiryFromDom?.();
                         });
                     });
                 };
@@ -1882,6 +1931,7 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
             boot.__joinVideoCall = () => joinVideoCall();
             boot.__joinAudioCall = () => joinAudioCall();
             boot.__leaveCall = (notifyRemote = true) => leaveCall(notifyRemote);
+            boot.__syncSessionExpiryFromDom = () => syncSessionExpiryFromDom();
             boot.__toggleMic = () => {
                 window.MashoraAgoraMediaControls?.toggleMic(mediaControlOptions())
                     .catch((error) => console.error(error));
@@ -1951,11 +2001,14 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                 boot.dataset.sessionObserved = '1';
                 new MutationObserver(() => {
                     startSessionTimers();
+                    syncSessionExpiryFromDom();
                 }).observe(metricsEl, {
                     attributes: true,
                     attributeFilter: ['data-status', 'data-session-start', 'data-session-end'],
                 });
             }
+
+            syncSessionExpiryFromDom();
 
             boot.dataset.initialized = '1';
             boot.dataset.boundAppointmentId = String(appointmentId);

@@ -1240,6 +1240,27 @@ test('doctor can send a session chat message after starting session', function (
         ->and($message->send_by)->toBe('doctor');
 });
 
+test('doctor conversation keeps a single wire-ignored mobile video host after sending chat', function () {
+    $user = User::factory()->create();
+    $doctor = Doctor::factory()->create(['profile_completed' => true]);
+    $appointment = Appointment::factory()->create([
+        'doctor_id' => $doctor->id,
+        'user_id' => $user->id,
+        'status' => 'in_process',
+        'actual_start_at' => now(),
+        'extend_at' => now()->addMinutes(30),
+    ]);
+
+    $page = Livewire::actingAs($doctor, 'doctor')
+        ->test('pages::doctor.appointment.conversation', ['appointment' => $appointment])
+        ->set('draft', 'vgyg')
+        ->call('sendMessage')
+        ->assertSee('vgyg');
+
+    expect(substr_count($page->html(), 'id="doctor-consultation-inline-video"'))->toBe(1)
+        ->and(substr_count($page->html(), 'wire:key="doctor-consultation-inline-video-'.$appointment->id.'"'))->toBe(1);
+});
+
 test('doctor notify call broadcasts incoming call events to patient', function () {
     config([
         'broadcasting.default' => 'pusher',
