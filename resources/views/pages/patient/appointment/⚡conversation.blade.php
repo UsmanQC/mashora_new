@@ -1066,6 +1066,24 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 return mode === 'audio' ? 'audio' : 'video';
             }
 
+            function readStoredCallPayload() {
+                try {
+                    const activeRaw = sessionStorage.getItem('mashora_active_call_' + appointmentId);
+                    const pendingRaw = sessionStorage.getItem('mashora_pending_call_' + appointmentId);
+                    const raw = activeRaw || pendingRaw;
+
+                    if (! raw) {
+                        return null;
+                    }
+
+                    const data = JSON.parse(raw);
+
+                    return data?.agora_app_id && data?.agora_channel ? data : null;
+                } catch (_) {
+                    return null;
+                }
+            }
+
             async function createLocalMediaTracks(mode) {
                 const micTrack = await AgoraRTC.createMicrophoneAudioTrack();
 
@@ -1172,6 +1190,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 }
 
                 activeMode = null;
+                boot.__activeMode = null;
 
                 const remotePlayer = document.getElementById(agoraRemotePlayerId());
                 const localPlayer = document.getElementById(agoraLocalPlayerId());
@@ -1186,6 +1205,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
 
             function markCallConnected(mode) {
                 activeMode = mode;
+                boot.__activeMode = mode;
                 incomingPayload = null;
 
                 if (!callStartedAt) {
@@ -1194,6 +1214,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                     updateActiveCallOverlayUi();
                 }
 
+                showOverlay(true);
                 showMediaControlsForMode(mode);
                 syncMediaControlUi(mode);
                 refreshCallUiState();
@@ -1424,7 +1445,6 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 const localTrack = boot.__localVideo || localVideo;
                 if (localTrack) {
                     try {
-                        localTrack.stop();
                         localTrack.play(agoraLocalPlayerId());
                     } catch (error) {
                         console.error('Failed to replay local video track', error);
@@ -1441,7 +1461,6 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                     }
 
                     try {
-                        user.videoTrack.stop();
                         user.videoTrack.play(agoraRemotePlayerId());
                     } catch (error) {
                         console.error('Failed to replay remote video track', error);
@@ -1535,7 +1554,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 );
             }
 
-            async function leaveCallLocal() {
+            async function leaveCallLocal({ clearStoredCall = true } = {}) {
                 stopCallTimer();
                 if (localVideo) {
                     localVideo.stop();
@@ -1556,6 +1575,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                     agoraClient = null;
                 }
                 activeMode = null;
+                boot.__activeMode = null;
                 incomingPayload = null;
                 const remoteWrap = document.getElementById(agoraRemotePlayerId());
                 const localWrap = document.getElementById(agoraLocalPlayerId());
@@ -1569,6 +1589,10 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 syncMediaControlUi(null);
                 document.getElementById(micBtnId())?.classList.add('hidden');
                 document.getElementById(videoBtnId())?.classList.add('hidden');
+
+                if (clearStoredCall) {
+                    clearPendingCallStorage();
+                }
             }
 
             async function postEndCall() {
@@ -1597,7 +1621,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
 
                 dismissIncomingAlert();
                 incomingBannerEl()?.classList.add('hidden');
-                await leaveCallLocal();
+                await leaveCallLocal({ clearStoredCall: notifyRemote });
 
                 if (notifyRemote && wasActive) {
                     await postEndCall();
@@ -1663,19 +1687,14 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 });
 
                 client.on('user-unpublished', (user, mediaType) => {
-                    if (mediaType === 'video') {
-                        const remotePlayer = document.getElementById(agoraRemotePlayerId());
-                        if (remotePlayer) {
-                            remotePlayer.innerHTML = '';
-                        }
+                    // Keep last frame / container when tracks briefly drop during patient refresh.
+                    if (mediaType === 'video' && ! user.hasVideo) {
+                        // Intentionally do not clear remote player DOM here.
                     }
                 });
 
                 client.on('user-left', () => {
-                    const remotePlayer = document.getElementById(agoraRemotePlayerId());
-                    if (remotePlayer) {
-                        remotePlayer.innerHTML = '';
-                    }
+                    // Patient refresh leaves and rejoins — do not destroy the remote container.
                 });
             }
 
@@ -1916,25 +1935,14 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
             }
 
             function restorePendingCallFromStorage() {
-                try {
-                    const activeRaw = sessionStorage.getItem('mashora_active_call_' + appointmentId);
-                    const pendingRaw = sessionStorage.getItem('mashora_pending_call_' + appointmentId);
-                    const raw = activeRaw || pendingRaw;
-                    if (! raw) {
-                        return false;
-                    }
-
-                    const data = JSON.parse(raw);
-                    if (data?.agora_app_id) {
-                        showIncomingCallBanner(data, { silent: true });
-
-                        return true;
-                    }
-                } catch (_) {
-                    // ignore parse errors
+                const data = readStoredCallPayload();
+                if (! data) {
+                    return false;
                 }
 
-                return false;
+                showIncomingCallBanner(data, { silent: true });
+
+                return true;
             }
 
             async function restorePendingCallFromServer() {
@@ -1960,6 +1968,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                     }
 
                     showIncomingCallBanner(data, { silent: true });
+                    persistActiveCall(data, data.call_type === 'audio' ? 'audio' : 'video');
 
                     return true;
                 } catch (_) {
@@ -1967,35 +1976,39 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 }
             }
 
-            async function restoreAndRejoinCall() {
+            async function restoreAndRejoinCall(attempt = 0) {
                 syncPatientSessionFromDom(boot);
 
                 if (appointmentStatus !== 'in_process' || activeMode || callJoinInProgress) {
                     return;
                 }
 
-                const restoredFromStorage = restorePendingCallFromStorage();
-                const restoredFromServer = await restorePendingCallFromServer();
+                await restorePendingCallFromServer();
+                const stored = readStoredCallPayload();
 
-                if (! restoredFromStorage && ! restoredFromServer && ! incomingPayload?.agora_app_id) {
-                    // Keep active-call storage when server pending was already consumed by join.
-                    try {
-                        if (! sessionStorage.getItem('mashora_active_call_' + appointmentId)) {
-                            clearPendingCallStorage();
-                        }
-                    } catch (_) {
-                        clearPendingCallStorage();
-                    }
-
-                    incomingPayload = null;
-                    incomingBannerEl()?.classList.add('hidden');
+                if (! stored && ! incomingPayload?.agora_app_id) {
                     refreshCallUiState();
 
                     return;
                 }
 
-                if (incomingPayload?.agora_app_id) {
-                    boot.__acceptIncoming?.();
+                const payload = incomingPayload?.agora_app_id ? incomingPayload : stored;
+                const mode = resolveEffectiveCallMode(
+                    payload?.call_type === 'audio' ? 'audio' : 'video',
+                    payload,
+                    null,
+                );
+
+                try {
+                    await joinCall(mode, payload);
+                } catch (error) {
+                    console.error('Failed to restore active call', error);
+                }
+
+                if (! activeMode && attempt < 2) {
+                    window.setTimeout(() => {
+                        restoreAndRejoinCall(attempt + 1).catch(() => {});
+                    }, 1200 * (attempt + 1));
                 }
             }
 
@@ -2143,6 +2156,13 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 }
 
                 if (!incomingPayload?.agora_app_id) {
+                    const stored = readStoredCallPayload();
+                    if (stored) {
+                        incomingPayload = stored;
+                    }
+                }
+
+                if (!incomingPayload?.agora_app_id) {
                     showCallToast(labelNoActiveCall, 'warning');
                     dismissIncomingAlert();
                     incomingBannerEl()?.classList.add('hidden');
@@ -2151,7 +2171,11 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                     return;
                 }
 
-                const mode = resolveEffectiveCallMode('audio', incomingPayload, null);
+                const mode = resolveEffectiveCallMode(
+                    incomingPayload.call_type === 'audio' ? 'audio' : 'video',
+                    incomingPayload,
+                    null,
+                );
                 joinCall(mode, incomingPayload).catch((error) => console.error(error));
             };
             boot.__dismissIncoming = () => {
@@ -2247,6 +2271,18 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 document.addEventListener('livewire:navigating', () => {
                     teardownPatientConversationRealtime();
                 });
+
+                // Persist call creds across hard refreshes; never end the remote call automatically.
+                window.addEventListener('pagehide', () => {
+                    const bootEl = document.getElementById('patient-conversation-bootstrap');
+                    const mode = bootEl?.__activeMode;
+                    if (! mode) {
+                        return;
+                    }
+
+                    // Soft leave locally if possible, keep sessionStorage for rejoin.
+                    bootEl.__leaveCall?.(false).catch(() => {});
+                });
             }
 
             if (pusherKey) {
@@ -2284,6 +2320,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                     }
 
                     window.__patientConversationTeardown = () => {
+                        // Soft teardown for Livewire navigation — keep storage so page can rejoin.
                         boot.__leaveCall?.(false).catch(() => {});
                         if (channel) {
                             delete channel.__mashoraPatientConversationBound;
@@ -2300,11 +2337,18 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
             }
 
             boot.__syncCallOverlay = () => {
-                if (activeMode) {
-                    showOverlay(true);
-                    updateActiveCallOverlayUi();
-                    replayActiveVideoTracks();
+                const mode = activeMode || boot.__activeMode;
+                if (! mode) {
+                    return;
                 }
+
+                activeMode = mode;
+                boot.__activeMode = mode;
+                showOverlay(true);
+                showMediaControlsForMode(mode);
+                syncMediaControlUi(mode);
+                updateActiveCallOverlayUi();
+                replayActiveVideoTracks();
             };
 
             function registerPatientConversationMorphHook() {
@@ -2315,6 +2359,21 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 window.__patientConversationMorphHook = true;
 
                 const registerHook = () => {
+                    Livewire.hook('morph.updated', ({ el }) => {
+                        const bootEl = document.getElementById('patient-conversation-bootstrap');
+                        if (! bootEl || ! bootEl.__activeMode) {
+                            return;
+                        }
+
+                        if (
+                            el?.id === 'patient-consultation-inline-video'
+                            || el?.closest?.('#patient-consultation-inline-video')
+                            || el?.querySelector?.('#patient-consultation-inline-video, #patient-agora-toggle-mic-mobile, #patient-agora-leave')
+                        ) {
+                            bootEl.__syncCallOverlay?.();
+                        }
+                    });
+
                     Livewire.hook('commit', ({ succeed }) => {
                         succeed(() => {
                             const bootEl = document.getElementById('patient-conversation-bootstrap');

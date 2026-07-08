@@ -151,6 +151,7 @@
                 <div
                     id="patient-consultation-inline-video"
                     wire:ignore
+                    wire:key="patient-consultation-inline-video-{{ $appointment->id }}"
                     class="patient-consultation-inline-video relative aspect-[4/3] overflow-hidden rounded-3xl bg-gradient-to-br from-[#064e3b] via-[#047857] to-[#059669] shadow-[0_8px_30px_-4px_rgba(16,185,129,0.35)]"
                     data-test="patient-consultation-inline-video"
                 >
