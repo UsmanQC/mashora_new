@@ -3,7 +3,9 @@
     /** @var string $checkoutId */
     /** @var string|null $integrity */
     /** @var string $env */
+    /** @var float|null $amountDue */
     $isTestEnv = in_array($env ?? 'test', ['test', 'dev'], true);
+    $applePayAmount = number_format((float) ($amountDue ?? 0), 2, '.', '');
 @endphp
 
 <div class="hyperpay-ltr space-y-3" dir="ltr" wire:ignore wire:key="hyperpay-widget-{{ $checkoutId }}">
@@ -16,13 +18,21 @@
     ></form>
 
     <script>
+        window.hyperpayOrLabel = @js(__('patient_booking.or_divider'));
+
         var wpwlOptions = window.hyperpayWrapOnReady({
             style: 'plain',
             locale: @js(app()->getLocale() === 'ar' ? 'ar' : 'en'),
             paymentTarget: '_top',
             applePay: {
                 displayName: @js(config('app.name')),
-                total: { label: @js(config('app.name')) },
+                total: {
+                    label: @js(config('app.name')),
+                    amount: @js($applePayAmount),
+                    type: 'final',
+                },
+                currencyCode: 'SAR',
+                countryCode: 'SA',
                 buttonType: 'pay',
                 supportedNetworks: ['masterCard', 'visa', 'mada'],
                 supportedCountries: ['SA'],

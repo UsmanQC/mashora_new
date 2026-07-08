@@ -400,6 +400,19 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
 
         return __('patient.appointments.session_started_waiting');
     }
+
+    public function sessionTimeExpired(): bool
+    {
+        if ((bool) config('appointments.relaxed_session_limits', false)) {
+            return false;
+        }
+
+        if ((string) $this->appointment->status !== 'in_process') {
+            return false;
+        }
+
+        return $this->appointment->extend_at !== null && $this->appointment->extend_at->isPast();
+    }
 }; ?>
 
 <div
@@ -947,6 +960,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 row.appendChild(bubble);
                 messagesWrap.appendChild(row);
                 messagesWrap.scrollTop = messagesWrap.scrollHeight;
+                window.dispatchEvent(new CustomEvent('patient-chat-message-received'));
             }
 
             let incomingPayload = null;
@@ -1396,6 +1410,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                     remainingEl.classList.toggle('text-[#047857]', left > 300);
                     remainingEl.classList.toggle('text-[#10B981]', left > 300);
                     maybeEndCallWhenSessionExpired(left);
+                    maybeRefreshWhenSessionExpires(left);
                 }
             }
 
@@ -1729,6 +1744,34 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                     .catch(() => {});
             }
 
+            let sessionExpiredRefreshHandled = false;
+
+            function maybeRefreshWhenSessionExpires(leftSeconds) {
+                if (metricsEl()?.dataset.relaxedSessionLimits === '1') {
+                    return;
+                }
+
+                if (leftSeconds > 0) {
+                    sessionExpiredRefreshHandled = false;
+
+                    return;
+                }
+
+                if (sessionExpiredRefreshHandled) {
+                    return;
+                }
+
+                sessionExpiredRefreshHandled = true;
+
+                if (window.Livewire) {
+                    const componentEl = document.querySelector('[wire\\:id]');
+                    const wireId = componentEl?.getAttribute('wire:id');
+                    if (wireId) {
+                        window.Livewire.find(wireId)?.$refresh();
+                    }
+                }
+            }
+
             async function refreshConfig() {
                 const res = await fetch(tokenUrl, {
                     method: 'POST',
@@ -1772,11 +1815,6 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                     liveBanner.classList.add('max-sm:hidden', 'sm:block');
                 }
                 document.getElementById('patient-chat-locked-callout')?.classList.add('hidden');
-
-                const waitingChipEl = callUiEls().waiting;
-                if (waitingChipEl) {
-                    waitingChipEl.classList.remove('hidden');
-                }
 
                 const statusLabel = document.getElementById('patient-conversation-status-label');
                 if (statusLabel) {

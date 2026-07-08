@@ -800,6 +800,10 @@ return [
         'status_cancelled' => 'ملغاة',
         'status_rescheduled' => 'أعيد جدولتها',
         'status_not_attended' => 'فائت',
+        'chat_panel_title' => 'المحادثة',
+        'chat_minimize' => 'تصغير',
+        'chat_expand' => 'توسيع',
+        'chat_minimized_hint' => 'المحادثة مصغّرة — اضغط للفتح',
         'chat_locked_until_started' => 'ابدأ الجلسة لتفعيل المراسلة والمكالمات.',
         'chat_locked_until_one_hour' => 'تفتح المراسلة قبل ساعة من موعد الجلسة المحدد.',
         'chat_open_session_needs_approval' => 'يمكنك مراسلة المريض الآن. اطلب موافقة المريض لبدء الجلسة وتفعيل المكالمات.',
@@ -816,7 +820,7 @@ return [
     ],
 
     'consultation' => [
-        'title' => 'الاستشارة',
+        'title' => 'الموعد',
         'back' => 'العودة إلى الجدول',
         'rec' => 'REC',
         'call_quality' => '1080p · ممتاز',
@@ -858,6 +862,12 @@ return [
         'review_while_waiting' => 'راجع الملخص والسجل أدناه أثناء الانتظار.',
         'open_chat' => 'فتح المحادثة',
         'close_chat' => 'إغلاق المحادثة',
+        'chat_minimize' => 'تصغير المحادثة',
+        'chat_expand' => 'توسيع المحادثة',
+        'chat_minimized_hint' => 'المحادثة مصغّرة — اضغط للفتح',
+        'chat_new_message_hint' => 'رسالة جديدة — اضغط للعرض',
+        'session_time_ended_title' => 'انتهى وقت الجلسة',
+        'session_time_ended_hint' => 'لم تعد مكالمة الفيديو متاحة. يمكنك متابعة مراسلة المريض أدناه.',
     ],
 
     'notifications' => [

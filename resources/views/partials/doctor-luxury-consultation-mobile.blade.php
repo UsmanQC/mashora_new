@@ -9,13 +9,15 @@
 <div
     class="doctor-luxury-consultation relative flex h-svh max-h-svh min-h-0 flex-col overflow-hidden bg-slate-50 lg:hidden"
     data-test="doctor-luxury-consultation"
-    x-data="{ tab: 'summary', chatOpen: false, callActive: false }"
+    wire:key="doctor-consultation-mobile-{{ $appointment->id }}"
+    x-data="{ tab: 'summary', chatOpen: false, callActive: false, chatCardMinimized: false, hasNewMessage: false }"
     x-bind:class="{
         'doctor-consultation--call-active': callActive,
         'doctor-consultation--chat-open': chatOpen,
     }"
     x-on:consultation-call-active.window="callActive = true; chatOpen = false"
     x-on:consultation-call-ended.window="callActive = false; chatOpen = false"
+    x-on:doctor-chat-message-received.window="if (chatCardMinimized) hasNewMessage = true"
 >
     <header class="shrink-0 border-b border-slate-100 bg-white px-4 pb-3 pt-[max(2rem,env(safe-area-inset-top))]">
         <div class="flex items-center gap-3">
@@ -38,17 +40,17 @@
         <div class="px-4 pt-4">
             @if (in_array($appointment->status, ['new', 'rescheduled'], true))
                 @if ($appointment->isSessionStartRequestPending())
-                    <flux:button type="button" variant="primary" icon="clock" class="doctor-luxury-btn-primary mb-3 w-full cursor-not-allowed opacity-70" disabled>
+                    <flux:button type="button" variant="primary" icon="clock" class="doctor-luxury-btn-primary mb-3 w-full cursor-not-allowed !bg-[#047857] !text-white opacity-70" disabled>
                         {{ __('doctor.conversation.start_session_pending') }}
                     </flux:button>
                 @elseif ($this->canPressStartSession($sessions))
-                    <flux:button type="button" variant="primary" icon="play" class="doctor-luxury-btn-primary mb-3 w-full" wire:click="startSession" wire:loading.attr="disabled">
+                    <flux:button type="button" variant="primary" icon="play" class="doctor-luxury-btn-primary mb-3 w-full !bg-[#047857] !text-white" wire:click="startSession" wire:loading.attr="disabled">
                         {{ __('doctor.conversation.start_session') }}
                     </flux:button>
                 @endif
             @endif
 
-            @if ($appointment->status === 'in_process')
+            @if ($appointment->status === 'in_process' && ! $this->sessionTimeExpired())
                 <div class="mb-3 flex gap-2">
                     <button
                         type="button"
@@ -80,6 +82,133 @@
                     <p class="truncate text-xs text-slate-500">{{ $this->patientMetaLine() }}</p>
                 </div>
             </div>
+
+            @if ($appointment->status === 'in_process' && ! $this->sessionTimeExpired())
+            <div
+                id="doctor-consultation-inline-video"
+                class="doctor-consultation-inline-video relative mt-3 aspect-[4/3] overflow-hidden rounded-3xl bg-gradient-to-br from-[#064e3b] via-[#047857] to-[#059669] shadow-[0_8px_30px_-4px_rgba(4,120,87,0.35)]"
+                data-test="doctor-consultation-inline-video"
+            >
+                <div
+                    id="doctor-consultation-video-idle"
+                    class="doctor-consultation-video-idle absolute inset-0 flex flex-col items-center justify-center gap-3 px-4 text-center"
+                >
+                    <div class="flex size-20 items-center justify-center rounded-full bg-[#10B981]/30 text-2xl font-bold text-white ring-4 ring-white/10">
+                        {{ $this->patientInitials() }}
+                    </div>
+                    <p class="text-sm font-medium text-white/90">{{ $appointment->patient_name }}</p>
+                    <p class="max-w-[14rem] text-xs leading-relaxed text-white/70">{{ __('doctor.consultation.waiting_for_call') }}</p>
+                </div>
+
+                <div id="agora-remote-player-mobile" class="doctor-consultation-remote absolute inset-0 z-0 h-full w-full"></div>
+
+                <div class="pointer-events-none absolute start-3 top-3 z-10">
+                    <span
+                        id="doctor-consultation-call-quality"
+                        class="hidden items-center gap-1.5 rounded-full bg-black/35 px-2.5 py-1 text-[0.625rem] font-semibold text-white backdrop-blur-sm"
+                    >
+                        <span class="size-1.5 rounded-full bg-emerald-400"></span>
+                        {{ __('doctor.consultation.call_quality') }}
+                    </span>
+                </div>
+
+                <div class="doctor-consultation-local-preview pointer-events-none absolute end-3 bottom-[4.75rem] z-10 w-[4.25rem] overflow-hidden rounded-2xl border border-white/20 bg-zinc-900/90 shadow-xl ring-1 ring-white/10">
+                    <div id="agora-local-player-mobile" class="aspect-[3/4] w-full bg-zinc-800"></div>
+                    <p class="px-1 py-0.5 text-center text-[0.5625rem] font-semibold text-zinc-300">{{ __('doctor.conversation.you') }}</p>
+                </div>
+
+                <div
+                    id="doctor-consultation-call-controls-wrap"
+                    class="pointer-events-none absolute inset-x-0 bottom-0 z-20 hidden flex justify-center px-4 pb-4 pt-8"
+                >
+                    <div
+                        class="doctor-consultation-call-controls pointer-events-auto flex items-center justify-center gap-3 rounded-full border border-white/10 bg-zinc-900/90 px-3 py-2 shadow-xl backdrop-blur-md"
+                        role="toolbar"
+                        aria-label="{{ __('doctor.conversation.call_in_progress') }}"
+                    >
+                        <button
+                            type="button"
+                            id="agora-toggle-mic-mobile"
+                            data-label-on="{{ __('doctor.conversation.mic') }}"
+                            data-label-off="{{ __('doctor.conversation.mic_muted') }}"
+                            aria-pressed="false"
+                            disabled
+                            class="doctor-consultation-call-controls__btn video-call-control hidden"
+                            title="{{ __('doctor.conversation.mic') }}"
+                        >
+                            <flux:icon name="microphone" variant="mini" class="size-5 shrink-0" />
+                        </button>
+                        <button
+                            type="button"
+                            id="agora-leave-btn-mobile"
+                            class="doctor-consultation-call-controls__btn doctor-consultation-call-controls__btn--leave hidden"
+                            aria-label="{{ __('doctor.conversation.end_call') }}"
+                        >
+                            <flux:icon name="phone-x-mark" variant="mini" class="size-5 shrink-0" />
+                        </button>
+                        <button
+                            type="button"
+                            id="agora-toggle-chat-mobile"
+                            x-on:click="chatOpen = !chatOpen"
+                            x-bind:aria-pressed="chatOpen"
+                            x-bind:title="chatOpen ? @js(__('doctor.consultation.close_chat')) : @js(__('doctor.consultation.open_chat'))"
+                            x-bind:class="chatOpen ? 'doctor-consultation-call-controls__btn--active' : ''"
+                            class="doctor-consultation-call-controls__btn hidden"
+                            data-test="doctor-consultation-chat-toggle"
+                        >
+                            <flux:icon name="chat-bubble-left-right" variant="mini" class="size-5 shrink-0" />
+                        </button>
+                        <button
+                            type="button"
+                            id="agora-toggle-video-mobile"
+                            data-label-on="{{ __('doctor.conversation.camera') }}"
+                            data-label-off="{{ __('doctor.conversation.camera_off') }}"
+                            aria-pressed="false"
+                            disabled
+                            class="doctor-consultation-call-controls__btn video-call-control hidden"
+                            title="{{ __('doctor.conversation.camera') }}"
+                        >
+                            <flux:icon name="video-camera" variant="mini" class="size-5 shrink-0" />
+                        </button>
+                    </div>
+                </div>
+            </div>
+            @elseif ($appointment->status === 'in_process')
+                <div
+                    class="doctor-consultation-session-ended mt-3 rounded-3xl border border-slate-200/90 bg-white p-5 shadow-sm"
+                    data-test="doctor-consultation-session-ended"
+                >
+                    <div class="flex flex-col items-center text-center">
+                        <span class="flex size-16 items-center justify-center rounded-full bg-slate-100 text-slate-500 ring-4 ring-slate-50">
+                            <flux:icon name="clock" variant="mini" class="size-8" />
+                        </span>
+                        <p class="mt-3 text-sm font-bold text-slate-900">{{ __('doctor.consultation.session_time_ended_title') }}</p>
+                        <p class="mt-2 max-w-[18rem] text-xs leading-relaxed text-slate-500">
+                            {{ __('doctor.consultation.session_time_ended_hint') }}
+                        </p>
+                    </div>
+                </div>
+            @else
+                <div
+                    class="doctor-consultation-presession mt-3 rounded-3xl border border-slate-200/90 bg-white p-5 shadow-sm"
+                    data-test="doctor-consultation-presession"
+                >
+                    <div class="flex flex-col items-center text-center">
+                        <span class="flex size-16 items-center justify-center rounded-full bg-slate-100 text-slate-500 ring-4 ring-slate-50">
+                            <flux:icon name="calendar-days" variant="mini" class="size-8" />
+                        </span>
+                        <p class="mt-3 text-sm font-bold text-slate-900">{{ __('doctor.consultation.session_not_started') }}</p>
+                        <p class="mt-2 max-w-[18rem] text-xs leading-relaxed text-slate-500">
+                            {{ $this->preSessionStatusMessage($sessions) }}
+                        </p>
+                        @if (in_array($appointment->status, ['new', 'rescheduled'], true))
+                            <p class="mt-2 text-[0.6875rem] font-medium text-slate-400">
+                                {{ __('doctor.consultation.review_while_waiting') }}
+                            </p>
+                        @endif
+                    </div>
+                </div>
+            @endif
 
             @if ($this->appointmentDateLabel() || $this->appointmentTimeRangeLabel())
                 <div class="mt-3 rounded-2xl border border-slate-100 bg-slate-50/90 px-3.5 py-3">
@@ -397,10 +526,43 @@
                 >
                     <flux:icon name="x-mark" variant="mini" class="size-4" />
                 </button>
+                <button
+                    type="button"
+                    x-on:click="chatCardMinimized = !chatCardMinimized; hasNewMessage = false"
+                    class="relative flex size-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50"
+                    x-bind:aria-label="chatCardMinimized ? @js(__('doctor.consultation.chat_expand')) : @js(__('doctor.consultation.chat_minimize'))"
+                    data-test="doctor-chat-card-minimize-toggle-mobile"
+                >
+                    <flux:icon x-show="!chatCardMinimized" name="chevron-down" variant="mini" class="size-4" />
+                    <flux:icon x-show="chatCardMinimized" x-cloak name="chevron-up" variant="mini" class="size-4" />
+                    <span
+                        x-show="hasNewMessage"
+                        x-cloak
+                        class="absolute -top-0.5 -end-0.5 flex size-2.5 rounded-full bg-rose-500 ring-2 ring-white"
+                        aria-hidden="true"
+                    ></span>
+                </button>
             </div>
         </div>
 
         <div
+            x-show="chatCardMinimized"
+            x-cloak
+            x-bind:class="callActive ? 'pb-[max(0.75rem,env(safe-area-inset-bottom))]' : 'pb-[calc(5.25rem+env(safe-area-inset-bottom))]'"
+            class="px-4 pt-3 text-center"
+        >
+            <button
+                type="button"
+                x-on:click="chatCardMinimized = false; hasNewMessage = false"
+                class="inline-flex items-center gap-1.5 text-xs font-semibold text-[#047857]"
+            >
+                <span x-show="hasNewMessage" x-cloak class="flex size-1.5 shrink-0 rounded-full bg-rose-500"></span>
+                <span x-text="hasNewMessage ? @js(__('doctor.consultation.chat_new_message_hint')) : @js(__('doctor.consultation.chat_minimized_hint'))"></span>
+            </button>
+        </div>
+
+        <div
+            x-show="!chatCardMinimized"
             id="doctor-chat-messages-mobile"
             class="doctor-consultation-chat-messages max-h-44 space-y-3 overflow-y-auto px-4 py-3"
             wire:ignore.self
@@ -452,7 +614,7 @@
             @endforelse
         </div>
 
-        <div class="border-t border-slate-100 bg-slate-50/80 px-4 py-3 pb-[calc(5.25rem+env(safe-area-inset-bottom))]">
+        <div x-show="!chatCardMinimized" class="border-t border-slate-100 bg-slate-50/80 px-4 py-3 pb-[calc(5.25rem+env(safe-area-inset-bottom))]">
             <form
                 wire:submit="sendMessage"
                 class="doctor-consultation-chat-form flex items-center gap-2 rounded-full border border-slate-200 bg-white py-1 pe-1 ps-4 shadow-sm @if (! $appointment->isDoctorChatOpen()) pointer-events-none opacity-55 @endif"

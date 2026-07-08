@@ -6,13 +6,15 @@
 <div
     class="patient-luxury-consultation-mobile relative flex h-svh max-h-svh min-h-0 flex-col overflow-hidden bg-slate-50 sm:hidden"
     data-test="patient-luxury-consultation-mobile"
-    x-data="{ chatOpen: false, callActive: false }"
+    wire:key="patient-consultation-mobile-{{ $appointment->id }}"
+    x-data="{ chatOpen: false, callActive: false, chatCardMinimized: false, hasNewMessage: false }"
     x-bind:class="{
         'patient-consultation--call-active': callActive,
         'patient-consultation--chat-open': chatOpen,
     }"
     x-on:patient-consultation-call-active.window="callActive = true; chatOpen = false"
     x-on:patient-consultation-call-ended.window="callActive = false; chatOpen = false"
+    x-on:patient-chat-message-received.window="if (chatCardMinimized) hasNewMessage = true"
 >
     <header class="shrink-0 border-b border-slate-100 bg-white px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
         <div class="flex items-center gap-3">
@@ -145,7 +147,7 @@
                 </div>
             @endif
 
-            @if ($appointment->status === 'in_process')
+            @if ($appointment->status === 'in_process' && ! $this->sessionTimeExpired())
                 <div
                     id="patient-consultation-inline-video"
                     wire:ignore
@@ -228,6 +230,18 @@
                                 <flux:icon name="video-camera" variant="mini" class="size-5 shrink-0" />
                             </button>
                         </div>
+                    </div>
+                </div>
+            @elseif ($appointment->status === 'in_process')
+                <div class="rounded-3xl border border-slate-200/90 bg-white p-5 shadow-sm" data-test="patient-consultation-session-ended">
+                    <div class="flex flex-col items-center text-center">
+                        <span class="flex size-16 items-center justify-center rounded-full bg-slate-100 text-slate-500 ring-4 ring-slate-50">
+                            <flux:icon name="clock" variant="mini" class="size-8" />
+                        </span>
+                        <p class="mt-3 text-sm font-bold text-slate-900">{{ __('patient.appointments.luxury.session_time_ended_title') }}</p>
+                        <p class="mt-2 max-w-[18rem] text-xs leading-relaxed text-slate-500">
+                            {{ __('patient.appointments.luxury.session_time_ended_hint') }}
+                        </p>
                     </div>
                 </div>
             @else
@@ -320,10 +334,43 @@
                 >
                     <flux:icon name="x-mark" variant="mini" class="size-4" />
                 </button>
+                <button
+                    type="button"
+                    x-on:click="chatCardMinimized = !chatCardMinimized; hasNewMessage = false"
+                    class="relative flex size-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm"
+                    x-bind:aria-label="chatCardMinimized ? @js(__('patient.appointments.luxury.chat_expand')) : @js(__('patient.appointments.luxury.chat_minimize'))"
+                    data-test="patient-chat-card-minimize-toggle-mobile"
+                >
+                    <flux:icon x-show="!chatCardMinimized" name="chevron-down" variant="mini" class="size-4" />
+                    <flux:icon x-show="chatCardMinimized" x-cloak name="chevron-up" variant="mini" class="size-4" />
+                    <span
+                        x-show="hasNewMessage"
+                        x-cloak
+                        class="absolute -top-0.5 -end-0.5 flex size-2.5 rounded-full bg-rose-500 ring-2 ring-white"
+                        aria-hidden="true"
+                    ></span>
+                </button>
             </div>
         </div>
 
         <div
+            x-show="chatCardMinimized"
+            x-cloak
+            x-bind:class="callActive ? 'pb-[max(0.75rem,env(safe-area-inset-bottom))]' : 'pb-[calc(5.25rem+env(safe-area-inset-bottom))]'"
+            class="px-4 pt-3 text-center"
+        >
+            <button
+                type="button"
+                x-on:click="chatCardMinimized = false; hasNewMessage = false"
+                class="inline-flex items-center gap-1.5 text-xs font-semibold text-[#10B981]"
+            >
+                <span x-show="hasNewMessage" x-cloak class="flex size-1.5 shrink-0 rounded-full bg-rose-500"></span>
+                <span x-text="hasNewMessage ? @js(__('patient.appointments.luxury.chat_new_message_hint')) : @js(__('patient.appointments.luxury.chat_minimized_hint'))"></span>
+            </button>
+        </div>
+
+        <div
+            x-show="!chatCardMinimized"
             id="patient-chat-messages-mobile"
             class="patient-consultation-chat-messages max-h-44 space-y-3 overflow-y-auto px-4 py-3"
             wire:ignore.self
@@ -366,7 +413,7 @@
             @endforelse
         </div>
 
-        <div class="border-t border-slate-100 bg-slate-50/80 px-4 py-3 pb-[calc(5.25rem+env(safe-area-inset-bottom))]">
+        <div x-show="!chatCardMinimized" class="border-t border-slate-100 bg-slate-50/80 px-4 py-3 pb-[calc(5.25rem+env(safe-area-inset-bottom))]">
             <form
                 wire:submit="sendMessage"
                 class="patient-consultation-chat-form flex items-center gap-2 rounded-full border border-slate-200 bg-white py-1 pe-1 ps-4 shadow-sm @if (! $appointment->isChatOpen()) pointer-events-none opacity-55 @endif"

@@ -42,6 +42,11 @@
 <div
     class="pointer-events-none fixed inset-x-0 bottom-0 z-50 px-5 pb-[max(1rem,env(safe-area-inset-bottom))] sm:hidden"
     data-test="patient-luxury-dock"
+    x-data="{ callInProgress: false }"
+    x-on:patient-consultation-call-active.window="callInProgress = true"
+    x-on:patient-consultation-call-ended.window="callInProgress = false"
+    x-show="!callInProgress"
+    x-cloak
 >
     <nav
         class="patient-glass-nav pointer-events-auto mx-auto flex max-w-md items-end justify-between gap-0 rounded-full px-1 py-1 shadow-[0_8px_30px_rgb(0,0,0,0.08)]"

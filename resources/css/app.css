@@ -1376,19 +1376,11 @@ select:focus[data-flux-control] {
     .doctor-luxury-mobile-active ui-switch {
         --color-accent: #047857;
         --color-accent-foreground: #ffffff;
-    }
-
-    .doctor-luxury-mobile-active ui-switch [data-flux-switch-track] {
         background-color: #cbd5e1 !important;
     }
 
-    .doctor-luxury-mobile-active ui-switch[data-checked] [data-flux-switch-track] {
+    .doctor-luxury-mobile-active ui-switch[data-checked] {
         background-color: #047857 !important;
-    }
-
-    .doctor-luxury-mobile-active ui-switch [data-flux-switch-thumb] {
-        background-color: #ffffff !important;
-        box-shadow: 0 1px 3px rgb(15 23 42 / 0.18);
     }
 
     .doctor-luxury-mobile-active ui-label[data-flux-label],

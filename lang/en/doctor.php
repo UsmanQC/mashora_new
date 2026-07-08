@@ -799,6 +799,10 @@ return [
         'status_cancelled' => 'Cancelled',
         'status_rescheduled' => 'Rescheduled',
         'status_not_attended' => 'Missed',
+        'chat_panel_title' => 'Chat',
+        'chat_minimize' => 'Minimize',
+        'chat_expand' => 'Expand',
+        'chat_minimized_hint' => 'Chat minimized — tap to open',
         'chat_locked_until_started' => 'Start the session to enable messaging and calls.',
         'chat_locked_until_one_hour' => 'Messaging opens one hour before the scheduled session time.',
         'chat_open_session_needs_approval' => 'You can message the patient now. Request patient approval to start the session and enable calls.',
@@ -815,7 +819,7 @@ return [
     ],
 
     'consultation' => [
-        'title' => 'Consultation',
+        'title' => 'Appointment',
         'back' => 'Back to schedule',
         'rec' => 'REC',
         'call_quality' => '1080p · Excellent',
@@ -857,6 +861,12 @@ return [
         'review_while_waiting' => 'Review summary and history below while you wait.',
         'open_chat' => 'Open chat',
         'close_chat' => 'Close chat',
+        'chat_minimize' => 'Minimize chat',
+        'chat_expand' => 'Expand chat',
+        'chat_minimized_hint' => 'Chat minimized — tap to open',
+        'chat_new_message_hint' => 'New message — tap to view',
+        'session_time_ended_title' => 'Session time has ended',
+        'session_time_ended_hint' => 'The video call is no longer available. You can still message the patient below.',
     ],
 
     'notifications' => [

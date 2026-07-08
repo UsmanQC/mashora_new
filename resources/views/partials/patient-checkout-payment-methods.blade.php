@@ -19,16 +19,16 @@
     </div>
 
     <ul
-        class="grid grid-cols-4 gap-2"
+        class="grid grid-cols-4 gap-2.5"
         role="list"
         aria-label="{{ __('patient_booking.checkout_accepts') }}"
     >
         @foreach ($methods as $method)
-            <li class="flex h-11 items-center justify-center rounded-xl bg-gradient-to-b from-white to-slate-50/80 px-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+            <li class="flex h-12 items-center justify-center rounded-xl border border-slate-100 bg-gradient-to-b from-white to-slate-50/80 px-2 shadow-[0_1px_3px_rgba(15,23,42,0.06)] transition-shadow hover:shadow-[0_2px_6px_rgba(15,23,42,0.08)]">
                 <img
                     src="{{ asset('images/payment/'.$method['file']) }}"
                     alt="{{ $method['label'] }}"
-                    class="h-[1.125rem] w-auto max-w-full object-contain object-center select-none"
+                    class="h-[1.375rem] w-auto max-w-full object-contain object-center select-none"
                     style="max-width: {{ $method['width'] }};"
                     loading="lazy"
                     decoding="async"

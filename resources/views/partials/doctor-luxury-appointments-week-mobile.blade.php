@@ -58,9 +58,9 @@
                                     <p class="truncate text-sm font-bold text-slate-900">{{ $appointment->patient_name }}</p>
                                     <p class="mt-0.5 text-[0.6875rem] text-slate-500">{{ $appointment->formattedSessionStart() ?: '—' }}</p>
                                 </div>
-                                <flux:badge :color="$this->statusBadgeColorFor($appointment)" size="sm">
+                                <span class="shrink-0 rounded-full px-2.5 py-1 text-[0.625rem] font-bold {{ $this->statusBadgeClassesFor($appointment) }}">
                                     {{ __('doctor.appointment_status.'.$appointment->status) }}
-                                </flux:badge>
+                                </span>
                             </a>
                         @endforeach
                     </div>
