@@ -876,5 +876,13 @@ return [
         'appointment_booked_body' => 'حجز :patient جلسة في :date الساعة :time.',
         'session_start_approved_title' => 'وافق المريض على البدء المبكر',
         'session_start_approved_body' => 'وافق :patient على طلبك لبدء الجلسة مبكرًا. يمكنك بدء الجلسة الآن.',
+        'refund_request_submitted_title' => 'طلب المريض استردادًا',
+        'refund_request_submitted_body' => 'طلب :patient استردادًا بمبلغ :amount ر.س. ستراجع الإدارة الطلب.',
+        'refund_request_approved_title' => 'تمت الموافقة على طلب الاسترداد',
+        'refund_request_approved_body' => 'وافقت الإدارة على طلب الاسترداد من :patient بمبلغ :amount ر.س.',
+        'refund_request_rejected_title' => 'تم رفض طلب الاسترداد',
+        'refund_request_rejected_body' => 'رفضت الإدارة طلب الاسترداد من :patient.',
+        'refund_request_processed_title' => 'تمت معالجة الاسترداد',
+        'refund_request_processed_body' => 'تمت معالجة استرداد بمبلغ :amount ر.س للمريض :patient وإضافته إلى محفظته.',
     ],
 ];

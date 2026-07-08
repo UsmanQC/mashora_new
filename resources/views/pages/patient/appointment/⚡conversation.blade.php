@@ -51,6 +51,25 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
 
     public bool $showRefundModal = false;
 
+    public string $refundReason = 'service_not_provided';
+
+    public string $refundReasonNote = '';
+
+    /**
+     * @return array<string, string>
+     */
+    public function refundReasonOptions(): array
+    {
+        return [
+            'duplicate_payment' => __('patient.missed.refund_reasons.duplicate_payment'),
+            'appointment_cancelled' => __('patient.missed.refund_reasons.appointment_cancelled'),
+            'service_not_provided' => __('patient.missed.refund_reasons.service_not_provided'),
+            'technical_issue' => __('patient.missed.refund_reasons.technical_issue'),
+            'doctor_unable_to_attend' => __('patient.missed.refund_reasons.doctor_unable_to_attend'),
+            'other' => __('patient.missed.refund_reasons.other'),
+        ];
+    }
+
     public function promptRefundMissed(int $appointmentId): void
     {
         if ((int) $this->appointment->id !== $appointmentId) {
@@ -64,11 +83,15 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
         }
 
         $this->showRefundModal = true;
+        $this->refundReason = 'service_not_provided';
+        $this->refundReasonNote = '';
     }
 
     public function dismissRefundMissedModal(): void
     {
         $this->showRefundModal = false;
+        $this->refundReason = 'service_not_provided';
+        $this->refundReasonNote = '';
     }
 
     public function confirmRefundMissed(): void
@@ -85,16 +108,27 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
             return;
         }
 
-        app(PatientMissedAppointmentService::class)->refund($user, $this->appointment);
+        $this->validate([
+            'refundReason' => ['required', 'string', 'in:'.implode(',', PatientMissedAppointmentService::REFUND_REASON_KEYS)],
+            'refundReasonNote' => ['nullable', 'string', 'max:2000', 'required_if:refundReason,other'],
+        ], [], [
+            'refundReason' => __('patient.missed.refund'),
+            'refundReasonNote' => __('patient.missed.reason_note_label'),
+        ]);
+
+        app(PatientMissedAppointmentService::class)->requestRefund(
+            $user,
+            $this->appointment,
+            $this->refundReason,
+            $this->refundReason === 'other' ? $this->refundReasonNote : null,
+        );
 
         $this->appointment->refresh();
         $this->dismissRefundMissedModal();
 
         Flux::toast(
             variant: 'success',
-            text: __('patient.missed.refund_success', [
-                'amount' => number_format((float) $this->appointment->total, 2),
-            ]),
+            text: __('patient.missed.refund_request_submitted'),
         );
 
         $this->redirectRoute('patient.appointments', ['tab' => 'missed'], navigate: true);
@@ -684,6 +718,28 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
             <flux:text class="mt-2 text-center text-sm leading-relaxed text-zinc-600">
                 {{ __('patient.missed.refund_modal.body') }}
             </flux:text>
+
+            <div class="mt-4 space-y-3">
+                <flux:select
+                    wire:model.live="refundReason"
+                    :label="__('patient.missed.refund_reason_label')"
+                    :placeholder="__('patient.missed.refund_reason_placeholder')"
+                >
+                    @foreach ($this->refundReasonOptions() as $reasonKey => $reasonLabel)
+                        <option value="{{ $reasonKey }}">{{ $reasonLabel }}</option>
+                    @endforeach
+                </flux:select>
+
+                @if ($refundReason === 'other')
+                    <flux:textarea
+                        wire:model.live="refundReasonNote"
+                        :label="__('patient.missed.reason_note_label')"
+                        :placeholder="__('patient.missed.reason_note_placeholder')"
+                        rows="3"
+                        required
+                    />
+                @endif
+            </div>
 
             <div class="mt-5 rounded-xl border border-zinc-200/90 bg-zinc-50 px-4 py-3 text-sm">
                 <p class="font-semibold text-zinc-900">{{ $appointment->doctor?->displayName() }}</p>

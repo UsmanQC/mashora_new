@@ -61,6 +61,7 @@ final class PatientWalletService
 
         return match ($metaType) {
             'appointment_refund' => __('patient.wallet.type_refund'),
+            'appointment_refund_partial' => __('patient.wallet.type_refund'),
             'appointment_payment' => __('patient.wallet.type_payment'),
             default => $transaction->type === TransactionType::Deposit
                 ? __('patient.wallet.type_credit')
