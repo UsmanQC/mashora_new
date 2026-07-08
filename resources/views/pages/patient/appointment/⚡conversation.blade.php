@@ -552,8 +552,8 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
         id="patient-session-live-banner"
         @class([
             'max-sm:hidden rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50 to-white px-4 py-3 shadow-sm shadow-emerald-900/5 ring-1 ring-emerald-100',
-            'hidden sm:block' => $appointment->status === 'in_process',
-            'hidden' => $appointment->status !== 'in_process',
+            'hidden sm:block' => $appointment->status === 'in_process' && ! $this->sessionTimeExpired(),
+            'hidden' => $appointment->status !== 'in_process' || $this->sessionTimeExpired(),
         ])
     >
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -1264,28 +1264,73 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 syncMediaControlUi();
             }
 
+            function isSessionFinished() {
+                if (sessionFinishedUiShown) {
+                    return true;
+                }
+
+                if (metricsEl()?.dataset.relaxedSessionLimits === '1') {
+                    return false;
+                }
+
+                const endIso = metricsEl()?.dataset.sessionEnd || '';
+                if (! endIso) {
+                    return false;
+                }
+
+                return new Date(endIso).getTime() <= Date.now();
+            }
+
             function refreshCallUiState() {
-                const sessionActive = callEnabled && appointmentStatus === 'in_process';
+                const sessionFinished = isSessionFinished();
+                const sessionActive = callEnabled && appointmentStatus === 'in_process' && ! sessionFinished;
                 const ui = callUiEls();
                 const incomingBanner = incomingBannerEl();
 
                 if (ui.waiting) {
                     ui.waiting.classList.toggle(
                         'hidden',
-                        !sessionActive || activeMode || incomingPayload || (incomingBanner && !incomingBanner.classList.contains('hidden')),
+                        sessionFinished
+                            || !sessionActive
+                            || activeMode
+                            || incomingPayload
+                            || (incomingBanner && !incomingBanner.classList.contains('hidden')),
                     );
                 }
 
                 if (ui.chip) {
-                    ui.chip.classList.toggle('hidden', !activeMode);
+                    ui.chip.classList.toggle('hidden', sessionFinished || !activeMode);
                 }
+
+                document.getElementById('patient-call-started-chip-desktop')?.classList.toggle(
+                    'hidden',
+                    sessionFinished || !activeMode,
+                );
+                document.getElementById('patient-waiting-for-call-chip-desktop')?.classList.toggle(
+                    'hidden',
+                    sessionFinished
+                        || !sessionActive
+                        || activeMode
+                        || incomingPayload
+                        || (incomingBanner && !incomingBanner.classList.contains('hidden')),
+                );
 
                 const sessionLiveBanner = document.getElementById('patient-session-live-banner');
                 const hasIncomingCall = Boolean(incomingPayload)
                     || (incomingBanner && !incomingBanner.classList.contains('hidden'));
 
-                if (sessionLiveBanner && sessionActive) {
-                    sessionLiveBanner.classList.toggle('sm:hidden', hasIncomingCall);
+                if (sessionLiveBanner) {
+                    if (sessionFinished || !sessionActive) {
+                        sessionLiveBanner.classList.add('hidden');
+                    } else {
+                        sessionLiveBanner.classList.remove('hidden');
+                        sessionLiveBanner.classList.toggle('sm:hidden', hasIncomingCall);
+                    }
+                }
+
+                if (sessionFinished) {
+                    document.getElementById('patient-session-finished-chip')?.classList.remove('hidden');
+                    document.getElementById('patient-session-finished-chip-desktop')?.classList.remove('hidden');
                 }
             }
 
@@ -1447,6 +1492,19 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 if (remainingEl && endIso) {
                     const end = new Date(endIso).getTime();
                     const left = (end - now) / 1000;
+
+                    if (left <= 0) {
+                        remainingEl.textContent = metrics.dataset.sessionFinished
+                            || @js(__('patient.appointments.session_finished'));
+                        remainingEl.classList.remove('text-amber-700', 'text-[#047857]', 'text-[#10B981]');
+                        remainingEl.classList.add('text-slate-600');
+                        document.getElementById('patient-session-countdown-mobile')?.classList.add('hidden');
+                        maybeEndCallWhenSessionExpired(left);
+                        maybeRefreshWhenSessionExpires(left);
+
+                        return;
+                    }
+
                     remainingEl.textContent = formatDuration(left);
                     remainingEl.classList.toggle('text-amber-700', left > 0 && left <= 300);
                     remainingEl.classList.toggle('text-rose-600', left <= 0);
@@ -1759,10 +1817,6 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
             }
 
             function showSessionFinishedUi() {
-                if (sessionFinishedUiShown) {
-                    return;
-                }
-
                 sessionFinishedUiShown = true;
 
                 const finishedLabel = metricsEl()?.dataset.sessionFinished
@@ -1774,11 +1828,25 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 const ui = callUiEls();
                 ui.chip?.classList.add('hidden');
                 ui.waiting?.classList.add('hidden');
+                document.getElementById('patient-call-started-chip')?.classList.add('hidden');
                 document.getElementById('patient-call-started-chip-desktop')?.classList.add('hidden');
+                document.getElementById('patient-waiting-for-call-chip')?.classList.add('hidden');
                 document.getElementById('patient-waiting-for-call-chip-desktop')?.classList.add('hidden');
                 document.getElementById('patient-session-live-banner')?.classList.add('hidden');
+                document.getElementById('patient-live-now-badge')?.classList.add('hidden');
+                document.getElementById('patient-chat-live-now-badge')?.classList.add('hidden');
+                document.getElementById('patient-session-countdown-mobile')?.classList.add('hidden');
                 document.getElementById('incoming-call-banner')?.classList.add('hidden');
                 document.getElementById('incoming-call-banner-desktop')?.classList.add('hidden');
+
+                const remainingMobile = document.getElementById('patient-timer-session-remaining-mobile');
+                const remainingDesktop = document.getElementById('patient-timer-session-remaining');
+                if (remainingMobile) {
+                    remainingMobile.textContent = finishedLabel;
+                }
+                if (remainingDesktop) {
+                    remainingDesktop.textContent = finishedLabel;
+                }
 
                 document.getElementById('patient-session-finished-chip')?.classList.remove('hidden');
                 document.getElementById('patient-session-finished-chip-desktop')?.classList.remove('hidden');
@@ -1799,6 +1867,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 }
 
                 showOverlay(false);
+                refreshCallUiState();
                 window.dispatchEvent(new CustomEvent('patient-consultation-call-ended'));
             }
 

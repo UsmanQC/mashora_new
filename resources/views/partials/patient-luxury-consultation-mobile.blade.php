@@ -67,8 +67,11 @@
                     <p class="truncate text-base font-bold text-slate-900">{{ $doctorName }}</p>
                     <p class="truncate text-xs font-medium text-[#059669]">{{ $this->doctorSpecialtyLabel() }}</p>
                 </div>
-                @if ($appointment->status === 'in_process')
-                    <span class="inline-flex shrink-0 items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[0.625rem] font-bold text-emerald-700">
+                @if ($appointment->status === 'in_process' && ! $this->sessionTimeExpired())
+                    <span
+                        id="patient-live-now-badge"
+                        class="inline-flex shrink-0 items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[0.625rem] font-bold text-emerald-700"
+                    >
                         <span class="size-1.5 animate-pulse rounded-full bg-emerald-500"></span>
                         {{ __('patient.appointments.luxury.live_session') }}
                     </span>
@@ -94,8 +97,17 @@
                                 <p class="text-sm font-bold text-slate-900">{{ $this->appointmentTimeRangeLabel() }}</p>
                             @endif
 
-                            @if ($appointment->status === 'in_process' && $this->appointmentEndsAtLabel())
-                                <div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-slate-200/80 pt-2">
+                            @if ($appointment->status === 'in_process' && $this->sessionTimeExpired())
+                                <div class="mt-2 border-t border-slate-200/80 pt-2">
+                                    <p class="text-xs font-semibold text-slate-600">
+                                        {{ __('patient.appointments.session_finished') }}
+                                    </p>
+                                </div>
+                            @elseif ($appointment->status === 'in_process' && $this->appointmentEndsAtLabel())
+                                <div
+                                    id="patient-session-countdown-mobile"
+                                    class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-slate-200/80 pt-2"
+                                >
                                     <p class="text-xs text-slate-500">
                                         {{ __('patient.appointments.luxury.ends_at', ['time' => $this->appointmentEndsAtLabel()]) }}
                                     </p>
@@ -328,8 +340,11 @@
                 </div>
             </div>
             <div class="flex shrink-0 items-center gap-2">
-                @if ($appointment->status === 'in_process')
-                    <span class="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[0.625rem] font-bold text-emerald-700">
+                @if ($appointment->status === 'in_process' && ! $this->sessionTimeExpired())
+                    <span
+                        id="patient-chat-live-now-badge"
+                        class="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[0.625rem] font-bold text-emerald-700"
+                    >
                         <span class="size-1.5 animate-pulse rounded-full bg-emerald-500"></span>
                         {{ __('patient.appointments.luxury.live_session') }}
                     </span>
