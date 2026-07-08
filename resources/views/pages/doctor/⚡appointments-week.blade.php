@@ -36,16 +36,16 @@ new #[Layout('layouts::doctor')] #[Title('This week')] class extends Component
             ->implode('');
     }
 
-    public function statusBadgeColorFor(Appointment $appointment): string
+    public function statusBadgeClassesFor(Appointment $appointment): string
     {
         return match ($appointment->status) {
-            'new' => 'sky',
-            'in_process' => 'amber',
-            'completed' => 'emerald',
-            'cancelled', 'not_attended' => 'rose',
-            'rescheduled' => 'indigo',
-            'pending_follow_up' => 'violet',
-            default => 'zinc',
+            'new' => 'bg-sky-100 text-sky-800',
+            'in_process' => 'bg-amber-100 text-amber-900',
+            'completed' => 'bg-emerald-100 text-emerald-800',
+            'cancelled', 'not_attended' => 'bg-rose-100 text-rose-800',
+            'rescheduled' => 'bg-indigo-100 text-indigo-800',
+            'pending_follow_up' => 'bg-violet-100 text-violet-800',
+            default => 'bg-zinc-100 text-zinc-700',
         };
     }
 
@@ -139,9 +139,9 @@ new #[Layout('layouts::doctor')] #[Title('This week')] class extends Component
                                         <p class="truncate text-sm font-semibold text-zinc-900">{{ $appointment->patient_name }}</p>
                                         <p class="text-xs text-zinc-500">{{ $appointment->formattedSessionStart() ?: '—' }}</p>
                                     </div>
-                                    <flux:badge :color="$this->statusBadgeColorFor($appointment)" size="sm">
+                                    <span class="shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold {{ $this->statusBadgeClassesFor($appointment) }}">
                                         {{ __('doctor.appointment_status.'.$appointment->status) }}
-                                    </flux:badge>
+                                    </span>
                                 </a>
                             @endforeach
                         </div>

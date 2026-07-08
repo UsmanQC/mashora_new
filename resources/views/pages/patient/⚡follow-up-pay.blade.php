@@ -398,6 +398,7 @@ new #[Layout('layouts::patient')] #[Title('Pay follow-up')] class extends Compon
                 'checkoutId' => $hyperpayCheckoutId,
                 'integrity' => $hyperpayIntegrity,
                 'env' => $hyperpayEnv,
+                'amountDue' => $this->amountDue(),
             ])
 
             <flux:button wire:click="initHyperpayCheckout" variant="ghost" class="w-full" wire:loading.attr="disabled">

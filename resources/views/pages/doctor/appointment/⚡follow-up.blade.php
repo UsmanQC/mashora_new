@@ -431,9 +431,9 @@ new #[Layout('layouts::doctor')] #[Title('Follow Up')] class extends Component
             @elseif ($this->canSchedulePaidAppointment)
                 <flux:text class="mt-2 text-zinc-600">{{ __('doctor.scheduled_appointment.subtitle', ['days' => $this->windowDays()]) }}</flux:text>
 
-                <div class="mt-6 rounded-2xl border border-violet-200/80 bg-violet-50/40 p-5 shadow-sm sm:p-6">
-                    <flux:heading size="md" class="font-semibold text-violet-950">{{ __('doctor.scheduled_appointment.title') }}</flux:heading>
-                    <flux:text class="mt-1 text-sm text-violet-900/80">{{ __('doctor.scheduled_appointment.option_body') }}</flux:text>
+                <div class="mt-6 rounded-2xl border border-emerald-200/80 bg-emerald-50/40 p-5 shadow-sm sm:p-6">
+                    <flux:heading size="md" class="font-semibold text-emerald-950">{{ __('doctor.scheduled_appointment.title') }}</flux:heading>
+                    <flux:text class="mt-1 text-sm text-emerald-900/80">{{ __('doctor.scheduled_appointment.option_body') }}</flux:text>
 
                     <form wire:submit="savePaidAppointment" class="mt-5 space-y-5">
                         <flux:field>
@@ -456,8 +456,8 @@ new #[Layout('layouts::doctor')] #[Title('Follow Up')] class extends Component
                                             wire:click="$set('paidSelectedTime', '{{ $slot }}')"
                                             @class([
                                                 'rounded-full border px-4 py-2 text-sm font-semibold transition',
-                                                'border-violet-700 bg-violet-700 text-white' => $paidSelectedTime === $slot,
-                                                'border-zinc-200 bg-white text-zinc-700 hover:border-violet-400' => $paidSelectedTime !== $slot,
+                                                'border-[#047857] bg-[#047857] text-white' => $paidSelectedTime === $slot,
+                                                'border-zinc-200 bg-white text-zinc-700 hover:border-emerald-400' => $paidSelectedTime !== $slot,
                                             ])
                                         >
                                             {{ $this->displaySlot($slot) }}
@@ -468,7 +468,7 @@ new #[Layout('layouts::doctor')] #[Title('Follow Up')] class extends Component
                             <flux:error name="paidSelectedTime" />
                         </flux:field>
 
-                        <flux:callout variant="secondary" icon="banknotes" class="text-sm">
+                        <flux:callout variant="secondary" icon="banknotes" class="text-sm [&_[data-slot=content]]:!text-black">
                             {{ __('doctor.scheduled_appointment.price_hint', [
                                 'amount' => number_format($this->paidSessionPrice(), 2),
                                 'minutes' => \App\Services\DoctorScheduledAppointmentService::paymentGraceMinutes(),
@@ -476,7 +476,7 @@ new #[Layout('layouts::doctor')] #[Title('Follow Up')] class extends Component
                         </flux:callout>
 
                         <div class="flex justify-end">
-                            <flux:button type="submit" variant="primary" class="!bg-violet-700 !text-white hover:!brightness-95">
+                            <flux:button type="submit" variant="primary" class="!bg-[#047857] !text-white hover:!brightness-95">
                                 {{ __('doctor.scheduled_appointment.submit') }}
                             </flux:button>
                         </div>

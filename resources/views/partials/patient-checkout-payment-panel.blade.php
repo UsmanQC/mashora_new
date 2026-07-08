@@ -60,6 +60,7 @@
             'checkoutId' => $hyperpayCheckoutId,
             'integrity' => $hyperpayIntegrity,
             'env' => $hyperpayEnv,
+            'amountDue' => $checkoutDue,
         ])
 
         <flux:button
