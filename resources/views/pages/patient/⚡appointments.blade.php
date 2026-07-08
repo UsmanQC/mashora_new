@@ -114,8 +114,7 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
             $query->where(function ($builder): void {
                 $builder->where('status', 'not_attended')
                     ->orWhere(function ($nested): void {
-                        $nested->where('status', 'cancelled')
-                            ->where('cancel_status', 'patient_payment_missed');
+                        app(PatientPaymentMissedAppointmentService::class)->constrainEligible($nested);
                     });
             });
         } else {
@@ -139,8 +138,7 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
             $query->where(function ($builder): void {
                 $builder->whereIn('status', $this->mobileSegmentStatuses()['upcoming'])
                     ->orWhere(function ($nested): void {
-                        $nested->where('status', 'cancelled')
-                            ->where('cancel_status', 'patient_payment_missed');
+                        app(PatientPaymentMissedAppointmentService::class)->constrainEligible($nested);
                     });
             });
         } else {
@@ -172,13 +170,14 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
             ->pluck('aggregate', 'status')
             ->map(fn ($count): int => (int) $count);
 
+        $eligiblePaymentMissedCount = app(PatientPaymentMissedAppointmentService::class)
+            ->constrainEligible($this->baseQuery())
+            ->count();
+
         return collect([
             'upcoming' => collect($this->mobileSegmentStatuses()['upcoming'])
                 ->sum(fn (string $status): int => (int) ($counts[$status] ?? 0))
-                + $this->baseQuery()
-                    ->where('status', 'cancelled')
-                    ->where('cancel_status', 'patient_payment_missed')
-                    ->count(),
+                + $eligiblePaymentMissedCount,
             'previous' => max(0, collect($this->mobileSegmentStatuses()['previous'])
                 ->sum(fn (string $status): int => (int) ($counts[$status] ?? 0))
                 - $this->baseQuery()
@@ -354,9 +353,8 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
 
     public function getUnresolvedPaymentMissedCountProperty(): int
     {
-        return $this->baseQuery()
-            ->where('status', 'cancelled')
-            ->where('cancel_status', 'patient_payment_missed')
+        return app(PatientPaymentMissedAppointmentService::class)
+            ->constrainEligible($this->baseQuery())
             ->count();
     }
 
@@ -372,18 +370,21 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
             ->pluck('aggregate', 'status')
             ->map(fn ($count): int => (int) $count);
 
+        $eligiblePaymentMissedCount = app(PatientPaymentMissedAppointmentService::class)
+            ->constrainEligible($this->baseQuery())
+            ->count();
+
+        $allPaymentMissedCount = $this->baseQuery()
+            ->where('status', 'cancelled')
+            ->where('cancel_status', 'patient_payment_missed')
+            ->count();
+
         return collect([
             'ongoing' => (int) ($counts['new'] ?? 0) + (int) ($counts['in_process'] ?? 0) + (int) ($counts['pending_follow_up'] ?? 0),
             'rescheduled' => (int) ($counts['rescheduled'] ?? 0),
             'completed' => (int) ($counts['completed'] ?? 0),
-            'missed' => (int) ($counts['not_attended'] ?? 0) + $this->baseQuery()
-                ->where('status', 'cancelled')
-                ->where('cancel_status', 'patient_payment_missed')
-                ->count(),
-            'cancelled' => max(0, (int) ($counts['cancelled'] ?? 0) - $this->baseQuery()
-                ->where('status', 'cancelled')
-                ->where('cancel_status', 'patient_payment_missed')
-                ->count()),
+            'missed' => (int) ($counts['not_attended'] ?? 0) + $eligiblePaymentMissedCount,
+            'cancelled' => max(0, (int) ($counts['cancelled'] ?? 0) - $allPaymentMissedCount),
         ]);
     }
 

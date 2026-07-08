@@ -258,6 +258,16 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
         $this->refreshAgoraCredentials();
     }
 
+    #[On('patient-session-completed')]
+    public function onPatientSessionCompleted(int $appointmentId = 0): void
+    {
+        if ($appointmentId !== 0 && $appointmentId !== (int) $this->appointment->id) {
+            return;
+        }
+
+        $this->appointment->refresh();
+    }
+
     public function formattedAppointmentTime(): string
     {
         $raw = (string) $this->appointment->start_time;
@@ -409,7 +419,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
     id="patient-conversation-root"
     class="patient-luxury-conversation sm:bg-transparent sm:space-y-5 sm:pb-0 max-sm:flex max-sm:h-svh max-sm:max-h-svh max-sm:min-h-0 max-sm:flex-col max-sm:overflow-hidden max-sm:bg-slate-50 max-sm:pb-0"
     data-test="patient-luxury-conversation"
-    @if (! in_array($appointment->status, ['in_process', 'completed', 'cancelled', 'not_attended'], true)) wire:poll.3s="refreshAppointmentSession" @endif
+    @if (! in_array($appointment->status, ['completed', 'cancelled', 'not_attended'], true)) wire:poll.3s="refreshAppointmentSession" @endif
 >
     @include('partials.patient-luxury-consultation-mobile')
 
@@ -880,10 +890,11 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
             if (boot.dataset.initialized === '1' && boot.dataset.boundAppointmentId === String(appointmentId)) {
                 boot.__mountOverlayToBody?.();
                 boot.__bindCallControlButtons?.();
-                boot.__restorePendingCall?.();
                 boot.__syncCallOverlay?.();
                 boot.__observeSessionMetrics?.();
+                boot.__syncSessionFromDom?.();
                 startSessionTimers();
+                boot.__restoreAndRejoinCall?.().catch(() => {});
 
                 return;
             }
@@ -893,7 +904,8 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
             teardownPatientConversationRealtime();
 
             if (boot.dataset.initialized === '1') {
-                boot.__leaveCall?.().catch(() => {});
+                // Soft re-init / appointment switch must not broadcast call.ended.
+                boot.__leaveCall?.(false).catch(() => {});
             }
 
             boot.dataset.initialized = '1';
@@ -1319,18 +1331,20 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
             }
 
             function syncPatientSessionFromDom(bootEl) {
-                const metricsEl = document.getElementById('patient-conversation-metrics');
-                const nextStatus = bootEl?.dataset.appointmentStatus || metricsEl?.dataset.status || appointmentStatus;
+                const metricsNode = document.getElementById('patient-conversation-metrics');
+                // Metrics are Livewire-managed; bootstrap is wire:ignore so prefer metrics status.
+                const nextStatus = metricsNode?.dataset.status || bootEl?.dataset.appointmentStatus || appointmentStatus;
                 const prevStatus = appointmentStatus;
                 const wasWaiting = appointmentStatus !== 'in_process' && nextStatus === 'in_process';
 
                 appointmentStatus = nextStatus;
+
                 if (bootEl && bootEl.dataset.appointmentStatus !== appointmentStatus) {
                     bootEl.dataset.appointmentStatus = appointmentStatus;
                 }
 
-                if (metricsEl && nextStatus === 'in_process' && metricsEl.dataset.status !== nextStatus) {
-                    metricsEl.dataset.status = nextStatus;
+                if (metricsNode && metricsNode.dataset.status !== appointmentStatus) {
+                    metricsNode.dataset.status = appointmentStatus;
                 }
 
                 if (prevStatus === 'in_process' && nextStatus === 'completed') {
@@ -1338,16 +1352,26 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                     incomingPayload = null;
                     incomingBannerEl()?.classList.add('hidden');
                     dismissIncomingAlert();
+
+                    if (activeMode) {
+                        leaveCallLocal().catch(() => {});
+                    }
+
                     window.dispatchEvent(new CustomEvent('mashora:call-ended', {
-                        detail: { appointment_id: appointmentId },
+                        detail: { appointment_id: appointmentId, status: nextStatus },
                     }));
+
+                    if (window.Livewire) {
+                        Livewire.dispatch('patient-session-completed', { appointmentId });
+                    }
                 }
 
                 if (wasWaiting && incomingLabelEl() && incomingBannerEl()) {
-                    showCallToast(metricsEl?.dataset.sessionStartedWaiting || 'Session started.', 'success');
+                    showCallToast(metricsNode?.dataset.sessionStartedWaiting || 'Session started.', 'success');
                     startSessionTimers();
-                    refreshCallUiState();
                 }
+
+                refreshCallUiState();
             }
 
             function tickSessionTimers() {
@@ -1590,6 +1614,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                     return;
                 }
 
+                const nextStatus = data?.status || appointmentStatus;
                 clearPendingCallStorage();
                 incomingPayload = null;
                 incomingBannerEl()?.classList.add('hidden');
@@ -1598,11 +1623,25 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
 
                 if (activeMode) {
                     await leaveCallLocal();
-                    refreshCallUiState();
+                }
+
+                if (nextStatus && nextStatus !== appointmentStatus) {
+                    appointmentStatus = nextStatus;
+                    boot.dataset.appointmentStatus = nextStatus;
+                    const metrics = metricsEl();
+                    if (metrics) {
+                        metrics.dataset.status = nextStatus;
+                    }
+                }
+
+                refreshCallUiState();
+
+                if (nextStatus === 'completed' && window.Livewire) {
+                    Livewire.dispatch('patient-session-completed', { appointmentId });
                 }
 
                 window.dispatchEvent(new CustomEvent('mashora:call-ended', {
-                    detail: { appointment_id: appointmentId },
+                    detail: { appointment_id: appointmentId, status: nextStatus },
                 }));
             }
 
@@ -1835,6 +1874,42 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
             function clearPendingCallStorage() {
                 try {
                     sessionStorage.removeItem('mashora_pending_call_' + appointmentId);
+                    sessionStorage.removeItem('mashora_active_call_' + appointmentId);
+                } catch (_) {
+                    // ignore storage errors
+                }
+            }
+
+            function persistActiveCall(data, mode = null) {
+                if (! data?.agora_app_id || ! data?.agora_channel) {
+                    return;
+                }
+
+                try {
+                    sessionStorage.setItem(
+                        'mashora_active_call_' + appointmentId,
+                        JSON.stringify({
+                            appointment_id: appointmentId,
+                            call_type: mode === 'audio'
+                                ? 'audio'
+                                : (data.call_type || mode || 'video'),
+                            agora_app_id: data.agora_app_id,
+                            agora_token: data.agora_token || null,
+                            agora_channel: data.agora_channel,
+                        }),
+                    );
+                    sessionStorage.setItem(
+                        'mashora_pending_call_' + appointmentId,
+                        JSON.stringify({
+                            appointment_id: appointmentId,
+                            call_type: mode === 'audio'
+                                ? 'audio'
+                                : (data.call_type || mode || 'video'),
+                            agora_app_id: data.agora_app_id,
+                            agora_token: data.agora_token || null,
+                            agora_channel: data.agora_channel,
+                        }),
+                    );
                 } catch (_) {
                     // ignore storage errors
                 }
@@ -1842,23 +1917,29 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
 
             function restorePendingCallFromStorage() {
                 try {
-                    const raw = sessionStorage.getItem('mashora_pending_call_' + appointmentId);
-                    if (!raw) {
-                        return;
+                    const activeRaw = sessionStorage.getItem('mashora_active_call_' + appointmentId);
+                    const pendingRaw = sessionStorage.getItem('mashora_pending_call_' + appointmentId);
+                    const raw = activeRaw || pendingRaw;
+                    if (! raw) {
+                        return false;
                     }
 
                     const data = JSON.parse(raw);
                     if (data?.agora_app_id) {
                         showIncomingCallBanner(data, { silent: true });
+
+                        return true;
                     }
                 } catch (_) {
                     // ignore parse errors
                 }
+
+                return false;
             }
 
             async function restorePendingCallFromServer() {
-                if (!pendingCallUrl) {
-                    return;
+                if (! pendingCallUrl) {
+                    return false;
                 }
 
                 try {
@@ -1869,23 +1950,52 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                         },
                     });
 
-                    if (!res.ok) {
-                        return;
+                    if (! res.ok) {
+                        return false;
                     }
 
                     const data = await res.json();
-                    if (!data?.pending || !data?.agora_app_id) {
-                        clearPendingCallStorage();
-                        incomingPayload = null;
-                        incomingBannerEl()?.classList.add('hidden');
-                        refreshCallUiState();
-
-                        return;
+                    if (! data?.pending || ! data?.agora_app_id) {
+                        return false;
                     }
 
                     showIncomingCallBanner(data, { silent: true });
+
+                    return true;
                 } catch (_) {
-                    // ignore network errors
+                    return false;
+                }
+            }
+
+            async function restoreAndRejoinCall() {
+                syncPatientSessionFromDom(boot);
+
+                if (appointmentStatus !== 'in_process' || activeMode || callJoinInProgress) {
+                    return;
+                }
+
+                const restoredFromStorage = restorePendingCallFromStorage();
+                const restoredFromServer = await restorePendingCallFromServer();
+
+                if (! restoredFromStorage && ! restoredFromServer && ! incomingPayload?.agora_app_id) {
+                    // Keep active-call storage when server pending was already consumed by join.
+                    try {
+                        if (! sessionStorage.getItem('mashora_active_call_' + appointmentId)) {
+                            clearPendingCallStorage();
+                        }
+                    } catch (_) {
+                        clearPendingCallStorage();
+                    }
+
+                    incomingPayload = null;
+                    incomingBannerEl()?.classList.add('hidden');
+                    refreshCallUiState();
+
+                    return;
+                }
+
+                if (incomingPayload?.agora_app_id) {
+                    boot.__acceptIncoming?.();
                 }
             }
 
@@ -1968,7 +2078,10 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                         throw new Error(labelNoActiveCall);
                     }
 
-                    clearPendingCallStorage();
+                    persistActiveCall({
+                        ...cfg,
+                        call_type: effectiveMode === 'audio' ? 'audio' : (payload?.call_type || 'video'),
+                    }, effectiveMode);
 
                     const client = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
                     agoraClient = client;
@@ -2056,10 +2169,10 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
             bindCallControlButtons();
             boot.__bindCallControlButtons = bindCallControlButtons;
             boot.__restorePendingCall = restorePendingCallFromStorage;
+            boot.__restoreAndRejoinCall = restoreAndRejoinCall;
 
             if (appointmentStatus === 'in_process') {
-                restorePendingCallFromStorage();
-                restorePendingCallFromServer();
+                restoreAndRejoinCall().catch(() => {});
             } else {
                 clearPendingCallStorage();
                 incomingPayload = null;
@@ -2171,7 +2284,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                     }
 
                     window.__patientConversationTeardown = () => {
-                        boot.__leaveCall?.().catch(() => {});
+                        boot.__leaveCall?.(false).catch(() => {});
                         if (channel) {
                             delete channel.__mashoraPatientConversationBound;
                         }
@@ -2190,6 +2303,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 if (activeMode) {
                     showOverlay(true);
                     updateActiveCallOverlayUi();
+                    replayActiveVideoTracks();
                 }
             };
 
@@ -2208,6 +2322,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                             bootEl?.__mountOverlayToBody?.();
                             bootEl?.__syncCallOverlay?.();
                             bootEl?.__observeSessionMetrics?.();
+                            bootEl?.__syncSessionFromDom?.();
                             startSessionTimers();
                         });
                     });
@@ -2246,10 +2361,12 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
             }
 
             boot.__observeSessionMetrics = observeSessionMetrics;
+            boot.__syncSessionFromDom = () => syncPatientSessionFromDom(boot);
 
             registerPatientConversationMorphHook();
 
             startSessionTimers();
+            syncPatientSessionFromDom(boot);
             refreshCallUiState();
 
             if (boot.dataset.sessionObserved !== '1') {

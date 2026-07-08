@@ -425,7 +425,8 @@ test('doctor cannot start session more than one hour before scheduled time witho
         ->and($appointment->fresh()->session_start_requested_at)->not->toBeNull();
 });
 
-test('doctor can request early session start before one hour window and patient approval allows session to begin', function () {
+test('doctor conversation refreshes start session button after patient approval without remounting', function () {
+    app()->setLocale('en');
     config(['appointments.relaxed_session_limits' => false]);
 
     $user = User::factory()->create(['profile_completed' => true]);
@@ -439,6 +440,36 @@ test('doctor can request early session start before one hour window and patient 
         'scheduled_at' => null,
         'appointment_date' => now()->addDay()->toDateString(),
         'start_time' => '10:00:00',
+        'session_start_requested_at' => now(),
+        'session_start_approved_at' => null,
+    ]);
+
+    $doctorPage = Livewire::actingAs($doctor, 'doctor')
+        ->test('pages::doctor.appointment.conversation', ['appointment' => $appointment])
+        ->assertSee(__('doctor.conversation.start_session_pending'), false);
+
+    $appointment->update(['session_start_approved_at' => now()]);
+
+    $doctorPage
+        ->dispatch('session-start-approved', appointmentId: $appointment->id)
+        ->assertSee(__('doctor.conversation.start_session'), false)
+        ->assertDontSee(__('doctor.conversation.start_session_pending'), false);
+});
+
+test('doctor can request early session start before one hour window and patient approval allows session to begin', function () {
+    config(['appointments.relaxed_session_limits' => false]);
+
+    $user = User::factory()->create(['profile_completed' => true]);
+    $doctor = Doctor::factory()->create(['profile_completed' => true]);
+
+    $appointment = Appointment::factory()->create([
+        'doctor_id' => $doctor->id,
+        'user_id' => $user->id,
+        'status' => 'new',
+        'duration' => 15,
+        'scheduled_at' => null,
+        'appointment_date' => now()->toDateString(),
+        'start_time' => now()->addMinutes(30)->format('H:i:s'),
     ]);
 
     Event::fake([PatientSessionStartRequested::class]);
@@ -460,8 +491,12 @@ test('doctor can request early session start before one hour window and patient 
         ->test('pages::patient.appointment.conversation', ['appointment' => $appointment])
         ->call('approveSessionStart');
 
-    Livewire::actingAs($doctor, 'doctor')
-        ->test('pages::doctor.appointment.conversation', ['appointment' => $appointment])
+    Livewire::actingAs($doctor, 'doctor');
+
+    $doctorPage
+        ->call('refreshAppointmentSessionState')
+        ->assertSee(__('doctor.conversation.start_session'), false)
+        ->assertDontSee(__('doctor.conversation.start_session_pending'), false)
         ->call('startSession');
 
     $started = $appointment->fresh();

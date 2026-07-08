@@ -88,6 +88,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Payment-missed reschedule window
+    |--------------------------------------------------------------------------
+    |
+    | Hours after the payment-missed appointment was created during which the
+    | patient may choose a new slot. After this window the item is removed.
+    |
+    */
+
+    'payment_missed_reschedule_window_hours' => (int) env('APPOINTMENT_PAYMENT_MISSED_RESCHEDULE_WINDOW_HOURS', 24),
+
+    /*
+    |--------------------------------------------------------------------------
     | Instant consultation window
     |--------------------------------------------------------------------------
     |
