@@ -1242,7 +1242,6 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
 
                 if (localTrack) {
                     try {
-                        localTrack.stop();
                         localTrack.play(agoraLocalPlayerId());
                     } catch (error) {
                         console.error('Failed to replay local video track', error);
@@ -1259,7 +1258,6 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                     }
 
                     try {
-                        user.videoTrack.stop();
                         user.videoTrack.play(agoraRemotePlayerId());
                     } catch (error) {
                         console.error('Failed to replay remote video track', error);
@@ -1331,6 +1329,7 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                     agoraClient = null;
                 }
                 currentMode = null;
+                boot.__currentMode = null;
                 const rp = document.getElementById(agoraRemotePlayerId());
                 const lp = document.getElementById(agoraLocalPlayerId());
                 if (rp) {
@@ -1419,28 +1418,35 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
 
             function registerRemoteUserHandlers(client, mode) {
                 client.on('user-published', async (user, mediaType) => {
-                    await client.subscribe(user, mediaType);
-                    if (mediaType === 'video') {
-                        user.videoTrack?.play(agoraRemotePlayerId());
-                    }
-                    if (mediaType === 'audio') {
-                        user.audioTrack?.play();
+                    try {
+                        await client.subscribe(user, mediaType);
+                        if (mediaType === 'video') {
+                            user.videoTrack?.play(agoraRemotePlayerId());
+                        }
+                        if (mediaType === 'audio') {
+                            user.audioTrack?.play();
+                        }
+                    } catch (error) {
+                        console.error('Failed to subscribe to remote user media', error);
                     }
                 });
 
-                client.on('user-unpublished', (user, mediaType) => {
-                    if (mediaType === 'video') {
-                        const rp = document.getElementById(agoraRemotePlayerId());
-                        if (rp) {
-                            rp.innerHTML = '';
-                        }
-                    }
+                client.on('user-unpublished', () => {
+                    // Patient refresh may briefly unpublish; keep containers + local stream alive.
                 });
 
                 client.on('user-left', () => {
-                    const rp = document.getElementById(agoraRemotePlayerId());
-                    if (rp) {
-                        rp.innerHTML = '';
+                    // Wait for patient rejoin without destroying the live call UI.
+                    if (currentMode && notifyUrl) {
+                        refreshAgoraConfig()
+                            .then((cfg) => {
+                                if (! cfg) {
+                                    return null;
+                                }
+
+                                return postNotify(currentMode === 'audio' ? 'audio' : 'video', cfg);
+                            })
+                            .catch(() => {});
                     }
                 });
             }
@@ -1666,15 +1672,18 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                     await client.publish([audioTrack, videoTrack]);
                     await subscribeExistingRemoteUsers(client, 'video');
                     currentMode = 'video';
+                    boot.__currentMode = 'video';
                     const videoBtn = btnVideo();
                     const audioBtn = btnAudio();
                     setCallButtonActive(videoBtn, labelLive + ' · ' + labelVideo);
                     if (audioBtn) {
                         audioBtn.disabled = true;
                     }
+                    showOverlay(true);
                     showMediaControlsForMode('video');
                     startCallTimer('video', labelVideo, labelVoice);
                     syncMediaControlUi('video');
+                    replayActiveVideoTracks();
                 } catch (e) {
                     console.error(e);
                     await resetPartialAgoraJoin();
@@ -1722,12 +1731,14 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                     await client.publish([audioTrack]);
                     await subscribeExistingRemoteUsers(client, 'audio');
                     currentMode = 'audio';
+                    boot.__currentMode = 'audio';
                     const videoBtn = btnVideo();
                     const audioBtn = btnAudio();
                     setCallButtonActive(audioBtn, labelLive + ' · ' + labelVoice);
                     if (videoBtn) {
                         videoBtn.disabled = true;
                     }
+                    showOverlay(true);
                     showMediaControlsForMode('audio');
                     startCallTimer('audio', labelVideo, labelVoice);
                     syncMediaControlUi('audio');
@@ -1743,8 +1754,12 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
             }
 
             boot.__syncCallOverlay = () => {
-                if (currentMode) {
+                if (currentMode || boot.__currentMode) {
+                    const mode = currentMode || boot.__currentMode;
+                    currentMode = mode;
                     showOverlay(true);
+                    showMediaControlsForMode(mode);
+                    syncMediaControlUi(mode);
                     updateActiveCallOverlayUi();
                     replayActiveVideoTracks();
                 }
@@ -1758,6 +1773,21 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                 window.__doctorConversationMorphHook = true;
 
                 const registerHook = () => {
+                    Livewire.hook('morph.updated', ({ el }) => {
+                        const bootEl = document.getElementById('doctor-conversation-bootstrap');
+                        if (! bootEl || ! bootEl.__currentMode) {
+                            return;
+                        }
+
+                        if (
+                            el?.id === 'doctor-consultation-inline-video'
+                            || el?.closest?.('#doctor-consultation-inline-video')
+                            || el?.querySelector?.('#doctor-consultation-inline-video, #agora-remote-player-mobile, #agora-local-player-mobile')
+                        ) {
+                            bootEl.__syncCallOverlay?.();
+                        }
+                    });
+
                     Livewire.hook('commit', ({ succeed }) => {
                         succeed(() => {
                             const bootEl = document.getElementById('doctor-conversation-bootstrap');
