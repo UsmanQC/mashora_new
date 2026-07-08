@@ -126,10 +126,19 @@
                         <span id="patient-call-chip-duration" class="font-mono tabular-nums">00:00</span>
                     </span>
                     <span
+                        id="patient-session-finished-chip"
+                        @class([
+                            'inline-flex rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-semibold text-slate-600 shadow-sm',
+                            'hidden' => ! ($appointment->status === 'in_process' && $this->sessionTimeExpired()),
+                        ])
+                    >
+                        {{ __('patient.appointments.session_finished') }}
+                    </span>
+                    <span
                         id="patient-waiting-for-call-chip"
                         @class([
                             'inline-flex rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-600 shadow-sm',
-                            'hidden' => $appointment->status !== 'in_process',
+                            'hidden' => $appointment->status !== 'in_process' || $this->sessionTimeExpired(),
                         ])
                     >
                         {{ __('patient.appointments.waiting_for_specialist_call') }}

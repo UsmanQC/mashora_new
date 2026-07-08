@@ -302,6 +302,7 @@ return [
         ],
         'realtime_misconfigured' => 'تنبيهات الوقت الفعلي غير مضبوطة. عيّن BROADCAST_CONNECTION=pusher في .env (وليس log) ثم نفّذ php artisan config:clear.',
         'call_in_progress' => 'المكالمة قيد التنفيذ',
+        'session_finished' => 'انتهت الجلسة',
         'call_duration_label' => 'مدة المكالمة',
         'you' => 'أنت',
         'end_call' => 'إنهاء المكالمة',

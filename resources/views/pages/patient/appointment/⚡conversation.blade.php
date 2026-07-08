@@ -299,6 +299,10 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
 
     public function conversationHeaderSubtitle(): string
     {
+        if ($this->sessionTimeExpired()) {
+            return __('patient.appointments.session_finished');
+        }
+
         return __('patient.appointments.status_'.$this->appointment->status);
     }
 
@@ -437,7 +441,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
             </a>
             <div>
                 <h1 class="text-lg font-semibold tracking-tight text-zinc-900">{{ $appointment->doctor?->displayName() ?: __('patient.appointments.title') }}</h1>
-                <p id="patient-conversation-status-label" class="mt-0.5 text-xs text-zinc-500">{{ __('patient.appointments.status_'.$appointment->status) }}</p>
+                <p id="patient-conversation-status-label" class="mt-0.5 text-xs text-zinc-500">{{ $this->conversationHeaderSubtitle() }}</p>
             </div>
         </div>
         </div>
@@ -453,10 +457,19 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 <span id="patient-call-chip-duration-desktop" class="font-mono tabular-nums">00:00</span>
             </span>
             <span
+                id="patient-session-finished-chip-desktop"
+                @class([
+                    'rounded-full border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-[11px] font-semibold text-zinc-600',
+                    'hidden' => ! ($appointment->status === 'in_process' && $this->sessionTimeExpired()),
+                ])
+            >
+                {{ __('patient.appointments.session_finished') }}
+            </span>
+            <span
                 id="patient-waiting-for-call-chip-desktop"
                 @class([
                     'rounded-full border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-[11px] font-semibold text-zinc-600',
-                    'hidden' => $appointment->status !== 'in_process',
+                    'hidden' => $appointment->status !== 'in_process' || $this->sessionTimeExpired(),
                 ])
             >
                 {{ __('patient.appointments.waiting_for_specialist_call') }}
@@ -491,6 +504,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
         data-label-agora-sdk-missing="{{ __('patient.appointments.agora_sdk_missing') }}"
         data-label-no-active-call="{{ __('patient.appointments.no_active_call') }}"
         data-session-ended="{{ __('patient.appointments.session_time_ended') }}"
+        data-session-finished="{{ __('patient.appointments.session_finished') }}"
         data-relaxed-session-limits="{{ config('appointments.relaxed_session_limits') ? '1' : '0' }}"
     ></div>
 
@@ -929,6 +943,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
 
             let sessionTimerId = null;
             let sessionEndedDisconnectHandled = false;
+            let sessionFinishedUiShown = false;
 
             document.querySelectorAll('#patient-chat-messages [wire\\:key^="patient-chat-"], #patient-chat-messages-mobile [wire\\:key^="patient-chat-mobile-"]').forEach((el) => {
                 const key = el.getAttribute('wire:key') || '';
@@ -1743,6 +1758,65 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 return payloadCfg;
             }
 
+            function showSessionFinishedUi() {
+                if (sessionFinishedUiShown) {
+                    return;
+                }
+
+                sessionFinishedUiShown = true;
+
+                const finishedLabel = metricsEl()?.dataset.sessionFinished
+                    || @js(__('patient.appointments.session_finished'));
+
+                document.getElementById('patient-consultation-inline-video')?.classList.add('hidden');
+                document.getElementById('patient-consultation-inline-video')?.setAttribute('aria-hidden', 'true');
+
+                const ui = callUiEls();
+                ui.chip?.classList.add('hidden');
+                ui.waiting?.classList.add('hidden');
+                document.getElementById('patient-call-started-chip-desktop')?.classList.add('hidden');
+                document.getElementById('patient-waiting-for-call-chip-desktop')?.classList.add('hidden');
+                document.getElementById('patient-session-live-banner')?.classList.add('hidden');
+                document.getElementById('incoming-call-banner')?.classList.add('hidden');
+                document.getElementById('incoming-call-banner-desktop')?.classList.add('hidden');
+
+                document.getElementById('patient-session-finished-chip')?.classList.remove('hidden');
+                document.getElementById('patient-session-finished-chip-desktop')?.classList.remove('hidden');
+
+                const statusLabel = document.getElementById('patient-conversation-status-label');
+                if (statusLabel) {
+                    statusLabel.textContent = finishedLabel;
+                }
+
+                const chipLabel = callUiEls().label;
+                if (chipLabel) {
+                    chipLabel.textContent = finishedLabel;
+                }
+
+                const overlayTitle = overlayTitleEl();
+                if (overlayTitle) {
+                    overlayTitle.textContent = finishedLabel;
+                }
+
+                showOverlay(false);
+                window.dispatchEvent(new CustomEvent('patient-consultation-call-ended'));
+            }
+
+            function syncSessionExpiryFromDom() {
+                if (metricsEl()?.dataset.relaxedSessionLimits === '1') {
+                    return;
+                }
+
+                const endIso = metricsEl()?.dataset.sessionEnd || '';
+                if (! endIso) {
+                    return;
+                }
+
+                if (new Date(endIso).getTime() <= Date.now()) {
+                    showSessionFinishedUi();
+                }
+            }
+
             function maybeEndCallWhenSessionExpired(leftSeconds) {
                 if (metricsEl()?.dataset.relaxedSessionLimits === '1') {
                     return;
@@ -1750,9 +1824,12 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
 
                 if (leftSeconds > 0) {
                     sessionEndedDisconnectHandled = false;
+                    sessionFinishedUiShown = false;
 
                     return;
                 }
+
+                showSessionFinishedUi();
 
                 if (!activeMode || sessionEndedDisconnectHandled) {
                     return;
@@ -1763,6 +1840,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
 
                 leaveCall()
                     .then(() => {
+                        showSessionFinishedUi();
                         if (window.Flux?.toast) {
                             window.Flux.toast({ text: endedMessage, variant: 'warning' });
                         }
@@ -2389,6 +2467,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                             bootEl?.__syncCallOverlay?.();
                             bootEl?.__observeSessionMetrics?.();
                             bootEl?.__syncSessionFromDom?.();
+                            bootEl?.__syncSessionExpiryFromDom?.();
                             startSessionTimers();
                         });
                     });
@@ -2414,6 +2493,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
 
                 const sessionObserver = new MutationObserver(() => {
                     syncPatientSessionFromDom(boot);
+                    syncSessionExpiryFromDom();
                     startSessionTimers();
                 });
 
@@ -2427,16 +2507,19 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
 
             boot.__observeSessionMetrics = observeSessionMetrics;
             boot.__syncSessionFromDom = () => syncPatientSessionFromDom(boot);
+            boot.__syncSessionExpiryFromDom = () => syncSessionExpiryFromDom();
 
             registerPatientConversationMorphHook();
 
             startSessionTimers();
             syncPatientSessionFromDom(boot);
+            syncSessionExpiryFromDom();
 
             if (boot.dataset.sessionObserved !== '1') {
                 boot.dataset.sessionObserved = '1';
                 const sessionObserver = new MutationObserver(() => {
                     syncPatientSessionFromDom(boot);
+                    syncSessionExpiryFromDom();
                     startSessionTimers();
                 });
                 sessionObserver.observe(boot, { attributes: true, attributeFilter: ['data-appointment-status'] });
