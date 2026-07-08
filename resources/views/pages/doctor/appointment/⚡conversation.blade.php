@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Str;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\On;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
@@ -274,6 +275,25 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
             || $this->canOfferSessionStart($sessions);
     }
 
+    #[On('session-start-approved')]
+    public function onSessionStartApproved(int $appointmentId = 0): void
+    {
+        if ($appointmentId !== 0 && $appointmentId !== (int) $this->appointment->id) {
+            return;
+        }
+
+        $this->appointment->refresh();
+    }
+
+    public function refreshAppointmentSessionState(): void
+    {
+        if (! in_array((string) $this->appointment->status, ['new', 'rescheduled'], true)) {
+            return;
+        }
+
+        $this->appointment->refresh();
+    }
+
     public function preSessionStatusMessage(AppointmentSessionService $sessions): string
     {
         if ((string) $this->appointment->status === 'in_process') {
@@ -364,7 +384,7 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
     }
 }; ?>
 
-<div>
+<div @if ($appointment->isSessionStartRequestPending()) wire:poll.5s="refreshAppointmentSessionState" @endif>
     @include('partials.doctor-luxury-consultation-mobile')
 
     <div
@@ -1114,10 +1134,17 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                 channel.bind('call.ended', (data) => {
                     handleRemoteCallEnded(data);
                 });
-                channel.bind('session.start-approved', () => {
+                channel.bind('session.start-approved', (data) => {
+                    const approvedAppointmentId = Number(data?.appointment_id || appointmentId);
+
                     if (window.Livewire) {
-                        const componentEl = document.querySelector('[wire\\:id]');
-                        const wireId = componentEl?.getAttribute('wire:id');
+                        window.Livewire.dispatch('session-start-approved', {
+                            appointmentId: approvedAppointmentId,
+                        });
+
+                        const conversationRoot = boot.closest('[wire\\:id]');
+                        const wireId = conversationRoot?.getAttribute('wire:id');
+
                         if (wireId) {
                             window.Livewire.find(wireId)?.$refresh();
                         }
@@ -1172,6 +1199,14 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                         btn.classList.add('inline-flex');
                     });
 
+                    if (show) {
+                        window.requestAnimationFrame(() => {
+                            window.requestAnimationFrame(() => {
+                                replayActiveVideoTracks();
+                            });
+                        });
+                    }
+
                     return;
                 }
 
@@ -1181,6 +1216,44 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
 
                 el.classList.toggle('hidden', !show);
                 el.setAttribute('aria-hidden', show ? 'false' : 'true');
+
+                if (show) {
+                    window.requestAnimationFrame(() => {
+                        window.requestAnimationFrame(() => {
+                            replayActiveVideoTracks();
+                        });
+                    });
+                }
+            }
+
+            function replayActiveVideoTracks() {
+                const localTrack = boot.__localVideo || localVideo;
+
+                if (localTrack) {
+                    try {
+                        localTrack.stop();
+                        localTrack.play(agoraLocalPlayerId());
+                    } catch (error) {
+                        console.error('Failed to replay local video track', error);
+                    }
+                }
+
+                if (!agoraClient) {
+                    return;
+                }
+
+                agoraClient.remoteUsers.forEach((user) => {
+                    if (!user.videoTrack) {
+                        return;
+                    }
+
+                    try {
+                        user.videoTrack.stop();
+                        user.videoTrack.play(agoraRemotePlayerId());
+                    } catch (error) {
+                        console.error('Failed to replay remote video track', error);
+                    }
+                });
             }
 
             function assignLocalTracks(audio, video = null) {
@@ -1637,6 +1710,7 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                 if (currentMode) {
                     showOverlay(true);
                     updateActiveCallOverlayUi();
+                    replayActiveVideoTracks();
                 }
             };
 

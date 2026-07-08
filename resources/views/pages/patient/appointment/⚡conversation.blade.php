@@ -2152,6 +2152,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 if (activeMode) {
                     showOverlay(true);
                     updateActiveCallOverlayUi();
+                    replayActiveVideoTracks();
                 }
             };
 

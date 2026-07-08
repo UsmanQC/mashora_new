@@ -249,6 +249,7 @@
             @if ($appointment->status === 'in_process')
             <div
                 id="doctor-consultation-inline-video"
+                wire:ignore
                 class="doctor-consultation-inline-video relative mt-4 aspect-[4/3] overflow-hidden rounded-3xl bg-gradient-to-br from-[#064e3b] via-[#047857] to-[#059669] shadow-[0_8px_30px_-4px_rgba(4,120,87,0.35)]"
                 data-test="doctor-consultation-inline-video"
             >
