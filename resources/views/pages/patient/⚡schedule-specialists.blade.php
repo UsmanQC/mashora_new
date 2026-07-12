@@ -180,6 +180,11 @@ new #[Layout('layouts::patient')] #[Title('Specialists')] class extends Componen
                 $items,
                 fn (array $specialist): bool => SpecialistCatalog::offersDuration($specialist, $this->selectedDuration)
             ));
+
+            $items = array_map(
+                fn (array $specialist): array => $this->withSelectedDurationPricing($specialist),
+                $items
+            );
         }
 
         if ($this->filterGender !== 'both') {
@@ -350,7 +355,59 @@ new #[Layout('layouts::patient')] #[Title('Specialists')] class extends Componen
 
     public function selectDuration(string $minutes): void
     {
+        if (! in_array($minutes, $this->durationOptions, true)) {
+            return;
+        }
+
         $this->selectedDuration = $minutes;
+
+        $preferences = Session::get('session_filter_preferences');
+        if (! is_array($preferences)) {
+            $preferences = [];
+        }
+
+        $preferences['duration_minutes'] = $minutes;
+        Session::put('session_filter_preferences', $preferences);
+
+        $this->filteredSpecialistsCache = null;
+        $this->doctorSlotsCache = [];
+        unset($this->specialists, $this->visibleSpecialists);
+
+        $this->hydrateLikeState();
+    }
+
+    /**
+     * @param  array<string, mixed>  $specialist
+     * @return array<string, mixed>
+     */
+    protected function withSelectedDurationPricing(array $specialist): array
+    {
+        if ($this->selectedDuration === '') {
+            return $specialist;
+        }
+
+        $prices = is_array($specialist['duration_prices'] ?? null)
+            ? $specialist['duration_prices']
+            : [];
+
+        if (array_key_exists($this->selectedDuration, $prices)) {
+            $specialist['price_sar'] = (int) $prices[$this->selectedDuration];
+            $specialist['session_minutes'] = (int) $this->selectedDuration;
+        }
+
+        return $specialist;
+    }
+
+    /**
+     * Selected session length in minutes for booking links and slot queries.
+     */
+    protected function bookingDurationMinutes(array $specialist): int
+    {
+        if ($this->selectedDuration !== '') {
+            return (int) $this->selectedDuration;
+        }
+
+        return max(15, (int) ($specialist['session_minutes'] ?? 15));
     }
 
     /**
@@ -527,7 +584,7 @@ new #[Layout('layouts::patient')] #[Title('Specialists')] class extends Componen
         $doctorId = $specialist['doctor_database_id'] ?? null;
         if (is_int($doctorId) && $doctorId > 0) {
             $date = $this->selectedDate;
-            $duration = (int) ($specialist['session_minutes'] ?? 15);
+            $duration = $this->bookingDurationMinutes($specialist);
 
             PendingPatientBooking::store($doctorId, $date, $slot, $duration);
 
@@ -563,9 +620,7 @@ new #[Layout('layouts::patient')] #[Title('Specialists')] class extends Componen
     public function availableSlots(array $specialist): array
     {
         $doctorId = $specialist['doctor_database_id'] ?? null;
-        $duration = (int) ($this->selectedDuration !== ''
-            ? $this->selectedDuration
-            : ($specialist['session_minutes'] ?? 15));
+        $duration = $this->bookingDurationMinutes($specialist);
 
         if (is_int($doctorId) && $doctorId > 0) {
             $doctor = Doctor::query()->find($doctorId);

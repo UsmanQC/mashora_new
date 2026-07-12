@@ -225,6 +225,13 @@ final class SpecialistCatalog
             ->values()
             ->all();
 
+        /** @var array<string, int> $durationPrices */
+        $durationPrices = $offeredDurations
+            ->mapWithKeys(static fn ($duration): array => [
+                (string) $duration->duration => (int) round((float) ($duration->pivot?->price ?? 0)),
+            ])
+            ->all();
+
         $preferredDuration = (string) (session('session_filter_preferences.duration_minutes') ?? '');
         $selectedDuration = $offeredDurations->first();
 
@@ -326,6 +333,7 @@ final class SpecialistCatalog
             'price_sar' => $price,
             'session_minutes' => $sessionMinutes,
             'offered_duration_minutes' => $offeredDurationMinutes,
+            'duration_prices' => $durationPrices,
             'channels' => $channels,
             'slots' => $slots,
             'tags' => $tags,
@@ -391,6 +399,9 @@ final class SpecialistCatalog
             'price_sar' => (int) ($entry['price_sar'] ?? 0),
             'session_minutes' => (int) ($entry['session_minutes'] ?? 15),
             'offered_duration_minutes' => [(string) ($entry['session_minutes'] ?? 15)],
+            'duration_prices' => [
+                (string) ($entry['session_minutes'] ?? 15) => (int) ($entry['price_sar'] ?? 0),
+            ],
             'channels' => is_array($entry['channels'] ?? null) ? $entry['channels'] : [],
             'slots' => is_array($entry['slots'] ?? null) ? $entry['slots'] : [],
             'tags' => $tags,

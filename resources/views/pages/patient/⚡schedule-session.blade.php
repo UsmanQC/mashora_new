@@ -118,6 +118,10 @@ new #[Layout('layouts::patient')] #[Title('Schedule a session')] class extends C
     {
         $this->validateCurrentMobileStep();
 
+        if ($this->mobileStep === 2) {
+            $this->ensureMobileDurationDefault();
+        }
+
         if ($this->mobileStep >= $this->mobileStepsTotal()) {
             $this->proceedNext();
 
@@ -172,7 +176,7 @@ new #[Layout('layouts::patient')] #[Title('Schedule a session')] class extends C
     protected function ensureMobileDurationDefault(): void
     {
         if ($this->durationMinutes === '') {
-            $this->durationMinutes = '30';
+            $this->durationMinutes = '15';
         }
     }
 
