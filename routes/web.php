@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AiChatbotBookingController;
 use App\Http\Controllers\AiChatbotController;
+use App\Http\Controllers\Patient\DeviceTokenController;
 use App\Http\Controllers\Patient\FollowUpPaymentController;
 use App\Http\Controllers\Patient\PatientAppointmentRealtimeController;
 use App\Http\Controllers\Patient\PatientPaymentController;
@@ -125,6 +126,14 @@ Route::view('patient/menu', 'patient.menu')
 Route::livewire('patient/notifications', 'pages::patient.notifications')
     ->middleware(['auth', 'patient.profile'])
     ->name('patient.notifications');
+
+Route::post('patient/device-token', [DeviceTokenController::class, 'store'])
+    ->middleware(['auth', 'patient.profile'])
+    ->name('patient.device-token.store');
+
+Route::delete('patient/device-token', [DeviceTokenController::class, 'destroy'])
+    ->middleware(['auth', 'patient.profile'])
+    ->name('patient.device-token.destroy');
 
 Route::livewire('patient/wallet', 'pages::patient.wallet')
     ->middleware(['auth', 'patient.profile'])

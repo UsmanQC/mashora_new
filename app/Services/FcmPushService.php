@@ -73,7 +73,7 @@ final class FcmPushService
 
         try {
             $response = Http::withHeaders([
-                'Authorization' => 'key '.$serverKey,
+                'Authorization' => 'key='.$serverKey,
                 'Content-Type' => 'application/json',
             ])->timeout(15)->post('https://fcm.googleapis.com/fcm/send', $payload);
 
