@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'awaan-v2';
+const CACHE_VERSION = 'awaan-v3';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const OFFLINE_URL = '/offline.html';
 
@@ -6,8 +6,10 @@ const PRECACHE_URLS = [
     OFFLINE_URL,
     '/manifest.webmanifest',
     '/doctor/manifest.webmanifest',
-    '/images/pwa/icon-192.png',
-    '/images/pwa/icon-512.png',
+    '/images/pwa/icon-192-v3.png',
+    '/images/pwa/icon-512-v3.png',
+    '/images/pwa/icon-192-maskable-v3.png',
+    '/images/pwa/icon-512-maskable-v3.png',
     '/images/favicon-awaan.png',
 ];
 
