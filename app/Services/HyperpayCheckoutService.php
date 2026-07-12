@@ -274,16 +274,6 @@ class HyperpayCheckoutService
     }
 
     /**
-     * HyperPay sandbox connector mode. INTERNAL uses the simulator; EXTERNAL hits the bank connector.
-     */
-    private function resolvedTestMode(): string
-    {
-        $mode = strtoupper((string) config('hyperpay.test_mode', 'INTERNAL'));
-
-        return in_array($mode, ['INTERNAL', 'EXTERNAL'], true) ? $mode : 'INTERNAL';
-    }
-
-    /**
      * @return array{checkout_id: string, integrity: ?string, entity_id: string, env: string}
      */
     private function createCheckout(
@@ -315,7 +305,7 @@ class HyperpayCheckoutService
 
         if (in_array($this->env, ['test', 'dev'], true)) {
             $payload['integrity'] = true;
-            $payload['testMode'] = $this->resolvedTestMode();
+            $payload['testMode'] = 'EXTERNAL';
             $payload['customParameters[3DS2_enrolled]'] = true;
         }
 
