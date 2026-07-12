@@ -286,11 +286,13 @@ final class SpecialistCatalog
             'voice' => in_array('voice_call', $communicationCodes, true),
         ];
 
+        $slotStepMinutes = max(15, (int) ($sessionMinutes > 0 ? $sessionMinutes : 15));
+
         /** @var list<string> $slots */
         $slots = collect($doctor->workingDays)
             ->where('is_working', true)
-            ->flatMap(static function ($workingDay) {
-                return $workingDay->workingHours->flatMap(static function ($hour) {
+            ->flatMap(static function ($workingDay) use ($slotStepMinutes) {
+                return $workingDay->workingHours->flatMap(static function ($hour) use ($slotStepMinutes) {
                     if (! filled($hour->start_time) || ! filled($hour->end_time)) {
                         return [];
                     }
@@ -299,9 +301,9 @@ final class SpecialistCatalog
                     $end = Carbon::createFromFormat('H:i:s', (string) $hour->end_time);
                     $times = [];
 
-                    while ($start < $end) {
+                    while ($start->copy()->addMinutes($slotStepMinutes)->lessThanOrEqualTo($end)) {
                         $times[] = $start->format('H:i');
-                        $start = $start->addMinutes(15);
+                        $start = $start->addMinutes($slotStepMinutes);
                     }
 
                     return $times;

@@ -695,7 +695,8 @@ new #[Layout('layouts::patient')] #[Title('Specialists')] class extends Componen
                 ->all();
         }
 
-        $cacheKey = $doctorId.'|'.$this->selectedDate;
+        $stepMinutes = max(15, (int) ($this->selectedDuration !== '' ? $this->selectedDuration : 15));
+        $cacheKey = $doctorId.'|'.$this->selectedDate.'|'.$stepMinutes;
         if (array_key_exists($cacheKey, $this->doctorSlotsCache)) {
             return $this->doctorSlotsCache[$cacheKey];
         }
@@ -717,7 +718,7 @@ new #[Layout('layouts::patient')] #[Title('Specialists')] class extends Componen
                     ->with('workingHours');
             }])
             ->find($doctorId);
-            if (! $doctor instanceof Doctor || $doctor->workingDays->isEmpty()) {
+        if (! $doctor instanceof Doctor || $doctor->workingDays->isEmpty()) {
             $this->doctorSlotsCache[$cacheKey] = [];
 
             return [];
@@ -725,8 +726,8 @@ new #[Layout('layouts::patient')] #[Title('Specialists')] class extends Componen
 
         /** @var list<string> $slots */
         $slots = $doctor->workingDays
-            ->flatMap(static function ($workingDay) use ($timezone) {
-                return $workingDay->workingHours->flatMap(static function ($hour) use ($timezone) {
+            ->flatMap(static function ($workingDay) use ($timezone, $stepMinutes) {
+                return $workingDay->workingHours->flatMap(static function ($hour) use ($timezone, $stepMinutes) {
                     if (! filled($hour->start_time) || ! filled($hour->end_time)) {
                         return [];
                     }
@@ -739,9 +740,9 @@ new #[Layout('layouts::patient')] #[Title('Specialists')] class extends Componen
                     }
 
                     $times = [];
-                    while ($start < $end) {
+                    while ($start->copy()->addMinutes($stepMinutes)->lessThanOrEqualTo($end)) {
                         $times[] = $start->format('H:i');
-                        $start = $start->addMinutes(15);
+                        $start = $start->addMinutes($stepMinutes);
                     }
 
                     return $times;
