@@ -25,9 +25,11 @@ class WebManifestController extends Controller
 
         $startUrl = (string) ($appConfig['start_url'] ?? '/patient');
 
+        $cacheVersion = (string) config('pwa.cache_version', 'awaan-v2');
+
         $icons = collect((array) config('pwa.icons', []))
             ->map(static fn (array $icon): array => [
-                'src' => '/'.ltrim((string) ($icon['path'] ?? ''), '/'),
+                'src' => '/'.ltrim((string) ($icon['path'] ?? ''), '/').'?v='.$cacheVersion,
                 'sizes' => (string) ($icon['sizes'] ?? '192x192'),
                 'type' => 'image/png',
                 'purpose' => (string) ($icon['purpose'] ?? 'any'),
@@ -52,6 +54,9 @@ class WebManifestController extends Controller
             'icons' => $icons,
         ], 200, [
             'Content-Type' => 'application/manifest+json; charset=utf-8',
+            'Cache-Control' => 'no-cache, no-store, must-revalidate',
+            'Pragma' => 'no-cache',
+            'Expires' => '0',
         ]);
     }
 }

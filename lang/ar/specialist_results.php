@@ -41,7 +41,7 @@ return [
     'search_placeholder' => 'ابحث باسم الطبيب',
     'filters' => 'المرشحات',
     'today_short' => 'اليوم',
-    'duration_minutes' => ':minutes دقيقة',
+    'duration_minutes' => ':minutes د',
     'filter_title' => 'فلترة البحث',
     'all_option' => 'الكل',
     'clear' => 'مسح',

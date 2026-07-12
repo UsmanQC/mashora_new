@@ -25,25 +25,62 @@ use Livewire\Livewire;
 
 uses(RefreshDatabase::class);
 
-test('doctor mobile header exposes hamburger menu with wallet and settings links', function () {
+test('doctor mobile header exposes luxury dock and more menu page', function () {
     app()->setLocale('en');
 
     $doctor = Doctor::factory()->create([
         'phone' => '966511122255',
         'profile_completed' => true,
         'status' => 'approved',
+        'registration_number' => 'SCFHS-88214',
     ]);
 
     $this->actingAs($doctor, 'doctor')
         ->get(route('doctor.dashboard'))
         ->assertSuccessful()
-        ->assertSee('data-test="doctor-mobile-menu-open"', false)
-        ->assertSee(__('doctor.nav.menu'), false)
-        ->assertSee('data-test="doctor-mobile-menu-close"', false)
-        ->assertSee(__('doctor.menu.wallet'), false)
-        ->assertSee(route('doctor.settings.wallet'), false)
+        ->assertSee('data-test="doctor-luxury-home"', false)
+        ->assertSee('data-test="doctor-luxury-dock"', false);
+
+    $this->actingAs($doctor, 'doctor')
+        ->get(route('doctor.menu'))
+        ->assertSuccessful()
+        ->assertSee('data-test="doctor-luxury-more"', false)
+        ->assertSee('data-test="doctor-luxury-dock"', false)
         ->assertSee(__('doctor.menu.working_hours'), false)
-        ->assertSee(route('doctor.settings.profile'), false);
+        ->assertSee(__('doctor.menu.wallet'), false)
+        ->assertSee(__('doctor.mobile.more_verified'), false)
+        ->assertSee('SCFHS-88214', false);
+});
+
+test('doctor luxury mobile dashboard shows up next card for upcoming appointment', function () {
+    app()->setLocale('en');
+
+    $doctor = Doctor::factory()->create([
+        'phone' => '966511122266',
+        'profile_completed' => true,
+        'status' => 'approved',
+    ]);
+
+    $user = User::factory()->create(['name' => 'Layla Hassan']);
+
+    Appointment::factory()->create([
+        'doctor_id' => $doctor->id,
+        'user_id' => $user->id,
+        'patient_name' => 'Layla Hassan',
+        'status' => 'new',
+        'is_follow_up' => false,
+        'appointment_date' => now()->toDateString(),
+        'start_time' => now()->addMinutes(18)->format('H:i:s'),
+        'duration' => 45,
+    ]);
+
+    Livewire::actingAs($doctor, 'doctor')
+        ->test('pages::doctor.dashboard')
+        ->assertSee('data-test="doctor-luxury-up-next"', false)
+        ->assertSee('Layla Hassan', false)
+        ->assertSee(__('doctor.mobile.open_consultation'), false)
+        ->assertSee(__('doctor.mobile.today_glance'), false)
+        ->assertSee(__('doctor.mobile.needs_attention'), false);
 });
 
 test('doctor guest is redirected to doctor login when accessing dashboard', function () {
@@ -132,6 +169,25 @@ test('doctor pending approval is redirected to account status from portal pages'
         ->assertSee(__('doctor.account_status.pending_title'));
 });
 
+test('doctor luxury mobile wallet page shows balance dock and transactions', function () {
+    app()->setLocale('en');
+
+    $doctor = Doctor::factory()->create([
+        'phone' => '966511122288',
+        'profile_completed' => true,
+        'status' => 'approved',
+    ]);
+
+    $this->actingAs($doctor, 'doctor')
+        ->get(route('doctor.settings.wallet'))
+        ->assertSuccessful()
+        ->assertSee('data-test="doctor-luxury-wallet"', false)
+        ->assertSee('data-test="doctor-luxury-dock"', false)
+        ->assertSee('data-test="doctor-wallet-income-chart"', false)
+        ->assertSee(__('doctor.wallet.mobile_total_balance'), false)
+        ->assertSee(__('doctor.wallet.mobile_monthly_income'), false);
+});
+
 test('rejected doctor is blocked from the portal and sees the rejected message', function () {
     $doctor = Doctor::factory()->create([
         'profile_completed' => true,
@@ -174,6 +230,8 @@ test('approved doctor dashboard includes formatted revenue total for revenue-eli
         'user_id' => $user->id,
         'status' => 'completed',
         'total' => 2500,
+        'doctor_share' => 1750,
+        'mashora_share' => 750,
         'created_at' => now(),
         'updated_at' => now(),
         'appointment_date' => now()->toDateString(),
@@ -182,7 +240,47 @@ test('approved doctor dashboard includes formatted revenue total for revenue-eli
     $this->actingAs($doctor, 'doctor')
         ->get(route('doctor.dashboard', ['period' => 'today']))
         ->assertOk()
-        ->assertSee('2,500');
+        ->assertSee('1,750')
+        ->assertDontSee('2,500');
+});
+
+test('doctor luxury mobile schedule page shows dock navbar and status filters', function () {
+    app()->setLocale('en');
+
+    $doctor = Doctor::factory()->create([
+        'phone' => '966511122277',
+        'profile_completed' => true,
+        'status' => 'approved',
+    ]);
+
+    $user = User::factory()->create(['name' => 'Layla Hassan']);
+
+    Appointment::factory()->create([
+        'doctor_id' => $doctor->id,
+        'user_id' => $user->id,
+        'patient_name' => 'Layla Hassan',
+        'status' => 'new',
+        'is_follow_up' => false,
+        'appointment_date' => now()->toDateString(),
+        'start_time' => '09:00:00',
+        'duration' => 45,
+    ]);
+
+    $this->actingAs($doctor, 'doctor')
+        ->get(route('doctor.appointments'))
+        ->assertSuccessful()
+        ->assertSee('data-test="doctor-luxury-dock"', false)
+        ->assertSee('data-test="doctor-luxury-schedule"', false)
+        ->assertSee(__('doctor.mobile.schedule_title'), false)
+        ->assertSee(__('doctor.appointment_status.new'), false)
+        ->assertSee('Layla Hassan', false)
+        ->assertDontSee('Video', false)
+        ->assertDontSee('Clinic', false)
+        ->assertDontSee('Therapy', false);
+
+    Livewire::actingAs($doctor, 'doctor')
+        ->test('pages::doctor.appointments')
+        ->assertSee(__('doctor.appointments.filter_by_status'), false);
 });
 
 test('authenticated doctor can view appointments ratings and settings pages', function () {
@@ -311,6 +409,44 @@ test('doctor can save bank account from settings page', function () {
     expect($account)->not->toBeNull()
         ->and($account->account_holder_name)->toBe('John Doe')
         ->and($account->iban_number)->toBe('SA4410000000123456789001');
+});
+
+test('doctor can upload optional bank attachment from settings page', function () {
+    Storage::fake('public');
+
+    $doctor = Doctor::factory()->create(['profile_completed' => true]);
+
+    $this->actingAs($doctor, 'doctor');
+
+    Livewire::test('pages::doctor.settings.bank-account')
+        ->set('account_holder_name', 'John Doe')
+        ->set('account_number', '123456789')
+        ->set('iban_number', 'SA4410000000123456789001')
+        ->set('attachment', UploadedFile::fake()->create('iban-letter.pdf', 120, 'application/pdf'))
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $account = BankAccount::query()->where('doctor_id', $doctor->id)->first();
+
+    expect($account)->not->toBeNull()
+        ->and($account->attachment_path)->not->toBeNull();
+
+    Storage::disk('public')->assertExists((string) $account->attachment_path);
+});
+
+test('doctor bank attachment rejects unsupported file types', function () {
+    Storage::fake('public');
+
+    $doctor = Doctor::factory()->create(['profile_completed' => true]);
+
+    $this->actingAs($doctor, 'doctor');
+
+    Livewire::test('pages::doctor.settings.bank-account')
+        ->set('account_number', '123456789')
+        ->set('iban_number', 'SA4410000000123456789001')
+        ->set('attachment', UploadedFile::fake()->create('notes.txt', 10, 'text/plain'))
+        ->call('save')
+        ->assertHasErrors(['attachment']);
 });
 
 test('doctor header notifications are dynamic and can be marked as read', function () {
@@ -891,9 +1027,46 @@ test('prescription page lets doctor toggle prescription_not_needed', function ()
 
     Livewire::actingAs($doctor, 'doctor')
         ->test('pages::doctor.appointment.prescription', ['appointment' => $appointment])
-        ->set('prescriptionNotNeeded', true);
+        ->set('prescriptionNotNeeded', true)
+        ->assertSet('showCompleteAppointmentModal', true)
+        ->assertSee(__('doctor.complete_modal.title'), false)
+        ->call('dismissCompleteAppointmentModal')
+        ->assertSet('showCompleteAppointmentModal', false)
+        ->assertSet('prescriptionNotNeeded', false);
 
-    expect($appointment->fresh()->prescription_not_needed)->toBeTrue();
+    expect($appointment->fresh()->prescription_not_needed)->toBeFalse();
+});
+
+test('prescription no medication toggle opens complete modal and can mark session complete', function () {
+    $user = User::factory()->create();
+    $doctor = Doctor::factory()->create([
+        'profile_completed' => true,
+        'phone' => '966511122313',
+    ]);
+    $appointment = Appointment::factory()->create([
+        'doctor_id' => $doctor->id,
+        'user_id' => $user->id,
+        'status' => 'in_process',
+        'prescription_not_needed' => false,
+        'appointment_date' => now()->toDateString(),
+        'scheduled_at' => now(),
+    ]);
+
+    Diagnosis::create([
+        'appointment_id' => $appointment->id,
+        'diagnosis_name' => 'Example diagnosis',
+    ]);
+
+    Livewire::actingAs($doctor, 'doctor')
+        ->test('pages::doctor.appointment.prescription', ['appointment' => $appointment])
+        ->set('prescriptionNotNeeded', true)
+        ->assertSet('showCompleteAppointmentModal', true)
+        ->call('confirmCompleteAppointment')
+        ->assertRedirect(route('doctor.appointments.follow-up', $appointment));
+
+    expect($appointment->fresh())
+        ->prescription_not_needed->toBeTrue()
+        ->status->toBe('completed');
 });
 
 test('doctor can add and remove a medication via the prescription page', function () {
@@ -1011,8 +1184,33 @@ test('doctor conversation page includes resilient video call client bootstrap', 
         ->assertSee('data-label-call-failed', false)
         ->assertSee('data-label-agora-sdk-missing', false)
         ->assertSee('id="btn-agora-video"', false)
+        ->assertSee('id="btn-agora-video-mobile"', false)
         ->assertSee('id="agora-toggle-mic"', false)
-        ->assertSee('id="agora-toggle-video"', false);
+        ->assertSee('id="agora-toggle-video"', false)
+        ->assertSee('id="agora-toggle-mic-mobile"', false)
+        ->assertSee('id="agora-toggle-video-mobile"', false);
+});
+
+test('doctor luxury mobile consultation shell is rendered', function () {
+    $user = User::factory()->create();
+    $doctor = Doctor::factory()->create(['profile_completed' => true]);
+    $appointment = Appointment::factory()->create([
+        'doctor_id' => $doctor->id,
+        'user_id' => $user->id,
+        'status' => 'in_process',
+        'actual_start_at' => now(),
+        'extend_at' => now()->addMinutes(30),
+    ]);
+
+    $this->actingAs($doctor, 'doctor')
+        ->get(route('doctor.appointments.conversation', $appointment))
+        ->assertOk()
+        ->assertSee('data-test="doctor-luxury-consultation"', false)
+        ->assertSee('data-test="doctor-consultation-inline-video"', false)
+        ->assertSee('data-test="doctor-consultation-chat-toggle"', false)
+        ->assertSee('id="doctor-chat-panel-mobile"', false)
+        ->assertSee('id="doctor-chat-messages-mobile"', false)
+        ->assertSee(__('doctor.consultation.session_chat'), false);
 });
 
 test('doctor can send a session chat message after starting session', function () {
@@ -1040,6 +1238,27 @@ test('doctor can send a session chat message after starting session', function (
     expect($message)->not->toBeNull()
         ->and($message->body)->toBe('Hello from the doctor')
         ->and($message->send_by)->toBe('doctor');
+});
+
+test('doctor conversation keeps a single wire-ignored mobile video host after sending chat', function () {
+    $user = User::factory()->create();
+    $doctor = Doctor::factory()->create(['profile_completed' => true]);
+    $appointment = Appointment::factory()->create([
+        'doctor_id' => $doctor->id,
+        'user_id' => $user->id,
+        'status' => 'in_process',
+        'actual_start_at' => now(),
+        'extend_at' => now()->addMinutes(30),
+    ]);
+
+    $page = Livewire::actingAs($doctor, 'doctor')
+        ->test('pages::doctor.appointment.conversation', ['appointment' => $appointment])
+        ->set('draft', 'vgyg')
+        ->call('sendMessage')
+        ->assertSee('vgyg');
+
+    expect(substr_count($page->html(), 'id="doctor-consultation-inline-video"'))->toBe(1)
+        ->and(substr_count($page->html(), 'wire:key="doctor-consultation-inline-video-'.$appointment->id.'"'))->toBe(1);
 });
 
 test('doctor notify call broadcasts incoming call events to patient', function () {

@@ -3,18 +3,28 @@
     /** @var \Livewire\Component $component */
     $status = (string) $appointment->status;
     $showTimer = $component->shouldShowStartTimer($appointment);
+    $showPaymentTimer = $component->shouldShowPaymentTimer($appointment);
     $canJoinSession = $status === 'in_process' && $appointment->allowsPatientCalls();
     $canOpenChat = $component->canOpenChat($appointment);
+    $sessionStartPending = $appointment->isSessionStartRequestPending();
+    $canResolvePaymentMissed = $component->canResolvePaymentMissed($appointment);
     $awaitingDoctor = in_array($status, ['new', 'rescheduled'], true)
-        && (! $appointment->is_follow_up || $appointment->allowsPatientCalls());
+        && (! $appointment->is_follow_up || $appointment->allowsPatientCalls())
+        && ! $sessionStartPending
+        && ! $canOpenChat;
     $canResolveMissed = $component->canResolveMissed($appointment);
     $hasMissedRefund = $component->hasMissedRefund($appointment);
-    $hasAction = $appointment->status === 'pending_follow_up' || $canJoinSession || $canOpenChat || $awaitingDoctor || $canResolveMissed || ($appointment->isDoctorMissed() && $hasMissedRefund);
+    $hasAction = $appointment->status === 'pending_follow_up' || $canJoinSession || $canOpenChat || $sessionStartPending || $awaitingDoctor || $canResolveMissed || $canResolvePaymentMissed || ($appointment->isDoctorMissed() && $hasMissedRefund);
     $doctorName = $appointment->doctor?->displayName() ?: __('patient.appointments.title');
 @endphp
 
 <article class="flex h-full flex-col overflow-hidden rounded-2xl border border-zinc-200/80 bg-white shadow-[0_8px_30px_-12px_rgba(21,101,192,0.18)] ring-1 ring-zinc-100">
-    @if ($showTimer)
+    @if ($showPaymentTimer)
+        @include('partials.patient-payment-deadline-banner', [
+            'expiresAtIso' => $component->paymentExpiresAtIso($appointment),
+            'variant' => 'card',
+        ])
+    @elseif ($showTimer)
         <div
             x-data="appointmentStartTimer(@js($component->sessionStartsAtIso($appointment)))"
             x-init="start()"
@@ -56,7 +66,7 @@
                             {{ $doctorName }}
                         </h2>
                     </div>
-                    @unless ($showTimer)
+                    @unless ($showTimer || $showPaymentTimer)
                         <span @class([
                             'inline-flex shrink-0 items-center rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide',
                             $component->statusBadgeClassesFor($appointment),
@@ -94,14 +104,38 @@
         @if ($hasAction)
             <div class="mt-4">
                 @if ($appointment->status === 'pending_follow_up')
-                    <flux:button
-                        :href="$appointment->patient_confirmed_at === null ? route('patient.follow-up.confirm', $appointment) : route('patient.follow-up.pay', $appointment)"
-                        wire:navigate
-                        class="w-full !rounded-xl !border-violet-200 !bg-violet-50 !py-2.5 !text-violet-900 hover:!bg-violet-100"
-                        icon="credit-card"
-                    >
-                        {{ __('patient.follow_up.confirm_and_pay') }}
-                    </flux:button>
+                    @if ($appointment->requiresPatientPayment())
+                        <flux:button
+                            :href="route('patient.follow-up.confirm', $appointment)"
+                            wire:navigate
+                            class="w-full !rounded-xl !bg-violet-600 !py-2.5 !text-white hover:!brightness-95"
+                            icon="credit-card"
+                        >
+                            {{ __('patient.scheduled_appointment.confirm_and_pay') }}
+                        </flux:button>
+                    @else
+                        <flux:button
+                            :href="$appointment->patient_confirmed_at === null ? route('patient.follow-up.confirm', $appointment) : route('patient.follow-up.pay', $appointment)"
+                            wire:navigate
+                            class="w-full !rounded-xl !border-violet-200 !bg-violet-50 !py-2.5 !text-violet-900 hover:!bg-violet-100"
+                            icon="credit-card"
+                        >
+                            {{ __('patient.follow_up.confirm_and_pay') }}
+                        </flux:button>
+                    @endif
+                @elseif ($canResolvePaymentMissed)
+                    <div class="rounded-xl border border-orange-200/90 bg-gradient-to-r from-orange-50 to-amber-50/80 px-3.5 py-3">
+                        <p class="text-sm font-semibold text-orange-950">{{ __('patient.scheduled_appointment.missed_card_title') }}</p>
+                        <p class="mt-1 text-xs leading-relaxed text-orange-900/90">{{ __('patient.scheduled_appointment.missed_card_body') }}</p>
+                        <flux:button
+                            :href="route('patient.appointments.payment-missed-reschedule', $appointment)"
+                            wire:navigate
+                            class="mt-3 w-full !rounded-xl !bg-[#10B981] !py-2.5 !text-white hover:!brightness-95"
+                            icon="calendar-days"
+                        >
+                            {{ __('patient.scheduled_appointment.choose_appointment') }}
+                        </flux:button>
+                    </div>
                 @elseif ($canJoinSession)
                     <flux:button
                         :href="route('patient.appointments.conversation', ['appointment' => $appointment->id])"
@@ -111,6 +145,29 @@
                     >
                         {{ __('patient.appointments.join_session') }}
                     </flux:button>
+                @elseif ($sessionStartPending)
+                    <div class="rounded-xl border border-amber-200/90 bg-gradient-to-r from-amber-50 to-orange-50/80 px-3.5 py-3">
+                        <p class="text-sm font-semibold text-amber-950">{{ __('patient.appointments.session_start_request_pending') }}</p>
+                        <p class="mt-1 text-xs leading-relaxed text-amber-900/90">{{ __('patient.appointments.session_start_request_banner') }}</p>
+                        <div class="mt-3 flex flex-col gap-2 sm:flex-row">
+                            <flux:button
+                                type="button"
+                                wire:click="approveSessionStart({{ $appointment->id }})"
+                                wire:loading.attr="disabled"
+                                class="flex-1 !rounded-xl !bg-[#10B981] !py-2.5 !text-white hover:!brightness-95"
+                            >
+                                {{ __('patient.appointments.session_start_request_approve') }}
+                            </flux:button>
+                            <flux:button
+                                type="button"
+                                wire:click="declineSessionStart({{ $appointment->id }})"
+                                wire:loading.attr="disabled"
+                                class="flex-1 !rounded-xl !border-zinc-300 !bg-white !py-2.5 !text-black hover:!bg-zinc-50"
+                            >
+                                {{ __('patient.appointments.session_start_request_decline') }}
+                            </flux:button>
+                        </div>
+                    </div>
                 @elseif ($canOpenChat)
                     <flux:button
                         :href="route('patient.appointments.conversation', ['appointment' => $appointment->id])"

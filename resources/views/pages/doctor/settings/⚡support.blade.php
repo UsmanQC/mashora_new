@@ -54,7 +54,10 @@ new #[Layout('layouts::doctor')] #[Title('Support')] class extends Component
     }
 }; ?>
 
-<div class="space-y-6">
+<div class="relative w-full">
+    @include('partials.doctor-luxury-support-mobile')
+
+    <div class="hidden space-y-6 lg:block">
     <div class="flex items-center justify-between gap-3">
         <div>
             <flux:heading size="xl" class="font-semibold text-zinc-900">{{ __('tickets.title') }}</flux:heading>
@@ -94,4 +97,5 @@ new #[Layout('layouts::doctor')] #[Title('Support')] class extends Component
             @endforeach
         </div>
     @endif
+    </div>
 </div>

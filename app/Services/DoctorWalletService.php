@@ -59,6 +59,55 @@ final class DoctorWalletService
         ];
     }
 
+    public function pendingPayoutBalance(Doctor $doctor): float
+    {
+        return round((float) $doctor->invoices()
+            ->where('payment_status', '!=', 'paid')
+            ->sum('doctor_share'), 2);
+    }
+
+    public function totalBalance(Doctor $doctor): float
+    {
+        return round($this->balance($doctor) + $this->pendingPayoutBalance($doctor), 2);
+    }
+
+    public function incomeTrendPercent(Doctor $doctor, ?CarbonInterface $month = null): ?float
+    {
+        $month ??= now(config('app.timezone'));
+        $current = $this->monthlySummary($doctor, $month)['income'];
+        $previous = $this->monthlySummary($doctor, $month->copy()->subMonth())['income'];
+
+        if ($previous == 0.0) {
+            return $current > 0 ? 100.0 : null;
+        }
+
+        return round((($current - $previous) / abs($previous)) * 100, 0);
+    }
+
+    /**
+     * @return list<array{key: string, label: string, income: float, is_current: bool}>
+     */
+    public function monthlyIncomeChart(Doctor $doctor, int $months = 6): array
+    {
+        $timezone = config('app.timezone');
+        $locale = app()->getLocale();
+        $points = [];
+
+        for ($offset = $months - 1; $offset >= 0; $offset--) {
+            $month = now($timezone)->copy()->subMonths($offset)->startOfMonth();
+            $summary = $this->monthlySummary($doctor, $month);
+
+            $points[] = [
+                'key' => $month->format('Y-m'),
+                'label' => $month->locale($locale)->translatedFormat('M'),
+                'income' => $summary['income'],
+                'is_current' => $offset === 0,
+            ];
+        }
+
+        return $points;
+    }
+
     public function completedAppointmentsCount(
         Doctor $doctor,
         ?CarbonInterface $start = null,

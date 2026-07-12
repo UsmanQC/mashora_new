@@ -102,7 +102,9 @@ test('completing appointment clears pending incoming call and broadcasts call en
     app(AppointmentCompletionService::class)->attemptCompletion($appointment->fresh());
 
     Event::assertDispatched(AppointmentCallEnded::class, function (AppointmentCallEnded $event) use ($appointment, $user): bool {
-        return $event->appointmentId === $appointment->id && $event->patientUserId === $user->id;
+        return $event->appointmentId === $appointment->id
+            && $event->patientUserId === $user->id
+            && $event->status === 'completed';
     });
 
     $this->actingAs($user)

@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\AppointmentRefundRequest;
 use App\Models\User;
 use App\Services\PatientWalletService;
 use Bavix\Wallet\Models\Transaction;
@@ -41,6 +42,30 @@ new #[Layout('layouts::patient')] #[Title('Wallet')] class extends Component
     public function getTransactionsProperty(): Collection
     {
         return app(PatientWalletService::class)->recentTransactions($this->patient(), 30);
+    }
+
+    /**
+     * @return Collection<int, AppointmentRefundRequest>
+     */
+    public function getRefundRequestsProperty(): Collection
+    {
+        return AppointmentRefundRequest::query()
+            ->with(['appointment:id,appointment_date,start_time', 'doctor:id,name,name_ar'])
+            ->where('patient_id', $this->patient()->id)
+            ->latest('id')
+            ->limit(10)
+            ->get();
+    }
+
+    public function refundStatusLabel(string $status): string
+    {
+        return match ($status) {
+            'pending_review' => __('patient.missed.refund_status.pending_review'),
+            'approved' => __('patient.missed.refund_status.approved'),
+            'rejected' => __('patient.missed.refund_status.rejected'),
+            'processed' => __('patient.missed.refund_status.processed'),
+            default => __('patient.missed.refund_status.pending_review'),
+        };
     }
 
     public function transactionLabel(Transaction $transaction): string
@@ -151,6 +176,40 @@ new #[Layout('layouts::patient')] #[Title('Wallet')] class extends Component
                         ])>
                             {{ $isCredit ? '+' : '' }}{{ number_format($amount, 2) }} {{ config('currency.sa_riyal_symbol') }}
                         </p>
+                    </div>
+                @endforeach
+            </div>
+        @endif
+    </div>
+
+    <div class="rounded-3xl border border-slate-100/80 bg-white p-5 shadow-[0_8px_32px_0_rgba(0,0,0,0.03)] sm:rounded-2xl sm:border-zinc-200/90 sm:shadow-sm">
+        <flux:heading size="lg" class="font-semibold text-zinc-900">{{ __('patient.wallet.refund_requests_title') }}</flux:heading>
+
+        @if ($this->refundRequests->isEmpty())
+            <flux:text class="mt-4 text-sm text-zinc-500">{{ __('patient.wallet.refund_requests_empty') }}</flux:text>
+        @else
+            <div class="mt-4 divide-y divide-zinc-100">
+                @foreach ($this->refundRequests as $request)
+                    <div class="flex flex-wrap items-start justify-between gap-3 py-3 first:pt-0 last:pb-0">
+                        <div class="min-w-0">
+                            <p class="text-sm font-semibold text-zinc-900">
+                                {{ __('patient.wallet.refund_request_appointment') }} #{{ $request->appointment_id }}
+                            </p>
+                            <p class="text-xs text-zinc-500">
+                                {{ $request->doctor?->displayName() ?? __('patient.appointments.specialist_label') }}
+                                ·
+                                {{ $request->created_at?->timezone(config('app.timezone'))->translatedFormat('d M Y, g:i a') }}
+                            </p>
+                        </div>
+                        <span @class([
+                            'inline-flex rounded-full px-2.5 py-1 text-xs font-semibold',
+                            'bg-amber-100 text-amber-800' => $request->status === 'pending_review',
+                            'bg-sky-100 text-sky-800' => $request->status === 'approved',
+                            'bg-rose-100 text-rose-700' => $request->status === 'rejected',
+                            'bg-emerald-100 text-emerald-800' => $request->status === 'processed',
+                        ])>
+                            {{ $this->refundStatusLabel((string) $request->status) }}
+                        </span>
                     </div>
                 @endforeach
             </div>

@@ -202,14 +202,14 @@ new #[Layout('layouts::doctor')] #[Title('Working hours')] class extends Compone
                                             type="time"
                                             step="1"
                                             wire:model="workingHours.{{ $dayOfWeek }}.{{ $slotIndex }}.start_time"
-                                            class="rounded-lg border border-zinc-200 px-3 py-2 text-sm"
+                                            class="doctor-working-hours-time-input rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-slate-900"
                                         />
                                         <span class="text-zinc-500">-</span>
                                         <input
                                             type="time"
                                             step="1"
                                             wire:model="workingHours.{{ $dayOfWeek }}.{{ $slotIndex }}.end_time"
-                                            class="rounded-lg border border-zinc-200 px-3 py-2 text-sm"
+                                            class="doctor-working-hours-time-input rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-slate-900"
                                         />
 
                                         @if ($loop->first)

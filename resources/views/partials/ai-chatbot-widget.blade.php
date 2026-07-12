@@ -47,12 +47,8 @@
             role="dialog"
             aria-label="{{ __('ai_chatbot.title', [], $initialChatbotLocale) }}"
         >
-            <div class="flex items-center justify-between gap-3 border-b border-slate-100 bg-primary px-5 py-4 text-white">
-                <div class="min-w-0">
-                    <p id="awaan-ai-chatbot-title" class="truncate font-display text-base font-bold">{{ __('ai_chatbot.title', [], $initialChatbotLocale) }}</p>
-                    <p id="awaan-ai-chatbot-subtitle" class="truncate text-xs text-primary-50">{{ __('ai_chatbot.subtitle', [], $initialChatbotLocale) }}</p>
-                </div>
-                <div class="flex shrink-0 items-center gap-2">
+            <div class="relative border-b border-slate-100 bg-primary px-5 pb-4 pt-5 text-center text-white">
+                <div class="absolute end-3 top-3 flex shrink-0 items-center gap-1">
                     <button
                         type="button"
                         id="awaan-ai-chatbot-reset"
@@ -70,7 +66,22 @@
                         <i data-lucide="x" class="h-5 w-5"></i>
                     </button>
                 </div>
+
+                <div class="mx-auto mb-3 flex size-14 items-center justify-center rounded-2xl bg-white/15 shadow-[inset_0_1px_0_rgba(255,255,255,0.2)] ring-1 ring-white/25">
+                    @include('partials.ai-chatbot-logo', ['class' => 'size-8 text-white'])
+                </div>
+
+                <p id="awaan-ai-chatbot-title" class="truncate font-display text-base font-bold">{{ __('ai_chatbot.title', [], $initialChatbotLocale) }}</p>
+                <p id="awaan-ai-chatbot-subtitle" class="mt-0.5 truncate text-xs text-primary-50">{{ __('ai_chatbot.subtitle', [], $initialChatbotLocale) }}</p>
             </div>
+
+            <template id="awaan-ai-chatbot-welcome-template">
+                <div class="awaan-ai-chatbot-welcome-hero flex flex-col items-center px-2 pb-1 pt-2 text-center">
+                    <div class="mb-3 flex size-16 items-center justify-center rounded-3xl bg-primary/10 ring-1 ring-primary/15">
+                        @include('partials.ai-chatbot-logo', ['class' => 'size-9 text-primary'])
+                    </div>
+                </div>
+            </template>
 
             <div id="awaan-ai-chatbot-messages" class="flex max-h-80 flex-col gap-3 overflow-y-auto bg-surface-subtle p-4"></div>
 
@@ -124,12 +135,14 @@
                 type="button"
                 id="awaan-ai-chatbot-toggle"
                 @class([
-                    'pointer-events-auto hidden h-14 w-14 items-center justify-center rounded-full bg-primary text-white shadow-lg shadow-primary/30 transition hover:bg-primary-600 hover:shadow-xl',
+                    'hidden h-14 w-14 items-center justify-center rounded-full bg-primary text-white shadow-lg shadow-primary/30 transition hover:bg-primary-600 hover:shadow-xl',
+                    'pointer-events-none' => $isPatientDock,
+                    'pointer-events-auto' => ! $isPatientDock,
                     'sm:inline-flex' => ! $isPatientDock,
                 ])
                 aria-label="{{ __('ai_chatbot.open', [], $initialChatbotLocale) }}"
             >
-                <i data-lucide="message-circle" class="h-6 w-6"></i>
+                <span class="inline-flex shrink-0">@include('partials.ai-chatbot-logo', ['class' => 'size-6 text-white'])</span>
             </button>
         @else
             <button
@@ -138,13 +151,20 @@
                 class="inline-flex h-14 w-14 items-center justify-center rounded-full bg-primary text-white shadow-lg shadow-primary/30 transition hover:bg-primary-600 hover:shadow-xl"
                 aria-label="{{ __('ai_chatbot.open', [], $initialChatbotLocale) }}"
             >
-                <i data-lucide="message-circle" class="h-6 w-6"></i>
+                @include('partials.ai-chatbot-logo', ['class' => 'size-7 text-white'])
             </button>
         @endif
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
+        (function () {
+            let chatbotLifecycleAbort = null;
+
+            const initAwaanAiChatbotWidget = () => {
+            chatbotLifecycleAbort?.abort();
+            chatbotLifecycleAbort = new AbortController();
+            const { signal } = chatbotLifecycleAbort;
+
             const root = document.getElementById('awaan-ai-chatbot');
             if (!root) {
                 return;
@@ -648,6 +668,11 @@
                     messagesEl.innerHTML = '';
                 }
 
+                const welcomeTemplate = document.getElementById('awaan-ai-chatbot-welcome-template');
+                if (welcomeTemplate?.content?.firstElementChild) {
+                    messagesEl.appendChild(welcomeTemplate.content.firstElementChild.cloneNode(true));
+                }
+
                 appendBubble('assistant', labels().welcome);
                 renderQuickActions();
             };
@@ -783,10 +808,11 @@
                     }
 
                     applyLocale(nextLocale, { resetWelcome: true });
-                });
+                }, { signal });
             });
 
             window.openAwaanAiChatbot = openPanel;
+            window.toggleAwaanAiChatbot = togglePanel;
 
             document.addEventListener('click', (event) => {
                 const trigger = event.target.closest('[data-open-ai-chatbot]');
@@ -796,11 +822,11 @@
 
                 event.preventDefault();
                 togglePanel();
-            });
+            }, { signal });
 
-            toggle?.addEventListener('click', togglePanel);
+            toggle?.addEventListener('click', togglePanel, { signal });
 
-            closeBtn.addEventListener('click', closePanel);
+            closeBtn.addEventListener('click', closePanel, { signal });
 
             resetBtn.addEventListener('click', async () => {
                 exitBookingFlow();
@@ -817,7 +843,7 @@
                 } catch (error) {
                     // Ignore reset network errors; UI is already cleared locally.
                 }
-            });
+            }, { signal });
 
             form.addEventListener('submit', async (event) => {
                 event.preventDefault();
@@ -830,7 +856,18 @@
                 removeQuickActions();
                 input.value = '';
                 await sendUserMessage(message);
-            });
-        });
+            }, { signal });
+            };
+
+            const bootAwaanAiChatbotWidget = () => initAwaanAiChatbotWidget();
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', bootAwaanAiChatbotWidget, { once: true });
+            } else {
+                bootAwaanAiChatbotWidget();
+            }
+
+            document.addEventListener('livewire:navigated', bootAwaanAiChatbotWidget);
+        })();
     </script>
 @endif

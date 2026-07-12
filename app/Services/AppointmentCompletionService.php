@@ -59,6 +59,7 @@ final class AppointmentCompletionService
         broadcast(new AppointmentCallEnded(
             (int) $appointment->id,
             (int) $appointment->user_id,
+            (string) $appointment->status,
         ));
     }
 }

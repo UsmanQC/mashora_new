@@ -53,4 +53,34 @@ final class DoctorAppointmentNotifier
             'appointment_id' => (string) $appointment->id,
         ]);
     }
+
+    public function notifySessionStartApproved(Appointment $appointment, Doctor $doctor): void
+    {
+        $appointment->loadMissing('user');
+
+        $patientName = filled($appointment->patient_name)
+            ? (string) $appointment->patient_name
+            : ($appointment->user?->name ?? __('patient.appointments.title'));
+
+        $title = __('doctor.notifications.session_start_approved_title');
+        $message = __('doctor.notifications.session_start_approved_body', [
+            'patient' => $patientName,
+        ]);
+
+        Notification::query()->create([
+            'type' => 'session_start_approved',
+            'title' => $title,
+            'message' => $message,
+            'userable_type' => Doctor::class,
+            'userable_id' => $doctor->id,
+            'senderable_type' => User::class,
+            'senderable_id' => $appointment->user_id,
+            'action' => route('doctor.appointments.conversation', $appointment),
+        ]);
+
+        $this->push->sendToNotifiable($doctor, $title, $message, [
+            'type' => 'session_start_approved',
+            'appointment_id' => (string) $appointment->id,
+        ]);
+    }
 }

@@ -17,7 +17,10 @@ new #[Layout('layouts::doctor')] #[Title('Privacy policy')] class extends Compon
     }
 }; ?>
 
-<div class="space-y-6">
+<div class="relative w-full">
+    @include('partials.doctor-luxury-privacy-policy-mobile')
+
+    <div class="hidden space-y-6 lg:block">
     <div class="flex items-center justify-between gap-3">
         <flux:heading size="xl" class="font-semibold text-zinc-900">{{ __('Privacy policy') }}</flux:heading>
         <flux:button :href="route('doctor.dashboard')" wire:navigate variant="ghost" size="sm" icon="arrow-left">{{ __('Back') }}</flux:button>
@@ -32,5 +35,6 @@ new #[Layout('layouts::doctor')] #[Title('Privacy policy')] class extends Compon
         @else
             <flux:text class="text-zinc-600">{{ __('Privacy policy content is not available yet.') }}</flux:text>
         @endif
+    </div>
     </div>
 </div>

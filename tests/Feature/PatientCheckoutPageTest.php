@@ -47,8 +47,9 @@ test('authenticated patient sees luxury checkout shell on mobile', function () {
         ->assertSee('data-test="patient-luxury-checkout"', false)
         ->assertSee('data-test="patient-checkout-header"', false)
         ->assertSee('data-test="patient-checkout-step-payment"', false)
-        ->assertSee(__('patient_booking.checkout_title'), false)
-        ->assertSee(__('patient_booking.luxury.trust_badge'), false)
+        ->assertSee('data-test="patient-checkout-payment-card"', false)
+        ->assertSee('data-test="patient-checkout-payment-methods"', false)
+        ->assertSee(__('patient_booking.pay_through'), false)
         ->assertSee('data-test="patient-navbar-language-switch"', false);
 });
 

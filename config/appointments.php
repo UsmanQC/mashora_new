@@ -64,6 +64,42 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Follow-up session duration
+    |--------------------------------------------------------------------------
+    |
+    | Minutes allowed for a free follow-up video/voice session. Calls auto-end
+    | when this limit is reached (via extend_at on session start).
+    |
+    */
+
+    'follow_up_session_duration_minutes' => (int) env('APPOINTMENT_FOLLOW_UP_SESSION_DURATION_MINUTES', 5),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Doctor-scheduled paid appointment payment window
+    |--------------------------------------------------------------------------
+    |
+    | Minutes the patient has to confirm and pay after the doctor schedules a
+    | new paid appointment following a follow-up session.
+    |
+    */
+
+    'doctor_scheduled_payment_grace_minutes' => (int) env('APPOINTMENT_DOCTOR_SCHEDULED_PAYMENT_GRACE_MINUTES', 60),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Payment-missed reschedule window
+    |--------------------------------------------------------------------------
+    |
+    | Hours after the payment-missed appointment was created during which the
+    | patient may choose a new slot. After this window the item is removed.
+    |
+    */
+
+    'payment_missed_reschedule_window_hours' => (int) env('APPOINTMENT_PAYMENT_MISSED_RESCHEDULE_WINDOW_HOURS', 24),
+
+    /*
+    |--------------------------------------------------------------------------
     | Instant consultation window
     |--------------------------------------------------------------------------
     |

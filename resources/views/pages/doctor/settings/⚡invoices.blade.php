@@ -90,7 +90,11 @@ new #[Layout('layouts::doctor')] #[Title('Invoices')] class extends Component
 
 
 
-<div class="space-y-6">
+<div class="relative w-full">
+
+    @include('partials.doctor-luxury-invoices-mobile')
+
+    <div class="hidden space-y-6 lg:block">
 
     <div class="flex items-center justify-between gap-3">
 
@@ -227,6 +231,8 @@ new #[Layout('layouts::doctor')] #[Title('Invoices')] class extends Component
             @endforelse
 
         </div>
+
+    </div>
 
     </div>
 

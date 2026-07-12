@@ -7,11 +7,11 @@
             <span class="text-5xl font-bold leading-none text-[#f8bb86]">!</span>
         </div>
 
-        <flux:heading size="xl" class="font-bold text-[#545454]">
+        <flux:heading size="xl" class="font-bold text-slate-900">
             {{ __('doctor.complete_modal.title') }}
         </flux:heading>
 
-        <flux:text class="mt-3 max-w-[20rem] leading-relaxed text-[#595959]">
+        <flux:text class="mt-3 max-w-[20rem] leading-relaxed text-slate-900">
             {{ __('doctor.complete_modal.body') }}
         </flux:text>
 
@@ -45,11 +45,11 @@
             <span class="text-5xl font-bold leading-none text-[#f8bb86]">!</span>
         </div>
 
-        <flux:heading size="xl" class="font-bold text-[#545454]">
+        <flux:heading size="xl" class="font-bold text-slate-900">
             {{ __('doctor.complete_flow.diagnosis_title') }}
         </flux:heading>
 
-        <flux:text class="mt-3 max-w-[20rem] leading-relaxed text-[#595959]">
+        <flux:text class="mt-3 max-w-[20rem] leading-relaxed text-slate-900">
             {{ __('doctor.complete_flow.diagnosis_body') }}
         </flux:text>
 
@@ -85,11 +85,11 @@
             <span class="text-5xl font-bold leading-none text-[#f8bb86]">!</span>
         </div>
 
-        <flux:heading size="xl" class="font-bold text-[#545454]">
+        <flux:heading size="xl" class="font-bold text-slate-900">
             {{ __('doctor.complete_flow.prescription_title') }}
         </flux:heading>
 
-        <flux:text class="mt-3 max-w-[20rem] leading-relaxed text-[#595959]">
+        <flux:text class="mt-3 max-w-[20rem] leading-relaxed text-slate-900">
             {{ __('doctor.complete_flow.prescription_body') }}
         </flux:text>
 

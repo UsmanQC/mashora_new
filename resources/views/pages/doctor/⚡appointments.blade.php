@@ -10,6 +10,7 @@ use App\Services\PatientAppointmentNotifier;
 use Flux\Flux;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -26,10 +27,17 @@ new #[Layout('layouts::doctor')] #[Title('Appointments')] class extends Componen
     public function mount(): void
     {
         app(AppointmentMissedService::class)->processDueMissedAppointments();
+
+        if ($this->day === '') {
+            $this->day = now()->toDateString();
+        }
     }
 
     #[Url]
     public string $status = 'all';
+
+    #[Url]
+    public string $day = '';
 
     /**
      * @return array<string, string>
@@ -70,6 +78,198 @@ new #[Layout('layouts::doctor')] #[Title('Appointments')] class extends Componen
     public function updatedStatus(): void
     {
         $this->resetPage();
+    }
+
+    public function updatedDay(): void
+    {
+        $this->resetPage();
+    }
+
+    public function selectScheduleDay(string $iso): void
+    {
+        $this->day = $iso;
+        $this->resetPage();
+    }
+
+    public function initialsFor(?string $name): string
+    {
+        if (! filled($name)) {
+            return '?';
+        }
+
+        return \Illuminate\Support\Str::of((string) $name)
+            ->explode(' ')
+            ->filter()
+            ->take(2)
+            ->map(fn (string $word): string => \Illuminate\Support\Str::substr($word, 0, 1))
+            ->implode('');
+    }
+
+    /**
+     * @return list<array{iso: string, weekday: string, day_num: int, is_selected: bool, is_today: bool, has_appointments: bool}>
+     */
+    public function scheduleDays(): array
+    {
+        $locale = app()->getLocale();
+        $selected = Carbon::parse($this->day)->startOfDay();
+        $start = $selected->copy()->subDays(3)->startOfDay();
+        $end = $start->copy()->addDays(13)->startOfDay();
+
+        /** @var list<string> $datesWithAppointments */
+        $datesWithAppointments = $this->baseAppointmentsQuery()
+            ->whereBetween('appointment_date', [$start->toDateString(), $end->toDateString()])
+            ->distinct()
+            ->pluck('appointment_date')
+            ->map(fn ($date): string => Carbon::parse($date)->toDateString())
+            ->all();
+
+        $days = [];
+
+        for ($i = 0; $i < 14; $i++) {
+            $date = $start->copy()->addDays($i)->locale($locale);
+            $iso = $date->toDateString();
+
+            $days[] = [
+                'iso' => $iso,
+                'weekday' => $date->translatedFormat('D'),
+                'day_num' => $date->day,
+                'is_selected' => $iso === $selected->toDateString(),
+                'is_today' => $iso === now()->toDateString(),
+                'has_appointments' => in_array($iso, $datesWithAppointments, true),
+            ];
+        }
+
+        return $days;
+    }
+
+    /**
+     * @return Builder<Appointment>
+     */
+    protected function dayAppointmentsQuery(): Builder
+    {
+        return $this->baseAppointmentsQuery()->whereDate('appointment_date', $this->day);
+    }
+
+    public function dayFilterCount(string $key): int
+    {
+        if ($key === 'all') {
+            return $this->dayAppointmentsQuery()->count();
+        }
+
+        $query = $this->dayAppointmentsQuery();
+
+        if ($key === 'pending_follow_up') {
+            return $query->upcomingFollowUp()->count();
+        }
+
+        if ($key === 'new') {
+            return $query->where('status', 'new')->where('is_follow_up', false)->count();
+        }
+
+        return $query->where('status', $key)->count();
+    }
+
+    /**
+     * @return Collection<int, Appointment>
+     */
+    public function getMobileScheduleAppointmentsProperty(): Collection
+    {
+        $query = $this->dayAppointmentsQuery()
+            ->with([
+                'followUps' => fn ($query) => $query
+                    ->where('status', 'pending_follow_up')
+                    ->latest('id'),
+                'parentAppointment',
+            ])
+            ->when($this->status !== 'all', function (Builder $query): void {
+                if ($this->status === 'pending_follow_up') {
+                    $query->upcomingFollowUp();
+                } elseif ($this->status === 'new') {
+                    $query->where('status', 'new')->where('is_follow_up', false);
+                } else {
+                    $query->where('status', $this->status);
+                }
+            })
+            ->orderBy('start_time');
+
+        return $query->get();
+    }
+
+    public function mobileCardHref(Appointment $appointment): string
+    {
+        if (in_array((string) $appointment->status, ['new', 'rescheduled', 'in_process'], true)) {
+            return route('doctor.appointments.conversation', $appointment);
+        }
+
+        if ((string) $appointment->status === 'completed' && $this->canOpenChat($appointment)) {
+            return route('doctor.appointments.conversation', $appointment);
+        }
+
+        if ($this->canScheduleFollowUp($appointment)) {
+            return route('doctor.appointments.follow-up', $appointment);
+        }
+
+        if ((string) $appointment->status === 'pending_follow_up' && $appointment->parentAppointment instanceof Appointment) {
+            return route('doctor.appointments.follow-up', $appointment->parentAppointment);
+        }
+
+        return route('doctor.appointments.medical-history', $appointment);
+    }
+
+    public function mobileSessionLine(Appointment $appointment): string
+    {
+        if ($appointment->is_follow_up) {
+            return __('doctor.mobile.schedule_session_follow_up', ['duration' => $appointment->duration]);
+        }
+
+        return __('doctor.mobile.schedule_session_line', ['duration' => $appointment->duration]);
+    }
+
+    public function mobileCardAccentClass(Appointment $appointment): string
+    {
+        if ($appointment->is_follow_up && $appointment->status !== 'pending_follow_up') {
+            return 'border-l-violet-500';
+        }
+
+        return match ((string) $appointment->status) {
+            'in_process' => 'border-l-[#10B981]',
+            'new' => 'border-l-sky-500',
+            'completed' => 'border-l-emerald-500',
+            'pending_follow_up' => 'border-l-violet-500',
+            'cancelled' => 'border-l-rose-400',
+            'rescheduled' => 'border-l-indigo-500',
+            'not_attended' => 'border-l-orange-500',
+            default => 'border-l-slate-300',
+        };
+    }
+
+    /**
+     * @return array{label: string, classes: string}|null
+     */
+    public function mobileInlineBadge(Appointment $appointment): ?array
+    {
+        if ((string) $appointment->status === 'in_process') {
+            return [
+                'label' => __('doctor.mobile.badge_now'),
+                'classes' => 'bg-emerald-100 text-emerald-700',
+            ];
+        }
+
+        if ($appointment->is_follow_up && $appointment->status !== 'pending_follow_up') {
+            return [
+                'label' => __('doctor.appointment_status.follow_up'),
+                'classes' => 'bg-violet-100 text-violet-700',
+            ];
+        }
+
+        if ((string) $appointment->status === 'new') {
+            return [
+                'label' => __('doctor.mobile.badge_confirmed'),
+                'classes' => 'bg-slate-100 text-slate-600',
+            ];
+        }
+
+        return null;
     }
 
     public function getAppointmentsProperty(): LengthAwarePaginator
@@ -121,7 +321,7 @@ new #[Layout('layouts::doctor')] #[Title('Appointments')] class extends Componen
 
     public function sessionStartsAtIso(Appointment $appointment): ?string
     {
-        return $appointment->sessionStartsAt()?->toIso8601String();
+        return $appointment->sessionStartsAt()?->copy()->subHour()->toIso8601String();
     }
 
     public function canOpenSessionNow(Appointment $appointment): bool
@@ -130,12 +330,16 @@ new #[Layout('layouts::doctor')] #[Title('Appointments')] class extends Componen
             return true;
         }
 
+        if (in_array((string) $appointment->status, ['new', 'rescheduled'], true)) {
+            return true;
+        }
+
         return app(AppointmentSessionService::class)->canDoctorStart($appointment);
     }
 
     public function canOpenChat(Appointment $appointment): bool
     {
-        return $appointment->isChatOpen();
+        return $appointment->isDoctorChatOpen();
     }
 
     public function statusLabelFor(Appointment $appointment): string
@@ -390,7 +594,10 @@ new #[Layout('layouts::doctor')] #[Title('Appointments')] class extends Componen
     }
 }; ?>
 
-<div class="space-y-6">
+<div class="relative w-full">
+    @include('partials.doctor-luxury-schedule-mobile')
+
+    <div class="hidden space-y-6 lg:block">
     <div class="flex flex-wrap items-center justify-between gap-3">
         <flux:heading size="xl" class="font-semibold tracking-tight text-zinc-900">{{ __('doctor.appointments.title') }}</flux:heading>
         <span class="inline-flex items-center rounded-full bg-[#10B981]/10 px-3 py-1 text-xs font-semibold text-[#2f49ca]">
@@ -523,25 +730,14 @@ new #[Layout('layouts::doctor')] #[Title('Appointments')] class extends Componen
                             <td class="px-4 py-3 align-middle text-center">
                                 @if ($hasSessionActions)
                                     <div class="inline-flex flex-nowrap items-center justify-center gap-1.5">
-                                        <template x-if="ready">
-                                            <a
-                                                href="{{ $openSessionHref }}"
-                                                wire:navigate
-                                                class="inline-flex shrink-0 items-center justify-center gap-1 rounded-lg bg-[#047857] px-2 py-1.5 text-[0.6875rem] font-semibold whitespace-nowrap text-white shadow-sm transition hover:brightness-95"
-                                            >
-                                                <flux:icon name="video-camera" variant="mini" class="size-3.5 shrink-0" />
-                                                {{ __('doctor.appointments.open_session') }}
-                                            </a>
-                                        </template>
-                                        <template x-if="!ready">
-                                            <span
-                                                class="inline-flex shrink-0 cursor-not-allowed items-center justify-center gap-1 rounded-lg bg-zinc-200 px-2 py-1.5 text-[0.6875rem] font-semibold whitespace-nowrap text-zinc-500"
-                                                title="{{ __('doctor.appointments.open_session_wait') }}"
-                                            >
-                                                <flux:icon name="video-camera" variant="mini" class="size-3.5 shrink-0 opacity-60" />
-                                                {{ __('doctor.appointments.open_session') }}
-                                            </span>
-                                        </template>
+                                        <a
+                                            href="{{ $openSessionHref }}"
+                                            wire:navigate
+                                            class="inline-flex shrink-0 items-center justify-center gap-1 rounded-lg bg-[#047857] px-2 py-1.5 text-[0.6875rem] font-semibold whitespace-nowrap text-white shadow-sm transition hover:brightness-95"
+                                        >
+                                            <flux:icon name="video-camera" variant="mini" class="size-3.5 shrink-0" />
+                                            {{ __('doctor.appointments.open_session') }}
+                                        </a>
                                         <button
                                             type="button"
                                             wire:click="promptCancelAppointment({{ $row->id }})"
@@ -629,6 +825,7 @@ new #[Layout('layouts::doctor')] #[Title('Appointments')] class extends Componen
             {{ $this->appointments->links() }}
         </div>
     @endif
+    </div>
 
     <flux:modal wire:model.self="showCancelModal" class="max-w-md rounded-2xl shadow-xl" :closable="true">
         <div class="px-6 py-8 sm:px-8">
@@ -640,7 +837,7 @@ new #[Layout('layouts::doctor')] #[Title('Appointments')] class extends Componen
                 {{ __('doctor.appointments.cancel_modal.title') }}
             </flux:heading>
 
-            <flux:text class="mt-2 text-center text-sm leading-relaxed text-zinc-600">
+            <flux:text class="mt-2 text-center text-sm leading-relaxed text-slate-900">
                 @if ($this->pendingCancelAppointment instanceof \App\Models\Appointment && $this->cancelRequiresRefund($this->pendingCancelAppointment))
                     {{ __('doctor.appointments.cancel_modal.body') }}
                 @else
@@ -651,7 +848,7 @@ new #[Layout('layouts::doctor')] #[Title('Appointments')] class extends Componen
             @if ($this->pendingCancelAppointment instanceof \App\Models\Appointment)
                 <div class="mt-5 rounded-xl border border-zinc-200/90 bg-zinc-50 px-4 py-3 text-sm">
                     <p class="font-semibold text-zinc-900">{{ $this->pendingCancelAppointment->patient_name }}</p>
-                    <p class="mt-1 tabular-nums text-zinc-600">
+                    <p class="mt-1 tabular-nums text-slate-900">
                         {{ $this->pendingCancelAppointment->appointment_date?->format('d/m/Y') }}
                         ·
                         {{ \Illuminate\Support\Str::limit((string) $this->pendingCancelAppointment->start_time, 8, '') }}

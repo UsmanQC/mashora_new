@@ -115,6 +115,99 @@ new #[Layout('layouts::doctor')] #[Title('Working hours')] class extends Compone
         $this->workingHours[$dayOfWeek] = array_values($this->workingHours[$dayOfWeek]);
     }
 
+    public function toggleDay(string $dayOfWeek): void
+    {
+        if (in_array($dayOfWeek, $this->availabilities, true)) {
+            $this->availabilities = array_values(array_diff($this->availabilities, [$dayOfWeek]));
+
+            return;
+        }
+
+        $this->availabilities[] = $dayOfWeek;
+
+        if (empty($this->workingHours[$dayOfWeek])) {
+            $this->workingHours[$dayOfWeek] = [[
+                'start_time' => '09:00:00',
+                'end_time' => '10:00:00',
+            ]];
+        }
+    }
+
+    public function setVacationMode(): void
+    {
+        $this->availabilities = [];
+    }
+
+    public function daySummaryLabel(string $dayOfWeek): string
+    {
+        if (! in_array($dayOfWeek, $this->availabilities, true)) {
+            return __('doctor.mobile.working_hours_day_off');
+        }
+
+        $slots = $this->workingHours[$dayOfWeek] ?? [];
+        $count = count($slots);
+
+        if ($count === 0) {
+            return __('doctor.mobile.working_hours_no_shifts');
+        }
+
+        $minutes = 0;
+
+        foreach ($slots as $slot) {
+            $start = $slot['start_time'] ?? null;
+            $end = $slot['end_time'] ?? null;
+
+            if (! $start || ! $end || $end <= $start) {
+                continue;
+            }
+
+            $minutes += Carbon::createFromTimeString($start)->diffInMinutes(Carbon::createFromTimeString($end));
+        }
+
+        $hours = $minutes / 60;
+        $hoursLabel = $hours == floor($hours) ? (string) (int) $hours : number_format($hours, 1);
+
+        return trans_choice('doctor.mobile.working_hours_shifts_count', $count, ['count' => $count])
+            .' · '.$hoursLabel.__('doctor.mobile.working_hours_hours_suffix');
+    }
+
+    /**
+     * @return list<array{type: string, index?: int, label: string}>
+     */
+    public function dayChipsFor(string $dayOfWeek): array
+    {
+        $slots = collect($this->workingHours[$dayOfWeek] ?? [])
+            ->filter(fn (array $slot): bool => filled($slot['start_time'] ?? null) && filled($slot['end_time'] ?? null))
+            ->sortBy('start_time');
+
+        $chips = [];
+        $previousEnd = null;
+
+        foreach ($slots as $index => $slot) {
+            if ($previousEnd !== null && $slot['start_time'] > $previousEnd) {
+                $chips[] = [
+                    'type' => 'break',
+                    'label' => $this->formatTimeRange((string) $previousEnd, (string) $slot['start_time']),
+                ];
+            }
+
+            $chips[] = [
+                'type' => 'shift',
+                'index' => $index,
+                'label' => $this->formatTimeRange((string) $slot['start_time'], (string) $slot['end_time']),
+            ];
+
+            $previousEnd = $slot['end_time'];
+        }
+
+        return $chips;
+    }
+
+    private function formatTimeRange(string $start, string $end): string
+    {
+        return Carbon::createFromTimeString($start)->format('H:i').'–'.Carbon::createFromTimeString($end)->format('H:i');
+    }
+
     public function save(): void
     {
         $this->validate([
@@ -167,7 +260,10 @@ new #[Layout('layouts::doctor')] #[Title('Working hours')] class extends Compone
     }
 }; ?>
 
-<div class="space-y-6">
+<div class="relative w-full">
+    @include('partials.doctor-luxury-working-hours-mobile')
+
+    <div class="hidden space-y-6 lg:block">
     <div class="flex items-center justify-between gap-3">
         <flux:heading size="xl" class="font-semibold text-zinc-900">{{ __('Working hours') }}</flux:heading>
         <flux:button :href="route('doctor.dashboard')" wire:navigate variant="ghost" size="sm" icon="arrow-left">{{ __('Back') }}</flux:button>
@@ -196,14 +292,14 @@ new #[Layout('layouts::doctor')] #[Title('Working hours')] class extends Compone
                                             type="time"
                                             step="1"
                                             wire:model="workingHours.{{ $dayOfWeek }}.{{ $slotIndex }}.start_time"
-                                            class="rounded-lg border border-zinc-200 px-3 py-2 text-sm"
+                                            class="doctor-working-hours-time-input rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-slate-900"
                                         />
                                         <span class="text-zinc-500">-</span>
                                         <input
                                             type="time"
                                             step="1"
                                             wire:model="workingHours.{{ $dayOfWeek }}.{{ $slotIndex }}.end_time"
-                                            class="rounded-lg border border-zinc-200 px-3 py-2 text-sm"
+                                            class="doctor-working-hours-time-input rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-slate-900"
                                         />
 
                                         @if ($loop->first)
@@ -240,5 +336,6 @@ new #[Layout('layouts::doctor')] #[Title('Working hours')] class extends Compone
                 <flux:text class="text-sm font-medium text-emerald-600">{{ session('working_hours_saved') }}</flux:text>
             @endif
         </form>
+    </div>
     </div>
 </div>

@@ -268,6 +268,8 @@ test('patient confirms free follow-up without payment', function () {
     $this->actingAs($user);
 
     Livewire::test('pages::patient.follow-up-confirm', ['appointment' => $followUp])
+        ->assertSee('data-test="patient-follow-up-confirm-header"', false)
+        ->assertSee(__('patient.follow_up.title'), false)
         ->call('confirmAndPay')
         ->assertRedirect(route('patient.appointments'));
 
@@ -638,4 +640,40 @@ test('follow-up appointment page shows finished message instead of schedule form
         ->assertSee(__('doctor.follow_up.session_finished'), false)
         ->assertDontSee(__('doctor.follow_up.complete_session_first'), false)
         ->assertDontSee(__('doctor.follow_up.submit'), false);
+});
+
+test('payment missed reschedule page renders luxury mobile header and green submit button', function () {
+    app()->setLocale('en');
+
+    $doctor = seedDoctorWithSlots();
+    $user = User::factory()->create(['profile_completed' => true]);
+
+    $parent = Appointment::factory()->create([
+        'doctor_id' => $doctor->id,
+        'user_id' => $user->id,
+        'status' => 'completed',
+        'duration' => 30,
+    ]);
+
+    $appointment = Appointment::factory()->create([
+        'doctor_id' => $doctor->id,
+        'user_id' => $user->id,
+        'parent_id' => $parent->id,
+        'is_follow_up' => false,
+        'status' => 'cancelled',
+        'cancel_status' => 'patient_payment_missed',
+        'duration' => 30,
+        'appointment_date' => now()->addDay()->format('Y-m-d'),
+        'start_time' => '10:00:00',
+        'end_time' => '10:30:00',
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('patient.appointments.payment-missed-reschedule', $appointment))
+        ->assertSuccessful()
+        ->assertSee('data-test="patient-payment-missed-reschedule-header"', false)
+        ->assertSee(__('patient.scheduled_appointment.missed_hint'), false)
+        ->assertSee('data-test="patient-payment-missed-reschedule-submit"', false)
+        ->assertSee('bg-[#10B981]', false)
+        ->assertSee('text-amber-950', false);
 });

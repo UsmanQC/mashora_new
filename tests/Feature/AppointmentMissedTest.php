@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Appointment;
+use App\Models\AppointmentRefundRequest;
 use App\Models\Doctor;
 use App\Models\Notification;
 use App\Models\User;
@@ -237,7 +238,7 @@ test('missed appointment processing runs even when relaxed session limits are en
         ->and($appointment->fresh()->status)->toBe('not_attended');
 });
 
-test('missed appointment processing is idempotent for refunds', function () {
+test('missed appointment processing is idempotent for refund requests', function () {
     Carbon::setTestNow('2026-06-23 14:00:00');
 
     $doctor = Doctor::factory()->create(['status' => 'approved']);
@@ -266,12 +267,11 @@ test('missed appointment processing is idempotent for refunds', function () {
     expect((float) $user->fresh()->balanceFloat)->toBe(0.0);
 
     app(PatientMissedAppointmentService::class)->refund($user, $appointment->fresh());
-
-    expect((float) $user->fresh()->balanceFloat)->toBe(100.0);
-
     app(PatientMissedAppointmentService::class)->refund($user, $appointment->fresh());
 
-    expect((float) $user->fresh()->balanceFloat)->toBe(100.0);
+    expect(AppointmentRefundRequest::query()
+        ->where('appointment_id', $appointment->id)
+        ->count())->toBe(1);
 });
 
 test('doctor appointments page shows missed status label', function () {

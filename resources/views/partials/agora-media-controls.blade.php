@@ -24,8 +24,26 @@
                     const micBtn = document.getElementById(micBtnId);
                     const videoBtn = document.getElementById(videoBtnId);
 
-                    micBtn?.classList.remove('hidden');
-                    videoBtn?.classList.toggle('hidden', mode !== 'video');
+                    [micBtn, videoBtn].forEach((btn) => {
+                        if (!btn) {
+                            return;
+                        }
+
+                        btn.classList.remove('hidden');
+
+                        if (btn.classList.contains('doctor-consultation-call-controls__btn')) {
+                            btn.classList.add('inline-flex');
+                        }
+                    });
+
+                    if (videoBtn) {
+                        const hideVideo = mode !== 'video';
+                        videoBtn.classList.toggle('hidden', hideVideo);
+
+                        if (hideVideo && videoBtn.classList.contains('doctor-consultation-call-controls__btn')) {
+                            videoBtn.classList.remove('inline-flex');
+                        }
+                    }
                 }
 
                 function sync(options) {

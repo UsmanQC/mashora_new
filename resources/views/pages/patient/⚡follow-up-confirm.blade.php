@@ -2,9 +2,11 @@
 
 use App\Models\Appointment;
 use App\Models\User;
+use App\Services\DoctorScheduledAppointmentService;
 use App\Services\FollowUpAppointmentService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
@@ -20,8 +22,25 @@ new #[Layout('layouts::patient')] #[Title('Follow-up appointment')] class extend
             abort(403);
         }
 
+        if ($appointment->isPatientPaymentMissed()) {
+            $this->redirectRoute('patient.appointments.payment-missed-reschedule', $appointment, navigate: true);
+
+            return;
+        }
+
         if (! $appointment->isPendingFollowUp()) {
             abort(404);
+        }
+
+        if ($appointment->requiresPatientPayment() && $appointment->isPaymentExpired()) {
+            app(DoctorScheduledAppointmentService::class)->expireDuePayments();
+            $appointment->refresh();
+
+            if ($appointment->isPatientPaymentMissed()) {
+                $this->redirectRoute('patient.appointments.payment-missed-reschedule', $appointment, navigate: true);
+
+                return;
+            }
         }
 
         $this->appointment = $appointment->load('doctor', 'parentAppointment');
@@ -76,16 +95,77 @@ new #[Layout('layouts::patient')] #[Title('Follow-up appointment')] class extend
     {
         return (float) $this->appointment->total <= 0;
     }
+
+    public function isDoctorScheduledPaid(): bool
+    {
+        return $this->appointment->requiresPatientPayment();
+    }
+
+    public function paymentExpiresAtIso(): ?string
+    {
+        return $this->appointment->paymentExpiresAtIso();
+    }
+
+    public function profilePhotoUrl(): ?string
+    {
+        $user = Auth::user();
+
+        if ($user === null || ! filled($user->profile_photo_path)) {
+            return null;
+        }
+
+        return Storage::disk('public')->url((string) $user->profile_photo_path);
+    }
+
+    public function pageTitle(): string
+    {
+        return $this->isDoctorScheduledPaid()
+            ? __('patient.scheduled_appointment.title')
+            : __('patient.follow_up.title');
+    }
+
+    public function pageSubtitle(): string
+    {
+        return $this->isDoctorScheduledPaid()
+            ? __('patient.scheduled_appointment.subtitle')
+            : __('patient.follow_up.subtitle');
+    }
 }; ?>
 
-<div class="mx-auto max-w-xl space-y-6 px-4 py-8">
-    <div>
-        <flux:heading size="xl" class="font-semibold text-[#10B981]">{{ __('patient.follow_up.title') }}</flux:heading>
-        <flux:text class="mt-2 text-zinc-600">{{ __('patient.follow_up.subtitle') }}</flux:text>
+<div class="patient-luxury-follow-up-confirm bg-slate-50 pb-[calc(4.75rem+env(safe-area-inset-bottom))] sm:bg-transparent sm:pb-12" data-test="patient-luxury-follow-up-confirm">
+    <div class="sm:hidden">
+        @include('partials.patient-luxury-page-header', [
+            'title' => $this->pageTitle(),
+            'subtitle' => $this->pageSubtitle(),
+            'profilePhotoUrl' => $this->profilePhotoUrl(),
+            'userName' => auth()->user()?->name,
+            'backUrl' => route('patient.appointments'),
+            'backLabel' => __('patient.appointments.title'),
+            'testId' => 'patient-follow-up-confirm-header',
+        ])
     </div>
 
-    <div class="rounded-2xl border border-zinc-200/90 bg-white p-5 shadow-sm">
-        <flux:badge color="sky" class="mb-4">{{ __('patient.follow_up.badge') }}</flux:badge>
+    <div class="mx-auto max-w-xl space-y-5 px-6 pt-5 sm:space-y-6 sm:px-4 sm:py-8">
+        <div class="hidden sm:block">
+            <flux:heading size="xl" class="font-semibold text-[#10B981]">
+                {{ $this->pageTitle() }}
+            </flux:heading>
+            <flux:text class="mt-2 text-zinc-600">
+                {{ $this->pageSubtitle() }}
+            </flux:text>
+        </div>
+
+    @if ($this->isDoctorScheduledPaid() && $this->paymentExpiresAtIso())
+        @include('partials.patient-payment-deadline-banner', [
+            'expiresAtIso' => $this->paymentExpiresAtIso(),
+            'variant' => 'page',
+        ])
+    @endif
+
+    <div class="rounded-3xl border border-slate-100/80 bg-white p-5 shadow-[0_8px_32px_0_rgba(0,0,0,0.03)] sm:rounded-2xl sm:border-zinc-200/90 sm:shadow-sm">
+        <flux:badge color="sky" class="mb-4">
+            {{ $this->isDoctorScheduledPaid() ? __('patient.scheduled_appointment.badge') : __('patient.follow_up.badge') }}
+        </flux:badge>
 
         <dl class="space-y-3 text-sm">
             <div class="flex justify-between gap-4">
@@ -117,7 +197,11 @@ new #[Layout('layouts::patient')] #[Title('Follow-up appointment')] class extend
         </dl>
 
         <flux:text class="mt-4 text-sm text-zinc-600">
-            {{ $this->isFree() ? __('patient.follow_up.confirm_hint_free') : __('patient.follow_up.confirm_hint') }}
+            @if ($this->isDoctorScheduledPaid())
+                {{ __('patient.scheduled_appointment.confirm_hint', ['minutes' => \App\Services\DoctorScheduledAppointmentService::paymentGraceMinutes()]) }}
+            @else
+                {{ $this->isFree() ? __('patient.follow_up.confirm_hint_free') : __('patient.follow_up.confirm_hint') }}
+            @endif
         </flux:text>
 
         <div class="mt-6 flex flex-col gap-3 sm:flex-row">
@@ -126,11 +210,18 @@ new #[Layout('layouts::patient')] #[Title('Follow-up appointment')] class extend
                 variant="primary"
                 class="w-full !bg-[#10B981] !text-white hover:!brightness-95 sm:flex-1"
             >
-                {{ $this->isFree() ? __('patient.follow_up.confirm_free') : __('patient.follow_up.confirm_and_pay') }}
+                @if ($this->isDoctorScheduledPaid())
+                    {{ __('patient.scheduled_appointment.confirm_and_pay') }}
+                @else
+                    {{ $this->isFree() ? __('patient.follow_up.confirm_free') : __('patient.follow_up.confirm_and_pay') }}
+                @endif
             </flux:button>
-            <flux:button :href="route('patient.appointments')" wire:navigate variant="ghost" class="w-full sm:w-auto">
+            <flux:button :href="route('patient.appointments')" wire:navigate variant="filled" class="w-full !border !border-zinc-300 !bg-white !text-black sm:w-auto">
                 {{ __('patient.follow_up.later') }}
             </flux:button>
         </div>
     </div>
+    </div>
 </div>
+
+@include('partials.payment-deadline-timer-script')

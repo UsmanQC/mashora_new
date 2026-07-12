@@ -1,5 +1,6 @@
 <?php
 
+use App\Livewire\Concerns\HandlesDoctorBankAccountAttachment;
 use App\Models\BankAccount;
 use App\Models\Doctor;
 use Illuminate\Support\Facades\Auth;
@@ -9,6 +10,8 @@ use Livewire\Component;
 
 new #[Layout('layouts::doctor')] #[Title('Bank account')] class extends Component
 {
+    use HandlesDoctorBankAccountAttachment;
+
     public string $account_holder_name = '';
 
     public string $account_number = '';
@@ -34,6 +37,7 @@ new #[Layout('layouts::doctor')] #[Title('Bank account')] class extends Componen
         $this->account_holder_name = (string) ($account?->account_holder_name ?? $doctor->name ?? '');
         $this->account_number = (string) ($account?->account_number ?? '');
         $this->iban_number = (string) ($account?->iban_number ?? '');
+        $this->mountBankAccountAttachment($account);
     }
 
     public function goBack(): void
@@ -54,6 +58,7 @@ new #[Layout('layouts::doctor')] #[Title('Bank account')] class extends Componen
                 'size:24',
                 'regex:/^SA[0-9A-Z]{22}$/',
             ],
+            ...$this->bankAttachmentValidationRules(),
         ], [
             'account_number.required' => __('doctor.auth.bank_account_number_required'),
             'iban_number.required' => __('doctor.auth.bank_iban_required'),
@@ -63,7 +68,7 @@ new #[Layout('layouts::doctor')] #[Title('Bank account')] class extends Componen
 
         $doctor = $this->doctor();
 
-        BankAccount::query()->updateOrCreate(
+        $account = BankAccount::query()->updateOrCreate(
             ['doctor_id' => $doctor->id],
             [
                 'doctor_id' => $doctor->id,
@@ -72,6 +77,8 @@ new #[Layout('layouts::doctor')] #[Title('Bank account')] class extends Componen
                 'iban_number' => $validated['iban_number'],
             ],
         );
+
+        $this->syncBankAccountAttachment($account);
 
         $this->redirect(route('doctor.register.duration'), navigate: true);
     }
@@ -128,6 +135,13 @@ new #[Layout('layouts::doctor')] #[Title('Bank account')] class extends Componen
                 <flux:text class="text-xs text-zinc-500">{{ __('doctor.auth.bank_iban_hint') }}</flux:text>
                 <flux:error name="iban_number" />
             </flux:field>
+
+            @include('partials.doctor-bank-attachment-field', [
+                'existingPath' => $existingAttachmentPath,
+                'existingUrl' => $this->existingAttachmentUrl(),
+                'existingIsImage' => $this->existingAttachmentIsImage(),
+                'existingFilename' => $this->existingAttachmentFilename(),
+            ])
 
             <div class="flex flex-col gap-3 pt-1 sm:flex-row sm:justify-between">
                 <flux:button type="button" variant="ghost" wire:click="goBack" class="order-2 sm:order-1">

@@ -196,6 +196,79 @@ final class PatientAppointmentNotifier
         ]);
     }
 
+    public function notifyDoctorScheduledAppointmentPaymentRequired(
+        Appointment $appointment,
+        Doctor $doctor,
+        CarbonInterface $start,
+        CarbonInterface $expiresAt,
+    ): void {
+        $user = $this->patientUser($appointment);
+        if ($user === null) {
+            return;
+        }
+
+        $locale = app()->getLocale();
+        $minutes = DoctorScheduledAppointmentService::paymentGraceMinutes();
+        $title = __('patient.notifications.doctor_scheduled_appointment_title', locale: $locale);
+        $message = __('patient.notifications.doctor_scheduled_appointment_body', [
+            'doctor' => $doctor->displayName(),
+            'date' => $start->locale($locale)->translatedFormat('d M Y'),
+            'time' => $start->locale($locale)->translatedFormat('g:i a'),
+            'amount' => number_format((float) $appointment->total, 2),
+            'minutes' => $minutes,
+        ], locale: $locale);
+
+        Notification::query()->create([
+            'type' => 'doctor_scheduled_appointment_payment',
+            'title' => $title,
+            'message' => $message,
+            'userable_type' => User::class,
+            'userable_id' => $user->id,
+            'senderable_type' => Doctor::class,
+            'senderable_id' => $doctor->id,
+            'action' => route('patient.follow-up.confirm', $appointment),
+        ]);
+
+        $this->push->sendToUser($user, $title, $message, [
+            'type' => 'doctor_scheduled_appointment_payment',
+            'appointment_id' => (string) $appointment->id,
+            'payment_expires_at' => $expiresAt->toIso8601String(),
+        ]);
+    }
+
+    public function notifyDoctorScheduledPaymentMissed(Appointment $appointment, Doctor $doctor): void
+    {
+        $user = $this->patientUser($appointment);
+        if ($user === null) {
+            return;
+        }
+
+        $startsAt = $this->appointmentStartsAt($appointment);
+        $locale = app()->getLocale();
+        $title = __('patient.notifications.doctor_scheduled_payment_missed_title', locale: $locale);
+        $message = __('patient.notifications.doctor_scheduled_payment_missed_body', [
+            'doctor' => $doctor->displayName(),
+            'date' => $startsAt?->locale($locale)->translatedFormat('d M Y') ?? '--',
+            'time' => $startsAt?->locale($locale)->translatedFormat('g:i a') ?? '--',
+        ], locale: $locale);
+
+        Notification::query()->create([
+            'type' => 'doctor_scheduled_payment_missed',
+            'title' => $title,
+            'message' => $message,
+            'userable_type' => User::class,
+            'userable_id' => $user->id,
+            'senderable_type' => Doctor::class,
+            'senderable_id' => $doctor->id,
+            'action' => route('patient.appointments.payment-missed-reschedule', $appointment),
+        ]);
+
+        $this->push->sendToUser($user, $title, $message, [
+            'type' => 'doctor_scheduled_payment_missed',
+            'appointment_id' => (string) $appointment->id,
+        ]);
+    }
+
     public function notifyFollowUpBooked(Appointment $appointment, Doctor $doctor): void
     {
         $user = $this->patientUser($appointment);
@@ -225,6 +298,39 @@ final class PatientAppointmentNotifier
 
         $this->push->sendToUser($user, $title, $message, [
             'type' => 'follow_up_booked',
+            'appointment_id' => (string) $appointment->id,
+        ]);
+    }
+
+    public function notifySessionStartRequest(Appointment $appointment, Doctor $doctor): void
+    {
+        $user = $this->patientUser($appointment);
+        if ($user === null) {
+            return;
+        }
+
+        $startsAt = $this->appointmentStartsAt($appointment);
+        $locale = app()->getLocale();
+        $title = __('patient.notifications.session_start_request_title', locale: $locale);
+        $message = __('patient.notifications.session_start_request_message', [
+            'doctor' => $doctor->displayName(),
+            'time' => $startsAt?->locale($locale)->translatedFormat('g:i a') ?? '--',
+            'date' => $startsAt?->locale($locale)->translatedFormat('d M Y') ?? '--',
+        ], locale: $locale);
+
+        Notification::query()->create([
+            'type' => 'session_start_request',
+            'title' => $title,
+            'message' => $message,
+            'userable_type' => User::class,
+            'userable_id' => $user->id,
+            'senderable_type' => Doctor::class,
+            'senderable_id' => $doctor->id,
+            'action' => route('patient.appointments.conversation', $appointment),
+        ]);
+
+        $this->push->sendToUser($user, $title, $message, [
+            'type' => 'session_start_request',
             'appointment_id' => (string) $appointment->id,
         ]);
     }

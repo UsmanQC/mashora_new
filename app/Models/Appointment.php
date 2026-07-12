@@ -41,7 +41,10 @@ class Appointment extends Model
             'actual_start_at' => 'datetime',
             'actual_end_at' => 'datetime',
             'extend_at' => 'datetime',
+            'session_start_requested_at' => 'datetime',
+            'session_start_approved_at' => 'datetime',
             'patient_confirmed_at' => 'datetime',
+            'payment_expires_at' => 'datetime',
             'amount' => 'decimal:2',
             'discount' => 'decimal:2',
             'tax' => 'decimal:2',
@@ -58,6 +61,7 @@ class Appointment extends Model
         'user_id',
         'parent_id',
         'patient_confirmed_at',
+        'payment_expires_at',
         'is_follow_up',
         'scheduled_at',
         'appointment_date',
@@ -89,8 +93,8 @@ class Appointment extends Model
         'actual_start_at',
         'actual_end_at',
         'extend_at',
-        'extend_duration',
-        'invoice_id',
+        'session_start_requested_at',
+        'session_start_approved_at',
     ];
 
     /**
@@ -167,7 +171,36 @@ class Appointment extends Model
 
         $now ??= now()->timezone(config('app.timezone'));
 
+        return $now->greaterThanOrEqualTo($startsAt->copy()->subHour());
+    }
+
+    public function isScheduledSessionTimeReached(?CarbonInterface $now = null): bool
+    {
+        $startsAt = $this->sessionStartsAt();
+
+        if ($startsAt === null) {
+            return true;
+        }
+
+        $now ??= now()->timezone(config('app.timezone'));
+
         return $now->greaterThanOrEqualTo($startsAt);
+    }
+
+    public function hasSessionStartRequest(): bool
+    {
+        return $this->session_start_requested_at !== null;
+    }
+
+    public function isSessionStartRequestPending(): bool
+    {
+        return $this->session_start_requested_at !== null
+            && $this->session_start_approved_at === null;
+    }
+
+    public function isSessionStartApproved(): bool
+    {
+        return $this->session_start_approved_at !== null;
     }
 
     public function sessionEndsAt(): ?Carbon
@@ -191,7 +224,7 @@ class Appointment extends Model
                 return null;
             }
 
-            $durationMinutes = max(1, (int) ($this->duration ?? 0));
+            $durationMinutes = $this->effectiveSessionDurationMinutes();
 
             return $startsAt->copy()->addMinutes($durationMinutes);
         } catch (\Throwable) {
@@ -199,9 +232,46 @@ class Appointment extends Model
         }
     }
 
+    public function effectiveSessionDurationMinutes(): int
+    {
+        if ($this->is_follow_up) {
+            return FollowUpAppointmentService::sessionDurationMinutes();
+        }
+
+        return max(1, (int) ($this->duration ?? 0));
+    }
+
     public function isPendingFollowUp(): bool
     {
         return $this->status === 'pending_follow_up';
+    }
+
+    public function requiresPatientPayment(): bool
+    {
+        return $this->isPendingFollowUp()
+            && ! $this->is_follow_up
+            && (float) $this->total > 0
+            && $this->patient_confirmed_at === null;
+    }
+
+    public function isPaymentExpired(): bool
+    {
+        if ($this->payment_expires_at === null) {
+            return false;
+        }
+
+        return $this->payment_expires_at->isPast();
+    }
+
+    public function paymentExpiresAtIso(): ?string
+    {
+        return $this->payment_expires_at?->toIso8601String();
+    }
+
+    public function isPatientPaymentMissed(): bool
+    {
+        return $this->status === 'cancelled'
+            && $this->cancel_status === 'patient_payment_missed';
     }
 
     public function isUpcomingFollowUp(): bool
@@ -255,11 +325,24 @@ class Appointment extends Model
             return $now->lessThanOrEqualTo($this->chatOpenUntil());
         }
 
+        if (in_array((string) $this->status, ['new', 'rescheduled'], true)) {
+            if ((bool) config('appointments.relaxed_session_limits', false)) {
+                return true;
+            }
+
+            return $this->isSessionStartDue($now);
+        }
+
         if ((string) $this->status !== 'completed') {
             return false;
         }
 
         return $now->lessThanOrEqualTo($this->chatOpenUntil());
+    }
+
+    public function isDoctorChatOpen(?CarbonInterface $now = null): bool
+    {
+        return $this->isChatOpen($now);
     }
 
     public function allowsPatientCalls(): bool
@@ -337,6 +420,14 @@ class Appointment extends Model
         return $this->hasMany(ChMessage::class, 'appointment_id');
     }
 
+    /**
+     * @return HasMany<AppointmentRefundRequest, $this>
+     */
+    public function refundRequests(): HasMany
+    {
+        return $this->hasMany(AppointmentRefundRequest::class);
+    }
+
     public function isDoctorMissed(): bool
     {
         return $this->status === 'not_attended'
@@ -347,5 +438,10 @@ class Appointment extends Model
     {
         return $this->status === 'cancelled'
             && $this->cancel_status === 'patient_refunded';
+    }
+
+    public function hasRefundRequest(): bool
+    {
+        return $this->refundRequests()->exists();
     }
 }

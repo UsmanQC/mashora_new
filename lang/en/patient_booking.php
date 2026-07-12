@@ -43,6 +43,8 @@ return [
     'checkout_subtitle' => 'Review your session and pay securely.',
 
     'checkout_accepts' => 'Accepted payment methods',
+    'pay_through' => 'You can pay through',
+    'or_divider' => 'OR',
     'payment_brand_visa' => 'Visa',
     'payment_brand_mastercard' => 'Mastercard',
     'payment_brand_mada' => 'mada',

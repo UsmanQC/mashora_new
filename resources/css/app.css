@@ -1031,29 +1031,23 @@ select:focus[data-flux-control] {
     gap: 0.125rem;
     padding: 0.375rem 0.125rem 0.5rem;
     border-radius: 9999px;
-    color: #94a3b8;
+    color: #0f172a;
     text-decoration: none;
     transition: color 0.2s ease, background-color 0.2s ease;
     -webkit-tap-highlight-color: transparent;
 }
 
 .patient-luxury-dock-btn:hover {
-    color: #334155;
+    color: #0f172a;
 }
 
 .patient-luxury-dock-btn--active {
     background-color: #ecfdf5;
-    color: #059669;
+    color: #0f172a;
 }
 
 .patient-luxury-dock-btn--active:hover {
-    color: #059669;
-}
-
-.patient-luxury-dock-btn__icon {
-    width: 1.125rem;
-    height: 1.125rem;
-    flex-shrink: 0;
+    color: #0f172a;
 }
 
 .patient-luxury-dock-btn__label {
@@ -1063,11 +1057,24 @@ select:focus[data-flux-control] {
     text-align: center;
     font-size: 0.5625rem;
     line-height: 1.15;
-    font-weight: 500;
+    font-weight: 600;
+    color: #0f172a;
 }
 
 .patient-luxury-dock-btn--active .patient-luxury-dock-btn__label {
-    font-weight: 600;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.patient-luxury-dock-btn__icon {
+    width: 1.125rem;
+    height: 1.125rem;
+    flex-shrink: 0;
+    color: #0f172a;
+}
+
+.patient-luxury-dock-btn--active .patient-luxury-dock-btn__icon {
+    color: #047857;
 }
 
 .patient-luxury-dock-fab {
@@ -1092,6 +1099,356 @@ select:focus[data-flux-control] {
 
 .patient-luxury-dock-fab:active {
     transform: scale(0.98);
+}
+
+.doctor-luxury-schedule-days {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x;
+}
+
+.doctor-luxury-schedule-days::-webkit-scrollbar,
+.doctor-luxury-schedule-filters::-webkit-scrollbar {
+    display: none;
+}
+
+.doctor-luxury-schedule-filters {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    -webkit-overflow-scrolling: touch;
+}
+
+.doctor-luxury-schedule-day {
+    display: flex;
+    min-width: 3.25rem;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.125rem;
+    border-radius: 1rem;
+    border: 1px solid transparent;
+    background-color: #fff;
+    padding: 0.625rem 0.75rem;
+    color: #0f172a;
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.doctor-luxury-schedule-day.is-selected {
+    border-color: #047857;
+    background-color: #047857;
+    color: #fff;
+    box-shadow: 0 8px 24px -8px rgb(4 120 87 / 0.45);
+}
+
+.doctor-luxury-schedule-day.is-today:not(.is-selected) {
+    border-color: rgb(16 185 129 / 0.25);
+}
+
+.doctor-luxury-schedule-day__weekday {
+    font-size: 0.625rem;
+    font-weight: 600;
+    text-transform: capitalize;
+    opacity: 0.85;
+}
+
+.doctor-luxury-schedule-day__num {
+    font-size: 1rem;
+    font-weight: 700;
+    line-height: 1.1;
+}
+
+.doctor-luxury-schedule-day__dot {
+    margin-top: 0.125rem;
+    width: 0.25rem;
+    height: 0.25rem;
+    border-radius: 9999px;
+    background-color: #10b981;
+}
+
+.doctor-luxury-schedule-day.is-selected .doctor-luxury-schedule-day__dot {
+    background-color: #fff;
+}
+
+.doctor-wallet-income-chart {
+    min-height: 7rem;
+}
+
+.doctor-wallet-income-chart__bar {
+    min-height: 0.625rem;
+}
+
+.doctor-luxury-scroll {
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+    overscroll-behavior-y: contain;
+}
+
+.doctor-consultation-inline-video--live .doctor-consultation-video-idle {
+    display: none;
+}
+
+.doctor-consultation-inline-video--live .doctor-consultation-remote {
+    z-index: 1;
+}
+
+.doctor-consultation-inline-video:not(.doctor-consultation-inline-video--live) .doctor-consultation-remote {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.doctor-consultation-inline-video:not(.doctor-consultation-inline-video--live) .doctor-consultation-local-preview {
+    display: none;
+}
+
+.doctor-consultation-call-controls {
+    min-height: 3.25rem;
+}
+
+.doctor-consultation-call-controls__btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    flex-shrink: 0;
+    border-radius: 9999px;
+    border: 1px solid rgb(255 255 255 / 0.15);
+    background-color: rgb(39 39 42 / 0.92);
+    color: #fff;
+    transition: background-color 0.2s ease, border-color 0.2s ease, opacity 0.2s ease;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.doctor-consultation-call-controls__btn.hidden {
+    display: none !important;
+}
+
+.doctor-consultation-call-controls__btn:hover:not(:disabled) {
+    background-color: rgb(63 63 70 / 0.95);
+}
+
+.doctor-consultation-call-controls__btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.doctor-consultation-call-controls__btn--leave {
+    border-color: transparent;
+    background-color: #e11d48;
+    box-shadow: 0 8px 20px -6px rgb(225 29 72 / 0.55);
+}
+
+.doctor-consultation-call-controls__btn--leave:hover {
+    background-color: #f43f5e;
+}
+
+.doctor-consultation-call-controls__btn.video-call-control--off {
+    border-color: rgb(244 63 94 / 0.65);
+    background-color: rgb(127 29 29 / 0.82);
+    color: #fecdd3;
+}
+
+.doctor-consultation-call-controls__btn svg,
+.doctor-consultation-call-controls__btn ui-icon {
+    color: inherit !important;
+}
+
+.doctor-consultation-chat-messages {
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+}
+
+.doctor-consultation-chat-form input:disabled {
+    cursor: not-allowed;
+}
+
+@media (max-width: 1023px) {
+    .doctor-luxury-consultation.doctor-consultation--call-active:not(.doctor-consultation--chat-open) #doctor-chat-panel-mobile {
+        display: none;
+    }
+
+    .doctor-luxury-consultation.doctor-consultation--call-active.doctor-consultation--chat-open #doctor-chat-panel-mobile {
+        position: fixed;
+        inset-inline: 0;
+        bottom: 0;
+        z-index: 45;
+        display: flex;
+        max-height: min(58vh, 32rem);
+        flex-direction: column;
+        overflow: hidden;
+        border-start-start-radius: 1.5rem;
+        border-start-end-radius: 1.5rem;
+        box-shadow: 0 -16px 48px -12px rgb(15 23 42 / 0.28);
+    }
+
+    .doctor-luxury-consultation.doctor-consultation--call-active.doctor-consultation--chat-open .doctor-consultation-chat-messages {
+        max-height: min(30vh, 15rem);
+        min-height: 6rem;
+        flex: 1 1 auto;
+    }
+
+    .doctor-luxury-consultation.doctor-consultation--call-active.doctor-consultation--chat-open .doctor-consultation-chat > .border-t {
+        padding-bottom: calc(0.75rem + env(safe-area-inset-bottom));
+    }
+
+    .doctor-consultation-call-controls__btn--active {
+        border-color: rgb(16 185 129 / 0.65);
+        background-color: rgb(6 78 59 / 0.95);
+        box-shadow: 0 0 0 2px rgb(16 185 129 / 0.35);
+    }
+}
+
+.patient-consultation-inline-video--live .patient-consultation-video-idle {
+    display: none;
+}
+
+.patient-consultation-inline-video--live .patient-consultation-remote {
+    z-index: 1;
+}
+
+.patient-consultation-inline-video:not(.patient-consultation-inline-video--live) .patient-consultation-remote {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.patient-consultation-inline-video:not(.patient-consultation-inline-video--live) .doctor-consultation-local-preview {
+    display: none;
+}
+
+@media (max-width: 639px) {
+    .patient-luxury-consultation-mobile.patient-consultation--call-active:not(.patient-consultation--chat-open) #patient-chat-panel-mobile {
+        display: none;
+    }
+
+    .patient-luxury-consultation-mobile.patient-consultation--call-active.patient-consultation--chat-open #patient-chat-panel-mobile {
+        position: fixed;
+        inset-inline: 0;
+        bottom: 0;
+        z-index: 45;
+        display: flex;
+        max-height: min(58vh, 32rem);
+        flex-direction: column;
+        overflow: hidden;
+        border-start-start-radius: 1.5rem;
+        border-start-end-radius: 1.5rem;
+        box-shadow: 0 -16px 48px -12px rgb(15 23 42 / 0.28);
+    }
+
+    .patient-luxury-consultation-mobile.patient-consultation--call-active.patient-consultation--chat-open .patient-consultation-chat-messages {
+        max-height: min(30vh, 15rem);
+        min-height: 6rem;
+        flex: 1 1 auto;
+    }
+
+    .patient-luxury-consultation-mobile.patient-consultation--call-active.patient-consultation--chat-open .patient-consultation-chat > .border-t {
+        padding-bottom: calc(0.75rem + env(safe-area-inset-bottom));
+    }
+}
+
+@media (max-width: 1023px) {
+    .doctor-luxury-mobile-active [data-flux-button]:not(.doctor-luxury-btn-primary) {
+        color: #0f172a !important;
+        -webkit-text-fill-color: #0f172a !important;
+    }
+
+    .doctor-luxury-mobile-active [data-flux-button]:not(.doctor-luxury-btn-primary) ui-icon,
+    .doctor-luxury-mobile-active [data-flux-button]:not(.doctor-luxury-btn-primary) svg {
+        color: #0f172a !important;
+    }
+
+    .doctor-luxury-mobile-active .doctor-luxury-btn-primary {
+        color: #fff !important;
+        -webkit-text-fill-color: #fff !important;
+    }
+
+    .doctor-luxury-mobile-active .doctor-luxury-btn-primary ui-icon,
+    .doctor-luxury-mobile-active .doctor-luxury-btn-primary svg {
+        color: #fff !important;
+    }
+
+    .doctor-luxury-mobile-active .doctor-luxury-schedule-filters [role='tab'],
+    .doctor-luxury-mobile-active .doctor-luxury-consultation .rounded-2xl.bg-slate-100\/80 button {
+        color: #0f172a !important;
+        -webkit-text-fill-color: #0f172a !important;
+    }
+
+    .doctor-luxury-mobile-active ui-switch {
+        --color-accent: #047857;
+        --color-accent-foreground: #ffffff;
+        background-color: #cbd5e1 !important;
+    }
+
+    .doctor-luxury-mobile-active ui-switch[data-checked] {
+        background-color: #047857 !important;
+    }
+
+    .doctor-luxury-mobile-active ui-label[data-flux-label],
+    .doctor-luxury-mobile-active [data-flux-label] {
+        color: #0f172a !important;
+    }
+
+    .doctor-luxury-mobile-active .doctor-working-hours-time-input {
+        color: #0f172a !important;
+        -webkit-text-fill-color: #0f172a !important;
+        background-color: #ffffff !important;
+        color-scheme: light;
+    }
+
+    .doctor-luxury-mobile-active .doctor-working-hours-time-input::-webkit-datetime-edit,
+    .doctor-luxury-mobile-active .doctor-working-hours-time-input::-webkit-datetime-edit-fields-wrapper,
+    .doctor-luxury-mobile-active .doctor-working-hours-time-input::-webkit-datetime-edit-hour-field,
+    .doctor-luxury-mobile-active .doctor-working-hours-time-input::-webkit-datetime-edit-minute-field,
+    .doctor-luxury-mobile-active .doctor-working-hours-time-input::-webkit-datetime-edit-second-field,
+    .doctor-luxury-mobile-active .doctor-working-hours-time-input::-webkit-datetime-edit-ampm-field {
+        color: #0f172a !important;
+        -webkit-text-fill-color: #0f172a !important;
+    }
+
+    .doctor-luxury-mobile-active .doctor-consultation-inline-video button,
+    .doctor-luxury-mobile-active .doctor-consultation-call-controls__btn {
+        color: #fff !important;
+        -webkit-text-fill-color: #fff !important;
+    }
+
+    .doctor-luxury-mobile-active ui-modal dialog,
+    .doctor-luxury-mobile-active ui-modal dialog [data-flux-heading],
+    .doctor-luxury-mobile-active ui-modal dialog [data-flux-text],
+    .doctor-luxury-mobile-active ui-modal dialog flux-heading,
+    .doctor-luxury-mobile-active ui-modal dialog flux-text,
+    .doctor-luxury-mobile-active ui-modal dialog p:not([class*='text-white']):not([class*='text-rose']):not([class*='text-amber']) {
+        color: #0f172a !important;
+        -webkit-text-fill-color: #0f172a !important;
+    }
+
+    .doctor-luxury-mobile-active ui-modal dialog [data-flux-label],
+    .doctor-luxury-mobile-active ui-modal dialog [data-flux-field] label {
+        color: #0f172a !important;
+        -webkit-text-fill-color: #0f172a !important;
+    }
+
+    .doctor-luxury-mobile-active ui-modal dialog [data-flux-button]:not([class*='text-white']):not([class*='!text-white']) {
+        color: #0f172a !important;
+        -webkit-text-fill-color: #0f172a !important;
+    }
+
+    .doctor-luxury-mobile-active ui-menu[data-flux-menu],
+    .doctor-luxury-mobile-active ui-menu[data-flux-menu] [data-flux-menu-item],
+    .doctor-luxury-mobile-active ui-menu[data-flux-menu] [data-flux-menu-item] span {
+        color: #0f172a !important;
+        -webkit-text-fill-color: #0f172a !important;
+    }
+
+    .doctor-luxury-mobile-active ui-menu[data-flux-menu] {
+        background-color: #ffffff !important;
+        border-color: #e2e8f0 !important;
+    }
+}
+
+@media (max-width: 1023px) {
+    #agora-call-overlay {
+        display: none !important;
+    }
 }
 
 .patient-luxury-mood-row {

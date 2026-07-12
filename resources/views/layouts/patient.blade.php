@@ -37,6 +37,9 @@
             'patient.support',
             'patient.support.create',
             'patient.support.show',
+            'patient.follow-up.confirm',
+            'patient.follow-up.pay',
+            'patient.appointments.payment-missed-reschedule',
         ]);
     @endphp
     <body
@@ -174,11 +177,13 @@
 
         @include('partials.pwa-install-prompt', ['pwaApp' => 'patient'])
 
-        @include('partials.ai-chatbot-widget', [
-            'forceVisible' => true,
-            'hideToggle' => $patientLuxuryMobileNav,
-            'layout' => 'patient-dock',
-        ])
+        @persist('awaan-ai-chatbot')
+            @include('partials.ai-chatbot-widget', [
+                'forceVisible' => true,
+                'hideToggle' => $patientLuxuryMobileNav,
+                'layout' => 'patient-dock',
+            ])
+        @endpersist
 
         @fluxScripts
     </body>

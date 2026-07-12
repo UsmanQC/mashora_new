@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Appointment;
+use App\Models\AppointmentRefundRequest;
 use App\Models\Communication;
 use App\Models\Degree;
 use App\Models\Doctor;
@@ -123,12 +124,20 @@ test('patient can request refund for doctor missed appointment', function () {
         'wallet_amount' => 150,
     ]);
 
-    $doctor->depositFloat(105.00);
+    app(PatientMissedAppointmentService::class)->requestRefund(
+        $user,
+        $appointment,
+        'service_not_provided',
+    );
 
-    app(PatientMissedAppointmentService::class)->refund($user, $appointment);
+    $request = AppointmentRefundRequest::query()
+        ->where('appointment_id', $appointment->id)
+        ->first();
 
-    expect((float) $user->fresh()->balanceFloat)->toBe(150.0)
-        ->and((float) $doctor->fresh()->balanceFloat)->toBe(0.0);
+    expect($request)->not->toBeNull()
+        ->and($request?->status)->toBe('pending_review')
+        ->and((float) $request?->requested_amount)->toBe(150.0)
+        ->and((float) $user->fresh()->balanceFloat)->toBe(0.0);
 });
 
 test('patient can reschedule doctor missed appointment', function () {
@@ -244,19 +253,19 @@ test('patient can refund missed appointment from appointments page', function ()
         'mashora_share' => 30,
     ]);
 
-    $doctor->depositFloat(70.00);
-
     Livewire::actingAs($user)
         ->test('pages::patient.appointments')
+        ->set('refundReason', 'service_not_provided')
         ->call('refundMissed', $appointment->id)
         ->assertHasNoErrors();
 
-    expect((float) $user->fresh()->balanceFloat)->toBe(100.0);
+    $request = AppointmentRefundRequest::query()
+        ->where('appointment_id', $appointment->id)
+        ->first();
 
-    $appointment->refresh();
-    expect($appointment->status)->toBe('cancelled')
-        ->and($appointment->cancel_status)->toBe('patient_refunded')
-        ->and($appointment->isPatientRefunded())->toBeTrue();
+    expect($request)->not->toBeNull()
+        ->and($request?->reason_key)->toBe('service_not_provided')
+        ->and($request?->status)->toBe('pending_review');
 });
 
 test('patient missed refund opens confirmation modal before processing', function () {
@@ -279,26 +288,29 @@ test('patient missed refund opens confirmation modal before processing', functio
         'mashora_share' => 30,
     ]);
 
-    $doctor->depositFloat(70.00);
-
     Livewire::actingAs($user)
         ->test('pages::patient.appointments')
         ->call('promptRefundMissed', $appointment->id)
         ->assertSet('showRefundModal', true)
         ->assertSee(__('patient.missed.refund_modal.title'), false)
         ->assertSee(__('patient.missed.refund_modal.refund_note', ['amount' => '100.00']), false)
+        ->set('refundReason', 'other')
+        ->set('refundReasonNote', 'Custom reason from patient')
         ->call('confirmRefundMissed')
         ->assertSet('showRefundModal', false)
         ->assertHasNoErrors();
 
-    expect((float) $user->fresh()->balanceFloat)->toBe(100.0);
+    $request = AppointmentRefundRequest::query()
+        ->where('appointment_id', $appointment->id)
+        ->first();
 
-    $appointment->refresh();
-    expect($appointment->status)->toBe('cancelled')
-        ->and($appointment->cancel_status)->toBe('patient_refunded');
+    expect($request)->not->toBeNull()
+        ->and($request?->reason_key)->toBe('other')
+        ->and($request?->reason_note)->toBe('Custom reason from patient')
+        ->and($request?->status)->toBe('pending_review');
 });
 
-test('refunded missed appointment appears in cancelled tab with refunded status', function () {
+test('requested missed refund appears with pending review status', function () {
     app()->setLocale('en');
 
     $user = User::factory()->create(['profile_completed' => true]);
@@ -318,17 +330,10 @@ test('refunded missed appointment appears in cancelled tab with refunded status'
         'mashora_share' => 30,
     ]);
 
-    $doctor->depositFloat(70.00);
-
-    app(PatientMissedAppointmentService::class)->refund($user, $appointment);
+    app(PatientMissedAppointmentService::class)->requestRefund($user, $appointment, 'technical_issue');
 
     $this->actingAs($user)
         ->get(route('patient.appointments', ['tab' => 'missed']))
         ->assertSuccessful()
-        ->assertDontSee(__('patient.missed.prompt'), false);
-
-    $this->actingAs($user)
-        ->get(route('patient.appointments', ['tab' => 'cancelled']))
-        ->assertSuccessful()
-        ->assertSee(__('patient.appointments.status_refunded'), false);
+        ->assertSee(__('patient.missed.refund_status.pending_review'), false);
 });

@@ -34,6 +34,8 @@
                     const conversationUrlTemplate = boot.dataset.conversationUrl || '';
                     const sessionStartedTitle = @js(__('patient.notifications.session_started_title'));
                     const sessionStartedBody = @js(__('patient.notifications.session_started_body'));
+                    const startRequestTitle = @js(__('patient.notifications.session_start_request_title'));
+                    const startRequestBody = @js(__('patient.notifications.session_start_request_body'));
 
                     function pendingCallKey(appointmentId) {
                         return 'mashora_pending_call_' + appointmentId;
@@ -76,6 +78,21 @@
                         window.dispatchEvent(new CustomEvent('mashora:incoming-call', { detail: data }));
                     }
 
+                    function handleStartRequest(data) {
+                        const appointmentId = Number(data?.appointment_id || 0);
+                        if (!appointmentId) {
+                            return;
+                        }
+
+                        window.MashoraRealtimeAlerts?.showDesktopNotification(startRequestTitle, startRequestBody);
+
+                        if (window.Flux?.toast) {
+                            window.Flux.toast({ text: startRequestBody, variant: 'info' });
+                        }
+
+                        window.dispatchEvent(new CustomEvent('mashora:session-start-requested', { detail: data }));
+                    }
+
                     const pusher = window.MashoraPatientPusher.acquire({
                         key: pusherKey,
                         cluster: pusherCluster,
@@ -91,6 +108,7 @@
                         console.error('Pusher patient channel error', error);
                     });
                     patientChannel.bind('session.join-requested', handleIncomingCall);
+                    patientChannel.bind('session.start-requested', handleStartRequest);
                     patientChannel.bind('appointment.session-started', handleSessionStarted);
                     patientChannel.bind('call.ended', (data) => {
                         const appointmentId = Number(data?.appointment_id || 0);

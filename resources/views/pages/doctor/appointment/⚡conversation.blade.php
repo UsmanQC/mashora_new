@@ -4,9 +4,15 @@ use App\Events\AppointmentChatMessageSent;
 use App\Livewire\Concerns\CompletesDoctorAppointment;
 use App\Models\Appointment;
 use App\Models\ChMessage;
+use App\Models\Diagnosis;
 use App\Services\AppointmentSessionService;
 use App\Support\DoctorAgoraChannel;
+use Flux\Flux;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
+use Illuminate\Support\Str;
+use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\On;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
@@ -31,8 +37,188 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
 
     public function mount(): void
     {
+        $this->appointment->loadMissing(['user', 'diagnosis', 'medications']);
+
         $this->refreshAgoraCredentials();
         $this->loadMessages();
+    }
+
+    public function patientInitials(): string
+    {
+        return Str::of($this->appointment->patient_name)
+            ->explode(' ')
+            ->take(2)
+            ->map(fn (string $word): string => Str::substr($word, 0, 1))
+            ->implode('');
+    }
+
+    public function patientAgeLabel(): ?string
+    {
+        $birthDate = $this->appointment->user?->birth_date;
+
+        if ($birthDate === null) {
+            return null;
+        }
+
+        return $birthDate->age.__('doctor.consultation.age_suffix');
+    }
+
+    public function patientGenderLabel(): ?string
+    {
+        $gender = strtolower((string) ($this->appointment->user?->gender ?? ''));
+
+        if ($gender === '') {
+            return null;
+        }
+
+        $key = 'doctor.register.gender_'.$gender;
+        $label = __($key);
+
+        return $label !== $key ? $label : ucfirst($gender);
+    }
+
+    public function patientMetaLine(): string
+    {
+        $parts = array_filter([
+            filled($this->appointment->appointment_number)
+                ? __('doctor.consultation.mrn', ['number' => $this->appointment->appointment_number])
+                : null,
+            $this->patientAgeLabel(),
+            $this->patientGenderLabel(),
+        ]);
+
+        return $parts !== [] ? implode(' · ', $parts) : '—';
+    }
+
+    public function appointmentDateLabel(): ?string
+    {
+        $date = $this->appointment->appointment_date ?? $this->appointment->scheduled_at;
+
+        if ($date === null) {
+            return null;
+        }
+
+        return \Illuminate\Support\Carbon::parse($date)
+            ->timezone(config('app.timezone'))
+            ->locale(app()->getLocale())
+            ->translatedFormat('D, d M Y');
+    }
+
+    public function appointmentTimeRangeLabel(): ?string
+    {
+        $startsAt = $this->appointment->sessionStartsAt();
+        $start = $startsAt?->timezone(config('app.timezone'))->format('h:i A');
+
+        if ($start === null && filled($this->appointment->formattedSessionStart())) {
+            $start = $this->appointment->formattedSessionStart();
+        }
+
+        $endsAt = (string) $this->appointment->status === 'in_process' && $this->appointment->extend_at !== null
+            ? $this->appointment->extend_at
+            : $this->appointment->sessionEndsAt();
+
+        $end = $endsAt?->timezone(config('app.timezone'))->format('h:i A');
+
+        if ($start !== null && $end !== null) {
+            return $start.' – '.$end;
+        }
+
+        return $start ?? $end;
+    }
+
+    public function appointmentEndsAtLabel(): ?string
+    {
+        $endsAt = (string) $this->appointment->status === 'in_process' && $this->appointment->extend_at !== null
+            ? $this->appointment->extend_at
+            : $this->appointment->sessionEndsAt();
+
+        return $endsAt?->timezone(config('app.timezone'))->format('h:i A');
+    }
+
+    /**
+     * @return EloquentCollection<int, Appointment>
+     */
+    #[Computed]
+    public function patientMedicalHistories(): EloquentCollection
+    {
+        if ($this->appointment->user_id === null) {
+            return new EloquentCollection;
+        }
+
+        return Appointment::query()
+            ->with(['diagnosis', 'medications'])
+            ->withCount('medications')
+            ->where('user_id', $this->appointment->user_id)
+            ->where('id', '!=', $this->appointment->id)
+            ->where('status', 'completed')
+            ->orderByDesc('scheduled_at')
+            ->limit(6)
+            ->get();
+    }
+
+    #[Computed]
+    public function priorVisitSummary(): ?string
+    {
+        if ($this->appointment->user_id === null) {
+            return null;
+        }
+
+        $prior = Appointment::query()
+            ->with('diagnosis')
+            ->where('user_id', $this->appointment->user_id)
+            ->where('id', '!=', $this->appointment->id)
+            ->where('status', 'completed')
+            ->whereHas('diagnosis')
+            ->orderByDesc('scheduled_at')
+            ->first();
+
+        $diagnosis = $prior?->diagnosis;
+
+        if (! $diagnosis instanceof Diagnosis) {
+            return null;
+        }
+
+        return collect([
+            $diagnosis->diagnosis_name,
+            $diagnosis->medical_history,
+            $diagnosis->treatment_plan,
+        ])->filter(fn (?string $value): bool => filled($value))->first();
+    }
+
+    /**
+     * @return list<string>
+     */
+    #[Computed]
+    public function medicationLabels(): array
+    {
+        $labels = $this->appointment->medications
+            ->map(fn ($medication): string => trim(collect([$medication->name, $medication->dosage])->filter()->implode(' ')))
+            ->filter()
+            ->values()
+            ->all();
+
+        if ($labels !== []) {
+            return $labels;
+        }
+
+        if ($this->appointment->user_id === null) {
+            return [];
+        }
+
+        $prior = Appointment::query()
+            ->with('medications')
+            ->where('user_id', $this->appointment->user_id)
+            ->where('id', '!=', $this->appointment->id)
+            ->where('status', 'completed')
+            ->whereHas('medications')
+            ->orderByDesc('scheduled_at')
+            ->first();
+
+        return $prior?->medications
+            ->map(fn ($medication): string => trim(collect([$medication->name, $medication->dosage])->filter()->implode(' ')))
+            ->filter()
+            ->values()
+            ->all() ?? [];
     }
 
     public function startSession(AppointmentSessionService $sessions): void
@@ -42,17 +228,125 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
             return;
         }
 
+        $wasInProcess = (string) $this->appointment->status === 'in_process';
+
         if (! $sessions->start($doctor, $this->appointment)) {
+            if (! $this->appointment->isSessionStartDue()
+                && ! (bool) config('appointments.relaxed_session_limits', false)
+                && ! $this->appointment->isSessionStartApproved()) {
+                Flux::toast(variant: 'warning', text: __('doctor.conversation.session_start_wait_one_hour'));
+            }
+
             return;
         }
 
         $this->appointment->refresh();
         $this->refreshAgoraCredentials();
+
+        if ((string) $this->appointment->status === 'in_process' && ! $wasInProcess) {
+            Flux::toast(variant: 'success', text: __('doctor.conversation.session_started_toast'));
+
+            return;
+        }
+
+        if ($this->appointment->isSessionStartRequestPending()) {
+            Flux::toast(variant: 'success', text: __('doctor.conversation.session_start_request_sent'));
+        }
+    }
+
+    public function canStartSessionDirectly(AppointmentSessionService $sessions): bool
+    {
+        return $this->appointment->isSessionStartApproved()
+            || $sessions->canDoctorStartWithoutPatientApproval($this->appointment);
+    }
+
+    public function canOfferSessionStart(AppointmentSessionService $sessions): bool
+    {
+        return $sessions->canDoctorOfferSessionStart($this->appointment);
+    }
+
+    public function canPressStartSession(AppointmentSessionService $sessions): bool
+    {
+        if ($this->appointment->isSessionStartRequestPending()) {
+            return false;
+        }
+
+        return $this->canStartSessionDirectly($sessions)
+            || $this->canOfferSessionStart($sessions);
+    }
+
+    #[On('session-start-approved')]
+    public function onSessionStartApproved(int $appointmentId = 0): void
+    {
+        if ($appointmentId !== 0 && $appointmentId !== (int) $this->appointment->id) {
+            return;
+        }
+
+        $this->appointment->refresh();
+    }
+
+    #[On('doctor-session-completed')]
+    public function onDoctorSessionCompleted(int $appointmentId = 0): void
+    {
+        if ($appointmentId !== 0 && $appointmentId !== (int) $this->appointment->id) {
+            return;
+        }
+
+        $this->appointment->refresh();
+    }
+
+    public function refreshAppointmentSessionState(): void
+    {
+        if (! in_array((string) $this->appointment->status, ['new', 'rescheduled', 'in_process'], true)) {
+            return;
+        }
+
+        $this->appointment->refresh();
+    }
+
+    public function preSessionStatusMessage(AppointmentSessionService $sessions): string
+    {
+        if ((string) $this->appointment->status === 'in_process') {
+            return __('doctor.consultation.waiting_for_call');
+        }
+
+        if (! in_array((string) $this->appointment->status, ['new', 'rescheduled'], true)) {
+            return __('doctor.consultation.session_not_active');
+        }
+
+        if ($this->appointment->isSessionStartRequestPending()) {
+            return __('doctor.conversation.waiting_for_patient_approval');
+        }
+
+        if ($this->canPressStartSession($sessions)) {
+            return __('doctor.consultation.ready_to_start_hint');
+        }
+
+        if (! $this->appointment->isSessionStartDue()
+            && ! (bool) config('appointments.relaxed_session_limits', false)
+            && ! $this->appointment->isSessionStartApproved()) {
+            return __('doctor.conversation.session_start_wait_one_hour');
+        }
+
+        return __('doctor.card.open_session_wait');
+    }
+
+    public function sessionTimeExpired(): bool
+    {
+        if ((bool) config('appointments.relaxed_session_limits', false)) {
+            return false;
+        }
+
+        if ((string) $this->appointment->status !== 'in_process') {
+            return false;
+        }
+
+        return $this->appointment->extend_at !== null && $this->appointment->extend_at->isPast();
     }
 
     public function sendMessage(): void
     {
-        if (! $this->appointment->isChatOpen()) {
+        if (! $this->appointment->isDoctorChatOpen()) {
             return;
         }
 
@@ -113,8 +407,8 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
     }
 }; ?>
 
-<div class="space-y-5">
-    @include('partials.doctor-appointment-workspace-header', ['appointment' => $appointment, 'active' => 'conversation'])
+<div @if (in_array($appointment->status, ['new', 'rescheduled', 'in_process'], true)) wire:poll.5s="refreshAppointmentSessionState" @endif>
+    @include('partials.doctor-luxury-consultation-mobile')
 
     <div
         id="conversation-page-metrics"
@@ -137,6 +431,9 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
         data-session-ended="{{ __('doctor.conversation.session_time_ended') }}"
         data-relaxed-session-limits="{{ config('appointments.relaxed_session_limits') ? '1' : '0' }}"
     ></div>
+
+    <div class="hidden space-y-5 lg:block">
+    @include('partials.doctor-appointment-workspace-header', ['appointment' => $appointment, 'active' => 'conversation'])
 
     <div class="relative overflow-hidden rounded-3xl border border-zinc-200/90 bg-white shadow-[0_20px_55px_-32px_rgba(15,23,42,0.35)] ring-1 ring-zinc-100">
         <div class="pointer-events-none absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-[#2f49ca] via-[#10B981] to-[#6f86ff] opacity-85"></div>
@@ -195,35 +492,36 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
 
                         <div class="flex flex-wrap items-center gap-2 xl:justify-end">
                             @if (in_array($appointment->status, ['new', 'rescheduled'], true))
-                                @php
-                                    $sessionStartsAtIso = $appointment->sessionStartsAt()?->toIso8601String();
-                                @endphp
-                                <div
-                                    @if ($sessionStartsAtIso)
-                                        x-data="appointmentStartTimer(@js($sessionStartsAtIso))"
-                                        x-init="start()"
-                                    @else
-                                        x-data="{ ready: true, start() {} }"
-                                    @endif
-                                >
-                                    <template x-if="ready">
-                                        <flux:button type="button" variant="primary" icon="play" class="min-h-10 shadow-md shadow-[#047857]/20" wire:click="startSession" wire:loading.attr="disabled">
-                                            {{ __('doctor.conversation.start_session') }}
-                                        </flux:button>
-                                    </template>
-                                    <template x-if="!ready">
+                                @if ($appointment->isSessionStartRequestPending())
+                                    <div>
                                         <flux:button
                                             type="button"
                                             variant="primary"
-                                            icon="play"
-                                            class="min-h-10 cursor-not-allowed opacity-50"
+                                            icon="clock"
+                                            class="min-h-10 !bg-[#047857] !text-white cursor-not-allowed opacity-70"
                                             disabled
-                                            title="{{ __('doctor.appointments.open_session_wait') }}"
                                         >
-                                            {{ __('doctor.conversation.start_session') }}
+                                            {{ __('doctor.conversation.start_session_pending') }}
                                         </flux:button>
-                                    </template>
-                                </div>
+                                        <p class="mt-2 text-xs text-zinc-500">{{ __('doctor.conversation.waiting_for_patient_approval') }}</p>
+                                    </div>
+                                @elseif ($this->canPressStartSession(app(AppointmentSessionService::class)))
+                                    <flux:button type="button" variant="primary" icon="play" class="min-h-10 !bg-[#047857] !text-white shadow-md shadow-[#047857]/20 hover:!brightness-95" wire:click="startSession" wire:loading.attr="disabled">
+                                        {{ __('doctor.conversation.start_session') }}
+                                    </flux:button>
+                                @else
+                                    <flux:button
+                                        type="button"
+                                        variant="primary"
+                                        icon="play"
+                                        class="min-h-10 !bg-[#047857] !text-white cursor-not-allowed opacity-50"
+                                        disabled
+                                        title="{{ __('doctor.conversation.session_start_wait_one_hour') }}"
+                                    >
+                                        {{ __('doctor.conversation.start_session') }}
+                                    </flux:button>
+                                    <p class="mt-2 text-xs text-zinc-500">{{ __('doctor.conversation.session_start_wait_one_hour') }}</p>
+                                @endif
                             @endif
                             @if ($appointment->status === 'in_process')
                                 <button
@@ -277,7 +575,36 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                     </div>
                 @endif
 
+                <div x-data="{ chatMinimized: false }" class="flex min-h-0 flex-1 flex-col">
+                    <div class="flex shrink-0 items-center justify-between border-b border-zinc-200/90 bg-white px-4 py-2 sm:px-5">
+                        <p class="flex items-center gap-2 text-sm font-semibold text-zinc-900">
+                            <flux:icon name="chat-bubble-left-right" variant="mini" class="size-4 text-zinc-500" />
+                            {{ __('doctor.conversation.chat_panel_title') }}
+                        </p>
+                        <button
+                            type="button"
+                            x-on:click="chatMinimized = !chatMinimized"
+                            class="flex items-center gap-1.5 rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-600 shadow-sm transition hover:bg-zinc-50"
+                            data-test="doctor-chat-minimize-toggle"
+                        >
+                            <flux:icon x-show="!chatMinimized" name="chevron-down" variant="mini" class="size-3.5" />
+                            <flux:icon x-show="chatMinimized" x-cloak name="chevron-up" variant="mini" class="size-3.5" />
+                            <span x-text="chatMinimized ? @js(__('doctor.conversation.chat_expand')) : @js(__('doctor.conversation.chat_minimize'))"></span>
+                        </button>
+                    </div>
+
+                    <div x-show="chatMinimized" x-cloak class="shrink-0 px-4 py-3 text-center sm:px-5">
+                        <button
+                            type="button"
+                            x-on:click="chatMinimized = false"
+                            class="text-sm font-semibold text-[#047857] hover:underline"
+                        >
+                            {{ __('doctor.conversation.chat_minimized_hint') }}
+                        </button>
+                    </div>
+
                 <div
+                    x-show="!chatMinimized"
                     class="relative flex min-h-0 flex-1 flex-col bg-gradient-to-b from-zinc-50/90 via-zinc-50/70 to-zinc-100/80"
                     id="doctor-chat-panel"
                     data-appointment-id="{{ $appointment->id }}"
@@ -328,17 +655,17 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                     </div>
                 </div>
 
-                <div class="shrink-0 border-t border-zinc-200/90 bg-white px-4 py-3 pb-[max(0.85rem,env(safe-area-inset-bottom))] sm:px-5 lg:pb-3">
+                <div x-show="!chatMinimized" class="shrink-0 border-t border-zinc-200/90 bg-white px-4 py-3 pb-[max(0.85rem,env(safe-area-inset-bottom))] sm:px-5 lg:pb-3">
                     <form
                         wire:submit="sendMessage"
-                        class="mx-auto flex max-w-4xl items-end gap-2 rounded-2xl border border-zinc-200/90 bg-gradient-to-r from-zinc-50/80 to-zinc-100/70 p-1.5 shadow-inner shadow-zinc-200/20 ring-1 ring-zinc-100/80 @if (! $appointment->isChatOpen()) pointer-events-none opacity-55 @endif"
+                        class="mx-auto flex max-w-4xl items-end gap-2 rounded-2xl border border-zinc-200/90 bg-gradient-to-r from-zinc-50/80 to-zinc-100/70 p-1.5 shadow-inner shadow-zinc-200/20 ring-1 ring-zinc-100/80 @if (! $appointment->isDoctorChatOpen()) pointer-events-none opacity-55 @endif"
                     >
                         <div class="min-w-0 flex-1">
                             <flux:input
                                 wire:model="draft"
                                 type="text"
                                 :placeholder="__('doctor.conversation.type_message')"
-                                :disabled="! $appointment->isChatOpen()"
+                                :disabled="! $appointment->isDoctorChatOpen()"
                                 class="!rounded-xl !border-0 !bg-transparent !shadow-none"
                             />
                         </div>
@@ -348,13 +675,15 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                             icon="paper-airplane"
                             class="shrink-0 !rounded-xl shadow-md shadow-[#047857]/25"
                             wire:loading.attr="disabled"
-                            :disabled="! $appointment->isChatOpen()"
+                            :disabled="! $appointment->isDoctorChatOpen()"
                         >
                             <span class="hidden sm:inline">{{ __('doctor.conversation.send') }}</span>
                         </flux:button>
                     </form>
-                    @if (in_array($appointment->status, ['new', 'rescheduled'], true))
-                        <p class="mt-2.5 text-center text-xs text-zinc-500">{{ __('doctor.conversation.chat_locked_until_started') }}</p>
+                    @if (in_array($appointment->status, ['new', 'rescheduled'], true) && ! $appointment->isDoctorChatOpen())
+                        <p class="mt-2.5 text-center text-xs text-zinc-500">{{ __('doctor.conversation.chat_locked_until_one_hour') }}</p>
+                    @elseif (in_array($appointment->status, ['new', 'rescheduled'], true) && ! $appointment->isChatOpen())
+                        <p class="mt-2.5 text-center text-xs text-zinc-500">{{ __('doctor.conversation.chat_open_session_needs_approval') }}</p>
                     @elseif ($appointment->status === 'completed' && $appointment->isChatOpen())
                         <p class="mt-2.5 text-center text-xs text-zinc-900">
                             {{ __('doctor.conversation.chat_open_after_completed', [
@@ -364,6 +693,7 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                     @elseif ($appointment->status === 'completed')
                         <p class="mt-2.5 text-center text-xs text-zinc-500">{{ __('doctor.conversation.chat_closed_after_window') }}</p>
                     @endif
+                </div>
                 </div>
             </div>
 
@@ -403,6 +733,7 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                 </div>
             </aside>
         </div>
+    </div>
     </div>
 
     @include('partials.video-call-overlay', [
@@ -470,12 +801,36 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
             }
 
             if (boot.dataset.initialized === '1') {
-                boot.__leaveCall?.().catch(() => {});
+                // Soft re-init must not broadcast call.ended to the patient.
+                boot.__leaveCall?.(false).catch(() => {});
             }
 
             const pusherKey = boot.dataset.pusherKey || '';
             const pusherCluster = boot.dataset.pusherCluster || 'mt1';
-            const csrfToken = document.querySelector('#doctor-chat-panel')?.dataset.csrf || '';
+
+            function isConsultationMobile() {
+                return window.matchMedia('(max-width: 1023px)').matches;
+            }
+
+            function agoraRemotePlayerId() {
+                return isConsultationMobile() ? 'agora-remote-player-mobile' : 'agora-remote-player';
+            }
+
+            function agoraLocalPlayerId() {
+                return isConsultationMobile() ? 'agora-local-player-mobile' : 'agora-local-player';
+            }
+
+            function chatPanelEl() {
+                return document.getElementById(isConsultationMobile() ? 'doctor-chat-panel-mobile' : 'doctor-chat-panel');
+            }
+
+            function chatMessagesEl() {
+                return document.getElementById(isConsultationMobile() ? 'doctor-chat-messages-mobile' : 'doctor-chat-messages');
+            }
+
+            const csrfToken = chatPanelEl()?.dataset.csrf
+                || document.querySelector('#doctor-chat-panel')?.dataset.csrf
+                || '';
             const seenMessageIds = new Set();
             const doctorId = Number(boot.dataset.doctorId || 0);
 
@@ -516,11 +871,11 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
             }
 
             function btnVideo() {
-                return document.getElementById('btn-agora-video');
+                return document.getElementById(isConsultationMobile() ? 'btn-agora-video-mobile' : 'btn-agora-video');
             }
 
             function btnAudio() {
-                return document.getElementById('btn-agora-audio');
+                return document.getElementById(isConsultationMobile() ? 'btn-agora-audio-mobile' : 'btn-agora-audio');
             }
 
             const btnIdleClass =
@@ -528,9 +883,9 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
             const btnActiveClass =
                 'inline-flex min-h-10 items-center gap-2 rounded-xl border-2 border-emerald-500 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-900 shadow-md shadow-emerald-900/10 ring-2 ring-emerald-500/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-45';
 
-            document.querySelectorAll('#doctor-chat-messages [wire\\:key^="doc-chat-"]').forEach((el) => {
+            document.querySelectorAll('#doctor-chat-messages-mobile [wire\\:key^="doc-chat-mobile-"], #doctor-chat-messages [wire\\:key^="doc-chat-"]').forEach((el) => {
                 const key = el.getAttribute('wire:key') || '';
-                const id = key.replace('doc-chat-', '');
+                const id = key.replace('doc-chat-mobile-', '').replace('doc-chat-', '');
                 if (id) seenMessageIds.add(id);
             });
 
@@ -549,11 +904,49 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
             let callTimerId = null;
             let callStartedAt = null;
             let sessionEndedDisconnectHandled = false;
+            let sessionExpiredUiShown = false;
             let agoraClient = null;
             let localAudio = null;
             let localVideo = null;
             let currentMode = null;
             let callJoinInProgress = false;
+
+            function showSessionExpiredUi() {
+                if (sessionExpiredUiShown) {
+                    return;
+                }
+
+                sessionExpiredUiShown = true;
+
+                const inline = document.getElementById('doctor-consultation-inline-video');
+                if (inline) {
+                    inline.classList.add('hidden');
+                    inline.setAttribute('aria-hidden', 'true');
+                }
+
+                document.getElementById('btn-agora-video-mobile')?.closest('.mb-3')?.classList.add('hidden');
+                document.getElementById('btn-agora-video-mobile')?.classList.add('hidden');
+                document.getElementById('btn-agora-audio-mobile')?.classList.add('hidden');
+                document.getElementById('btn-agora-video')?.classList.add('hidden');
+                document.getElementById('btn-agora-audio')?.classList.add('hidden');
+
+                window.dispatchEvent(new CustomEvent('consultation-call-ended'));
+            }
+
+            function syncSessionExpiryFromDom() {
+                if (metricsEl?.dataset.relaxedSessionLimits === '1') {
+                    return;
+                }
+
+                const endIso = metricsEl?.dataset.sessionEnd || '';
+                if (! endIso) {
+                    return;
+                }
+
+                if (new Date(endIso).getTime() <= Date.now()) {
+                    showSessionExpiredUi();
+                }
+            }
 
             function maybeEndCallWhenSessionExpired(leftSeconds) {
                 if (metricsEl?.dataset.relaxedSessionLimits === '1') {
@@ -562,9 +955,12 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
 
                 if (leftSeconds > 0) {
                     sessionEndedDisconnectHandled = false;
+                    sessionExpiredUiShown = false;
 
                     return;
                 }
+
+                showSessionExpiredUi();
 
                 if (!currentMode || sessionEndedDisconnectHandled) {
                     return;
@@ -575,6 +971,7 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
 
                 leaveCall()
                     .then(() => {
+                        showSessionExpiredUi();
                         if (window.Flux?.toast) {
                             window.Flux.toast({ text: endedMessage, variant: 'warning' });
                         }
@@ -582,10 +979,38 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                     .catch(() => {});
             }
 
+            let sessionExpiredRefreshHandled = false;
+
+            function maybeRefreshWhenSessionExpires(leftSeconds) {
+                if (metricsEl?.dataset.relaxedSessionLimits === '1') {
+                    return;
+                }
+
+                if (leftSeconds > 0) {
+                    sessionExpiredRefreshHandled = false;
+
+                    return;
+                }
+
+                if (sessionExpiredRefreshHandled) {
+                    return;
+                }
+
+                sessionExpiredRefreshHandled = true;
+
+                if (window.Livewire) {
+                    const componentEl = document.querySelector('[wire\\:id]');
+                    const wireId = componentEl?.getAttribute('wire:id');
+                    if (wireId) {
+                        window.Livewire.find(wireId)?.$refresh();
+                    }
+                }
+            }
+
             function tickSessionTimers() {
                 const metrics = document.getElementById('conversation-page-metrics');
-                const elapsedEl = document.getElementById('timer-session-elapsed');
-                const remainingEl = document.getElementById('timer-session-remaining');
+                const elapsedEl = document.getElementById(isConsultationMobile() ? 'timer-session-elapsed-mobile' : 'timer-session-elapsed');
+                const remainingEl = document.getElementById(isConsultationMobile() ? 'timer-session-remaining-mobile' : 'timer-session-remaining');
                 if (!metrics || !elapsedEl) return;
 
                 const status = metrics.dataset.status || '';
@@ -611,6 +1036,7 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                     remainingEl.classList.toggle('text-rose-600', left <= 0);
                     remainingEl.classList.toggle('text-[#047857]', left > 300);
                     maybeEndCallWhenSessionExpired(left);
+                    maybeRefreshWhenSessionExpires(left);
                 }
             }
 
@@ -743,7 +1169,7 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
             startSessionTimers();
 
             function appendMessageRow(payload) {
-                const wrap = document.getElementById('doctor-chat-messages');
+                const wrap = chatMessagesEl();
                 if (!wrap || !payload.id) return;
                 if (seenMessageIds.has(payload.id)) return;
                 if (payload.send_by === 'doctor' && doctorId && Number(payload.from_id) === doctorId) {
@@ -751,11 +1177,47 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                 }
                 seenMessageIds.add(payload.id);
 
-                const emptyCard = wrap.querySelector('.flex.flex-col.items-center.justify-center');
+                const emptyCard = wrap.querySelector('.doctor-consultation-chat-empty')
+                    || wrap.querySelector('.flex.flex-col.items-center.justify-center');
                 if (emptyCard) emptyCard.remove();
 
                 const row = document.createElement('div');
                 const isDoctor = payload.send_by === 'doctor';
+                const mobileChat = isConsultationMobile() && wrap.id === 'doctor-chat-messages-mobile';
+
+                if (mobileChat) {
+                    row.className = isDoctor ? 'flex flex-row-reverse gap-2' : 'flex gap-2';
+
+                    const stack = document.createElement('div');
+                    stack.className = 'min-w-0 max-w-[78%]'.concat(isDoctor ? ' text-end' : '');
+
+                    const bubble = document.createElement('div');
+                    bubble.className = isDoctor
+                        ? 'inline-block rounded-2xl rounded-br-md bg-[#047857] px-3.5 py-2 text-sm text-white shadow-sm'
+                        : 'inline-block rounded-2xl rounded-bl-md border border-slate-100 bg-slate-50 px-3.5 py-2 text-sm text-slate-800 shadow-sm';
+
+                    const text = document.createElement('p');
+                    text.className = 'whitespace-pre-wrap break-words text-start';
+                    text.textContent = payload.body || '';
+                    bubble.appendChild(text);
+                    stack.appendChild(bubble);
+
+                    if (payload.created_at) {
+                        const time = document.createElement('time');
+                        time.className = 'mt-1 block text-[0.625rem] text-slate-400'.concat(isDoctor ? ' text-end' : '');
+                        const d = new Date(payload.created_at);
+                        time.textContent = d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+                        stack.appendChild(time);
+                    }
+
+                    row.appendChild(stack);
+                    wrap.appendChild(row);
+                    wrap.scrollTop = wrap.scrollHeight;
+                    window.dispatchEvent(new CustomEvent('doctor-chat-message-received'));
+
+                    return;
+                }
+
                 row.className = isDoctor ? 'flex justify-end' : 'flex justify-start';
 
                 const bubble = document.createElement('div');
@@ -798,9 +1260,25 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                 channel.bind('call.ended', (data) => {
                     handleRemoteCallEnded(data);
                 });
+                channel.bind('session.start-approved', (data) => {
+                    const approvedAppointmentId = Number(data?.appointment_id || appointmentId);
+
+                    if (window.Livewire) {
+                        window.Livewire.dispatch('session-start-approved', {
+                            appointmentId: approvedAppointmentId,
+                        });
+
+                        const conversationRoot = boot.closest('[wire\\:id]');
+                        const wireId = conversationRoot?.getAttribute('wire:id');
+
+                        if (wireId) {
+                            window.Livewire.find(wireId)?.$refresh();
+                        }
+                    }
+                });
             }
 
-            const panel = document.getElementById('doctor-chat-panel');
+            const panel = chatPanelEl();
             const notifyUrl = panel?.dataset.notifyUrl || '';
             const endCallUrl = panel?.dataset.endCallUrl || '';
             const tokenUrl = panel?.dataset.tokenUrl || '';
@@ -819,10 +1297,87 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
             }
 
             function showOverlay(show) {
+                const inline = document.getElementById('doctor-consultation-inline-video');
+                const idle = document.getElementById('doctor-consultation-video-idle');
+                const quality = document.getElementById('doctor-consultation-call-quality');
+                const leaveMobile = document.getElementById('agora-leave-btn-mobile');
+                const controlsWrap = document.getElementById('doctor-consultation-call-controls-wrap');
                 const el = document.getElementById('agora-call-overlay');
-                if (!el) return;
+
+                if (isConsultationMobile()) {
+                    el?.classList.add('hidden');
+                    el?.setAttribute('aria-hidden', 'true');
+                    inline?.classList.toggle('doctor-consultation-inline-video--live', show);
+                    idle?.classList.toggle('hidden', show);
+                    quality?.classList.toggle('hidden', !show);
+                    quality?.classList.toggle('inline-flex', show);
+                    leaveMobile?.classList.toggle('hidden', !show);
+                    leaveMobile?.classList.toggle('inline-flex', show);
+                    controlsWrap?.classList.toggle('hidden', !show);
+
+                    const chatToggle = document.getElementById('agora-toggle-chat-mobile');
+                    chatToggle?.classList.toggle('hidden', !show);
+                    chatToggle?.classList.toggle('inline-flex', show);
+
+                    window.dispatchEvent(new CustomEvent(show ? 'consultation-call-active' : 'consultation-call-ended'));
+
+                    document.querySelectorAll('#doctor-consultation-inline-video .doctor-consultation-call-controls__btn:not(.hidden)').forEach((btn) => {
+                        btn.classList.add('inline-flex');
+                    });
+
+                    if (show) {
+                        window.requestAnimationFrame(() => {
+                            window.requestAnimationFrame(() => {
+                                replayActiveVideoTracks();
+                            });
+                        });
+                    }
+
+                    return;
+                }
+
+                if (!el) {
+                    return;
+                }
+
                 el.classList.toggle('hidden', !show);
                 el.setAttribute('aria-hidden', show ? 'false' : 'true');
+
+                if (show) {
+                    window.requestAnimationFrame(() => {
+                        window.requestAnimationFrame(() => {
+                            replayActiveVideoTracks();
+                        });
+                    });
+                }
+            }
+
+            function replayActiveVideoTracks() {
+                const localTrack = boot.__localVideo || localVideo;
+
+                if (localTrack) {
+                    try {
+                        localTrack.play(agoraLocalPlayerId());
+                    } catch (error) {
+                        console.error('Failed to replay local video track', error);
+                    }
+                }
+
+                if (!agoraClient) {
+                    return;
+                }
+
+                agoraClient.remoteUsers.forEach((user) => {
+                    if (!user.videoTrack) {
+                        return;
+                    }
+
+                    try {
+                        user.videoTrack.play(agoraRemotePlayerId());
+                    } catch (error) {
+                        console.error('Failed to replay remote video track', error);
+                    }
+                });
             }
 
             function assignLocalTracks(audio, video = null) {
@@ -838,9 +1393,9 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
 
             function mediaControlOptions(mode = currentMode) {
                 return {
-                    micBtnId: 'agora-toggle-mic',
-                    videoBtnId: 'agora-toggle-video',
-                    localPreviewId: 'agora-local-player',
+                    micBtnId: isConsultationMobile() ? 'agora-toggle-mic-mobile' : 'agora-toggle-mic',
+                    videoBtnId: isConsultationMobile() ? 'agora-toggle-video-mobile' : 'agora-toggle-video',
+                    localPreviewId: agoraLocalPlayerId(),
                     localAudio: boot.__localAudio || localAudio,
                     localVideo: boot.__localVideo || localVideo,
                     mode,
@@ -853,8 +1408,8 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
 
             function showMediaControlsForMode(mode) {
                 window.MashoraAgoraMediaControls?.showControlsForMode(
-                    'agora-toggle-mic',
-                    'agora-toggle-video',
+                    isConsultationMobile() ? 'agora-toggle-mic-mobile' : 'agora-toggle-mic',
+                    isConsultationMobile() ? 'agora-toggle-video-mobile' : 'agora-toggle-video',
                     mode,
                 );
             }
@@ -889,8 +1444,9 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                     agoraClient = null;
                 }
                 currentMode = null;
-                const rp = document.getElementById('agora-remote-player');
-                const lp = document.getElementById('agora-local-player');
+                boot.__currentMode = null;
+                const rp = document.getElementById(agoraRemotePlayerId());
+                const lp = document.getElementById(agoraLocalPlayerId());
                 if (rp) {
                     rp.innerHTML = '';
                 }
@@ -901,6 +1457,19 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                 syncMediaControlUi(null);
                 document.getElementById('agora-toggle-mic')?.classList.add('hidden');
                 document.getElementById('agora-toggle-video')?.classList.add('hidden');
+                document.getElementById('agora-toggle-mic-mobile')?.classList.add('hidden');
+                document.getElementById('agora-toggle-video-mobile')?.classList.add('hidden');
+                document.getElementById('agora-leave-btn-mobile')?.classList.add('hidden');
+                document.getElementById('agora-toggle-mic-mobile')?.classList.remove('inline-flex');
+                document.getElementById('agora-toggle-video-mobile')?.classList.remove('inline-flex');
+                document.getElementById('agora-leave-btn-mobile')?.classList.remove('inline-flex');
+
+                const metrics = document.getElementById('conversation-page-metrics');
+                const endIso = metrics?.dataset.sessionEnd || '';
+                const relaxed = metrics?.dataset.relaxedSessionLimits === '1';
+                if (! relaxed && endIso && new Date(endIso).getTime() <= Date.now()) {
+                    showSessionExpiredUi();
+                }
             }
 
             async function postEndCall() {
@@ -937,37 +1506,69 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                     return;
                 }
 
-                if (!currentMode) {
-                    return;
+                if (currentMode) {
+                    await leaveCallLocal();
                 }
 
-                await leaveCallLocal();
+                const nextStatus = data?.status || null;
+                const metrics = document.getElementById('conversation-page-metrics');
+
+                if (nextStatus && metrics) {
+                    metrics.dataset.status = nextStatus;
+                }
+
+                if (nextStatus === 'completed') {
+                    document.getElementById('btn-agora-video')?.classList.add('hidden');
+                    document.getElementById('btn-agora-audio')?.classList.add('hidden');
+                    document.getElementById('btn-agora-video-mobile')?.classList.add('hidden');
+                    document.getElementById('btn-agora-audio-mobile')?.classList.add('hidden');
+
+                    if (window.Livewire) {
+                        window.Livewire.dispatch('doctor-session-completed', {
+                            appointmentId,
+                        });
+
+                        const conversationRoot = boot.closest('[wire\\:id]');
+                        const wireId = conversationRoot?.getAttribute('wire:id');
+
+                        if (wireId) {
+                            window.Livewire.find(wireId)?.$refresh();
+                        }
+                    }
+                }
             }
 
             function registerRemoteUserHandlers(client, mode) {
                 client.on('user-published', async (user, mediaType) => {
-                    await client.subscribe(user, mediaType);
-                    if (mediaType === 'video') {
-                        user.videoTrack?.play('agora-remote-player');
-                    }
-                    if (mediaType === 'audio') {
-                        user.audioTrack?.play();
+                    try {
+                        await client.subscribe(user, mediaType);
+                        if (mediaType === 'video') {
+                            user.videoTrack?.play(agoraRemotePlayerId());
+                        }
+                        if (mediaType === 'audio') {
+                            user.audioTrack?.play();
+                        }
+                    } catch (error) {
+                        console.error('Failed to subscribe to remote user media', error);
                     }
                 });
 
-                client.on('user-unpublished', (user, mediaType) => {
-                    if (mediaType === 'video') {
-                        const rp = document.getElementById('agora-remote-player');
-                        if (rp) {
-                            rp.innerHTML = '';
-                        }
-                    }
+                client.on('user-unpublished', () => {
+                    // Patient refresh may briefly unpublish; keep containers + local stream alive.
                 });
 
                 client.on('user-left', () => {
-                    const rp = document.getElementById('agora-remote-player');
-                    if (rp) {
-                        rp.innerHTML = '';
+                    // Wait for patient rejoin without destroying the live call UI.
+                    if (currentMode && notifyUrl) {
+                        refreshAgoraConfig()
+                            .then((cfg) => {
+                                if (! cfg) {
+                                    return null;
+                                }
+
+                                return postNotify(currentMode === 'audio' ? 'audio' : 'video', cfg);
+                            })
+                            .catch(() => {});
                     }
                 });
             }
@@ -981,7 +1582,7 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
 
                     if (user.hasVideo && mode === 'video') {
                         await client.subscribe(user, 'video');
-                        user.videoTrack?.play('agora-remote-player');
+                        user.videoTrack?.play(agoraRemotePlayerId());
                     }
                 }
             }
@@ -1117,8 +1718,8 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                 }
 
                 currentMode = null;
-                const rp = document.getElementById('agora-remote-player');
-                const lp = document.getElementById('agora-local-player');
+                const rp = document.getElementById(agoraRemotePlayerId());
+                const lp = document.getElementById(agoraLocalPlayerId());
                 if (rp) {
                     rp.innerHTML = '';
                 }
@@ -1189,19 +1790,22 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                     const audioTrack = await AgoraRTC.createMicrophoneAudioTrack();
                     const videoTrack = await AgoraRTC.createCameraVideoTrack();
                     assignLocalTracks(audioTrack, videoTrack);
-                    videoTrack.play('agora-local-player');
+                    videoTrack.play(agoraLocalPlayerId());
                     await client.publish([audioTrack, videoTrack]);
                     await subscribeExistingRemoteUsers(client, 'video');
                     currentMode = 'video';
+                    boot.__currentMode = 'video';
                     const videoBtn = btnVideo();
                     const audioBtn = btnAudio();
                     setCallButtonActive(videoBtn, labelLive + ' · ' + labelVideo);
                     if (audioBtn) {
                         audioBtn.disabled = true;
                     }
+                    showOverlay(true);
                     showMediaControlsForMode('video');
                     startCallTimer('video', labelVideo, labelVoice);
                     syncMediaControlUi('video');
+                    replayActiveVideoTracks();
                 } catch (e) {
                     console.error(e);
                     await resetPartialAgoraJoin();
@@ -1249,12 +1853,14 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                     await client.publish([audioTrack]);
                     await subscribeExistingRemoteUsers(client, 'audio');
                     currentMode = 'audio';
+                    boot.__currentMode = 'audio';
                     const videoBtn = btnVideo();
                     const audioBtn = btnAudio();
                     setCallButtonActive(audioBtn, labelLive + ' · ' + labelVoice);
                     if (videoBtn) {
                         videoBtn.disabled = true;
                     }
+                    showOverlay(true);
                     showMediaControlsForMode('audio');
                     startCallTimer('audio', labelVideo, labelVoice);
                     syncMediaControlUi('audio');
@@ -1270,10 +1876,22 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
             }
 
             boot.__syncCallOverlay = () => {
-                if (currentMode) {
-                    showOverlay(true);
-                    updateActiveCallOverlayUi();
+                const mode = currentMode || boot.__currentMode;
+                if (! mode) {
+                    return;
                 }
+
+                currentMode = mode;
+                boot.__currentMode = mode;
+                showOverlay(true);
+                showMediaControlsForMode(mode);
+                syncMediaControlUi(mode);
+                updateActiveCallOverlayUi();
+                window.requestAnimationFrame(() => {
+                    window.requestAnimationFrame(() => {
+                        replayActiveVideoTracks();
+                    });
+                });
             };
 
             function registerDoctorConversationMorphHook() {
@@ -1284,11 +1902,19 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                 window.__doctorConversationMorphHook = true;
 
                 const registerHook = () => {
+                    Livewire.hook('morph.updated', () => {
+                        const bootEl = document.getElementById('doctor-conversation-bootstrap');
+                        if (bootEl?.__currentMode) {
+                            bootEl.__syncCallOverlay?.();
+                        }
+                    });
+
                     Livewire.hook('commit', ({ succeed }) => {
                         succeed(() => {
                             const bootEl = document.getElementById('doctor-conversation-bootstrap');
                             bootEl?.__bindCallButtons?.();
                             bootEl?.__syncCallOverlay?.();
+                            bootEl?.__syncSessionExpiryFromDom?.();
                         });
                     });
                 };
@@ -1305,6 +1931,7 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
             boot.__joinVideoCall = () => joinVideoCall();
             boot.__joinAudioCall = () => joinAudioCall();
             boot.__leaveCall = (notifyRemote = true) => leaveCall(notifyRemote);
+            boot.__syncSessionExpiryFromDom = () => syncSessionExpiryFromDom();
             boot.__toggleMic = () => {
                 window.MashoraAgoraMediaControls?.toggleMic(mediaControlOptions())
                     .catch((error) => console.error(error));
@@ -1330,17 +1957,17 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                         return;
                     }
 
-                    if (event.target.closest('#agora-leave-btn, [data-video-call-leave="agora-leave-btn"]')) {
+                    if (event.target.closest('#agora-leave-btn, #agora-leave-btn-mobile, [data-video-call-leave="agora-leave-btn"]')) {
                         event.preventDefault();
                         bootEl.__leaveCall?.().catch((error) => console.error(error));
                     }
 
-                    if (event.target.closest('#agora-toggle-mic')) {
+                    if (event.target.closest('#agora-toggle-mic, #agora-toggle-mic-mobile')) {
                         event.preventDefault();
                         bootEl.__toggleMic?.();
                     }
 
-                    if (event.target.closest('#agora-toggle-video')) {
+                    if (event.target.closest('#agora-toggle-video, #agora-toggle-video-mobile')) {
                         event.preventDefault();
                         bootEl.__toggleVideo?.();
                     }
@@ -1352,7 +1979,8 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
 
                 document.addEventListener('livewire:navigating', () => {
                     const bootEl = document.getElementById('doctor-conversation-bootstrap');
-                    bootEl?.__leaveCall?.(true).catch(() => {});
+                    // Do not notify remote — navigation / refresh must not end the call for the other party.
+                    bootEl?.__leaveCall?.(false).catch(() => {});
 
                     if (bootEl) {
                         delete bootEl.dataset.initialized;
@@ -1373,11 +2001,14 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                 boot.dataset.sessionObserved = '1';
                 new MutationObserver(() => {
                     startSessionTimers();
+                    syncSessionExpiryFromDom();
                 }).observe(metricsEl, {
                     attributes: true,
                     attributeFilter: ['data-status', 'data-session-start', 'data-session-end'],
                 });
             }
+
+            syncSessionExpiryFromDom();
 
             boot.dataset.initialized = '1';
             boot.dataset.boundAppointmentId = String(appointmentId);

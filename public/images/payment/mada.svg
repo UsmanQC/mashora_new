@@ -1,7 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 48" fill="none" role="img" aria-label="mada">
-  <rect width="160" height="48" rx="8" fill="#fff" stroke="#E4E4E7" stroke-width="1"/>
-  <rect x="10" y="12" width="5" height="9" rx="1" fill="#00AEEF"/>
-  <rect x="10" y="26" width="5" height="10" rx="1" fill="#00A651"/>
-  <text x="100" y="22" fill="#111827" font-family="system-ui,Segoe UI,sans-serif" font-size="11" font-weight="700" text-anchor="middle">مدى</text>
-  <text x="100" y="36" fill="#111827" font-family="system-ui,Segoe UI,Helvetica,Arial,sans-serif" font-size="13" font-weight="600" text-anchor="middle">mada</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 72 24" fill="none" role="img" aria-label="mada">
+  <rect x="0" y="3" width="4.5" height="8.5" rx="1" fill="#00AEEF"/>
+  <rect x="0" y="13.5" width="4.5" height="7.5" rx="1" fill="#00A651"/>
+  <text x="38" y="11.5" fill="#1F2937" font-family="system-ui,Segoe UI,Tahoma,sans-serif" font-size="9.5" font-weight="700" text-anchor="middle">&#1605;&#1583;&#1609;</text>
+  <text x="38" y="21" fill="#374151" font-family="system-ui,Segoe UI,Helvetica,Arial,sans-serif" font-size="10.5" font-weight="600" letter-spacing="0.02em" text-anchor="middle">mada</text>
 </svg>

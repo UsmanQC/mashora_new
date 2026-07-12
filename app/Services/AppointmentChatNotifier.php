@@ -21,7 +21,17 @@ final class AppointmentChatNotifier
 
         $appointment = $message->appointment;
 
-        if (! $appointment instanceof Appointment || ! $appointment->isChatOpen()) {
+        if (! $appointment instanceof Appointment) {
+            return;
+        }
+
+        $chatAllowed = match ((string) $message->send_by) {
+            'doctor' => $appointment->isDoctorChatOpen(),
+            'patient' => $appointment->isChatOpen(),
+            default => $appointment->isChatOpen(),
+        };
+
+        if (! $chatAllowed) {
             return;
         }
 

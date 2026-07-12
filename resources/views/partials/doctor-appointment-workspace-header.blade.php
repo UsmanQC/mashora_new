@@ -48,9 +48,67 @@
         'new', 'rescheduled' => 'bg-sky-50 text-sky-800 ring-sky-600/15',
         default => 'bg-amber-50 text-amber-900 ring-amber-600/15',
     };
+    $mobileStatusBadgeClass = match ($statusKey) {
+        'in_process' => 'bg-emerald-100 text-emerald-800',
+        'completed' => 'bg-zinc-100 text-zinc-600',
+        'new', 'rescheduled' => 'bg-sky-100 text-sky-800',
+        default => 'bg-amber-100 text-amber-900',
+    };
 @endphp
 
-<div class="space-y-4">
+<div class="lg:hidden">
+    <div class="mb-3 flex items-center gap-3">
+        <a
+            href="{{ route('doctor.dashboard') }}"
+            wire:navigate
+            class="flex size-10 shrink-0 items-center justify-center rounded-full border border-slate-100 bg-white text-slate-700 shadow-sm transition hover:bg-slate-50"
+            aria-label="{{ __('doctor.workspace.back_dashboard') }}"
+        >
+            <flux:icon name="chevron-left" variant="mini" class="size-5 rtl:rotate-180" />
+        </a>
+        <div class="min-w-0 flex-1">
+            <p class="truncate text-base font-bold text-slate-900">{{ $appointment->patient_name }}</p>
+            <p class="mt-0.5 truncate text-xs text-slate-500">
+                @if ($appointment->appointment_number)
+                    {{ $appointment->appointment_number }} ·
+                @endif
+                {{ $appointment->appointment_date?->format('d/m/Y') }}
+                @if ($appointment->formattedSessionStart() !== '')
+                    · {{ $appointment->formattedSessionStart() }}
+                @endif
+            </p>
+        </div>
+        <span @class([
+            'shrink-0 rounded-full px-2.5 py-1 text-[0.625rem] font-bold uppercase tracking-wide',
+            $mobileStatusBadgeClass,
+        ])>
+            {{ $statusLabel }}
+        </span>
+    </div>
+
+    <div class="doctor-workspace-tabs -mx-1 mb-3 flex gap-1.5 overflow-x-auto overscroll-x-contain px-1 pb-1">
+        @foreach ($tabs as $key => $tab)
+            @php $isActive = $key === $active; @endphp
+            <a
+                href="{{ $tab['route'] }}"
+                wire:navigate
+                @class([
+                    'flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-2 text-xs font-bold whitespace-nowrap transition',
+                    'border-transparent bg-[#047857] text-white shadow-sm' => $isActive,
+                    'border-slate-200 bg-white text-slate-600' => ! $isActive,
+                ])
+                @if ($isActive) aria-current="page" @endif
+            >
+                <flux:icon :name="$tab['icon']" variant="mini" class="size-3.5 shrink-0" />
+                {{ $tab['label'] }}
+            </a>
+        @endforeach
+    </div>
+
+    @include('partials.doctor-appointment-workflow-stepper', ['appointment' => $appointment, 'active' => $active])
+</div>
+
+<div class="hidden space-y-4 lg:block">
     <div class="flex items-center justify-between gap-3">
         <flux:link :href="route('doctor.dashboard')" wire:navigate class="inline-flex items-center gap-1 text-sm font-medium text-zinc-500 transition hover:text-[#10B981]">
             <flux:icon name="chevron-left" variant="mini" class="size-4 rtl:rotate-180" />

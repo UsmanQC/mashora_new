@@ -19,6 +19,8 @@ new #[Layout('layouts::doctor')] #[Title('Prescription')] class extends Componen
 
     public bool $prescriptionNotNeeded = false;
 
+    public bool $completeModalFromPrescriptionToggle = false;
+
     public bool $showMedicationModal = false;
 
     public ?int $editingMedicationId = null;
@@ -53,14 +55,83 @@ new #[Layout('layouts::doctor')] #[Title('Prescription')] class extends Componen
 
     public function updatedPrescriptionNotNeeded(bool $value): void
     {
-        $this->appointment->forceFill(['prescription_not_needed' => $value])->save();
+        if ($value) {
+            $this->appointment->forceFill(['prescription_not_needed' => true])->save();
+            $this->completeModalFromPrescriptionToggle = true;
+            $this->requestCompleteAppointment();
+
+            return;
+        }
+
+        $this->appointment->forceFill(['prescription_not_needed' => false])->save();
 
         Flux::toast(
             variant: 'success',
-            text: $value
-                ? __('doctor.prescription_form.prescription_toggle_on')
-                : __('doctor.prescription_form.prescription_toggle_off'),
+            text: __('doctor.prescription_form.prescription_toggle_off'),
         );
+    }
+
+    public function dismissCompleteAppointmentModal(): void
+    {
+        $this->revertPrescriptionToggleIfModalCancelled();
+
+        $this->showCompleteAppointmentModal = false;
+        $this->appointmentPendingCompleteId = null;
+    }
+
+    public function updatedShowCompleteAppointmentModal(bool $value): void
+    {
+        if (! $value) {
+            $this->revertPrescriptionToggleIfModalCancelled();
+            $this->appointmentPendingCompleteId = null;
+        }
+    }
+
+    public function confirmCompleteAppointment(): void
+    {
+        $this->completeModalFromPrescriptionToggle = false;
+
+        $id = $this->appointmentPendingCompleteId;
+        $this->showCompleteAppointmentModal = false;
+        $this->appointmentPendingCompleteId = null;
+
+        if ($id === null) {
+            return;
+        }
+
+        $doctor = $this->doctorForAppointmentCompletion();
+        if ($doctor === null) {
+            abort(403);
+        }
+
+        $appointment = Appointment::query()
+            ->where('doctor_id', $doctor->id)
+            ->whereKey($id)
+            ->first();
+
+        if ($appointment === null) {
+            return;
+        }
+
+        $result = app(\App\Services\AppointmentCompletionService::class)->attemptCompletion($appointment);
+
+        match ($result) {
+            \App\Services\AppointmentCompletionService::MISSING_DIAGNOSIS => $this->showDiagnosisRequiredModal = true,
+            \App\Services\AppointmentCompletionService::MISSING_PRESCRIPTION => $this->showPrescriptionRequiredModal = true,
+            \App\Services\AppointmentCompletionService::COMPLETED => $this->redirectAfterAppointmentCompletion($appointment->fresh()),
+            default => null,
+        };
+    }
+
+    private function revertPrescriptionToggleIfModalCancelled(): void
+    {
+        if (! $this->completeModalFromPrescriptionToggle) {
+            return;
+        }
+
+        $this->prescriptionNotNeeded = false;
+        $this->appointment->forceFill(['prescription_not_needed' => false])->save();
+        $this->completeModalFromPrescriptionToggle = false;
     }
 
     public function openCreateMedication(): void
@@ -170,7 +241,7 @@ new #[Layout('layouts::doctor')] #[Title('Prescription')] class extends Componen
     }
 }; ?>
 
-<div class="space-y-8">
+<div class="space-y-8 px-4 pb-28 pt-6 lg:px-0 lg:pb-0 lg:pt-0">
     @include('partials.doctor-appointment-workspace-header', ['appointment' => $appointment, 'active' => 'prescription'])
 
     <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
@@ -178,16 +249,51 @@ new #[Layout('layouts::doctor')] #[Title('Prescription')] class extends Componen
             <flux:heading size="xl" class="font-semibold text-zinc-900">{{ __('doctor.prescription_form.title') }}</flux:heading>
             <flux:text class="mt-1 text-zinc-600">{{ __('doctor.prescription_form.subtitle') }}</flux:text>
         </div>
-        <flux:button
-            type="button"
-            variant="primary"
-            icon="plus"
-            class="!bg-[#10B981] hover:!brightness-95"
-            wire:click="openCreateMedication"
-        >
-            {{ __('doctor.prescription_form.add_medication') }}
-        </flux:button>
+        <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
+            @if ($this->medications->isNotEmpty())
+                <flux:button
+                    :href="route('doctor.appointments.prescription.pdf', $appointment)"
+                    variant="outline"
+                    icon="arrow-down-tray"
+                    class="w-full !border-emerald-200 !text-emerald-800 hover:!bg-emerald-50 sm:w-auto"
+                    target="_blank"
+                    rel="noopener"
+                >
+                    {{ __('doctor.prescription_form.download_pdf') }}
+                </flux:button>
+            @endif
+            <flux:button
+                type="button"
+                variant="primary"
+                icon="plus"
+                class="w-full !bg-[#10B981] hover:!brightness-95 sm:w-auto"
+                wire:click="openCreateMedication"
+            >
+                {{ __('doctor.prescription_form.add_medication') }}
+            </flux:button>
+        </div>
     </div>
+
+    @if ($this->medications->isNotEmpty())
+        <div class="rounded-2xl border border-emerald-200/80 bg-gradient-to-r from-emerald-50 to-teal-50/60 px-4 py-3.5 shadow-sm">
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div class="min-w-0">
+                    <p class="text-sm font-semibold text-emerald-950">{{ __('doctor.prescription_form.download_pdf') }}</p>
+                    <p class="mt-0.5 text-xs text-emerald-900/80">{{ __('doctor.prescription_form.download_pdf_hint') }}</p>
+                </div>
+                <flux:button
+                    :href="route('doctor.appointments.prescription.pdf', $appointment)"
+                    variant="primary"
+                    icon="document-arrow-down"
+                    class="w-full shrink-0 !bg-[#047857] hover:!brightness-95 sm:w-auto"
+                    target="_blank"
+                    rel="noopener"
+                >
+                    {{ __('doctor.prescription_form.download_pdf') }}
+                </flux:button>
+            </div>
+        </div>
+    @endif
 
     <div class="rounded-2xl border border-zinc-200/90 bg-white p-5 shadow-sm sm:p-6">
         <div class="flex items-center justify-between gap-4">
@@ -213,7 +319,63 @@ new #[Layout('layouts::doctor')] #[Title('Prescription')] class extends Componen
                 <flux:text class="text-zinc-600">{{ __('doctor.prescription_form.no_medications') }}</flux:text>
             </div>
         @else
-            <div class="overflow-x-auto">
+            <div class="space-y-3 p-4 sm:hidden">
+                @foreach ($this->medications as $med)
+                    <div wire:key="med-mobile-{{ $med->id }}" class="rounded-xl border border-zinc-200/80 p-3.5">
+                        <div class="flex items-start justify-between gap-3">
+                            <p class="font-semibold text-zinc-900">{{ $med->name }}</p>
+                            <div class="flex shrink-0 items-center gap-1.5">
+                                <button
+                                    type="button"
+                                    wire:click="openEditMedication({{ $med->id }})"
+                                    class="flex size-8 items-center justify-center rounded-full bg-zinc-100 text-zinc-600"
+                                    aria-label="{{ __('doctor.prescription_form.edit_medication') }}"
+                                >
+                                    <flux:icon name="pencil-square" variant="mini" class="size-4" />
+                                </button>
+                                <button
+                                    type="button"
+                                    wire:click="deleteMedication({{ $med->id }})"
+                                    wire:confirm="{{ __('doctor.complete_modal.body') }}"
+                                    class="flex size-8 items-center justify-center rounded-full bg-rose-50 text-rose-600"
+                                    aria-label="{{ __('doctor.prescription_form.remove') }}"
+                                >
+                                    <flux:icon name="trash" variant="mini" class="size-4" />
+                                </button>
+                            </div>
+                        </div>
+
+                        <dl class="mt-2.5 grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
+                            <div>
+                                <dt class="font-semibold uppercase tracking-wide text-zinc-400">{{ __('doctor.prescription_form.col_dosage') }}</dt>
+                                <dd class="mt-0.5 text-zinc-700">{{ $med->dosage ?: '—' }}</dd>
+                            </div>
+                            <div>
+                                <dt class="font-semibold uppercase tracking-wide text-zinc-400">{{ __('doctor.prescription_form.col_usage') }}</dt>
+                                <dd class="mt-0.5 text-zinc-700">{{ $med->usage ?: '—' }}</dd>
+                            </div>
+                            <div>
+                                <dt class="font-semibold uppercase tracking-wide text-zinc-400">{{ __('doctor.prescription_form.col_frequency') }}</dt>
+                                <dd class="mt-0.5 text-zinc-700">{{ $med->frequency ?: '—' }}</dd>
+                            </div>
+                            <div>
+                                <dt class="font-semibold uppercase tracking-wide text-zinc-400">{{ __('doctor.prescription_form.col_duration') }}</dt>
+                                <dd class="mt-0.5 tabular-nums text-zinc-700">
+                                    {{ trim(($med->duration ?? '').' '.($med->duration_measurement ?? '')) ?: '—' }}
+                                </dd>
+                            </div>
+                        </dl>
+
+                        @if (filled($med->instructions))
+                            <p class="mt-2.5 border-t border-zinc-100 pt-2.5 text-xs italic text-zinc-600">
+                                {{ $med->instructions }}
+                            </p>
+                        @endif
+                    </div>
+                @endforeach
+            </div>
+
+            <div class="hidden overflow-x-auto sm:block">
                 <table class="min-w-full divide-y divide-zinc-200 text-sm">
                     <thead class="bg-zinc-50 text-xs uppercase tracking-wide text-zinc-500">
                         <tr>

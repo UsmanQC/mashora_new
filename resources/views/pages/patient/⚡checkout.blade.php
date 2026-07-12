@@ -662,35 +662,43 @@ new #[Layout('layouts::patient')] #[Title('Payment')] class extends Component
             </div>
 
             <div class="order-1 lg:order-2">
-                <div class="rounded-3xl border border-slate-100/80 bg-white p-5 shadow-[0_8px_32px_0_rgba(0,0,0,0.03)]">
-                    <div class="mb-4 flex items-center justify-between gap-3 border-b border-slate-100 pb-4">
-                        <div class="flex items-center gap-2">
-                            <span class="flex size-9 items-center justify-center rounded-lg bg-[#10B981]/10 text-[#10B981]">
-                                <flux:icon name="lock-closed" variant="mini" class="size-4" />
-                            </span>
-                            <flux:heading size="sm" class="font-semibold text-slate-900">{{ __('patient_booking.checkout_accepts') }}</flux:heading>
+                <div class="overflow-hidden rounded-3xl border border-slate-200/90 bg-white shadow-[0_8px_30px_-12px_rgba(15,23,42,0.12)]" data-test="patient-checkout-payment-card">
+                    <div class="border-b border-slate-100 bg-gradient-to-b from-slate-50/90 to-white px-5 py-4">
+                        <div class="flex items-start justify-between gap-4">
+                            <div class="flex min-w-0 items-start gap-3">
+                                <span class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#10B981]/10 text-[#10B981] ring-1 ring-[#10B981]/15">
+                                    <flux:icon name="lock-closed" variant="mini" class="size-4" />
+                                </span>
+                                <div class="min-w-0">
+                                    <flux:heading size="sm" class="font-semibold text-slate-900">{{ __('patient_booking.checkout_accepts') }}</flux:heading>
+                                    <p class="mt-0.5 text-xs leading-relaxed text-slate-500">{{ __('patient_booking.luxury.trust_badge') }}</p>
+                                </div>
+                            </div>
+                            <div class="shrink-0 text-end">
+                                <p class="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-500">
+                                    {{ $showAmountDue ? __('patient_booking.amount_due') : __('patient_booking.total') }}
+                                </p>
+                                <p class="text-xl font-bold tabular-nums text-[#059669]">
+                                    {{ number_format($showAmountDue ? $checkoutDue : $checkoutTotal, 2) }}
+                                    <span class="text-sm">{{ __('patient_booking.sar') }}</span>
+                                </p>
+                            </div>
                         </div>
-                        <div class="text-end">
-                            <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                                {{ $showAmountDue ? __('patient_booking.amount_due') : __('patient_booking.total') }}
-                            </p>
-                            <p class="text-xl font-bold tabular-nums text-[#059669]">
-                                {{ number_format($showAmountDue ? $checkoutDue : $checkoutTotal, 2) }}
-                                <span class="text-sm">{{ __('patient_booking.sar') }}</span>
-                            </p>
-                        </div>
+
                     </div>
 
-                    <div class="space-y-3">
+                    <div class="space-y-4 p-5">
                         @include('partials.patient-checkout-payment-panel')
+
+                        <div class="border-t border-slate-100 pt-4">
+                            @include('partials.patient-checkout-payment-methods', ['compact' => true, 'labelSurface' => 'bg-white'])
+                        </div>
                     </div>
 
-                    <flux:button :href="route('patient.home')" wire:navigate variant="ghost" class="mt-4 w-full">
-                        {{ __('patient_booking.back_home') }}
-                    </flux:button>
-
-                    <div class="mt-6 border-t border-slate-100 pt-5">
-                        @include('partials.patient-checkout-payment-methods')
+                    <div class="border-t border-slate-100 px-5 py-4">
+                        <flux:button :href="route('patient.home')" wire:navigate variant="ghost" class="w-full">
+                            {{ __('patient_booking.back_home') }}
+                        </flux:button>
                     </div>
                 </div>
             </div>

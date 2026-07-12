@@ -521,9 +521,9 @@ test('patient conversation luxury mobile shell is rendered', function () {
         ->get(route('patient.appointments.conversation', ['appointment' => $appointment->id]))
         ->assertSuccessful()
         ->assertSee('data-test="patient-luxury-conversation"', false)
-        ->assertSee('data-test="patient-luxury-conversation-header"', false)
+        ->assertSee('data-test="patient-luxury-consultation-mobile"', false)
         ->assertSee('Nora Specialist', false)
-        ->assertSee('id="patient-agora-overlay"', false)
+        ->assertSee('data-test="patient-consultation-inline-video"', false)
         ->assertSee('id="incoming-call-accept"', false)
         ->assertDontSee('id="patient-session-join-call-btn"', false);
 });

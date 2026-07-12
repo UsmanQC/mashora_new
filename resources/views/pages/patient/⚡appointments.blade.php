@@ -1,10 +1,14 @@
 <?php
 
 use App\Models\Appointment;
+use App\Models\AppointmentRefundRequest;
 use App\Models\User;
 use App\Services\AppointmentMissedService;
+use App\Services\AppointmentSessionService;
 use App\Services\AppointmentWalletService;
+use App\Services\DoctorScheduledAppointmentService;
 use App\Services\PatientMissedAppointmentService;
+use App\Services\PatientPaymentMissedAppointmentService;
 use Carbon\Carbon;
 use Flux\Flux;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -97,14 +101,25 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
             ->with([
                 'doctor:id,name,name_ar,profile_photo_path',
                 'doctor.specialities:id,title,title_ar',
+                'refundRequests:id,appointment_id,status,created_at',
             ])
             ->where('user_id', $userId);
     }
 
     public function getAppointmentsProperty(): LengthAwarePaginator
     {
-        $query = $this->baseQuery()
-            ->whereIn('status', $this->tabStatuses()[$this->tab]);
+        $query = $this->baseQuery();
+
+        if ($this->tab === 'missed') {
+            $query->where(function ($builder): void {
+                $builder->where('status', 'not_attended')
+                    ->orWhere(function ($nested): void {
+                        app(PatientPaymentMissedAppointmentService::class)->constrainEligible($nested);
+                    });
+            });
+        } else {
+            $query->whereIn('status', $this->tabStatuses()[$this->tab]);
+        }
 
         if (in_array($this->tab, ['ongoing', 'rescheduled'], true)) {
             $query->orderBy('appointment_date')->orderBy('start_time');
@@ -117,8 +132,22 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
 
     public function getMobileAppointmentsProperty(): LengthAwarePaginator
     {
-        $query = $this->baseQuery()
-            ->whereIn('status', $this->mobileSegmentStatuses()[$this->mobileSegment]);
+        $query = $this->baseQuery();
+
+        if ($this->mobileSegment === 'upcoming') {
+            $query->where(function ($builder): void {
+                $builder->whereIn('status', $this->mobileSegmentStatuses()['upcoming'])
+                    ->orWhere(function ($nested): void {
+                        app(PatientPaymentMissedAppointmentService::class)->constrainEligible($nested);
+                    });
+            });
+        } else {
+            $query->whereIn('status', $this->mobileSegmentStatuses()['previous'])
+                ->where(function ($builder): void {
+                    $builder->where('cancel_status', '!=', 'patient_payment_missed')
+                        ->orWhereNull('cancel_status');
+                });
+        }
 
         if ($this->mobileSegment === 'upcoming') {
             $query->orderBy('appointment_date')->orderBy('start_time');
@@ -141,11 +170,20 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
             ->pluck('aggregate', 'status')
             ->map(fn ($count): int => (int) $count);
 
+        $eligiblePaymentMissedCount = app(PatientPaymentMissedAppointmentService::class)
+            ->constrainEligible($this->baseQuery())
+            ->count();
+
         return collect([
             'upcoming' => collect($this->mobileSegmentStatuses()['upcoming'])
-                ->sum(fn (string $status): int => (int) ($counts[$status] ?? 0)),
-            'previous' => collect($this->mobileSegmentStatuses()['previous'])
-                ->sum(fn (string $status): int => (int) ($counts[$status] ?? 0)),
+                ->sum(fn (string $status): int => (int) ($counts[$status] ?? 0))
+                + $eligiblePaymentMissedCount,
+            'previous' => max(0, collect($this->mobileSegmentStatuses()['previous'])
+                ->sum(fn (string $status): int => (int) ($counts[$status] ?? 0))
+                - $this->baseQuery()
+                    ->where('status', 'cancelled')
+                    ->where('cancel_status', 'patient_payment_missed')
+                    ->count()),
         ]);
     }
 
@@ -197,6 +235,10 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
 
     public function luxuryStatusLabel(Appointment $appointment): string
     {
+        if ($appointment->isPatientPaymentMissed()) {
+            return __('patient.scheduled_appointment.missed_status');
+        }
+
         if ($appointment->isDoctorMissed()) {
             return __('patient.appointments.status_missed');
         }
@@ -268,6 +310,7 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
     public function processMissedAppointments(): void
     {
         app(AppointmentMissedService::class)->processDueMissedAppointments();
+        app(DoctorScheduledAppointmentService::class)->expireDuePayments();
 
         unset(
             $this->appointments,
@@ -308,6 +351,13 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
             ->count();
     }
 
+    public function getUnresolvedPaymentMissedCountProperty(): int
+    {
+        return app(PatientPaymentMissedAppointmentService::class)
+            ->constrainEligible($this->baseQuery())
+            ->count();
+    }
+
     /**
      * @return Collection<string, int>
      */
@@ -320,12 +370,21 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
             ->pluck('aggregate', 'status')
             ->map(fn ($count): int => (int) $count);
 
+        $eligiblePaymentMissedCount = app(PatientPaymentMissedAppointmentService::class)
+            ->constrainEligible($this->baseQuery())
+            ->count();
+
+        $allPaymentMissedCount = $this->baseQuery()
+            ->where('status', 'cancelled')
+            ->where('cancel_status', 'patient_payment_missed')
+            ->count();
+
         return collect([
             'ongoing' => (int) ($counts['new'] ?? 0) + (int) ($counts['in_process'] ?? 0) + (int) ($counts['pending_follow_up'] ?? 0),
             'rescheduled' => (int) ($counts['rescheduled'] ?? 0),
             'completed' => (int) ($counts['completed'] ?? 0),
-            'missed' => (int) ($counts['not_attended'] ?? 0),
-            'cancelled' => (int) ($counts['cancelled'] ?? 0),
+            'missed' => (int) ($counts['not_attended'] ?? 0) + $eligiblePaymentMissedCount,
+            'cancelled' => max(0, (int) ($counts['cancelled'] ?? 0) - $allPaymentMissedCount),
         ]);
     }
 
@@ -345,6 +404,22 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
 
     public function statusLabelFor(Appointment $appointment): string
     {
+        $latestRefundRequest = $appointment->refundRequests->sortByDesc('id')->first();
+
+        if ($latestRefundRequest instanceof AppointmentRefundRequest) {
+            return match ((string) $latestRefundRequest->status) {
+                'pending_review' => __('patient.missed.refund_status.pending_review'),
+                'approved' => __('patient.missed.refund_status.approved'),
+                'rejected' => __('patient.missed.refund_status.rejected'),
+                'processed' => __('patient.missed.refund_status.processed'),
+                default => __('patient.missed.refund_status.pending_review'),
+            };
+        }
+
+        if ($appointment->isPatientPaymentMissed()) {
+            return __('patient.scheduled_appointment.missed_status');
+        }
+
         if ($appointment->isPatientRefunded()) {
             return __('patient.appointments.status_refunded');
         }
@@ -398,6 +473,19 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
 
     public function statusBadgeClassesFor(Appointment $appointment): string
     {
+        $latestRefundRequest = $appointment->refundRequests->sortByDesc('id')->first();
+
+        if ($latestRefundRequest instanceof AppointmentRefundRequest) {
+            $status = (string) $latestRefundRequest->status;
+
+            return match ($status) {
+                'approved' => 'bg-sky-100 text-sky-800',
+                'rejected' => 'bg-rose-100 text-rose-700',
+                'processed' => 'bg-emerald-100 text-emerald-800',
+                default => 'bg-amber-100 text-amber-800',
+            };
+        }
+
         if ($appointment->isPatientRefunded()) {
             return 'bg-emerald-100 text-emerald-800';
         }
@@ -437,6 +525,23 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
         return $appointment->sessionStartsAt() !== null;
     }
 
+    public function shouldShowPaymentTimer(Appointment $appointment): bool
+    {
+        return $appointment->requiresPatientPayment()
+            && ! $appointment->isPaymentExpired()
+            && $appointment->payment_expires_at !== null;
+    }
+
+    public function paymentExpiresAtIso(Appointment $appointment): ?string
+    {
+        return $appointment->paymentExpiresAtIso();
+    }
+
+    public function canResolvePaymentMissed(Appointment $appointment): bool
+    {
+        return app(PatientPaymentMissedAppointmentService::class)->canReschedule($appointment);
+    }
+
     public function sessionStartsAtIso(Appointment $appointment): ?string
     {
         return $appointment->sessionStartsAt()?->toIso8601String();
@@ -474,6 +579,25 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
 
     public ?int $refundAppointmentId = null;
 
+    public string $refundReason = 'service_not_provided';
+
+    public string $refundReasonNote = '';
+
+    /**
+     * @return array<string, string>
+     */
+    public function refundReasonOptions(): array
+    {
+        return [
+            'duplicate_payment' => __('patient.missed.refund_reasons.duplicate_payment'),
+            'appointment_cancelled' => __('patient.missed.refund_reasons.appointment_cancelled'),
+            'service_not_provided' => __('patient.missed.refund_reasons.service_not_provided'),
+            'technical_issue' => __('patient.missed.refund_reasons.technical_issue'),
+            'doctor_unable_to_attend' => __('patient.missed.refund_reasons.doctor_unable_to_attend'),
+            'other' => __('patient.missed.refund_reasons.other'),
+        ];
+    }
+
     public function promptRefundMissed(int $appointmentId): void
     {
         $appointment = $this->baseQuery()->whereKey($appointmentId)->first();
@@ -489,6 +613,8 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
         }
 
         $this->refundAppointmentId = $appointment->id;
+        $this->refundReason = 'service_not_provided';
+        $this->refundReasonNote = '';
         $this->showRefundModal = true;
     }
 
@@ -496,6 +622,8 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
     {
         $this->showRefundModal = false;
         $this->refundAppointmentId = null;
+        $this->refundReason = 'service_not_provided';
+        $this->refundReasonNote = '';
     }
 
     public function confirmRefundMissed(): void
@@ -504,9 +632,8 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
             return;
         }
 
-        $appointmentId = $this->refundAppointmentId;
+        $this->refundMissed($this->refundAppointmentId);
         $this->dismissRefundMissedModal();
-        $this->refundMissed($appointmentId);
     }
 
     public function getPendingRefundAppointmentProperty(): ?Appointment
@@ -525,14 +652,63 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
 
         $appointment = $this->baseQuery()->findOrFail($appointmentId);
 
-        app(PatientMissedAppointmentService::class)->refund($user, $appointment);
+        $this->validate([
+            'refundReason' => ['required', 'string', 'in:'.implode(',', PatientMissedAppointmentService::REFUND_REASON_KEYS)],
+            'refundReasonNote' => ['nullable', 'string', 'max:2000', 'required_if:refundReason,other'],
+        ], [], [
+            'refundReason' => __('patient.missed.refund'),
+            'refundReasonNote' => __('patient.missed.reason_note_label'),
+        ]);
+
+        app(PatientMissedAppointmentService::class)->requestRefund(
+            $user,
+            $appointment,
+            $this->refundReason,
+            $this->refundReason === 'other' ? $this->refundReasonNote : null,
+        );
 
         Flux::toast(
             variant: 'success',
-            text: __('patient.missed.refund_success', [
-                'amount' => number_format((float) $appointment->total, 2),
-            ]),
+            text: __('patient.missed.refund_request_submitted'),
         );
+    }
+
+    public function approveSessionStart(int $appointmentId, AppointmentSessionService $sessions): void
+    {
+        $user = Auth::user();
+        abort_unless($user instanceof User, 403);
+
+        $appointment = $this->baseQuery()->findOrFail($appointmentId);
+
+        if (! $sessions->approveStart($appointment)) {
+            Flux::toast(variant: 'warning', text: __('patient.appointments.session_start_request_cannot_approve'));
+
+            return;
+        }
+
+        Flux::toast(variant: 'success', text: __('patient.appointments.session_start_request_approved'));
+    }
+
+    public function declineSessionStart(int $appointmentId, AppointmentSessionService $sessions): void
+    {
+        $user = Auth::user();
+        abort_unless($user instanceof User, 403);
+
+        $appointment = $this->baseQuery()->findOrFail($appointmentId);
+
+        if (! $sessions->clearStartRequest($appointment)) {
+            Flux::toast(variant: 'warning', text: __('patient.appointments.session_start_request_cannot_decline'));
+
+            return;
+        }
+
+        Flux::toast(variant: 'success', text: __('patient.appointments.session_start_request_declined'));
+    }
+
+    #[On('session-start-requested')]
+    public function refreshAfterSessionStartRequest(): void
+    {
+        // Re-render appointment cards when a realtime start request arrives.
     }
 }; ?>
 
@@ -694,6 +870,28 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
             <flux:text class="mt-2 text-center text-sm leading-relaxed text-zinc-600">
                 {{ __('patient.missed.refund_modal.body') }}
             </flux:text>
+
+            <div class="mt-4 space-y-3">
+                <flux:select
+                    wire:model.live="refundReason"
+                    :label="__('patient.missed.refund_reason_label')"
+                    :placeholder="__('patient.missed.refund_reason_placeholder')"
+                >
+                    @foreach ($this->refundReasonOptions() as $reasonKey => $reasonLabel)
+                        <option value="{{ $reasonKey }}">{{ $reasonLabel }}</option>
+                    @endforeach
+                </flux:select>
+
+                @if ($refundReason === 'other')
+                    <flux:textarea
+                        wire:model.live="refundReasonNote"
+                        :label="__('patient.missed.reason_note_label')"
+                        :placeholder="__('patient.missed.reason_note_placeholder')"
+                        rows="3"
+                        required
+                    />
+                @endif
+            </div>
 
             @if ($this->pendingRefundAppointment instanceof \App\Models\Appointment)
                 <div class="mt-5 rounded-xl border border-zinc-200/90 bg-zinc-50 px-4 py-3 text-sm">
@@ -864,6 +1062,49 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
 
                     this.label = timeLabel;
                     this.ariaLabel = this.labels.startsIn.replace(':time', timeLabel);
+                },
+            };
+        }
+
+        function paymentDeadlineTimer(isoExpires, expiredLabel) {
+            return {
+                label: '',
+                interval: null,
+                expiredLabel: expiredLabel || 'Expired',
+                start() {
+                    this.tick();
+                    this.interval = setInterval(() => this.tick(), 1000);
+                },
+                tick() {
+                    if (! isoExpires) {
+                        this.label = '';
+
+                        return;
+                    }
+
+                    const diff = new Date(isoExpires).getTime() - Date.now();
+
+                    if (diff <= 0) {
+                        this.label = this.expiredLabel;
+
+                        if (this.interval) {
+                            clearInterval(this.interval);
+                            this.interval = null;
+                        }
+
+                        return;
+                    }
+
+                    const totalSeconds = Math.floor(diff / 1000);
+                    const hours = Math.floor(totalSeconds / 3600);
+                    const minutes = Math.floor((totalSeconds % 3600) / 60);
+                    const seconds = totalSeconds % 60;
+
+                    if (hours > 0) {
+                        this.label = `${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+                    } else {
+                        this.label = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+                    }
                 },
             };
         }
@@ -1228,6 +1469,12 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
                     }
 
                     showSessionJoin(appointmentId);
+                });
+
+                window.addEventListener('mashora:session-start-requested', () => {
+                    if (window.Livewire) {
+                        window.Livewire.dispatch('session-start-requested');
+                    }
                 });
             }
 
