@@ -303,7 +303,21 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
             return __('patient.appointments.session_finished');
         }
 
-        return __('patient.appointments.status_'.$this->appointment->status);
+        return $this->statusLabel((string) $this->appointment->status);
+    }
+
+    public function statusLabel(string $status): string
+    {
+        return match ($status) {
+            'new' => __('patient.appointments.status_new'),
+            'in_process' => __('patient.appointments.status_in_process'),
+            'pending_follow_up' => __('patient.follow_up.badge'),
+            'rescheduled' => __('patient.appointments.tab_rescheduled'),
+            'completed' => __('patient.appointments.status_completed'),
+            'cancelled' => __('patient.appointments.tab_cancelled'),
+            'not_attended' => __('patient.appointments.status_missed'),
+            default => __('patient.appointments.status_'.$status),
+        };
     }
 
     public function doctorInitials(): string
@@ -700,7 +714,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                     <div class="mt-6 grid gap-2 text-start">
                         <div class="rounded-xl border border-zinc-200/80 bg-white/90 px-3 py-2 shadow-sm">
                             <p class="text-[11px] font-semibold uppercase tracking-wide text-zinc-400">{{ __('patient.appointments.status') }}</p>
-                            <p class="mt-0.5 text-sm font-semibold text-zinc-800">{{ __('patient.appointments.status_'.$appointment->status) }}</p>
+                            <p class="mt-0.5 text-sm font-semibold text-zinc-800">{{ $this->statusLabel((string) $appointment->status) }}</p>
                         </div>
                         <div class="rounded-xl border border-zinc-200/80 bg-white/90 px-3 py-2 shadow-sm">
                             <p class="text-[11px] font-semibold uppercase tracking-wide text-zinc-400">{{ __('patient.appointments.session_label') }}</p>
