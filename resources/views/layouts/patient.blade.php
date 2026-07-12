@@ -32,6 +32,7 @@
             'patient.important-numbers',
             'patient.wallet',
             'patient.medications',
+            'patient.diagnoses',
             'patient.favorites',
             'patient.privacy',
             'patient.support',
