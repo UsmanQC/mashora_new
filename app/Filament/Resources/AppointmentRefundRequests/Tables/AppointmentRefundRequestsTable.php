@@ -31,9 +31,24 @@ class AppointmentRefundRequestsTable
                 TextColumn::make('doctor.name')
                     ->label('Doctor')
                     ->searchable(),
+                TextColumn::make('requested_by')
+                    ->label('Requested by')
+                    ->badge()
+                    ->formatStateUsing(fn (?string $state): string => match ($state) {
+                        'doctor' => 'Doctor',
+                        default => 'Patient',
+                    })
+                    ->color(fn (?string $state): string => $state === 'doctor' ? 'info' : 'gray'),
                 TextColumn::make('reason_key')
                     ->label('Reason')
-                    ->formatStateUsing(fn (string $state): string => str($state)->replace('_', ' ')->title()->toString())
+                    ->formatStateUsing(function (string $state, AppointmentRefundRequest $record): string {
+                        if ($record->wasRequestedByDoctor() && filled($record->reason_note)) {
+                            return (string) $record->reason_note;
+                        }
+
+                        return str($state)->replace('_', ' ')->title()->toString();
+                    })
+                    ->wrap()
                     ->searchable(),
                 TextColumn::make('requested_amount')
                     ->label('Requested')

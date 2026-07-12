@@ -5,6 +5,7 @@ use App\Models\Doctor;
 use App\Services\AppointmentMissedService;
 use App\Services\AppointmentSessionService;
 use App\Services\AppointmentWalletService;
+use App\Services\DoctorRefundRequestService;
 use App\Services\FollowUpAppointmentService;
 use App\Services\PatientAppointmentNotifier;
 use Flux\Flux;
@@ -280,6 +281,7 @@ new #[Layout('layouts::doctor')] #[Title('Appointments')] class extends Componen
                     ->where('status', 'pending_follow_up')
                     ->latest('id'),
                 'parentAppointment',
+                'refundRequests' => fn ($query) => $query->latest('id'),
             ])
             ->when($this->status !== 'all', function (Builder $query): void {
                 if ($this->status === 'pending_follow_up') {
@@ -346,6 +348,18 @@ new #[Layout('layouts::doctor')] #[Title('Appointments')] class extends Componen
     {
         if ($appointment->isPatientRefunded()) {
             return __('doctor.appointment_status.refunded');
+        }
+
+        $latestRefundRequest = $appointment->refundRequests->sortByDesc('id')->first();
+
+        if ($latestRefundRequest !== null && in_array((string) $latestRefundRequest->status, ['pending_review', 'approved', 'rejected', 'processed'], true)) {
+            return match ((string) $latestRefundRequest->status) {
+                'pending_review' => __('doctor.missed.refund_status.pending_review'),
+                'approved' => __('doctor.missed.refund_status.approved'),
+                'rejected' => __('doctor.missed.refund_status.rejected'),
+                'processed' => __('doctor.missed.refund_status.processed'),
+                default => __('doctor.missed.refund_status.pending_review'),
+            };
         }
 
         if ($appointment->is_follow_up && $appointment->status !== 'pending_follow_up') {
@@ -592,6 +606,91 @@ new #[Layout('layouts::doctor')] #[Title('Appointments')] class extends Componen
 
         Flux::toast(variant: 'success', text: $this->cancelSuccessMessage($appointment));
     }
+
+    public bool $showRefundModal = false;
+
+    public ?int $refundAppointmentId = null;
+
+    public string $refundReasonNote = '';
+
+    public function canRequestSessionRefund(Appointment $appointment): bool
+    {
+        return app(DoctorRefundRequestService::class)->canRequestRefund($appointment);
+    }
+
+    public function promptRefundAppointment(int $appointmentId): void
+    {
+        $appointment = $this->baseAppointmentsQuery()->whereKey($appointmentId)->first();
+
+        if (! $appointment instanceof Appointment) {
+            abort(404);
+        }
+
+        if (! $this->canRequestSessionRefund($appointment)) {
+            Flux::toast(variant: 'warning', text: __('doctor.refund.not_eligible'));
+
+            return;
+        }
+
+        $this->refundAppointmentId = $appointment->id;
+        $this->refundReasonNote = '';
+        $this->showRefundModal = true;
+        $this->resetValidation();
+    }
+
+    public function dismissRefundAppointmentModal(): void
+    {
+        $this->showRefundModal = false;
+        $this->refundAppointmentId = null;
+        $this->refundReasonNote = '';
+        $this->resetValidation();
+    }
+
+    public function getPendingRefundAppointmentProperty(): ?Appointment
+    {
+        if ($this->refundAppointmentId === null) {
+            return null;
+        }
+
+        $appointment = $this->baseAppointmentsQuery()->whereKey($this->refundAppointmentId)->first();
+
+        return $appointment instanceof Appointment ? $appointment : null;
+    }
+
+    public function confirmRefundAppointment(): void
+    {
+        if ($this->refundAppointmentId === null) {
+            return;
+        }
+
+        $appointment = $this->baseAppointmentsQuery()->whereKey($this->refundAppointmentId)->first();
+
+        if (! $appointment instanceof Appointment) {
+            abort(404);
+        }
+
+        $this->validate([
+            'refundReasonNote' => ['required', 'string', 'max:2000'],
+        ], [], [
+            'refundReasonNote' => __('doctor.refund.reason_label'),
+        ]);
+
+        $doctor = Auth::guard('doctor')->user();
+        abort_unless($doctor instanceof Doctor, 403);
+
+        app(DoctorRefundRequestService::class)->requestRefund(
+            $doctor,
+            $appointment,
+            $this->refundReasonNote,
+        );
+
+        $this->dismissRefundAppointmentModal();
+
+        Flux::toast(
+            variant: 'success',
+            text: __('doctor.refund.request_submitted'),
+        );
+    }
 }; ?>
 
 <div class="relative w-full">
@@ -746,6 +845,16 @@ new #[Layout('layouts::doctor')] #[Title('Appointments')] class extends Componen
                                             <flux:icon name="x-circle" variant="mini" class="size-3.5 shrink-0" />
                                             {{ $this->cancelActionLabel($row) }}
                                         </button>
+                                        @if ($this->canRequestSessionRefund($row))
+                                            <button
+                                                type="button"
+                                                wire:click="promptRefundAppointment({{ $row->id }})"
+                                                class="inline-flex shrink-0 items-center justify-center gap-1 rounded-lg border border-orange-200 bg-orange-50 px-2 py-1.5 text-[0.6875rem] font-semibold whitespace-nowrap text-orange-800 transition hover:bg-orange-100"
+                                            >
+                                                <flux:icon name="banknotes" variant="mini" class="size-3.5 shrink-0" />
+                                                {{ __('doctor.refund.request') }}
+                                            </button>
+                                        @endif
                                     </div>
                                 @elseif ($this->canScheduleFollowUp($row))
                                     <div class="mx-auto inline-flex w-full min-w-[11rem] max-w-[13rem] flex-col gap-1.5">
@@ -887,6 +996,73 @@ new #[Layout('layouts::doctor')] #[Title('Appointments')] class extends Componen
                     </span>
                     <span wire:loading wire:target="confirmCancelAppointment">
                         {{ __('doctor.appointments.cancel_modal.confirming') }}
+                    </span>
+                </flux:button>
+            </div>
+        </div>
+    </flux:modal>
+
+    <flux:modal wire:model.self="showRefundModal" class="max-w-md rounded-2xl shadow-xl" :closable="true">
+        <div class="px-6 py-8 sm:px-8">
+            <div class="mx-auto flex size-16 items-center justify-center rounded-full bg-orange-100 text-orange-600">
+                <flux:icon name="banknotes" variant="outline" class="size-8" />
+            </div>
+
+            <flux:heading size="lg" class="mt-5 text-center font-semibold text-zinc-900">
+                {{ __('doctor.refund.modal.title') }}
+            </flux:heading>
+
+            <flux:text class="mt-2 text-center text-sm leading-relaxed text-slate-900">
+                {{ __('doctor.refund.modal.body') }}
+            </flux:text>
+
+            <div class="mt-5 space-y-3">
+                <flux:textarea
+                    wire:model.live="refundReasonNote"
+                    :label="__('doctor.refund.reason_label')"
+                    :placeholder="__('doctor.refund.reason_placeholder')"
+                    rows="4"
+                />
+
+                @if ($this->pendingRefundAppointment instanceof \App\Models\Appointment)
+                    <div class="rounded-xl border border-zinc-200/90 bg-zinc-50 px-4 py-3 text-sm">
+                        <p class="font-semibold text-zinc-900">{{ $this->pendingRefundAppointment->patient_name }}</p>
+                        <p class="mt-1 tabular-nums text-slate-900">
+                            {{ $this->pendingRefundAppointment->appointment_date?->format('d/m/Y') }}
+                            ·
+                            {{ \Illuminate\Support\Str::limit((string) $this->pendingRefundAppointment->start_time, 8, '') }}
+                        </p>
+                        @if ((float) $this->pendingRefundAppointment->total > 0)
+                            <p class="mt-2 text-xs font-medium text-orange-700">
+                                {{ __('doctor.refund.modal.refund_note', ['amount' => number_format((float) $this->pendingRefundAppointment->total, 2)]) }}
+                            </p>
+                        @endif
+                    </div>
+                @endif
+            </div>
+
+            <div class="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <flux:button
+                    type="button"
+                    variant="ghost"
+                    class="w-full sm:w-auto"
+                    wire:click="dismissRefundAppointmentModal"
+                >
+                    {{ __('doctor.refund.modal.dismiss') }}
+                </flux:button>
+                <flux:button
+                    type="button"
+                    variant="primary"
+                    class="w-full !bg-orange-600 hover:!bg-orange-700 sm:w-auto"
+                    wire:click="confirmRefundAppointment"
+                    wire:loading.attr="disabled"
+                    wire:target="confirmRefundAppointment"
+                >
+                    <span wire:loading.remove wire:target="confirmRefundAppointment">
+                        {{ __('doctor.refund.modal.confirm') }}
+                    </span>
+                    <span wire:loading wire:target="confirmRefundAppointment">
+                        {{ __('doctor.refund.modal.confirming') }}
                     </span>
                 </flux:button>
             </div>

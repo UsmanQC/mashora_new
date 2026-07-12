@@ -357,6 +357,11 @@
                             <flux:menu.item wire:click="requestCompleteAppointment" icon="check-circle">
                                 {{ __('doctor.card.mark_complete') }}
                             </flux:menu.item>
+                            @if ($this->canRequestSessionRefund())
+                                <flux:menu.item wire:click="promptRefundRequest" icon="banknotes">
+                                    {{ __('doctor.refund.request') }}
+                                </flux:menu.item>
+                            @endif
                         @endif
                     </flux:menu>
                 </flux:dropdown>

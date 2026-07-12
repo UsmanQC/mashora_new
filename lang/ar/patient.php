@@ -468,6 +468,8 @@ return [
         'chat_message_empty' => 'أرسل لك رسالة.',
         'refund_request_submitted_title' => 'تم إرسال طلب الاسترداد',
         'refund_request_submitted_body' => 'تم إرسال طلب استرداد بمبلغ :amount ر.س وهو قيد مراجعة الإدارة.',
+        'refund_request_submitted_by_doctor_title' => 'طلب الأخصائي استردادًا',
+        'refund_request_submitted_by_doctor_body' => 'طلب الأخصائي استردادًا بمبلغ :amount ر.س. ستراجع الإدارة الطلب قريبًا.',
         'refund_request_approved_title' => 'تمت الموافقة على طلب الاسترداد',
         'refund_request_approved_body' => 'تمت الموافقة على طلب استرداد بمبلغ :amount ر.س وسيتم معالجته قريبًا.',
         'refund_request_rejected_title' => 'تم رفض طلب الاسترداد',

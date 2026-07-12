@@ -356,6 +356,36 @@ return [
         'clear_filter' => 'مسح التصفية',
     ],
 
+    'missed' => [
+        'refund_status' => [
+            'pending_review' => 'الاسترداد قيد المراجعة',
+            'approved' => 'تمت الموافقة على الاسترداد',
+            'rejected' => 'رُفض الاسترداد',
+            'processed' => 'تم الاسترداد',
+        ],
+    ],
+
+    'refund' => [
+        'request' => 'طلب استرداد',
+        'request_submitted' => 'تم إرسال طلب الاسترداد. ستراجع الإدارة الطلب قريبًا.',
+        'already_requested' => 'يوجد بالفعل طلب استرداد لهذا الموعد.',
+        'not_eligible' => 'يمكن طلب الاسترداد أثناء الجلسة النشطة فقط.',
+        'not_paid' => 'لا يوجد مبلغ مدفوع لاسترداده في هذه الجلسة.',
+        'already_refunded' => 'تم استرداد هذه الجلسة بالفعل.',
+        'reason_label' => 'السبب',
+        'reason_placeholder' => 'اكتب سبب طلب الاسترداد…',
+        'reason_required' => 'يرجى كتابة سبب الاسترداد.',
+        'reason_too_long' => 'يجب ألا يتجاوز السبب 2000 حرف.',
+        'modal' => [
+            'title' => 'طلب استرداد للمريض؟',
+            'body' => 'ستراجع الإدارة سببك المكتوب ويمكنها استرداد المبلغ كاملًا أو جزئيًا. تُخصم حصتك بنفس النسبة.',
+            'confirm' => 'إرسال طلب الاسترداد',
+            'confirming' => 'جاري إرسال الطلب…',
+            'dismiss' => 'ليس الآن',
+            'refund_note' => 'المبلغ المطلوب: :amount ر.س',
+        ],
+    ],
+
     'appointment_status' => [
         'new' => 'جديد',
         'in_process' => 'قيد التنفيذ',
@@ -888,6 +918,8 @@ return [
         'session_start_approved_body' => 'وافق :patient على طلبك لبدء الجلسة مبكرًا. يمكنك بدء الجلسة الآن.',
         'refund_request_submitted_title' => 'طلب المريض استردادًا',
         'refund_request_submitted_body' => 'طلب :patient استردادًا بمبلغ :amount ر.س. ستراجع الإدارة الطلب.',
+        'refund_request_submitted_by_doctor_title' => 'تم إرسال طلب الاسترداد',
+        'refund_request_submitted_by_doctor_body' => 'تم إرسال طلب استرداد لـ :patient بمبلغ :amount ر.س وهو قيد مراجعة الإدارة.',
         'refund_request_approved_title' => 'تمت الموافقة على طلب الاسترداد',
         'refund_request_approved_body' => 'وافقت الإدارة على طلب الاسترداد من :patient بمبلغ :amount ر.س.',
         'refund_request_rejected_title' => 'تم رفض طلب الاسترداد',

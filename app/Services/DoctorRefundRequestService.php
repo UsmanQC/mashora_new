@@ -1,0 +1,100 @@
+<?php
+
+namespace App\Services;
+
+use App\Models\Appointment;
+use App\Models\AppointmentRefundRequest;
+use App\Models\Doctor;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
+
+final class DoctorRefundRequestService
+{
+    public const REASON_KEY = 'other';
+
+    public function __construct(
+        private readonly AppointmentWalletService $wallet,
+        private readonly AppointmentRefundRequestNotifier $refundRequestNotifier,
+    ) {}
+
+    public function canRequestRefund(Appointment $appointment): bool
+    {
+        return (string) $appointment->status === 'in_process'
+            && (float) $appointment->total > 0
+            && ! $appointment->hasOpenRefundRequest()
+            && ! $appointment->isPatientRefunded()
+            && ! $this->wallet->hasRefunded($appointment);
+    }
+
+    public function assertCanRequestRefund(Doctor $doctor, Appointment $appointment): void
+    {
+        if ((int) $appointment->doctor_id !== (int) $doctor->id) {
+            abort(403);
+        }
+
+        if ((string) $appointment->status !== 'in_process') {
+            throw ValidationException::withMessages([
+                'appointment' => __('doctor.refund.not_eligible'),
+            ]);
+        }
+
+        if ((float) $appointment->total <= 0) {
+            throw ValidationException::withMessages([
+                'appointment' => __('doctor.refund.not_paid'),
+            ]);
+        }
+
+        if ($appointment->isPatientRefunded() || $this->wallet->hasRefunded($appointment)) {
+            throw ValidationException::withMessages([
+                'appointment' => __('doctor.refund.already_refunded'),
+            ]);
+        }
+
+        if ($appointment->hasOpenRefundRequest()) {
+            throw ValidationException::withMessages([
+                'appointment' => __('doctor.refund.already_requested'),
+            ]);
+        }
+    }
+
+    public function requestRefund(
+        Doctor $doctor,
+        Appointment $appointment,
+        string $reasonNote,
+    ): AppointmentRefundRequest {
+        $this->assertCanRequestRefund($doctor, $appointment);
+
+        $reasonNote = trim($reasonNote);
+
+        if (blank($reasonNote)) {
+            throw ValidationException::withMessages([
+                'refundReasonNote' => __('doctor.refund.reason_required'),
+            ]);
+        }
+
+        if (mb_strlen($reasonNote) > 2000) {
+            throw ValidationException::withMessages([
+                'refundReasonNote' => __('doctor.refund.reason_too_long'),
+            ]);
+        }
+
+        $request = DB::transaction(function () use ($appointment, $doctor, $reasonNote): AppointmentRefundRequest {
+            $appointment->loadMissing('user');
+
+            return AppointmentRefundRequest::query()->create([
+                'appointment_id' => $appointment->id,
+                'patient_id' => $appointment->user_id,
+                'doctor_id' => $doctor->id,
+                'requested_by' => 'doctor',
+                'reason_key' => self::REASON_KEY,
+                'reason_note' => $reasonNote,
+                'status' => 'pending_review',
+                'requested_amount' => (float) $appointment->total,
+            ]);
+        });
+
+        $this->refundRequestNotifier->notifySubmitted($request);
+
+        return $request;
+    }
+}

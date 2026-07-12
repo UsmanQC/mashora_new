@@ -23,6 +23,28 @@ final class AppointmentRefundRequestNotifier
             return;
         }
 
+        if ($request->wasRequestedByDoctor()) {
+            $this->notifyPatient($request, $appointment, [
+                'type' => 'refund_request_submitted',
+                'title' => __('patient.notifications.refund_request_submitted_by_doctor_title'),
+                'message' => __('patient.notifications.refund_request_submitted_by_doctor_body', [
+                    'amount' => number_format((float) $request->requested_amount, 2),
+                ]),
+                'action' => route('patient.wallet'),
+            ]);
+
+            $this->notifyDoctor($request, $appointment, [
+                'type' => 'refund_request_submitted',
+                'title' => __('doctor.notifications.refund_request_submitted_by_doctor_title'),
+                'message' => __('doctor.notifications.refund_request_submitted_by_doctor_body', [
+                    'patient' => $this->patientName($appointment),
+                    'amount' => number_format((float) $request->requested_amount, 2),
+                ]),
+            ]);
+
+            return;
+        }
+
         $this->notifyDoctor($request, $appointment, [
             'type' => 'refund_request_submitted',
             'title' => __('doctor.notifications.refund_request_submitted_title'),

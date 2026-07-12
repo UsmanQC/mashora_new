@@ -468,6 +468,8 @@ return [
         'chat_message_empty' => 'Sent you a message.',
         'refund_request_submitted_title' => 'Refund request submitted',
         'refund_request_submitted_body' => 'Your refund request for :amount SAR was submitted and is pending admin review.',
+        'refund_request_submitted_by_doctor_title' => 'Specialist requested a refund',
+        'refund_request_submitted_by_doctor_body' => 'Your specialist requested a refund of :amount SAR. Admin will review it soon.',
         'refund_request_approved_title' => 'Refund request approved',
         'refund_request_approved_body' => 'Your refund request for :amount SAR was approved and will be processed soon.',
         'refund_request_rejected_title' => 'Refund request rejected',

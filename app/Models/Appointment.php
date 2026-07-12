@@ -444,4 +444,11 @@ class Appointment extends Model
     {
         return $this->refundRequests()->exists();
     }
+
+    public function hasOpenRefundRequest(): bool
+    {
+        return $this->refundRequests()
+            ->whereIn('status', ['pending_review', 'approved'])
+            ->exists();
+    }
 }

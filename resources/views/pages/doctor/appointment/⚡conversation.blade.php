@@ -5,10 +5,13 @@ use App\Livewire\Concerns\CompletesDoctorAppointment;
 use App\Models\Appointment;
 use App\Models\ChMessage;
 use App\Models\Diagnosis;
+use App\Models\Doctor;
 use App\Services\AppointmentSessionService;
+use App\Services\DoctorRefundRequestService;
 use App\Support\DoctorAgoraChannel;
 use Flux\Flux;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
@@ -405,6 +408,61 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
         $this->agoraChannel = DoctorAgoraChannel::channelName($this->appointment);
         $this->agoraToken = DoctorAgoraChannel::buildRtcToken($this->agoraChannel);
     }
+
+    public bool $showRefundModal = false;
+
+    public string $refundReasonNote = '';
+
+    public function canRequestSessionRefund(): bool
+    {
+        return app(DoctorRefundRequestService::class)->canRequestRefund($this->appointment);
+    }
+
+    public function promptRefundRequest(): void
+    {
+        if (! $this->canRequestSessionRefund()) {
+            Flux::toast(variant: 'warning', text: __('doctor.refund.not_eligible'));
+
+            return;
+        }
+
+        $this->refundReasonNote = '';
+        $this->showRefundModal = true;
+        $this->resetValidation();
+    }
+
+    public function dismissRefundRequestModal(): void
+    {
+        $this->showRefundModal = false;
+        $this->refundReasonNote = '';
+        $this->resetValidation();
+    }
+
+    public function confirmRefundRequest(): void
+    {
+        $this->validate([
+            'refundReasonNote' => ['required', 'string', 'max:2000'],
+        ], [], [
+            'refundReasonNote' => __('doctor.refund.reason_label'),
+        ]);
+
+        $doctor = Auth::guard('doctor')->user();
+        abort_unless($doctor instanceof Doctor, 403);
+
+        app(DoctorRefundRequestService::class)->requestRefund(
+            $doctor,
+            $this->appointment,
+            $this->refundReasonNote,
+        );
+
+        $this->appointment->refresh()->loadMissing(['user', 'diagnosis', 'medications', 'refundRequests']);
+        $this->dismissRefundRequestModal();
+
+        Flux::toast(
+            variant: 'success',
+            text: __('doctor.refund.request_submitted'),
+        );
+    }
 }; ?>
 
 <div @if (in_array($appointment->status, ['new', 'rescheduled', 'in_process'], true)) wire:poll.5s="refreshAppointmentSessionState" @endif>
@@ -561,6 +619,19 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                                 >
                                     {{ __('doctor.card.mark_complete') }}
                                 </flux:button>
+                                @if ($this->canRequestSessionRefund())
+                                    <flux:button
+                                        type="button"
+                                        size="sm"
+                                        variant="filled"
+                                        icon="banknotes"
+                                        class="min-h-10 !border-orange-200 !bg-orange-50 !text-orange-800 hover:!bg-orange-100"
+                                        wire:click="promptRefundRequest"
+                                        wire:loading.attr="disabled"
+                                    >
+                                        {{ __('doctor.refund.request') }}
+                                    </flux:button>
+                                @endif
                             @endif
                         </div>
                     </div>
@@ -772,6 +843,63 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
     ></div>
 
     @include('partials.doctor-complete-appointment-modals')
+
+    <flux:modal wire:model.self="showRefundModal" class="max-w-md rounded-2xl shadow-xl" :closable="true">
+        <div class="px-6 py-8 sm:px-8">
+            <div class="mx-auto flex size-16 items-center justify-center rounded-full bg-orange-100 text-orange-600">
+                <flux:icon name="banknotes" variant="outline" class="size-8" />
+            </div>
+
+            <flux:heading size="lg" class="mt-5 text-center font-semibold text-zinc-900">
+                {{ __('doctor.refund.modal.title') }}
+            </flux:heading>
+
+            <flux:text class="mt-2 text-center text-sm leading-relaxed text-slate-900">
+                {{ __('doctor.refund.modal.body') }}
+            </flux:text>
+
+            <div class="mt-5 space-y-3">
+                <flux:textarea
+                    wire:model.live="refundReasonNote"
+                    :label="__('doctor.refund.reason_label')"
+                    :placeholder="__('doctor.refund.reason_placeholder')"
+                    rows="4"
+                />
+
+                @if ((float) $appointment->total > 0)
+                    <p class="text-center text-xs font-medium text-orange-700">
+                        {{ __('doctor.refund.modal.refund_note', ['amount' => number_format((float) $appointment->total, 2)]) }}
+                    </p>
+                @endif
+            </div>
+
+            <div class="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <flux:button
+                    type="button"
+                    variant="ghost"
+                    class="w-full sm:w-auto"
+                    wire:click="dismissRefundRequestModal"
+                >
+                    {{ __('doctor.refund.modal.dismiss') }}
+                </flux:button>
+                <flux:button
+                    type="button"
+                    variant="primary"
+                    class="w-full !bg-orange-600 hover:!bg-orange-700 sm:w-auto"
+                    wire:click="confirmRefundRequest"
+                    wire:loading.attr="disabled"
+                    wire:target="confirmRefundRequest"
+                >
+                    <span wire:loading.remove wire:target="confirmRefundRequest">
+                        {{ __('doctor.refund.modal.confirm') }}
+                    </span>
+                    <span wire:loading wire:target="confirmRefundRequest">
+                        {{ __('doctor.refund.modal.confirming') }}
+                    </span>
+                </flux:button>
+            </div>
+        </div>
+    </flux:modal>
 </div>
 
 @push('scripts')

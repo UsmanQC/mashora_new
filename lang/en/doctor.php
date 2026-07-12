@@ -355,6 +355,36 @@ return [
         'clear_filter' => 'Clear filter',
     ],
 
+    'missed' => [
+        'refund_status' => [
+            'pending_review' => 'Refund pending review',
+            'approved' => 'Refund approved',
+            'rejected' => 'Refund rejected',
+            'processed' => 'Refunded',
+        ],
+    ],
+
+    'refund' => [
+        'request' => 'Request refund',
+        'request_submitted' => 'Refund request submitted. Admin will review it soon.',
+        'already_requested' => 'A refund request already exists for this appointment.',
+        'not_eligible' => 'Refund can only be requested during an active session.',
+        'not_paid' => 'This session has no paid amount to refund.',
+        'already_refunded' => 'This session has already been refunded.',
+        'reason_label' => 'Reason',
+        'reason_placeholder' => 'Write why a refund is needed…',
+        'reason_required' => 'Please write a refund reason.',
+        'reason_too_long' => 'Reason must be 2000 characters or fewer.',
+        'modal' => [
+            'title' => 'Request a patient refund?',
+            'body' => 'Admin will review your written reason and can refund the patient in full or partially. Your share is reversed in the same proportion.',
+            'confirm' => 'Submit refund request',
+            'confirming' => 'Submitting request…',
+            'dismiss' => 'Not now',
+            'refund_note' => 'Requested amount: :amount SAR',
+        ],
+    ],
+
     'appointment_status' => [
         'new' => 'New',
         'in_process' => 'In Process',
@@ -887,6 +917,8 @@ return [
         'session_start_approved_body' => ':patient approved your request to start the session early. You can start it now.',
         'refund_request_submitted_title' => 'Patient requested a refund',
         'refund_request_submitted_body' => ':patient requested a refund of :amount SAR. Admin will review the request.',
+        'refund_request_submitted_by_doctor_title' => 'Refund request submitted',
+        'refund_request_submitted_by_doctor_body' => 'Your refund request for :patient (:amount SAR) was submitted and is pending admin review.',
         'refund_request_approved_title' => 'Refund request approved',
         'refund_request_approved_body' => 'Admin approved the refund request from :patient for :amount SAR.',
         'refund_request_rejected_title' => 'Refund request rejected',
