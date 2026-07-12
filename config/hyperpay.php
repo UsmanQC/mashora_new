@@ -11,6 +11,12 @@ return [
     'entity_id_b2c' => env('HYPERPAY_ENTITY_ID_B2C'),
     'entity_id_b2b' => env('HYPERPAY_ENTITY_ID_B2B'),
 
+    /*
+    | INTERNAL keeps card auth inside HyperPay's simulator (recommended for sandbox).
+    | EXTERNAL routes to the connector/bank network and can fail if that platform is retired.
+    */
+    'test_mode' => env('HYPERPAY_TEST_MODE', 'INTERNAL'),
+
     'test' => [
         'api_base_url' => 'https://eu-test.oppwa.com/',
         'checkout_url' => 'https://eu-test.oppwa.com/v1/checkouts',
