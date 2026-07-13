@@ -173,14 +173,13 @@ new #[Layout('layouts::doctor')] #[Title('Working hours')] class extends Compone
     }
 }; ?>
 
-<div class="mx-auto max-w-xl space-y-8">
-    <div class="space-y-2">
-        <flux:text class="text-sm font-medium text-zinc-500">
-            {{ __('doctor.auth.onboarding_progress', ['current' => 6, 'total' => 6]) }}
-        </flux:text>
-        <flux:heading size="xl" class="font-semibold text-zinc-900">{{ __('doctor.auth.working_hours_title') }}</flux:heading>
-        <flux:text class="text-zinc-600">{{ __('doctor.auth.working_hours_subtitle') }}</flux:text>
-    </div>
+<div class="doctor-onboarding-basic mx-auto max-w-lg space-y-5 pb-10 sm:max-w-xl sm:space-y-8 sm:pb-8">
+    @include('partials.doctor-onboarding-header', [
+        'current' => 6,
+        'total' => 6,
+        'title' => __('doctor.auth.working_hours_title'),
+        'subtitle' => __('doctor.auth.working_hours_subtitle'),
+    ])
 
     <form wire:submit="finish" class="doctor-emerald-accent space-y-4">
         <flux:checkbox.group wire:model.live="availabilities" class="space-y-4">
