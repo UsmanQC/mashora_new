@@ -1,5 +1,6 @@
 <?php
 
+use App\Livewire\Concerns\RedirectsAuthenticatedDoctorsFromGuestPages;
 use App\Models\VerifyPhoneNumber;
 use App\Services\SmsService;
 use Illuminate\Support\Facades\URL;
@@ -10,6 +11,8 @@ use Symfony\Component\HttpKernel\Exception\HttpException;
 
 new #[Layout('layouts::doctor-guest')] #[Title('Verify mobile number')] class extends Component
 {
+    use RedirectsAuthenticatedDoctorsFromGuestPages;
+
     public string $phone = '';
 
     public string $code = '';
@@ -18,6 +21,10 @@ new #[Layout('layouts::doctor-guest')] #[Title('Verify mobile number')] class ex
 
     public function mount(): void
     {
+        if ($this->redirectAuthenticatedDoctorAwayFromGuestPages()) {
+            return;
+        }
+
         $digits = preg_replace('/\D/', '', (string) request()->query('phone', '')) ?? '';
 
         if ($digits === '') {

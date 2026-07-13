@@ -7,6 +7,8 @@
     <head>
         <meta name="application-name" content="{{ config('app.name') }} — {{ __('doctor.portal_name') }}" />
         <meta name="color-scheme" content="light" />
+        <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate" />
+        <meta http-equiv="Pragma" content="no-cache" />
         @include('partials.pwa', ['themeColor' => '#F6FFFC', 'pwaApp' => 'doctor'])
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         @include('partials.head')
@@ -80,6 +82,13 @@
         @endpersist
         @stack('scripts')
         @include('partials.pwa-install-prompt', ['pwaApp' => 'doctor'])
+        <script>
+            window.addEventListener('pageshow', (event) => {
+                if (event.persisted) {
+                    window.location.reload();
+                }
+            });
+        </script>
         @fluxScripts
     </body>
 </html>

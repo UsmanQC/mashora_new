@@ -1,5 +1,6 @@
 <?php
 
+use App\Livewire\Concerns\RedirectsAuthenticatedDoctorsFromGuestPages;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\RateLimiter;
@@ -11,6 +12,8 @@ use Livewire\Component;
 
 new #[Layout('layouts::doctor-guest')] #[Title('Doctor sign in')] class extends Component
 {
+    use RedirectsAuthenticatedDoctorsFromGuestPages;
+
     public string $phone = '';
 
     public string $password = '';
@@ -19,6 +22,10 @@ new #[Layout('layouts::doctor-guest')] #[Title('Doctor sign in')] class extends 
 
     public function mount(): void
     {
+        if ($this->redirectAuthenticatedDoctorAwayFromGuestPages()) {
+            return;
+        }
+
         $this->phone = (string) request()->string('phone');
 
         if ($this->phone === '') {
@@ -28,6 +35,10 @@ new #[Layout('layouts::doctor-guest')] #[Title('Doctor sign in')] class extends 
 
     public function login(): void
     {
+        if ($this->redirectAuthenticatedDoctorAwayFromGuestPages()) {
+            return;
+        }
+
         $this->phone = (string) (preg_replace('/\D/', '', $this->phone) ?? '');
 
         $this->validate([

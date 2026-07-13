@@ -785,6 +785,22 @@ test('doctor welcome phone step routes new numbers to register', function () {
         ->assertRedirect(route('doctor.verify-phone', ['phone' => '966511777222']));
 });
 
+test('authenticated doctor cannot use welcome login with another phone number', function () {
+    $doctor = Doctor::factory()->create([
+        'profile_completed' => true,
+        'status' => 'approved',
+        'phone' => '966511000111',
+    ]);
+
+    $this->actingAs($doctor, 'doctor')
+        ->get(route('doctor.welcome'))
+        ->assertRedirect(route('doctor.dashboard'));
+
+    $this->actingAs($doctor, 'doctor')
+        ->get(route('doctor.login', ['phone' => '966599988877']))
+        ->assertRedirect(route('doctor.dashboard'));
+});
+
 test('doctor can logout', function () {
     $doctor = Doctor::factory()->create(['profile_completed' => true]);
 
