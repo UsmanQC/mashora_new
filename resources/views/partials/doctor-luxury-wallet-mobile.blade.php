@@ -1,7 +1,10 @@
 @php
-    $currency = config('currency.sa_riyal_symbol');
+    $currency = config('currency.sa_riyal_symbol') ?: 'SAR';
     $monthIncome = $this->monthlySummary['income'];
     $trend = $this->incomeTrendPercent;
+    $totalBalance = $this->totalBalance;
+    $availableBalance = $this->balance;
+    $pendingBalance = $this->pendingBalance;
 @endphp
 
 <div
@@ -31,14 +34,18 @@
 
     <main class="doctor-luxury-scroll mx-auto flex min-h-0 w-full max-w-md flex-1 flex-col gap-5 overflow-y-auto overscroll-y-auto px-5 pb-[calc(7rem+env(safe-area-inset-bottom))] pt-1">
         <section
-            class="overflow-hidden rounded-3xl bg-gradient-to-br from-[#047857] via-[#059669] to-[#10B981] p-5 text-white shadow-[0_8px_30px_-4px_rgba(4,120,87,0.35)]"
+            class="doctor-wallet-balance-card overflow-hidden rounded-3xl bg-gradient-to-br from-[#047857] via-[#059669] to-[#10B981] p-5 shadow-[0_8px_30px_-4px_rgba(4,120,87,0.35)]"
             data-test="doctor-wallet-balance-card"
         >
-            <p class="text-[0.6875rem] font-semibold uppercase tracking-wider text-white/75">
+            <p class="text-[0.6875rem] font-semibold uppercase tracking-wider text-white/80">
                 {{ __('doctor.wallet.mobile_total_balance') }}
             </p>
-            <p class="mt-2 text-4xl font-bold tabular-nums tracking-tight">
-                {{ number_format($this->totalBalance, 0, '.', ',') }}
+            <p
+                class="doctor-wallet-balance-card__amount mt-2 text-4xl font-bold tabular-nums tracking-tight text-white"
+                data-test="doctor-wallet-total-balance"
+                dir="ltr"
+            >
+                <span>{{ number_format($totalBalance, 2, '.', ',') }}</span>
                 <span class="text-2xl font-semibold">{{ $currency }}</span>
             </p>
 
@@ -47,8 +54,12 @@
                     <dt class="text-[0.625rem] font-medium uppercase tracking-wide text-white/70">
                         {{ __('doctor.wallet.mobile_available') }}
                     </dt>
-                    <dd class="mt-1 text-lg font-bold tabular-nums">
-                        {{ number_format($this->balance, 0, '.', ',') }}
+                    <dd
+                        class="doctor-wallet-balance-card__amount mt-1 text-lg font-bold tabular-nums text-white"
+                        data-test="doctor-wallet-available-balance"
+                        dir="ltr"
+                    >
+                        <span>{{ number_format($availableBalance, 2, '.', ',') }}</span>
                         <span class="text-sm font-semibold">{{ $currency }}</span>
                     </dd>
                 </div>
@@ -56,8 +67,12 @@
                     <dt class="text-[0.625rem] font-medium uppercase tracking-wide text-white/70">
                         {{ __('doctor.wallet.mobile_pending') }}
                     </dt>
-                    <dd class="mt-1 text-lg font-bold tabular-nums">
-                        {{ number_format($this->pendingBalance, 0, '.', ',') }}
+                    <dd
+                        class="doctor-wallet-balance-card__amount mt-1 text-lg font-bold tabular-nums text-white"
+                        data-test="doctor-wallet-pending-balance"
+                        dir="ltr"
+                    >
+                        <span>{{ number_format($pendingBalance, 2, '.', ',') }}</span>
                         <span class="text-sm font-semibold">{{ $currency }}</span>
                     </dd>
                 </div>
@@ -81,8 +96,8 @@
             <div class="rounded-3xl border border-slate-100 bg-white p-4 shadow-[0_4px_20px_-2px_rgba(0,0,0,0.03)]">
                 <div class="mb-5 flex items-start justify-between gap-3">
                     <div class="min-w-0">
-                        <p class="text-2xl font-bold tabular-nums text-slate-900">
-                            {{ number_format($monthIncome, 0, '.', ',') }}
+                        <p class="text-2xl font-bold tabular-nums text-slate-900" dir="ltr">
+                            {{ number_format($monthIncome, 2, '.', ',') }}
                             <span class="text-base font-semibold text-slate-500">{{ $currency }}</span>
                         </p>
                         <p class="mt-0.5 text-[0.6875rem] text-slate-500">
@@ -111,16 +126,19 @@
                     aria-label="{{ __('doctor.wallet.mobile_chart_aria') }}"
                 >
                     @foreach ($this->monthlyIncomeChart as $point)
+                        @php
+                            $barHeightPx = max(8, (int) round(($point['height_percent'] / 100) * 112));
+                        @endphp
                         <div class="flex min-w-0 flex-1 flex-col items-center gap-2">
-                            <div class="relative flex h-28 w-full items-end justify-center">
+                            <div class="relative h-28 w-full max-w-[2.25rem]">
                                 <div
-                                    class="doctor-wallet-income-chart__bar w-full max-w-[2.25rem] rounded-full transition-all"
-                                    style="height: {{ $point['height_percent'] }}%"
+                                    class="doctor-wallet-income-chart__bar absolute inset-x-0 bottom-0 mx-auto w-full rounded-full transition-all"
+                                    style="height: {{ $barHeightPx }}px"
                                     @class([
                                         'bg-[#047857]' => $point['is_current'],
-                                        'bg-[#10B981]/20' => ! $point['is_current'],
+                                        'bg-[#10B981]/35' => ! $point['is_current'],
                                     ])
-                                    title="{{ $point['label'] }}: {{ number_format($point['income'], 0, '.', ',') }} {{ $currency }}"
+                                    title="{{ $point['label'] }}: {{ number_format($point['income'], 2, '.', ',') }} {{ $currency }}"
                                 ></div>
                             </div>
                             <span @class([
@@ -146,8 +164,8 @@
                     <p class="mt-0.5 text-[0.6875rem] text-slate-500">{{ __('doctor.wallet.month_sessions') }}</p>
                 </div>
                 <div class="rounded-3xl border border-slate-100 bg-white p-4 shadow-[0_4px_20px_-2px_rgba(0,0,0,0.03)]">
-                    <p class="text-xl font-bold tabular-nums text-slate-900">
-                        {{ number_format($this->monthlySummary['paid_out'], 0, '.', ',') }}
+                    <p class="text-xl font-bold tabular-nums text-slate-900" dir="ltr">
+                        {{ number_format($this->monthlySummary['paid_out'], 2, '.', ',') }}
                         <span class="text-sm font-semibold text-slate-500">{{ $currency }}</span>
                     </p>
                     <p class="mt-0.5 text-[0.6875rem] text-slate-500">{{ __('doctor.wallet.month_paid_out') }}</p>

@@ -1175,7 +1175,18 @@ select:focus[data-flux-control] {
 }
 
 .doctor-wallet-income-chart__bar {
-    min-height: 0.625rem;
+    min-height: 0.5rem;
+}
+
+.doctor-wallet-balance-card,
+.doctor-wallet-balance-card__amount {
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+}
+
+.doctor-wallet-balance-card dt {
+    color: rgb(255 255 255 / 0.7) !important;
+    -webkit-text-fill-color: rgb(255 255 255 / 0.7) !important;
 }
 
 .doctor-luxury-scroll {
