@@ -1171,11 +1171,17 @@ select:focus[data-flux-control] {
 }
 
 .doctor-wallet-income-chart {
-    min-height: 7rem;
+    min-height: 8rem;
 }
 
 .doctor-wallet-income-chart__bar {
-    min-height: 0.5rem;
+    display: block;
+    flex-shrink: 0;
+    width: 16px;
+    min-width: 16px;
+    min-height: 10px;
+    border-radius: 9999px;
+    background-color: #10b981;
 }
 
 .doctor-wallet-balance-card,

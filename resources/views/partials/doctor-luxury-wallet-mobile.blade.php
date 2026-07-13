@@ -121,23 +121,29 @@
                 </div>
 
                 <div
-                    class="doctor-wallet-income-chart flex items-end justify-between gap-2"
+                    class="doctor-wallet-income-chart flex h-32 items-end justify-between gap-2"
                     role="img"
                     aria-label="{{ __('doctor.wallet.mobile_chart_aria') }}"
+                    data-test="doctor-wallet-income-chart-bars"
                 >
                     @foreach ($this->monthlyIncomeChart as $point)
                         @php
-                            $barHeightPx = max(8, (int) round(($point['height_percent'] / 100) * 112));
+                            $hasIncome = $point['income'] > 0;
+                            $barHeightPx = $hasIncome
+                                ? max(24, (int) round(($point['height_percent'] / 100) * 112))
+                                : 10;
+                            $barColor = $point['is_current']
+                                ? '#047857'
+                                : ($hasIncome ? '#10B981' : '#A7F3D0');
                         @endphp
-                        <div class="flex min-w-0 flex-1 flex-col items-center gap-2">
-                            <div class="relative h-28 w-full max-w-[2.25rem]">
+                        <div
+                            class="flex min-w-0 flex-1 flex-col items-center gap-2"
+                            wire:key="doctor-wallet-bar-{{ $point['key'] }}"
+                        >
+                            <div class="flex h-28 w-full items-end justify-center">
                                 <div
-                                    class="doctor-wallet-income-chart__bar absolute inset-x-0 bottom-0 mx-auto w-full rounded-full transition-all"
-                                    style="height: {{ $barHeightPx }}px"
-                                    @class([
-                                        'bg-[#047857]' => $point['is_current'],
-                                        'bg-[#10B981]/35' => ! $point['is_current'],
-                                    ])
+                                    class="doctor-wallet-income-chart__bar w-4 rounded-full"
+                                    style="height: {{ $barHeightPx }}px; width: 16px; background-color: {{ $barColor }};"
                                     title="{{ $point['label'] }}: {{ number_format($point['income'], 2, '.', ',') }} {{ $currency }}"
                                 ></div>
                             </div>
