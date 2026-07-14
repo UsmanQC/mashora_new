@@ -29,6 +29,8 @@
             'measurementId' => $web['measurement_id'] ?? null,
         ],
     ];
+
+    $isAr = app()->getLocale() === 'ar';
 @endphp
 
 @if ($enabled)
@@ -37,4 +39,19 @@
     </script>
 
     @include('partials.pwa-notification-prompt')
+@else
+    <div
+        id="awaan-push-misconfigured"
+        class="fixed inset-x-3 top-[max(0.75rem,env(safe-area-inset-top))] z-[100] mx-auto max-w-md rounded-2xl border border-amber-300 bg-amber-50 p-4 shadow-2xl"
+        dir="{{ $isAr ? 'rtl' : 'ltr' }}"
+    >
+        <p class="text-sm font-bold text-amber-950">
+            {{ $isAr ? 'إعداد الإشعارات ناقص على السيرفر' : 'Push is not configured on the server' }}
+        </p>
+        <p class="mt-1 text-xs leading-relaxed text-amber-900">
+            {{ $isAr
+                ? 'أضف FIREBASE_WEB_* و FIREBASE_VAPID_KEY في ملف .env ثم نفّذ php artisan config:clear'
+                : 'Add FIREBASE_WEB_* and FIREBASE_VAPID_KEY to .env, then run php artisan config:clear' }}
+        </p>
+    </div>
 @endif

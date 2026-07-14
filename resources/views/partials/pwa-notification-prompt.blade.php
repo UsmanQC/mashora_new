@@ -1,11 +1,11 @@
-{{-- Shown when push is configured but the user has not enabled notifications yet. --}}
+{{-- Visible by default so mobile users always see it; JS only hides when push is already active. --}}
 @php
     $isAr = app()->getLocale() === 'ar';
 @endphp
 
 <div
     id="awaan-push-enable"
-    class="fixed inset-x-4 bottom-20 z-[75] hidden max-w-md rounded-2xl border border-emerald-200 bg-white p-4 shadow-xl sm:inset-x-auto sm:start-4 sm:bottom-6"
+    class="fixed inset-x-3 top-[max(0.75rem,env(safe-area-inset-top))] z-[100] mx-auto max-w-md rounded-2xl border border-emerald-200 bg-white p-4 shadow-2xl"
     dir="{{ $isAr ? 'rtl' : 'ltr' }}"
     role="dialog"
     aria-live="polite"
@@ -20,7 +20,7 @@
             <p class="text-sm font-bold text-zinc-900">
                 {{ $isAr ? 'تفعيل الإشعارات' : 'Enable notifications' }}
             </p>
-            <p class="mt-1 text-xs leading-relaxed text-zinc-600">
+            <p id="awaan-push-enable-body" class="mt-1 text-xs leading-relaxed text-zinc-600">
                 {{ $isAr
                     ? 'اضغط للسماح بالإشعارات حتى يصلك تنبيه بالمواعيد والرسائل.'
                     : 'Tap to allow notifications for appointments and messages.' }}
@@ -29,19 +29,19 @@
                 <button
                     type="button"
                     id="awaan-push-enable-btn"
-                    class="rounded-xl bg-[#10B981] px-4 py-2 text-xs font-bold text-white transition hover:bg-emerald-600"
+                    class="rounded-xl bg-[#10B981] px-4 py-2.5 text-xs font-bold text-white transition hover:bg-emerald-600"
                 >
                     {{ $isAr ? 'السماح بالإشعارات' : 'Allow notifications' }}
                 </button>
                 <button
                     type="button"
                     id="awaan-push-enable-dismiss"
-                    class="rounded-xl border border-zinc-200 px-4 py-2 text-xs font-semibold text-zinc-700 transition hover:bg-zinc-50"
+                    class="rounded-xl border border-zinc-200 px-4 py-2.5 text-xs font-semibold text-zinc-700 transition hover:bg-zinc-50"
                 >
                     {{ $isAr ? 'لاحقاً' : 'Later' }}
                 </button>
             </div>
-            <p id="awaan-push-enable-hint" class="mt-2 hidden text-[11px] text-amber-700"></p>
+            <p id="awaan-push-enable-hint" class="mt-2 hidden text-[11px] leading-relaxed text-amber-700"></p>
         </div>
     </div>
 </div>
@@ -52,30 +52,92 @@
         const enableBtn = document.getElementById('awaan-push-enable-btn');
         const dismissBtn = document.getElementById('awaan-push-enable-dismiss');
         const hint = document.getElementById('awaan-push-enable-hint');
-        const isAr = document.documentElement.lang?.startsWith('ar');
+        const body = document.getElementById('awaan-push-enable-body');
+        const isAr = @json($isAr);
+
+        const setHint = (message) => {
+            if (!hint) {
+                return;
+            }
+
+            hint.textContent = message;
+            hint.classList.toggle('hidden', !message);
+        };
+
+        const hide = () => root?.classList.add('hidden');
+
+        // Hide only when already granted (token sync happens in app.js).
+        if (window.isSecureContext && 'Notification' in window && Notification.permission === 'granted') {
+            hide();
+        }
+
+        if (!window.isSecureContext) {
+            if (body) {
+                body.textContent = isAr
+                    ? 'الإشعارات تحتاج فتح الموقع عبر HTTPS وليس http.'
+                    : 'Notifications require opening the site over HTTPS, not http.';
+            }
+            if (enableBtn) {
+                enableBtn.disabled = true;
+                enableBtn.classList.add('opacity-50');
+            }
+            setHint(isAr
+                ? 'افتح رابط https:// الخاص بالموقع من الجوال.'
+                : 'Open the site with its https:// URL on your phone.');
+        }
 
         dismissBtn?.addEventListener('click', () => {
-            root?.classList.add('hidden');
+            hide();
+            try {
+                sessionStorage.setItem('awaan-push-dismissed', '1');
+            } catch (e) {}
         });
 
+        if (sessionStorage.getItem('awaan-push-dismissed') === '1'
+            && window.isSecureContext
+            && 'Notification' in window
+            && Notification.permission === 'default') {
+            hide();
+        }
+
         enableBtn?.addEventListener('click', async () => {
+            if (!window.isSecureContext) {
+                setHint(isAr
+                    ? 'استخدم رابط HTTPS أولاً.'
+                    : 'Use the HTTPS link first.');
+                return;
+            }
+
             enableBtn.disabled = true;
+            setHint('');
 
             try {
                 if (typeof window.enableAwaanPushNotifications !== 'function') {
-                    throw new Error('Push script not loaded yet. Refresh and try again.');
+                    setHint(isAr
+                        ? 'سكربت الإشعارات لم يحمّل بعد. حدّث الصفحة وحاول مرة أخرى.'
+                        : 'Push script not loaded yet. Refresh and try again.');
+                    return;
                 }
 
                 const ok = await window.enableAwaanPushNotifications();
 
-                if (!ok && Notification.permission === 'denied' && hint) {
-                    hint.textContent = isAr
-                        ? 'تم حظر الإشعارات. افتح إعدادات الموقع في المتصفح وفعّل الإشعارات.'
-                        : 'Notifications are blocked. Open site settings in the browser and allow notifications.';
-                    hint.classList.remove('hidden');
+                if (ok) {
+                    hide();
+                    return;
+                }
+
+                if (Notification.permission === 'denied') {
+                    setHint(isAr
+                        ? 'تم حظر الإشعارات. من إعدادات الموقع في المتصفح فعّل الإشعارات ثم أعد المحاولة.'
+                        : 'Notifications are blocked. In site settings, allow notifications, then try again.');
+                } else {
+                    setHint(isAr
+                        ? 'لم يتم تفعيل الإشعارات. حاول مرة أخرى.'
+                        : 'Notifications were not enabled. Please try again.');
                 }
             } catch (error) {
                 console.warn(error);
+                setHint(isAr ? 'حدث خطأ. حاول مرة أخرى.' : 'Something went wrong. Please try again.');
             } finally {
                 enableBtn.disabled = false;
             }

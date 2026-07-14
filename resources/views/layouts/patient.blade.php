@@ -178,6 +178,7 @@
 
         @include('partials.pwa-install-prompt', ['pwaApp' => 'patient'])
 
+        {{-- FCM config must load before deferred JS finish / user interaction --}}
         @auth
             @include('partials.fcm-web', ['portal' => 'patient'])
         @endauth
