@@ -45,6 +45,11 @@ final class FcmPushService
             ->values();
 
         if ($deviceTokens->isEmpty()) {
+            Log::info('FCM skipped: no device tokens for recipient', [
+                'notifiable_type' => $notifiable::class,
+                'notifiable_id' => $notifiable->getKey(),
+            ]);
+
             return;
         }
 
@@ -88,12 +93,25 @@ final class FcmPushService
                         : ['sound' => 'default'],
                 ],
             ],
+            'webpush' => [
+                'headers' => [
+                    'Urgency' => 'high',
+                    'TTL' => '86400',
+                ],
+            ],
         ];
 
         if (! $silent) {
             $message['notification'] = [
                 'title' => $title,
                 'body' => $body,
+            ];
+
+            $message['webpush']['notification'] = [
+                'title' => $title,
+                'body' => $body,
+                'icon' => asset('images/pwa/icon-192-v3.png'),
+                'badge' => asset('images/pwa/icon-192-v3.png'),
             ];
         }
 

@@ -43,7 +43,10 @@ function hidePushEnableBanner() {
 }
 
 async function loadFirebaseMessaging(firebaseConfig) {
-    const [{ initializeApp }, { getMessaging, getToken, isSupported }] = await Promise.all([
+    const [
+        { initializeApp },
+        { getMessaging, getToken, onMessage, isSupported },
+    ] = await Promise.all([
         import(`https://www.gstatic.com/firebasejs/${FCM_SDK_VERSION}/firebase-app.js`),
         import(`https://www.gstatic.com/firebasejs/${FCM_SDK_VERSION}/firebase-messaging.js`),
     ]);
@@ -55,9 +58,23 @@ async function loadFirebaseMessaging(firebaseConfig) {
     }
 
     const app = initializeApp(firebaseConfig);
+    const messaging = getMessaging(app);
+
+    onMessage(messaging, (payload) => {
+        const title = payload.notification?.title || payload.data?.title || 'Awaan';
+        const body = payload.notification?.body || payload.data?.body || '';
+
+        if (Notification.permission === 'granted') {
+            new Notification(title, {
+                body,
+                icon: '/images/pwa/icon-192-v3.png',
+                data: payload.data || {},
+            });
+        }
+    });
 
     return {
-        messaging: getMessaging(app),
+        messaging,
         getToken,
     };
 }
