@@ -5,13 +5,16 @@ namespace App\Services;
 use App\Models\DeviceToken;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
 final class FcmPushService
 {
+    public function __construct(
+        private readonly FirebaseAccessTokenResolver $tokens,
+    ) {}
+
     /**
      * @param  array<string, string>  $data
      */
@@ -25,13 +28,14 @@ final class FcmPushService
      */
     public function sendToNotifiable(Model $notifiable, string $title, string $body, array $data = [], bool $silent = false): void
     {
-        $serverKey = (string) config('push.firebase_server_key');
+        $accessToken = $this->tokens->accessToken();
+        $projectId = $this->tokens->projectId();
 
-        if ($serverKey === '') {
+        if ($accessToken === null || $projectId === null || $projectId === '') {
             return;
         }
 
-        $tokens = DeviceToken::query()
+        $deviceTokens = DeviceToken::query()
             ->where('userable_type', $notifiable::class)
             ->where('userable_id', $notifiable->getKey())
             ->whereNotNull('device_token')
@@ -40,42 +44,65 @@ final class FcmPushService
             ->unique()
             ->values();
 
-        if ($tokens->isEmpty()) {
+        if ($deviceTokens->isEmpty()) {
             return;
         }
 
-        foreach ($tokens->chunk(500) as $chunk) {
-            $this->sendChunk($chunk, $title, $body, $data, $serverKey, $silent);
+        $endpoint = "https://fcm.googleapis.com/v1/projects/{$projectId}/messages:send";
+
+        foreach ($deviceTokens as $deviceToken) {
+            $this->sendToToken($endpoint, $accessToken, $deviceToken, $title, $body, $data, $silent);
         }
     }
 
     /**
-     * @param  Collection<int, string>  $tokens
      * @param  array<string, string>  $data
      */
-    private function sendChunk(Collection $tokens, string $title, string $body, array $data, string $serverKey, bool $silent = false): void
-    {
-        $notification = [
-            'title' => $title,
-            'body' => $body,
+    private function sendToToken(
+        string $endpoint,
+        string $accessToken,
+        string $deviceToken,
+        string $title,
+        string $body,
+        array $data,
+        bool $silent,
+    ): void {
+        $stringData = [];
+        foreach (array_merge(['click_action' => 'FLUTTER_NOTIFICATION_CLICK'], $data) as $key => $value) {
+            $stringData[(string) $key] = is_scalar($value) ? (string) $value : json_encode($value);
+        }
+
+        $message = [
+            'token' => $deviceToken,
+            'data' => $stringData,
+            'android' => [
+                'priority' => 'high',
+            ],
+            'apns' => [
+                'headers' => [
+                    'apns-priority' => '10',
+                ],
+                'payload' => [
+                    'aps' => $silent
+                        ? ['content-available' => 1]
+                        : ['sound' => 'default'],
+                ],
+            ],
         ];
 
         if (! $silent) {
-            $notification['sound'] = 'default';
+            $message['notification'] = [
+                'title' => $title,
+                'body' => $body,
+            ];
         }
 
-        $payload = [
-            'registration_ids' => $tokens->all(),
-            'notification' => $notification,
-            'data' => array_merge(['click_action' => 'FLUTTER_NOTIFICATION_CLICK'], $data),
-            'priority' => 'high',
-        ];
-
         try {
-            $response = Http::withHeaders([
-                'Authorization' => 'key='.$serverKey,
-                'Content-Type' => 'application/json',
-            ])->timeout(15)->post('https://fcm.googleapis.com/fcm/send', $payload);
+            $response = Http::withToken($accessToken)
+                ->timeout(15)
+                ->post($endpoint, [
+                    'message' => $message,
+                ]);
 
             if (! $response->successful()) {
                 Log::warning('FCM push failed', [
