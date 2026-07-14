@@ -68,7 +68,16 @@
 
         if (window.isSecureContext && 'Notification' in window && Notification.permission === 'granted') {
             hide();
+            try {
+                localStorage.setItem('awaan-push-enabled', '1');
+            } catch (e) {}
         }
+
+        try {
+            if (localStorage.getItem('awaan-push-enabled') === '1') {
+                hide();
+            }
+        } catch (e) {}
 
         if (!window.isSecureContext) {
             if (body) {

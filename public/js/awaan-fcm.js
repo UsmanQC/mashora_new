@@ -34,21 +34,57 @@ function pushEnableBanner() {
     return document.getElementById('awaan-push-enable');
 }
 
-function showPushEnableBanner() {
-    const el = pushEnableBanner();
-    if (!el) {
-        return;
-    }
-    el.style.display = '';
-    el.classList?.remove?.('hidden');
+function markPushUiDismissed() {
+    try {
+        localStorage.setItem('awaan-push-enabled', '1');
+        sessionStorage.setItem('awaan-push-dismissed', '1');
+    } catch (e) {}
 }
 
 function hidePushEnableBanner() {
     const el = pushEnableBanner();
+    if (el) {
+        el.style.display = 'none';
+        el.setAttribute('hidden', 'hidden');
+    }
+
+    const installPushBtn = document.getElementById('awaan-pwa-enable-push');
+    if (installPushBtn) {
+        installPushBtn.style.display = 'none';
+        installPushBtn.setAttribute('hidden', 'hidden');
+    }
+
+    const installHint = document.getElementById('awaan-pwa-enable-push-hint');
+    if (installHint) {
+        installHint.style.display = 'none';
+        installHint.classList?.add?.('hidden');
+    }
+}
+
+function showPushEnableBanner() {
+    // Never re-open the prompt once the browser already granted permission.
+    if ('Notification' in window && Notification.permission === 'granted') {
+        hidePushEnableBanner();
+        markPushUiDismissed();
+
+        return;
+    }
+
+    try {
+        if (localStorage.getItem('awaan-push-enabled') === '1') {
+            hidePushEnableBanner();
+
+            return;
+        }
+    } catch (e) {}
+
+    const el = pushEnableBanner();
     if (!el) {
         return;
     }
-    el.style.display = 'none';
+    el.removeAttribute('hidden');
+    el.style.display = '';
+    el.classList?.remove?.('hidden');
 }
 
 async function loadFirebaseMessaging(firebaseConfig) {
@@ -69,7 +105,6 @@ async function loadFirebaseMessaging(firebaseConfig) {
     const app = initializeApp(firebaseConfig);
     const messaging = getMessaging(app);
 
-    // Foreground: browser will not auto-show system notifications without this.
     onMessage(messaging, (payload) => {
         const title = payload.notification?.title || payload.data?.title || 'Awaan';
         const body = payload.notification?.body || payload.data?.body || '';
@@ -159,7 +194,6 @@ async function obtainAndRegisterToken() {
     await registerDeviceToken(config.registerUrl, token);
     window.localStorage.setItem(`awaan_fcm_token_${config.portal}`, token);
     console.info('FCM device token registered.');
-    hidePushEnableBanner();
 
     return token;
 }
@@ -172,17 +206,24 @@ async function enableAwaanPushNotifications() {
 
         if (permission !== 'granted') {
             console.warn('Notification permission not granted:', permission);
-            showPushEnableBanner();
 
             return false;
         }
 
-        await obtainAndRegisterToken();
+        // Close the prompt as soon as the OS permission is granted.
+        hidePushEnableBanner();
+        markPushUiDismissed();
+
+        try {
+            await obtainAndRegisterToken();
+        } catch (error) {
+            // Permission is already granted — keep UI closed; log sync issues only.
+            console.warn('FCM token sync failed after permission grant:', error);
+        }
 
         return true;
     } catch (error) {
         console.warn('FCM web push registration failed:', error);
-        showPushEnableBanner();
 
         return false;
     }
@@ -194,12 +235,28 @@ async function initFcmWebPush() {
     }
 
     if (Notification.permission === 'granted') {
+        hidePushEnableBanner();
+        markPushUiDismissed();
+
         try {
             await obtainAndRegisterToken();
         } catch (error) {
             console.warn('FCM token sync failed:', error);
-            showPushEnableBanner();
         }
+
+        return;
+    }
+
+    try {
+        if (localStorage.getItem('awaan-push-enabled') === '1') {
+            hidePushEnableBanner();
+
+            return;
+        }
+    } catch (e) {}
+
+    if (Notification.permission === 'denied') {
+        hidePushEnableBanner();
 
         return;
     }

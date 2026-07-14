@@ -34,12 +34,56 @@ function pushEnableBanner() {
     return document.getElementById('awaan-push-enable');
 }
 
-function showPushEnableBanner() {
-    pushEnableBanner()?.classList.remove('hidden');
+function markPushUiDismissed() {
+    try {
+        localStorage.setItem('awaan-push-enabled', '1');
+        sessionStorage.setItem('awaan-push-dismissed', '1');
+    } catch (e) {}
 }
 
 function hidePushEnableBanner() {
-    pushEnableBanner()?.classList.add('hidden');
+    const el = pushEnableBanner();
+    if (el) {
+        el.style.display = 'none';
+        el.setAttribute('hidden', 'hidden');
+    }
+
+    const installPushBtn = document.getElementById('awaan-pwa-enable-push');
+    if (installPushBtn) {
+        installPushBtn.style.display = 'none';
+        installPushBtn.setAttribute('hidden', 'hidden');
+    }
+
+    const installHint = document.getElementById('awaan-pwa-enable-push-hint');
+    if (installHint) {
+        installHint.style.display = 'none';
+        installHint.classList?.add?.('hidden');
+    }
+}
+
+function showPushEnableBanner() {
+    if ('Notification' in window && Notification.permission === 'granted') {
+        hidePushEnableBanner();
+        markPushUiDismissed();
+
+        return;
+    }
+
+    try {
+        if (localStorage.getItem('awaan-push-enabled') === '1') {
+            hidePushEnableBanner();
+
+            return;
+        }
+    } catch (e) {}
+
+    const el = pushEnableBanner();
+    if (!el) {
+        return;
+    }
+    el.removeAttribute('hidden');
+    el.style.display = '';
+    el.classList?.remove?.('hidden');
 }
 
 async function loadFirebaseMessaging(firebaseConfig) {
@@ -149,14 +193,10 @@ async function obtainAndRegisterToken() {
     await registerDeviceToken(config.registerUrl, token);
     window.localStorage.setItem(`awaan_fcm_token_${config.portal}`, token);
     console.info('FCM device token registered.');
-    hidePushEnableBanner();
 
     return token;
 }
 
-/**
- * Call from a button click so the browser is allowed to show the permission dialog.
- */
 export async function enableAwaanPushNotifications() {
     try {
         const permission = Notification.permission === 'granted'
@@ -165,62 +205,61 @@ export async function enableAwaanPushNotifications() {
 
         if (permission !== 'granted') {
             console.warn('Notification permission not granted:', permission);
-            showPushEnableBanner();
 
             return false;
         }
 
-        await obtainAndRegisterToken();
+        hidePushEnableBanner();
+        markPushUiDismissed();
+
+        try {
+            await obtainAndRegisterToken();
+        } catch (error) {
+            console.warn('FCM token sync failed after permission grant:', error);
+        }
 
         return true;
     } catch (error) {
         console.warn('FCM web push registration failed:', error);
-        showPushEnableBanner();
 
         return false;
     }
 }
 
-/**
- * On page load: sync token if already allowed; otherwise show Enable button (no auto-prompt).
- */
 export async function initFcmWebPush() {
-    if (!window.isSecureContext) {
-        console.warn('FCM web push requires HTTPS (or localhost).');
-
-        return;
-    }
-
-    if (!fcmConfig()) {
-        console.warn('FCM web push config missing (window.__AWAAN_FCM__). Check FIREBASE_WEB_* env.');
-
-        return;
-    }
-
-    if (!('Notification' in window)) {
+    if (!window.isSecureContext || !fcmConfig() || !('Notification' in window)) {
         return;
     }
 
     if (Notification.permission === 'granted') {
+        hidePushEnableBanner();
+        markPushUiDismissed();
+
         try {
             await obtainAndRegisterToken();
         } catch (error) {
             console.warn('FCM token sync failed:', error);
-            showPushEnableBanner();
         }
 
         return;
     }
 
+    try {
+        if (localStorage.getItem('awaan-push-enabled') === '1') {
+            hidePushEnableBanner();
+
+            return;
+        }
+    } catch (e) {}
+
     if (Notification.permission === 'denied') {
-        console.warn('Notifications are blocked for this site. Enable them in browser settings.');
-        showPushEnableBanner();
+        hidePushEnableBanner();
 
         return;
     }
 
-    // permission === 'default' — wait for user tap (browsers block silent prompts).
     showPushEnableBanner();
 }
 
 window.enableAwaanPushNotifications = enableAwaanPushNotifications;
+window.initFcmWebPush = initFcmWebPush;
