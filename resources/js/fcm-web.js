@@ -8,12 +8,15 @@ function readCookie(name) {
 
 function csrfHeaders() {
     const xsrf = readCookie('XSRF-TOKEN');
+    const meta = document.querySelector('meta[name="csrf-token"]');
+    const csrf = meta instanceof HTMLMetaElement ? meta.content : null;
 
     return {
         Accept: 'application/json',
         'Content-Type': 'application/json',
         'X-Requested-With': 'XMLHttpRequest',
         ...(xsrf ? { 'X-XSRF-TOKEN': xsrf } : {}),
+        ...(csrf ? { 'X-CSRF-TOKEN': csrf } : {}),
     };
 }
 
@@ -34,6 +37,8 @@ async function loadFirebaseMessaging(firebaseConfig) {
     ]);
 
     if (!(await isSupported())) {
+        console.warn('FCM web push is not supported in this browser.');
+
         return null;
     }
 
@@ -50,13 +55,15 @@ async function ensureServiceWorker() {
         return null;
     }
 
-    const existing = await navigator.serviceWorker.getRegistration('/');
+    let registration = await navigator.serviceWorker.getRegistration('/');
 
-    if (existing) {
-        return existing;
+    if (!registration) {
+        registration = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
     }
 
-    return navigator.serviceWorker.register('/sw.js', { scope: '/' });
+    await navigator.serviceWorker.ready;
+
+    return registration;
 }
 
 async function registerDeviceToken(registerUrl, token) {
@@ -68,7 +75,9 @@ async function registerDeviceToken(registerUrl, token) {
     });
 
     if (!response.ok) {
-        throw new Error(`Device token registration failed (${response.status})`);
+        const body = await response.text();
+
+        throw new Error(`Device token registration failed (${response.status}): ${body}`);
     }
 }
 
@@ -76,9 +85,23 @@ async function registerDeviceToken(registerUrl, token) {
  * Request notification permission, obtain an FCM web token, and save it on the server.
  */
 export async function initFcmWebPush() {
+    if (!window.isSecureContext) {
+        console.warn('FCM web push requires HTTPS (or localhost). Current page is not a secure context.');
+
+        return;
+    }
+
     const config = fcmConfig();
 
-    if (!config || !('Notification' in window)) {
+    if (!config) {
+        console.warn('FCM web push config missing (window.__AWAAN_FCM__). Check FIREBASE_WEB_* env and config cache.');
+
+        return;
+    }
+
+    if (!('Notification' in window)) {
+        console.warn('This browser has no Notification API.');
+
         return;
     }
 
@@ -88,6 +111,8 @@ export async function initFcmWebPush() {
             : await Notification.requestPermission();
 
         if (permission !== 'granted') {
+            console.warn('Notification permission not granted:', permission);
+
             return;
         }
 
@@ -100,6 +125,8 @@ export async function initFcmWebPush() {
         const registration = await ensureServiceWorker();
 
         if (!registration) {
+            console.warn('Service worker registration failed.');
+
             return;
         }
 
@@ -109,17 +136,15 @@ export async function initFcmWebPush() {
         });
 
         if (!token || token.length < 10) {
+            console.warn('FCM getToken returned an empty token.');
+
             return;
         }
 
-        const storageKey = `awaan_fcm_token_${config.portal}`;
-
-        if (window.localStorage.getItem(storageKey) === token) {
-            return;
-        }
-
+        // Always POST — localStorage can be stale vs DB (different server / cleared table).
         await registerDeviceToken(config.registerUrl, token);
-        window.localStorage.setItem(storageKey, token);
+        window.localStorage.setItem(`awaan_fcm_token_${config.portal}`, token);
+        console.info('FCM device token registered.');
     } catch (error) {
         console.warn('FCM web push registration skipped:', error);
     }
