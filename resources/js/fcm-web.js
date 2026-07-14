@@ -30,6 +30,18 @@ function fcmConfig() {
     return config;
 }
 
+function pushEnableBanner() {
+    return document.getElementById('awaan-push-enable');
+}
+
+function showPushEnableBanner() {
+    pushEnableBanner()?.classList.remove('hidden');
+}
+
+function hidePushEnableBanner() {
+    pushEnableBanner()?.classList.add('hidden');
+}
+
 async function loadFirebaseMessaging(firebaseConfig) {
     const [{ initializeApp }, { getMessaging, getToken, isSupported }] = await Promise.all([
         import(`https://www.gstatic.com/firebasejs/${FCM_SDK_VERSION}/firebase-app.js`),
@@ -81,30 +93,54 @@ async function registerDeviceToken(registerUrl, token) {
     }
 }
 
-/**
- * Request notification permission, obtain an FCM web token, and save it on the server.
- */
-export async function initFcmWebPush() {
+async function obtainAndRegisterToken() {
     if (!window.isSecureContext) {
-        console.warn('FCM web push requires HTTPS (or localhost). Current page is not a secure context.');
-
-        return;
+        throw new Error('Push requires HTTPS (or localhost).');
     }
 
     const config = fcmConfig();
 
     if (!config) {
-        console.warn('FCM web push config missing (window.__AWAAN_FCM__). Check FIREBASE_WEB_* env and config cache.');
-
-        return;
+        throw new Error('FCM web config missing (window.__AWAAN_FCM__).');
     }
 
     if (!('Notification' in window)) {
-        console.warn('This browser has no Notification API.');
-
-        return;
+        throw new Error('Notification API not available.');
     }
 
+    const firebaseMessaging = await loadFirebaseMessaging(config.firebase);
+
+    if (!firebaseMessaging) {
+        throw new Error('Firebase messaging is not supported here.');
+    }
+
+    const registration = await ensureServiceWorker();
+
+    if (!registration) {
+        throw new Error('Service worker registration failed.');
+    }
+
+    const token = await firebaseMessaging.getToken(firebaseMessaging.messaging, {
+        vapidKey: config.vapidKey,
+        serviceWorkerRegistration: registration,
+    });
+
+    if (!token || token.length < 10) {
+        throw new Error('FCM getToken returned an empty token.');
+    }
+
+    await registerDeviceToken(config.registerUrl, token);
+    window.localStorage.setItem(`awaan_fcm_token_${config.portal}`, token);
+    console.info('FCM device token registered.');
+    hidePushEnableBanner();
+
+    return token;
+}
+
+/**
+ * Call from a button click so the browser is allowed to show the permission dialog.
+ */
+export async function enableAwaanPushNotifications() {
     try {
         const permission = Notification.permission === 'granted'
             ? 'granted'
@@ -112,40 +148,62 @@ export async function initFcmWebPush() {
 
         if (permission !== 'granted') {
             console.warn('Notification permission not granted:', permission);
+            showPushEnableBanner();
 
-            return;
+            return false;
         }
 
-        const firebaseMessaging = await loadFirebaseMessaging(config.firebase);
+        await obtainAndRegisterToken();
 
-        if (!firebaseMessaging) {
-            return;
-        }
-
-        const registration = await ensureServiceWorker();
-
-        if (!registration) {
-            console.warn('Service worker registration failed.');
-
-            return;
-        }
-
-        const token = await firebaseMessaging.getToken(firebaseMessaging.messaging, {
-            vapidKey: config.vapidKey,
-            serviceWorkerRegistration: registration,
-        });
-
-        if (!token || token.length < 10) {
-            console.warn('FCM getToken returned an empty token.');
-
-            return;
-        }
-
-        // Always POST — localStorage can be stale vs DB (different server / cleared table).
-        await registerDeviceToken(config.registerUrl, token);
-        window.localStorage.setItem(`awaan_fcm_token_${config.portal}`, token);
-        console.info('FCM device token registered.');
+        return true;
     } catch (error) {
-        console.warn('FCM web push registration skipped:', error);
+        console.warn('FCM web push registration failed:', error);
+        showPushEnableBanner();
+
+        return false;
     }
 }
+
+/**
+ * On page load: sync token if already allowed; otherwise show Enable button (no auto-prompt).
+ */
+export async function initFcmWebPush() {
+    if (!window.isSecureContext) {
+        console.warn('FCM web push requires HTTPS (or localhost).');
+
+        return;
+    }
+
+    if (!fcmConfig()) {
+        console.warn('FCM web push config missing (window.__AWAAN_FCM__). Check FIREBASE_WEB_* env.');
+
+        return;
+    }
+
+    if (!('Notification' in window)) {
+        return;
+    }
+
+    if (Notification.permission === 'granted') {
+        try {
+            await obtainAndRegisterToken();
+        } catch (error) {
+            console.warn('FCM token sync failed:', error);
+            showPushEnableBanner();
+        }
+
+        return;
+    }
+
+    if (Notification.permission === 'denied') {
+        console.warn('Notifications are blocked for this site. Enable them in browser settings.');
+        showPushEnableBanner();
+
+        return;
+    }
+
+    // permission === 'default' — wait for user tap (browsers block silent prompts).
+    showPushEnableBanner();
+}
+
+window.enableAwaanPushNotifications = enableAwaanPushNotifications;
