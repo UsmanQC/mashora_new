@@ -11,4 +11,9 @@ if ('serviceWorker' in navigator) {
     }
 }
 
-import { initPatientSwipeBack } from './patient-swipe-back';
+import './patient-swipe-back';
+import { initFcmWebPush } from './fcm-web';
+
+window.addEventListener('load', () => {
+    initFcmWebPush();
+});

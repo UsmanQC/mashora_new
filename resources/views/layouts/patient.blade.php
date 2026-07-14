@@ -178,6 +178,10 @@
 
         @include('partials.pwa-install-prompt', ['pwaApp' => 'patient'])
 
+        @auth
+            @include('partials.fcm-web', ['portal' => 'patient'])
+        @endauth
+
         @persist('awaan-ai-chatbot')
             @include('partials.ai-chatbot-widget', [
                 'forceVisible' => true,

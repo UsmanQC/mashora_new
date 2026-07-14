@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'awaan-v3';
+const CACHE_VERSION = 'awaan-v4';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const OFFLINE_URL = '/offline.html';
 
@@ -12,6 +12,55 @@ const PRECACHE_URLS = [
     '/images/pwa/icon-512-maskable-v3.png',
     '/images/favicon-awaan.png',
 ];
+
+// Firebase web config is public (same values as the web app). Keep in sync with .env / config/push.php.
+importScripts('https://www.gstatic.com/firebasejs/11.6.0/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/11.6.0/firebase-messaging-compat.js');
+
+firebase.initializeApp({
+    apiKey: 'AIzaSyCZvzHslI0TkppJtmTInYrXMsw8sasd_ow',
+    authDomain: 'awaan-66719.firebaseapp.com',
+    projectId: 'awaan-66719',
+    storageBucket: 'awaan-66719.firebasestorage.app',
+    messagingSenderId: '894339707747',
+    appId: '1:894339707747:web:05d6c3ab33d249fd1a9956',
+});
+
+firebase.messaging().onBackgroundMessage((payload) => {
+    const title = payload.notification?.title || payload.data?.title || 'Awaan';
+    const body = payload.notification?.body || payload.data?.body || '';
+    const data = payload.data || {};
+
+    return self.registration.showNotification(title, {
+        body,
+        data,
+        icon: '/images/pwa/icon-192-v3.png',
+        badge: '/images/pwa/icon-192-v3.png',
+    });
+});
+
+self.addEventListener('notificationclick', (event) => {
+    event.notification.close();
+
+    const data = event.notification.data || {};
+    const target = data.click_url || data.action || data.link || '/patient';
+
+    event.waitUntil(
+        self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+            for (const client of clientList) {
+                if ('focus' in client) {
+                    return client.focus();
+                }
+            }
+
+            if (self.clients.openWindow) {
+                return self.clients.openWindow(target);
+            }
+
+            return undefined;
+        }),
+    );
+});
 
 self.addEventListener('install', (event) => {
     event.waitUntil(

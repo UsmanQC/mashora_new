@@ -198,6 +198,11 @@
         @endpersist
         @stack('scripts')
         @include('partials.pwa-install-prompt', ['pwaApp' => 'doctor'])
+
+        @auth('doctor')
+            @include('partials.fcm-web', ['portal' => 'doctor'])
+        @endauth
+
         @fluxScripts
     </body>
 </html>
