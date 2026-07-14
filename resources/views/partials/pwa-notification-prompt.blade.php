@@ -1,54 +1,53 @@
-{{-- Visible by default so mobile users always see it; JS only hides when push is already active. --}}
+{{-- Inline styles + move to <html> so overflow-hidden body shells cannot clip this on mobile. --}}
 @php
     $isAr = app()->getLocale() === 'ar';
 @endphp
 
 <div
     id="awaan-push-enable"
-    class="fixed inset-x-3 top-[max(0.75rem,env(safe-area-inset-top))] z-[100] mx-auto max-w-md rounded-2xl border border-emerald-200 bg-white p-4 shadow-2xl"
+    data-awaan-push="enable-v2"
+    style="position:fixed;left:12px;right:12px;top:max(12px,env(safe-area-inset-top));z-index:2147483646;margin:0 auto;max-width:28rem;border-radius:1rem;border:1px solid #a7f3d0;background:#ffffff;padding:1rem;box-shadow:0 20px 40px rgba(0,0,0,.18);font-family:inherit;"
     dir="{{ $isAr ? 'rtl' : 'ltr' }}"
     role="dialog"
     aria-live="polite"
 >
-    <div class="flex items-start gap-3">
-        <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="h-6 w-6" aria-hidden="true">
-                <path fill-rule="evenodd" d="M5.25 9a6.75 6.75 0 0 1 13.5 0v.75c0 2.123.8 4.057 2.118 5.52a.75.75 0 0 1-.297 1.206c-1.544.57-3.16.99-4.831 1.243a3.75 3.75 0 1 1-7.48 0 24.18 24.18 0 0 1-4.83-1.244.75.75 0 0 1-.298-1.205A8.217 8.217 0 0 0 5.25 9.75V9Zm4.502 8.9a2.25 2.25 0 1 0 4.496 0 25.057 25.057 0 0 1-4.496 0Z" clip-rule="evenodd" />
-            </svg>
-        </div>
-        <div class="min-w-0 flex-1">
-            <p class="text-sm font-bold text-zinc-900">
-                {{ $isAr ? 'تفعيل الإشعارات' : 'Enable notifications' }}
-            </p>
-            <p id="awaan-push-enable-body" class="mt-1 text-xs leading-relaxed text-zinc-600">
-                {{ $isAr
-                    ? 'اضغط للسماح بالإشعارات حتى يصلك تنبيه بالمواعيد والرسائل.'
-                    : 'Tap to allow notifications for appointments and messages.' }}
-            </p>
-            <div class="mt-3 flex flex-wrap gap-2">
-                <button
-                    type="button"
-                    id="awaan-push-enable-btn"
-                    class="rounded-xl bg-[#10B981] px-4 py-2.5 text-xs font-bold text-white transition hover:bg-emerald-600"
-                >
-                    {{ $isAr ? 'السماح بالإشعارات' : 'Allow notifications' }}
-                </button>
-                <button
-                    type="button"
-                    id="awaan-push-enable-dismiss"
-                    class="rounded-xl border border-zinc-200 px-4 py-2.5 text-xs font-semibold text-zinc-700 transition hover:bg-zinc-50"
-                >
-                    {{ $isAr ? 'لاحقاً' : 'Later' }}
-                </button>
-            </div>
-            <p id="awaan-push-enable-hint" class="mt-2 hidden text-[11px] leading-relaxed text-amber-700"></p>
-        </div>
+    <p style="margin:0;font-size:14px;font-weight:700;color:#18181b;">
+        {{ $isAr ? 'تفعيل الإشعارات' : 'Enable notifications' }}
+    </p>
+    <p id="awaan-push-enable-body" style="margin:6px 0 0;font-size:12px;line-height:1.45;color:#52525b;">
+        {{ $isAr
+            ? 'اضغط للسماح بالإشعارات حتى يصلك تنبيه بالمواعيد والرسائل.'
+            : 'Tap to allow notifications for appointments and messages.' }}
+    </p>
+    <div style="margin-top:12px;display:flex;flex-wrap:wrap;gap:8px;">
+        <button
+            type="button"
+            id="awaan-push-enable-btn"
+            style="border:0;border-radius:12px;background:#10B981;color:#fff;font-size:12px;font-weight:700;padding:10px 16px;"
+        >
+            {{ $isAr ? 'السماح بالإشعارات' : 'Allow notifications' }}
+        </button>
+        <button
+            type="button"
+            id="awaan-push-enable-dismiss"
+            style="border:1px solid #e4e4e7;border-radius:12px;background:#fff;color:#3f3f46;font-size:12px;font-weight:600;padding:10px 16px;"
+        >
+            {{ $isAr ? 'لاحقاً' : 'Later' }}
+        </button>
     </div>
+    <p id="awaan-push-enable-hint" style="display:none;margin:8px 0 0;font-size:11px;line-height:1.4;color:#b45309;"></p>
 </div>
 
 <script>
     (() => {
         const root = document.getElementById('awaan-push-enable');
+        if (!root) {
+            return;
+        }
+
+        // Escape overflow-hidden ancestors used by the mobile shells.
+        document.documentElement.appendChild(root);
+
         const enableBtn = document.getElementById('awaan-push-enable-btn');
         const dismissBtn = document.getElementById('awaan-push-enable-dismiss');
         const hint = document.getElementById('awaan-push-enable-hint');
@@ -59,14 +58,14 @@
             if (!hint) {
                 return;
             }
-
-            hint.textContent = message;
-            hint.classList.toggle('hidden', !message);
+            hint.textContent = message || '';
+            hint.style.display = message ? 'block' : 'none';
         };
 
-        const hide = () => root?.classList.add('hidden');
+        const hide = () => {
+            root.style.display = 'none';
+        };
 
-        // Hide only when already granted (token sync happens in app.js).
         if (window.isSecureContext && 'Notification' in window && Notification.permission === 'granted') {
             hide();
         }
@@ -79,7 +78,7 @@
             }
             if (enableBtn) {
                 enableBtn.disabled = true;
-                enableBtn.classList.add('opacity-50');
+                enableBtn.style.opacity = '0.5';
             }
             setHint(isAr
                 ? 'افتح رابط https:// الخاص بالموقع من الجوال.'
@@ -93,18 +92,20 @@
             } catch (e) {}
         });
 
-        if (sessionStorage.getItem('awaan-push-dismissed') === '1'
-            && window.isSecureContext
-            && 'Notification' in window
-            && Notification.permission === 'default') {
-            hide();
-        }
+        try {
+            if (
+                sessionStorage.getItem('awaan-push-dismissed') === '1'
+                && window.isSecureContext
+                && 'Notification' in window
+                && Notification.permission === 'default'
+            ) {
+                hide();
+            }
+        } catch (e) {}
 
         enableBtn?.addEventListener('click', async () => {
             if (!window.isSecureContext) {
-                setHint(isAr
-                    ? 'استخدم رابط HTTPS أولاً.'
-                    : 'Use the HTTPS link first.');
+                setHint(isAr ? 'استخدم رابط HTTPS أولاً.' : 'Use the HTTPS link first.');
                 return;
             }
 
@@ -114,8 +115,8 @@
             try {
                 if (typeof window.enableAwaanPushNotifications !== 'function') {
                     setHint(isAr
-                        ? 'سكربت الإشعارات لم يحمّل بعد. حدّث الصفحة وحاول مرة أخرى.'
-                        : 'Push script not loaded yet. Refresh and try again.');
+                        ? 'سكربت الإشعارات لم يحمّل. ارفع public/build وحدّث الصفحة.'
+                        : 'Push script not loaded. Deploy public/build and refresh.');
                     return;
                 }
 
@@ -126,18 +127,18 @@
                     return;
                 }
 
-                if (Notification.permission === 'denied') {
+                if ('Notification' in window && Notification.permission === 'denied') {
                     setHint(isAr
-                        ? 'تم حظر الإشعارات. من إعدادات الموقع في المتصفح فعّل الإشعارات ثم أعد المحاولة.'
-                        : 'Notifications are blocked. In site settings, allow notifications, then try again.');
+                        ? 'تم حظر الإشعارات من إعدادات الموقع في المتصفح.'
+                        : 'Notifications are blocked in this site’s browser settings.');
                 } else {
                     setHint(isAr
                         ? 'لم يتم تفعيل الإشعارات. حاول مرة أخرى.'
-                        : 'Notifications were not enabled. Please try again.');
+                        : 'Notifications were not enabled. Try again.');
                 }
             } catch (error) {
                 console.warn(error);
-                setHint(isAr ? 'حدث خطأ. حاول مرة أخرى.' : 'Something went wrong. Please try again.');
+                setHint(isAr ? 'حدث خطأ. حاول مرة أخرى.' : 'Something went wrong. Try again.');
             } finally {
                 enableBtn.disabled = false;
             }

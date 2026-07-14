@@ -42,16 +42,25 @@
 @else
     <div
         id="awaan-push-misconfigured"
-        class="fixed inset-x-3 top-[max(0.75rem,env(safe-area-inset-top))] z-[100] mx-auto max-w-md rounded-2xl border border-amber-300 bg-amber-50 p-4 shadow-2xl"
+        data-awaan-push="misconfigured-v2"
+        style="position:fixed;left:12px;right:12px;top:max(12px,env(safe-area-inset-top));z-index:2147483646;margin:0 auto;max-width:28rem;border-radius:1rem;border:1px solid #fcd34d;background:#fffbeb;padding:1rem;box-shadow:0 20px 40px rgba(0,0,0,.18);"
         dir="{{ $isAr ? 'rtl' : 'ltr' }}"
     >
-        <p class="text-sm font-bold text-amber-950">
+        <p style="margin:0;font-size:14px;font-weight:700;color:#78350f;">
             {{ $isAr ? 'إعداد الإشعارات ناقص على السيرفر' : 'Push is not configured on the server' }}
         </p>
-        <p class="mt-1 text-xs leading-relaxed text-amber-900">
+        <p style="margin:6px 0 0;font-size:12px;line-height:1.45;color:#92400e;">
             {{ $isAr
-                ? 'أضف FIREBASE_WEB_* و FIREBASE_VAPID_KEY في ملف .env ثم نفّذ php artisan config:clear'
-                : 'Add FIREBASE_WEB_* and FIREBASE_VAPID_KEY to .env, then run php artisan config:clear' }}
+                ? 'أضف FIREBASE_WEB_* و FIREBASE_VAPID_KEY في .env ثم: php artisan config:clear'
+                : 'Add FIREBASE_WEB_* and FIREBASE_VAPID_KEY to .env, then run: php artisan config:clear' }}
         </p>
     </div>
+    <script>
+        (() => {
+            const el = document.getElementById('awaan-push-misconfigured');
+            if (el) {
+                document.documentElement.appendChild(el);
+            }
+        })();
+    </script>
 @endif
