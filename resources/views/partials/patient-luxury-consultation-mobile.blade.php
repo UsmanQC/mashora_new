@@ -43,14 +43,29 @@
             @endif
 
             @if ($appointment->isSessionStartRequestPending())
-                <div class="rounded-2xl border border-amber-200/90 bg-amber-50 px-4 py-4 shadow-sm">
-                    <p class="text-sm font-bold text-amber-950">{{ __('patient.appointments.session_start_request_pending') }}</p>
-                    <p class="mt-1 text-xs leading-relaxed text-amber-900">{{ __('patient.appointments.session_start_request_banner') }}</p>
+                <div
+                    class="rounded-2xl border border-[#10B981]/35 bg-gradient-to-br from-emerald-50 via-white to-white px-4 py-4 shadow-sm ring-1 ring-[#10B981]/10"
+                    data-test="patient-session-start-dialog"
+                >
+                    <p class="text-sm font-bold text-[#047857]">{{ __('patient.appointments.session_start_request_pending') }}</p>
+                    <p class="mt-1 text-xs leading-relaxed text-zinc-700">{{ __('patient.appointments.session_start_request_banner') }}</p>
                     <div class="mt-3 flex flex-col gap-2">
-                        <flux:button type="button" variant="primary" class="w-full" wire:click="approveSessionStart" wire:loading.attr="disabled">
+                        <flux:button
+                            type="button"
+                            variant="primary"
+                            class="w-full !rounded-xl !bg-[#10B981] !text-white hover:!brightness-95"
+                            wire:click="approveSessionStart"
+                            wire:loading.attr="disabled"
+                        >
                             {{ __('patient.appointments.session_start_request_approve') }}
                         </flux:button>
-                        <flux:button type="button" variant="outline" class="w-full !text-slate-900" wire:click="declineSessionStart" wire:loading.attr="disabled">
+                        <flux:button
+                            type="button"
+                            variant="outline"
+                            class="w-full !rounded-xl !border-zinc-300 !bg-white !text-black hover:!bg-zinc-50"
+                            wire:click="declineSessionStart"
+                            wire:loading.attr="disabled"
+                        >
                             {{ __('patient.appointments.session_start_request_decline') }}
                         </flux:button>
                     </div>

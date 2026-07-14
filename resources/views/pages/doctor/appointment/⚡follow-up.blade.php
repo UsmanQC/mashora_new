@@ -519,20 +519,20 @@ new #[Layout('layouts::doctor')] #[Title('Follow Up')] class extends Component
                 </div>
             </flux:callout>
         @elseif ($followUpNotNeeded)
-            <flux:callout variant="success" icon="check-circle" class="mt-6">
+            <div class="mt-6 rounded-2xl border border-[#10B981]/40 bg-[#D1FAE5] p-5 text-black shadow-sm [&_[data-flux-text]]:text-black">
                 <div class="space-y-2">
-                    <p class="font-semibold">{{ __('doctor.follow_up.no_need_title') }}</p>
-                    <p class="text-sm">{{ __('doctor.follow_up.no_need_body') }}</p>
+                    <p class="font-semibold text-black">{{ __('doctor.follow_up.no_need_title') }}</p>
+                    <p class="text-sm text-black">{{ __('doctor.follow_up.no_need_body') }}</p>
                 </div>
-            </flux:callout>
+            </div>
 
-            <div class="mt-6 rounded-2xl border border-zinc-200/90 bg-white p-5 shadow-sm">
+            <div class="mt-6 rounded-2xl border border-zinc-200/90 bg-white p-5 text-black shadow-sm [&_[data-flux-heading]]:text-black [&_[data-flux-text]]:text-black">
                 <div class="flex items-center justify-between gap-4">
-                    <div>
-                        <flux:heading size="md" class="font-semibold text-zinc-900">
+                    <div class="min-w-0">
+                        <flux:heading size="md" class="font-semibold !text-black">
                             {{ __('doctor.follow_up.no_need_toggle_label') }}
                         </flux:heading>
-                        <flux:text class="mt-1 text-sm text-zinc-600">
+                        <flux:text class="mt-1 text-sm !text-black">
                             {{ __('doctor.follow_up.no_need_locked') }}
                         </flux:text>
                     </div>
@@ -631,14 +631,17 @@ new #[Layout('layouts::doctor')] #[Title('Follow Up')] class extends Component
         </form>
             </div>
 
-            <div class="rounded-2xl border border-zinc-200/90 bg-white p-5 shadow-sm sm:p-6 xl:col-span-5">
-                <flux:heading size="md" class="font-semibold text-zinc-900">{{ __('doctor.follow_up.option_no_need_title') }}</flux:heading>
-                <flux:text class="mt-1 text-sm text-zinc-600">{{ __('doctor.follow_up.option_no_need_body') }}</flux:text>
+            <div
+                class="rounded-2xl border border-zinc-200/90 bg-white p-5 text-black shadow-sm sm:p-6 xl:col-span-5 [&_[data-flux-heading]]:text-black [&_[data-flux-text]]:text-black"
+                data-test="doctor-follow-up-no-need-box"
+            >
+                <flux:heading size="md" class="font-semibold !text-black">{{ __('doctor.follow_up.option_no_need_title') }}</flux:heading>
+                <flux:text class="mt-1 text-sm !text-black">{{ __('doctor.follow_up.option_no_need_body') }}</flux:text>
 
-                <div class="mt-5 flex items-center justify-between gap-4 rounded-xl border border-zinc-200 bg-zinc-50/80 px-4 py-4">
+                <div class="mt-5 flex items-center justify-between gap-4 rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-4">
                     <div class="min-w-0">
-                        <p class="text-sm font-semibold text-zinc-900">{{ __('doctor.follow_up.no_need_toggle_label') }}</p>
-                        <p class="mt-0.5 text-xs text-zinc-600">{{ __('doctor.follow_up.no_need_toggle_hint') }}</p>
+                        <p class="text-sm font-semibold text-black">{{ __('doctor.follow_up.no_need_toggle_label') }}</p>
+                        <p class="mt-0.5 text-xs text-black">{{ __('doctor.follow_up.no_need_toggle_hint') }}</p>
                     </div>
                     <div class="shrink-0 [--color-accent:#10B981] [--color-accent-foreground:#ffffff]">
                         <flux:switch wire:model.live="followUpNotNeeded" />

@@ -1465,6 +1465,14 @@ select:focus[data-flux-control] {
         color: #0f172a !important;
     }
 
+    .doctor-luxury-mobile-active [data-test='doctor-follow-up-no-need-box'],
+    .doctor-luxury-mobile-active [data-test='doctor-follow-up-no-need-box'] [data-flux-heading],
+    .doctor-luxury-mobile-active [data-test='doctor-follow-up-no-need-box'] [data-flux-text],
+    .doctor-luxury-mobile-active [data-test='doctor-follow-up-no-need-box'] p {
+        color: #000000 !important;
+        -webkit-text-fill-color: #000000 !important;
+    }
+
     .doctor-luxury-mobile-active .doctor-working-hours-time-input {
         color: #0f172a !important;
         -webkit-text-fill-color: #0f172a !important;

@@ -146,9 +146,12 @@
                         {{ __('patient.appointments.join_session') }}
                     </flux:button>
                 @elseif ($sessionStartPending)
-                    <div class="rounded-xl border border-amber-200/90 bg-gradient-to-r from-amber-50 to-orange-50/80 px-3.5 py-3">
-                        <p class="text-sm font-semibold text-amber-950">{{ __('patient.appointments.session_start_request_pending') }}</p>
-                        <p class="mt-1 text-xs leading-relaxed text-amber-900/90">{{ __('patient.appointments.session_start_request_banner') }}</p>
+                    <div
+                        class="rounded-xl border border-[#10B981]/35 bg-gradient-to-br from-emerald-50 via-white to-white px-3.5 py-3 ring-1 ring-[#10B981]/10"
+                        data-test="patient-session-start-dialog"
+                    >
+                        <p class="text-sm font-semibold text-[#047857]">{{ __('patient.appointments.session_start_request_pending') }}</p>
+                        <p class="mt-1 text-xs leading-relaxed text-zinc-700">{{ __('patient.appointments.session_start_request_banner') }}</p>
                         <div class="mt-3 flex flex-col gap-2 sm:flex-row">
                             <flux:button
                                 type="button"

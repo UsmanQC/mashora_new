@@ -529,22 +529,39 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
 
     <div class="space-y-4 px-6 pt-4 sm:space-y-5 sm:px-0 sm:pt-0">
     @if ($appointment->isSessionStartRequestPending())
-        <flux:callout variant="warning" icon="question-mark-circle" class="border-amber-200 bg-amber-50 text-amber-950">
+        <div
+            class="rounded-2xl border border-[#10B981]/35 bg-gradient-to-br from-emerald-50 via-white to-white p-4 shadow-sm ring-1 ring-[#10B981]/10 sm:p-5"
+            data-test="patient-session-start-dialog"
+        >
             <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div class="min-w-0">
-                    <p class="text-sm font-semibold">{{ __('patient.appointments.session_start_request_pending') }}</p>
-                    <p class="mt-1 text-sm text-amber-900">{{ __('patient.appointments.session_start_request_banner') }}</p>
+                    <p class="text-sm font-semibold text-[#047857]">{{ __('patient.appointments.session_start_request_pending') }}</p>
+                    <p class="mt-1 text-sm text-zinc-700">{{ __('patient.appointments.session_start_request_banner') }}</p>
                 </div>
                 <div class="flex flex-wrap gap-2">
-                    <flux:button type="button" size="sm" variant="primary" wire:click="approveSessionStart" wire:loading.attr="disabled">
+                    <flux:button
+                        type="button"
+                        size="sm"
+                        variant="primary"
+                        class="!rounded-xl !bg-[#10B981] !text-white hover:!brightness-95"
+                        wire:click="approveSessionStart"
+                        wire:loading.attr="disabled"
+                    >
                         {{ __('patient.appointments.session_start_request_approve') }}
                     </flux:button>
-                    <flux:button type="button" size="sm" variant="filled" class="!border !border-zinc-300 !bg-white !text-black shadow-sm hover:!bg-zinc-100" wire:click="declineSessionStart" wire:loading.attr="disabled">
+                    <flux:button
+                        type="button"
+                        size="sm"
+                        variant="filled"
+                        class="!rounded-xl !border !border-zinc-300 !bg-white !text-black shadow-sm hover:!bg-zinc-100"
+                        wire:click="declineSessionStart"
+                        wire:loading.attr="disabled"
+                    >
                         {{ __('patient.appointments.session_start_request_decline') }}
                     </flux:button>
                 </div>
             </div>
-        </flux:callout>
+        </div>
     @endif
 
     @if (in_array($appointment->status, ['new', 'rescheduled'], true) && ! $appointment->isChatOpen())
