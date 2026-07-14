@@ -176,9 +176,12 @@
         @include('partials.patient-global-join-call-banner')
         @stack('scripts')
 
-        @include('partials.pwa-install-prompt', ['pwaApp' => 'patient'])
+        @include('partials.pwa-install-prompt', [
+            'pwaApp' => 'patient',
+            'showPush' => auth()->check(),
+        ])
 
-        {{-- FCM config must load before deferred JS finish / user interaction --}}
+        {{-- FCM config must load for logged-in patients --}}
         @auth
             @include('partials.fcm-web', ['portal' => 'patient'])
         @endauth

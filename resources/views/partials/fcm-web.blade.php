@@ -38,12 +38,15 @@
         window.__AWAAN_FCM__ = {!! json_encode($fcmBootstrap, JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) !!};
     </script>
 
+    {{-- Standalone module — works even if Vite public/build is outdated --}}
+    <script type="module" src="{{ asset('js/awaan-fcm.js') }}?v={{ config('pwa.cache_version') }}"></script>
+
     @include('partials.pwa-notification-prompt')
 @else
     <div
         id="awaan-push-misconfigured"
         data-awaan-push="misconfigured-v2"
-        style="position:fixed;left:12px;right:12px;top:max(12px,env(safe-area-inset-top));z-index:2147483646;margin:0 auto;max-width:28rem;border-radius:1rem;border:1px solid #fcd34d;background:#fffbeb;padding:1rem;box-shadow:0 20px 40px rgba(0,0,0,.18);"
+        style="position:fixed;left:12px;right:12px;bottom:max(5.5rem,calc(env(safe-area-inset-bottom) + 4.5rem));z-index:2147483646;margin:0 auto;max-width:28rem;border-radius:1rem;border:1px solid #fcd34d;background:#fffbeb;padding:1rem;box-shadow:0 20px 40px rgba(0,0,0,.18);"
         dir="{{ $isAr ? 'rtl' : 'ltr' }}"
     >
         <p style="margin:0;font-size:14px;font-weight:700;color:#78350f;">

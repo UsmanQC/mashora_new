@@ -113,10 +113,16 @@
             setHint('');
 
             try {
+                // Wait briefly for /js/awaan-fcm.js module to attach the helper.
+                const started = Date.now();
+                while (typeof window.enableAwaanPushNotifications !== 'function' && Date.now() - started < 5000) {
+                    await new Promise((resolve) => setTimeout(resolve, 100));
+                }
+
                 if (typeof window.enableAwaanPushNotifications !== 'function') {
                     setHint(isAr
-                        ? 'سكربت الإشعارات لم يحمّل. ارفع public/build وحدّث الصفحة.'
-                        : 'Push script not loaded. Deploy public/build and refresh.');
+                        ? 'سكربت الإشعارات لم يحمّل. ارفع public/js/awaan-fcm.js وحدّث الصفحة.'
+                        : 'Push script not loaded. Upload public/js/awaan-fcm.js and refresh.');
                     return;
                 }
 

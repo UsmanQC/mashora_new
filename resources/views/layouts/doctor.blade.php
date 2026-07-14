@@ -197,7 +197,10 @@
             </flux:toast.group>
         @endpersist
         @stack('scripts')
-        @include('partials.pwa-install-prompt', ['pwaApp' => 'doctor'])
+        @include('partials.pwa-install-prompt', [
+            'pwaApp' => 'doctor',
+            'showPush' => auth('doctor')->check(),
+        ])
 
         @auth('doctor')
             @include('partials.fcm-web', ['portal' => 'doctor'])
