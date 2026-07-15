@@ -59,7 +59,7 @@ test('myfatoorah embedded v3 creates session for card only and reports api error
     expect($session['ok'])->toBeTrue()
         ->and($session['session_id'])->toBe('SAU-test-session-123');
 
-    Http::assertSent(fn ($request): bool => ($request->data()['SupportedPaymentMethods'] ?? null) === ['card']);
+    Http::assertSent(fn ($request): bool => ! array_key_exists('SupportedPaymentMethods', $request->data()));
 });
 
 test('myfatoorah embedded v3 returns api message when session fails', function () {

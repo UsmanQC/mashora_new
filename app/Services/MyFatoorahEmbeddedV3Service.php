@@ -77,12 +77,11 @@ class MyFatoorahEmbeddedV3Service
                 };
             }
 
+            // Omit SupportedPaymentMethods so account-enabled wallets appear (Apple Pay, GPay, etc.).
             $response = $http->post($this->apiBaseUrl().'/v3/sessions', [
                 'PaymentMode' => 'COMPLETE_PAYMENT',
                 'Order' => $order,
                 'Customer' => $customerPayload,
-                // Card-only keeps checkout embedded (no hosted gateway redirect).
-                'SupportedPaymentMethods' => ['card'],
                 'Language' => app()->getLocale() === 'ar' ? 'AR' : 'EN',
             ]);
 
