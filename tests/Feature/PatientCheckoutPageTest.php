@@ -53,11 +53,13 @@ test('authenticated patient sees luxury checkout shell on mobile', function () {
         ->assertSee('data-test="patient-navbar-language-switch"', false);
 });
 
-test('myfatoorah checkout panel does not render fake non-interactive card fields', function () {
+test('myfatoorah checkout panel uses redirect payment without empty embed bar', function () {
     $panel = file_get_contents(resource_path('views/partials/patient-checkout-payment-panel.blade.php'));
 
     expect($panel)
-        ->toContain('mf-form-element')
+        ->toContain('patient-checkout-pay-card')
+        ->toContain('payment_redirect_hint')
+        ->not->toContain('mf-form-element')
         ->not->toContain('payment-card-field-guide');
 });
 
