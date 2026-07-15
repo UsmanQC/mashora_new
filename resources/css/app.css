@@ -1738,6 +1738,44 @@ select:focus[data-flux-control] {
     box-shadow: 0 20px 50px -12px rgb(15 23 42 / 0.28);
 }
 
+/* MyFatoorah embedded session — cleaner wallet row + card frame on mobile */
+.mf-embed-shell {
+    -webkit-tap-highlight-color: transparent;
+}
+
+.mf-embed-root {
+    overflow: visible;
+}
+
+.mf-embed-root iframe {
+    border: 0 !important;
+    border-radius: 10px;
+}
+
+/* Equalize MF “Pay With” tiles when session.js wraps buttons in bordered cards */
+.mf-embed-root [class*='apple'],
+.mf-embed-root [class*='google'],
+.mf-embed-root [id*='apple'],
+.mf-embed-root [id*='google'],
+.mf-embed-root [class*='Apple'],
+.mf-embed-root [class*='Google'] {
+    border-radius: 12px !important;
+}
+
+.mf-embed-root > div {
+    gap: 0.75rem !important;
+}
+
+@media (max-width: 639px) {
+    .mf-embed-shell {
+        max-width: 100%;
+    }
+
+    [data-test='patient-checkout-payment-card'] {
+        border-radius: 1.25rem;
+    }
+}
+
 /* \[:where(&)\]:size-4 {
     @apply size-4;
 } */

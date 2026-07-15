@@ -182,8 +182,8 @@
                                 callback: payment,
                                 containerId: containerId,
                                 shouldHandlePaymentUrl: true,
-                                // Wallet row filter (KNET / Benefit excluded). Card keeps Insert Card Details.
-                                paymentOptions: ['GooglePay', 'ApplePay', 'Card'],
+                                // Wallet row: Apple + Google only (+ Card form). Same sizes = cleaner row.
+                                paymentOptions: ['ApplePay', 'GooglePay', 'Card'],
                                 eventListener: eventHandler,
                                 subscribedEvents: [
                                     'VIEW_READY',
@@ -204,8 +204,8 @@
                                         style: {
                                             showCardholderName: true,
                                             hideCardIcons: false,
-                                            cardHeight: isNarrow ? '280px' : '240px',
-                                            tokenHeight: isNarrow ? '280px' : '240px',
+                                            cardHeight: isNarrow ? '300px' : '260px',
+                                            tokenHeight: isNarrow ? '300px' : '260px',
                                             input: {
                                                 color: '#0f172a',
                                                 fontSize: isNarrow ? '16px' : '14px',
@@ -258,24 +258,24 @@
                                     applePay: {
                                         language: lang,
                                         style: {
-                                            frameHeight: isNarrow ? '48px' : '44px',
+                                            frameHeight: '52px',
                                             frameWidth: '100%',
                                             button: {
-                                                height: isNarrow ? '48px' : '44px',
-                                                type: 'pay',
-                                                borderRadius: '12px',
+                                                height: '44px',
+                                                type: 'plain',
+                                                borderRadius: '10px',
                                             },
                                         },
                                     },
                                     googlePay: {
                                         language: lang,
                                         style: {
-                                            frameHeight: isNarrow ? '48px' : '44px',
+                                            frameHeight: '52px',
                                             frameWidth: '100%',
                                             button: {
-                                                height: isNarrow ? '48px' : '44px',
+                                                height: '44px',
                                                 type: 'pay',
-                                                borderRadius: '12px',
+                                                borderRadius: '10px',
                                                 color: 'black',
                                             },
                                         },
@@ -325,7 +325,7 @@
                 })()
             "
         >
-            <div class="mx-auto w-full max-w-[400px] bg-white px-0 sm:px-0">
+            <div class="mf-embed-shell mx-auto w-full max-w-[400px] rounded-2xl bg-white px-1 sm:px-0">
                 <div x-show="booting && !failed" x-cloak class="space-y-3 py-6">
                     <div class="h-10 animate-pulse rounded-xl bg-slate-100"></div>
                     <div class="h-10 animate-pulse rounded-xl bg-slate-100"></div>
@@ -333,26 +333,27 @@
                     <p class="text-center text-xs text-slate-400">{{ __('patient_booking.payment_processing') }}</p>
                 </div>
 
-                <div id="{{ $mfContainerId }}" class="min-h-[22rem] w-full bg-white sm:min-h-[20rem]"></div>
+                <div id="{{ $mfContainerId }}" class="mf-embed-root min-h-[22rem] w-full bg-white sm:min-h-[20rem]"></div>
             </div>
 
             <div class="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900" x-cloak x-show="failed">
                 <p>{{ __('patient_booking.payment_embedded_unavailable') }}</p>
                 <p class="mt-1 font-mono text-[0.65rem] text-amber-800/80" x-show="failReason" x-text="failReason"></p>
             </div>
-        </div>
 
-        <flux:button
-            type="button"
-            variant="ghost"
-            class="w-full !text-slate-500"
-            wire:click="initMyFatoorahEmbeddedV3"
-            wire:loading.attr="disabled"
-            data-test="patient-checkout-mf-retry"
-        >
-            <span wire:loading.remove wire:target="initMyFatoorahEmbeddedV3">{{ __('patient_booking.payment_retry') }}</span>
-            <span wire:loading wire:target="initMyFatoorahEmbeddedV3">{{ __('patient_booking.payment_processing') }}</span>
-        </flux:button>
+            <button
+                type="button"
+                class="w-full py-2 text-center text-xs font-medium text-slate-400 underline-offset-2 hover:text-slate-600 hover:underline"
+                wire:click="initMyFatoorahEmbeddedV3"
+                wire:loading.attr="disabled"
+                data-test="patient-checkout-mf-retry"
+                x-show="failed"
+                x-cloak
+            >
+                <span wire:loading.remove wire:target="initMyFatoorahEmbeddedV3">{{ __('patient_booking.payment_retry') }}</span>
+                <span wire:loading wire:target="initMyFatoorahEmbeddedV3">{{ __('patient_booking.payment_processing') }}</span>
+            </button>
+        </div>
     @elseif ($this->usesMyFatoorah())
         <div class="space-y-4" data-test="patient-checkout-mf-boot">
             @if ($paymentError === '')
