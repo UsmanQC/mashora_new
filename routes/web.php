@@ -239,6 +239,10 @@ Route::post('patient/payment/execute/{temporaryAppointment}', [PatientPaymentCon
     ->middleware(['auth', 'patient.profile'])
     ->name('patient.payment.execute');
 
+Route::post('patient/payment/embedded/{temporaryAppointment}', [PatientPaymentController::class, 'completeEmbedded'])
+    ->middleware(['auth', 'patient.profile'])
+    ->name('patient.payment.embedded');
+
 Route::post('patient/appointments/{appointment}/realtime/notify-call', [PatientAppointmentRealtimeController::class, 'notifyCall'])
     ->middleware(['auth', 'patient.profile'])
     ->name('patient.appointments.realtime.notify-call');

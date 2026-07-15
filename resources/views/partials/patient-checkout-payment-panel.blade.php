@@ -75,37 +75,75 @@
         </flux:button>
 
         <p class="text-center text-xs leading-relaxed text-slate-500">{{ __('patient_booking.payment_hyperpay_note') }}</p>
-    @else
-        {{-- MyFatoorah (and HyperPay when session not ready): redirect checkout — no empty embed box. --}}
-        <div class="space-y-4" data-test="patient-checkout-redirect-pay">
-            <div class="rounded-2xl border border-emerald-100 bg-emerald-50/50 px-4 py-3">
-                <div class="flex items-start gap-3">
-                    <span class="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl bg-[#10B981] text-white">
-                        <flux:icon name="lock-closed" variant="mini" class="size-4" />
-                    </span>
-                    <div class="min-w-0">
-                        <p class="text-sm font-semibold text-slate-900">{{ __('patient_booking.payment_card_details') }}</p>
-                        <p class="mt-0.5 text-xs leading-relaxed text-slate-600">
-                            {{ __('patient_booking.payment_redirect_hint') }}
-                        </p>
-                    </div>
+    @elseif ($this->usesMyFatoorah() && $embeddedReady)
+        <div
+            class="space-y-4"
+            wire:ignore
+            wire:key="mf-v3-{{ $this->mfSessionId }}"
+            data-test="patient-checkout-mf-embed"
+        >
+            <div class="flex items-center justify-between gap-3">
+                <div>
+                    <p class="text-sm font-semibold text-slate-900">{{ __('patient_booking.payment_card_details') }}</p>
+                    <p class="mt-0.5 text-xs text-slate-500">{{ __('patient_booking.payment_embedded_v3_hint') }}</p>
                 </div>
+                <span class="hidden shrink-0 items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[0.65rem] font-semibold uppercase tracking-wide text-emerald-700 ring-1 ring-emerald-100 sm:inline-flex">
+                    <flux:icon name="shield-check" variant="mini" class="size-3.5" />
+                    {{ __('patient_booking.ssl_badge') }}
+                </span>
             </div>
 
-            <flux:button
-                type="button"
-                variant="primary"
-                class="min-h-12 w-full !rounded-2xl !border-[#10B981] !bg-[#10B981] !text-white shadow-[0_10px_28px_-8px_rgba(16,185,129,0.45)] hover:!brightness-[0.97]"
-                wire:click="startCardPayment"
-                wire:loading.attr="disabled"
-                data-test="patient-checkout-pay-card"
-            >
-                <span wire:loading.remove wire:target="startCardPayment" class="inline-flex items-center gap-2">
-                    <flux:icon name="lock-closed" variant="mini" class="size-4" />
-                    {{ __('patient_booking.pay_now') }}
-                </span>
-                <span wire:loading wire:target="startCardPayment">{{ __('patient_booking.payment_processing') }}</span>
-            </flux:button>
+            <div class="overflow-hidden rounded-2xl border border-slate-200/90 bg-white p-3 sm:p-4">
+                <div id="payment-sessions" class="min-h-[18rem] w-full"></div>
+            </div>
+
+            <p id="mf-card-error" class="hidden rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                {{ __('patient_booking.payment_embedded_unavailable') }}
+            </p>
+
+            <p class="text-center text-[0.7rem] leading-relaxed text-slate-400">
+                {{ __('patient_booking.payment_hyperpay_note') }}
+            </p>
+        </div>
+    @else
+        <div class="space-y-4" data-test="patient-checkout-redirect-pay">
+            @if ($this->usesMyFatoorah())
+                <flux:button
+                    type="button"
+                    variant="primary"
+                    class="min-h-12 w-full !rounded-2xl !border-[#10B981] !bg-[#10B981] !text-white shadow-[0_10px_28px_-8px_rgba(16,185,129,0.45)] hover:!brightness-[0.97]"
+                    wire:click="initMyFatoorahEmbeddedV3"
+                    wire:loading.attr="disabled"
+                    data-test="patient-checkout-mf-retry"
+                >
+                    <span wire:loading.remove wire:target="initMyFatoorahEmbeddedV3">{{ __('patient_booking.payment_retry') }}</span>
+                    <span wire:loading wire:target="initMyFatoorahEmbeddedV3">{{ __('patient_booking.payment_processing') }}</span>
+                </flux:button>
+
+                <flux:button
+                    type="button"
+                    variant="ghost"
+                    class="min-h-11 w-full !rounded-2xl !border !border-slate-200 !bg-slate-50 !font-semibold !text-slate-700"
+                    wire:click="startCardPayment"
+                    wire:loading.attr="disabled"
+                    data-test="patient-checkout-pay-card"
+                >
+                    <span wire:loading.remove wire:target="startCardPayment">{{ __('patient_booking.pay_now_fallback') }}</span>
+                    <span wire:loading wire:target="startCardPayment">{{ __('patient_booking.payment_processing') }}</span>
+                </flux:button>
+            @else
+                <flux:button
+                    type="button"
+                    variant="primary"
+                    class="min-h-12 w-full !rounded-2xl !border-[#10B981] !bg-[#10B981] !text-white shadow-[0_10px_28px_-8px_rgba(16,185,129,0.45)] hover:!brightness-[0.97]"
+                    wire:click="startCardPayment"
+                    wire:loading.attr="disabled"
+                    data-test="patient-checkout-pay-card"
+                >
+                    <span wire:loading.remove wire:target="startCardPayment">{{ __('patient_booking.pay_now') }}</span>
+                    <span wire:loading wire:target="startCardPayment">{{ __('patient_booking.payment_processing') }}</span>
+                </flux:button>
+            @endif
 
             <p class="text-center text-[0.7rem] leading-relaxed text-slate-400">
                 @if ($this->usesMyFatoorah())

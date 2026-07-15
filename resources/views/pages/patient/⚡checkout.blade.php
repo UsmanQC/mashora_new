@@ -4,6 +4,7 @@ use App\Livewire\Concerns\InteractsWithPatientWalletPayment;
 use App\Models\Doctor;
 use App\Models\TemporaryAppointment;
 use App\Services\HyperpayCheckoutService;
+use App\Services\MyFatoorahEmbeddedV3Service;
 use App\Services\PatientPaymentCompletionService;
 use App\Services\StripeCheckoutService;
 use App\Support\PaymentGateway;
@@ -13,7 +14,6 @@ use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
-use MyFatoorah\Library\MyFatoorah;
 use MyFatoorah\Library\API\Payment\MyFatoorahPayment;
 
 new #[Layout('layouts::patient')] #[Title('Payment')] class extends Component
@@ -30,6 +30,8 @@ new #[Layout('layouts::patient')] #[Title('Payment')] class extends Component
     public string $hyperpayEnv = '';
     public string $hyperpayCallbackUrl = '';
     public string $mfSessionId = '';
+    public string $mfSessionJsUrl = '';
+    public string $mfCompleteUrl = '';
     public string $mfCountryCode = '';
     public string $mfJsDomain = '';
 
@@ -45,6 +47,8 @@ new #[Layout('layouts::patient')] #[Title('Payment')] class extends Component
 
         if ($this->usesHyperPay()) {
             $this->initHyperpayCheckout();
+        } elseif ($this->usesMyFatoorah()) {
+            $this->initMyFatoorahEmbeddedV3();
         }
     }
 
@@ -89,7 +93,59 @@ new #[Layout('layouts::patient')] #[Title('Payment')] class extends Component
 
         if ($this->usesHyperPay() && $this->amountDue() > 0) {
             $this->initHyperpayCheckout();
+        } elseif ($this->usesMyFatoorah() && $this->amountDue() > 0) {
+            $this->initMyFatoorahEmbeddedV3();
         }
+    }
+
+    public function initMyFatoorahEmbeddedV3(): void
+    {
+        if ($this->myFatoorahConfigError() !== null) {
+            $this->paymentError = $this->myFatoorahConfigError() ?? '';
+            $this->embeddedReady = false;
+
+            return;
+        }
+
+        if ($this->amountDue() <= 0) {
+            $this->embeddedReady = false;
+
+            return;
+        }
+
+        $user = Auth::user();
+        if (! $user instanceof \App\Models\User) {
+            abort(403);
+        }
+
+        $temp = $this->temporaryAppointment->fresh();
+        if ($temp === null) {
+            return;
+        }
+
+        /** @var MyFatoorahEmbeddedV3Service $embedded */
+        $embedded = app(MyFatoorahEmbeddedV3Service::class);
+        $session = $embedded->createCompletePaymentSession(
+            $temp,
+            PatientPaymentCompletionService::amountDue($temp),
+            $user
+        );
+
+        if ($session === null) {
+            $this->embeddedReady = false;
+            $this->paymentError = __('patient_booking.payment_start_failed');
+
+            return;
+        }
+
+        $temp->payment_session_id = $session['session_id'];
+        $temp->save();
+
+        $this->mfSessionId = $session['session_id'];
+        $this->mfSessionJsUrl = $session['session_js_url'];
+        $this->mfCompleteUrl = route('patient.payment.embedded', ['temporaryAppointment' => $temp->id]);
+        $this->embeddedReady = true;
+        $this->paymentError = '';
     }
 
     public function initHyperpayCheckout(): void
@@ -664,4 +720,125 @@ new #[Layout('layouts::patient')] #[Title('Payment')] class extends Component
             </div>
         </div>
     </div>
+
+    @if ($this->usesMyFatoorah() && $embeddedReady && $this->amountDue() > 0 && $mfSessionId !== '' && $mfSessionJsUrl !== '')
+        <script src="{{ $mfSessionJsUrl }}" id="mf-v3-session-js"></script>
+        <script>
+            (function () {
+                const completeUrl = @js($mfCompleteUrl);
+                const sessionId = @js($mfSessionId);
+                const csrf = @js(csrf_token());
+                const errorBox = document.getElementById('mf-card-error');
+
+                const showError = () => {
+                    if (errorBox) {
+                        errorBox.classList.remove('hidden');
+                    }
+                };
+
+                const finishPayment = (response) => {
+                    if (!response || !response.isSuccess) {
+                        showError();
+                        return;
+                    }
+
+                    if (response.paymentCompleted && response.paymentData) {
+                        fetch(completeUrl, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                'X-CSRF-TOKEN': csrf,
+                                'X-Requested-With': 'XMLHttpRequest',
+                            },
+                            body: JSON.stringify({
+                                paymentData: response.paymentData,
+                                sessionId: response.sessionId || sessionId,
+                            }),
+                        })
+                            .then((res) => res.json().then((data) => ({ ok: res.ok, data })))
+                            .then(({ data }) => {
+                                if (data && data.redirect) {
+                                    window.location.href = data.redirect;
+                                    return;
+                                }
+                                showError();
+                            })
+                            .catch(() => showError());
+
+                        return;
+                    }
+
+                    if (response.redirectionUrl) {
+                        window.location.href = response.redirectionUrl;
+                        return;
+                    }
+
+                    showError();
+                };
+
+                const start = () => {
+                    if (!window.myfatoorah) {
+                        showError();
+                        return;
+                    }
+
+                    window.myfatoorah.init({
+                        sessionId: sessionId,
+                        callback: finishPayment,
+                        containerId: 'payment-sessions',
+                        shouldHandlePaymentUrl: true,
+                        settings: {
+                            card: {
+                                language: @js(app()->getLocale() === 'ar' ? 'ar' : 'en'),
+                                style: {
+                                    showCardholderName: true,
+                                    hideCardIcons: false,
+                                    cardHeight: '280px',
+                                    button: {
+                                        textContent: @js(__('patient_booking.pay_now')),
+                                        backgroundColor: '#10B981',
+                                        color: 'white',
+                                        borderRadius: '16px',
+                                        height: '48px',
+                                        width: '100%',
+                                        margin: '12px 0 0 0',
+                                        fontSize: '15px',
+                                        cursor: 'pointer',
+                                    },
+                                    separator: {
+                                        useCustomSeparator: false,
+                                        textContent: @js(__('patient_booking.payment_card_details')),
+                                    },
+                                    input: {
+                                        color: '#111827',
+                                        fontSize: '14px',
+                                        inputHeight: '42px',
+                                        borderColor: '#e2e8f0',
+                                        borderWidth: '1px',
+                                        borderRadius: '12px',
+                                        placeHolder: {
+                                            holderName: @js(__('patient_booking.payment_placeholder_card_holder')),
+                                            cardNumber: @js(__('patient_booking.payment_placeholder_card_number')),
+                                            expiryDate: @js(__('patient_booking.payment_placeholder_expiry')),
+                                            securityCode: @js(__('patient_booking.payment_placeholder_cvv')),
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    });
+                };
+
+                const scriptEl = document.getElementById('mf-v3-session-js');
+                scriptEl?.addEventListener('error', showError);
+
+                if (window.myfatoorah) {
+                    start();
+                } else {
+                    scriptEl?.addEventListener('load', start, { once: true });
+                }
+            })();
+        </script>
+    @endif
 </div>

@@ -101,6 +101,10 @@ final class PatientPaymentCompletionService
             return $this->confirmHyperpayIfPaid($temporaryAppointment, $request);
         }
 
+        if ($request->filled('paymentData')) {
+            return $this->confirmMyFatoorahEmbeddedV3IfPaid($temporaryAppointment, (string) $request->input('paymentData'));
+        }
+
         try {
             $mf = new MyFatoorahPaymentStatus(self::mfConfig());
             $keyData = self::resolveStatusKey($temporaryAppointment, $request);
@@ -141,6 +145,71 @@ final class PatientPaymentCompletionService
                 $temporaryAppointment->appointment_id = $appointment->id;
                 $temporaryAppointment->payment_status = 'paid';
                 $temporaryAppointment->payment_response = json_encode($data);
+                $temporaryAppointment->save();
+
+                return $appointment;
+            });
+        } catch (Throwable $e) {
+            report($e);
+
+            return ['appointment' => null, 'state' => 'failed'];
+        }
+
+        self::notifyDoctorAfterBooking($appointment);
+
+        return ['appointment' => $appointment, 'state' => 'paid'];
+    }
+
+    /**
+     * @return array{appointment: ?Appointment, state: 'paid'|'needs_config'|'pending'|'failed'}
+     */
+    public function confirmMyFatoorahEmbeddedV3IfPaid(TemporaryAppointment $temporaryAppointment, string $paymentData): array
+    {
+        $temporaryAppointment->loadMissing('doctor');
+
+        if ($temporaryAppointment->appointment_id !== null) {
+            $existing = Appointment::query()->find($temporaryAppointment->appointment_id);
+            if ($existing !== null) {
+                return ['appointment' => $existing, 'state' => 'paid'];
+            }
+        }
+
+        /** @var MyFatoorahEmbeddedV3Service $embedded */
+        $embedded = app(MyFatoorahEmbeddedV3Service::class);
+        $encryptionKey = $embedded->encryptionKeyFor($temporaryAppointment);
+
+        if ($encryptionKey === null || $paymentData === '') {
+            return ['appointment' => null, 'state' => 'failed'];
+        }
+
+        $payload = $embedded->decryptPaymentData($paymentData, $encryptionKey);
+
+        if ($payload === null || ! $embedded->isPaidPayload($payload)) {
+            return ['appointment' => null, 'state' => 'failed'];
+        }
+
+        try {
+            $appointment = DB::transaction(function () use ($temporaryAppointment, $payload): Appointment {
+                $temporaryAppointment->refresh();
+
+                if ($temporaryAppointment->appointment_id !== null) {
+                    $found = Appointment::query()->find($temporaryAppointment->appointment_id);
+                    if ($found !== null) {
+                        return $found;
+                    }
+                }
+
+                $appointment = self::createAppointmentRecord($temporaryAppointment);
+                self::syncCommunications($appointment, $temporaryAppointment);
+                self::finalizeWallet($appointment, $temporaryAppointment);
+                $temporaryAppointment->appointment_id = $appointment->id;
+                $temporaryAppointment->payment_status = 'paid';
+                $temporaryAppointment->payment_invoice_id = (string) data_get($payload, 'Invoice.Id', $temporaryAppointment->payment_invoice_id);
+                $temporaryAppointment->payment_response = json_encode([
+                    'provider' => 'myfatoorah',
+                    'mode' => 'embedded_v3',
+                    'result' => $payload,
+                ]);
                 $temporaryAppointment->save();
 
                 return $appointment;

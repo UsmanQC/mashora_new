@@ -7,6 +7,7 @@ use App\Models\Appointment;
 use App\Models\TemporaryAppointment;
 use App\Services\HyperpayCheckoutService;
 use App\Services\PatientPaymentCompletionService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Redirect;
@@ -158,5 +159,37 @@ class PatientPaymentController extends Controller
         }
 
         return Redirect::route('patient.payment.failed', $tempAppointment);
+    }
+
+    /**
+     * MyFatoorah Embedded Payment v3 callback: decrypt paymentData and complete booking.
+     */
+    public function completeEmbedded(Request $request, TemporaryAppointment $temporaryAppointment): JsonResponse
+    {
+        abort_unless($temporaryAppointment->user_id === auth()->id(), 403);
+
+        $validated = $request->validate([
+            'paymentData' => ['required', 'string'],
+            'sessionId' => ['nullable', 'string'],
+        ]);
+
+        /** @var PatientPaymentCompletionService $completion */
+        $completion = app(PatientPaymentCompletionService::class);
+        $result = $completion->confirmMyFatoorahEmbeddedV3IfPaid(
+            $temporaryAppointment,
+            $validated['paymentData']
+        );
+
+        if ($result['state'] === 'paid' && $result['appointment'] !== null) {
+            return response()->json([
+                'ok' => true,
+                'redirect' => route('patient.payment.success', ['temporaryAppointment' => $temporaryAppointment->id]),
+            ]);
+        }
+
+        return response()->json([
+            'ok' => false,
+            'redirect' => route('patient.payment.failed', ['temporaryAppointment' => $temporaryAppointment->id]),
+        ], 422);
     }
 }

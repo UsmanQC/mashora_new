@@ -5,10 +5,6 @@ use App\Models\Appointment;
 use App\Models\Doctor;
 use App\Models\TemporaryAppointment;
 use App\Models\User;
-use App\Services\MyFatoorahInvoiceService;
-use App\Services\PatientPaymentCompletionService;
-use App\Services\PatientWalletService;
-use App\Support\PaymentGateway;
 use Flux\Flux;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -364,69 +360,8 @@ new #[Layout('layouts::patient')] #[Title('Book an appointment')] class extends 
             ]);
         });
 
-        // MyFatoorah: skip intermediate checkout page — go straight to hosted payment (mobile Confirm & pay).
-        if (PaymentGateway::isMyFatoorah()) {
-            $this->redirectToMyFatoorahOrCheckout($temp);
-
-            return;
-        }
-
-        $this->redirect(route('patient.checkout', $temp));
-    }
-
-    /**
-     * Start MyFatoorah hosted payment after booking. Falls back to checkout if invoice creation fails.
-     */
-    private function redirectToMyFatoorahOrCheckout(TemporaryAppointment $temp): void
-    {
-        $user = Auth::user();
-        abort_unless($user instanceof User, 403);
-
-        $walletService = app(PatientWalletService::class);
-        $walletService->ensureWallet($user);
-
-        $balance = $walletService->balance($user);
-        $walletApplied = round(min($balance, (float) $temp->total), 2);
-        $temp->wallet_amount = $walletApplied;
-        $temp->save();
-
-        $amountDue = PatientPaymentCompletionService::amountDue($temp);
-
-        if ($amountDue <= 0) {
-            $appointment = app(PatientPaymentCompletionService::class)->completeWithWalletOnly($temp->fresh());
-
-            if ($appointment !== null) {
-                $this->redirect(route('patient.payment.success', ['temporaryAppointment' => $temp->id]));
-
-                return;
-            }
-
-            $this->redirect(route('patient.checkout', $temp));
-
-            return;
-        }
-
-        if (empty(config('myfatoorah.api_key'))) {
-            session()->flash('flash_payment', __('patient_booking.payment_api_missing'));
-            $this->redirect(route('patient.checkout', $temp));
-
-            return;
-        }
-
-        $invoice = app(MyFatoorahInvoiceService::class)->createBookingInvoice($temp, $amountDue, $user);
-
-        if ($invoice !== null) {
-            $temp->payment_invoice_id = $invoice['invoice_id'];
-            $temp->payment_invoice_url = $invoice['invoice_url'];
-            $temp->save();
-
-            $this->redirect($invoice['invoice_url']);
-
-            return;
-        }
-
-        // Fallback: show checkout if MyFatoorah invoice could not be started.
-        session()->flash('flash_payment', __('patient_booking.payment_start_failed'));
+        // MyFatoorah: go to checkout so Embedded Payment v3 loads on-site (no hosted redirect).
+        // Other gateways also use checkout (HyperPay widget / Stripe).
         $this->redirect(route('patient.checkout', $temp));
     }
 
