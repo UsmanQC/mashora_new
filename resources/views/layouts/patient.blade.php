@@ -178,7 +178,7 @@
 
         @include('partials.pwa-install-prompt', [
             'pwaApp' => 'patient',
-            'showPush' => auth()->check(),
+            'showPush' => false, // notification dialog temporarily disabled
         ])
 
         {{-- FCM config must load for logged-in patients --}}

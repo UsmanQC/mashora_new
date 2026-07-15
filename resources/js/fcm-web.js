@@ -62,28 +62,8 @@ function hidePushEnableBanner() {
 }
 
 function showPushEnableBanner() {
-    if ('Notification' in window && Notification.permission === 'granted') {
-        hidePushEnableBanner();
-        markPushUiDismissed();
-
-        return;
-    }
-
-    try {
-        if (localStorage.getItem('awaan-push-enabled') === '1') {
-            hidePushEnableBanner();
-
-            return;
-        }
-    } catch (e) {}
-
-    const el = pushEnableBanner();
-    if (!el) {
-        return;
-    }
-    el.removeAttribute('hidden');
-    el.style.display = '';
-    el.classList?.remove?.('hidden');
+    // Notification enable dialog temporarily disabled.
+    hidePushEnableBanner();
 }
 
 async function loadFirebaseMessaging(firebaseConfig) {

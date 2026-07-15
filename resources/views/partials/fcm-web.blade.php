@@ -41,8 +41,11 @@
     {{-- Standalone module — works even if Vite public/build is outdated --}}
     <script type="module" src="{{ asset('js/awaan-fcm.js') }}?v={{ config('pwa.cache_version') }}"></script>
 
+    {{-- Notification enable dialog temporarily disabled
     @include('partials.pwa-notification-prompt')
+    --}}
 @else
+    {{-- Misconfigured push notice temporarily disabled
     <div
         id="awaan-push-misconfigured"
         data-awaan-push="misconfigured-v2"
@@ -66,4 +69,5 @@
             }
         })();
     </script>
+    --}}
 @endif

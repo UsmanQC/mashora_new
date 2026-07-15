@@ -199,7 +199,7 @@
         @stack('scripts')
         @include('partials.pwa-install-prompt', [
             'pwaApp' => 'doctor',
-            'showPush' => auth('doctor')->check(),
+            'showPush' => false, // notification dialog temporarily disabled
         ])
 
         @auth('doctor')
