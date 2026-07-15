@@ -131,18 +131,21 @@ new #[Layout('layouts::patient')] #[Title('Payment')] class extends Component
             $user
         );
 
-        if ($session === null) {
+        if (! ($session['ok'] ?? false)) {
             $this->embeddedReady = false;
-            $this->paymentError = __('patient_booking.payment_start_failed');
+            $this->mfSessionId = '';
+            $this->mfSessionJsUrl = '';
+            $this->mfCompleteUrl = '';
+            $this->paymentError = (string) ($session['message'] ?? __('patient_booking.payment_start_failed'));
 
             return;
         }
 
-        $temp->payment_session_id = $session['session_id'];
+        $temp->payment_session_id = (string) $session['session_id'];
         $temp->save();
 
-        $this->mfSessionId = $session['session_id'];
-        $this->mfSessionJsUrl = $session['session_js_url'];
+        $this->mfSessionId = (string) $session['session_id'];
+        $this->mfSessionJsUrl = (string) $session['session_js_url'];
         $this->mfCompleteUrl = route('patient.payment.embedded', ['temporaryAppointment' => $temp->id]);
         $this->embeddedReady = true;
         $this->paymentError = '';

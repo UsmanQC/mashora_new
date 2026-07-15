@@ -327,21 +327,30 @@
             <span wire:loading.remove wire:target="initMyFatoorahEmbeddedV3">{{ __('patient_booking.payment_retry') }}</span>
             <span wire:loading wire:target="initMyFatoorahEmbeddedV3">{{ __('patient_booking.payment_processing') }}</span>
         </flux:button>
+    @elseif ($this->usesMyFatoorah())
+        <div class="space-y-4" data-test="patient-checkout-mf-boot">
+            @if ($paymentError === '')
+                <p class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                    {{ __('patient_booking.payment_embedded_unavailable') }}
+                </p>
+            @endif
+
+            <flux:button
+                type="button"
+                variant="primary"
+                class="min-h-12 w-full !rounded-2xl !border-[#10B981] !bg-[#10B981] !text-white shadow-[0_10px_28px_-8px_rgba(16,185,129,0.45)] hover:!brightness-[0.97]"
+                wire:click="initMyFatoorahEmbeddedV3"
+                wire:loading.attr="disabled"
+                wire:target="initMyFatoorahEmbeddedV3"
+                data-test="patient-checkout-mf-retry"
+            >
+                <span wire:loading.remove wire:target="initMyFatoorahEmbeddedV3">{{ __('patient_booking.payment_retry') }}</span>
+                <span wire:loading wire:target="initMyFatoorahEmbeddedV3">{{ __('patient_booking.payment_processing') }}</span>
+            </flux:button>
+        </div>
     @else
         <div class="space-y-4" data-test="patient-checkout-redirect-pay">
-            @if ($this->usesMyFatoorah())
-                <flux:button
-                    type="button"
-                    variant="primary"
-                    class="min-h-12 w-full !rounded-2xl !border-[#10B981] !bg-[#10B981] !text-white shadow-[0_10px_28px_-8px_rgba(16,185,129,0.45)] hover:!brightness-[0.97]"
-                    wire:click="initMyFatoorahEmbeddedV3"
-                    wire:loading.attr="disabled"
-                    data-test="patient-checkout-mf-retry"
-                >
-                    <span wire:loading.remove wire:target="initMyFatoorahEmbeddedV3">{{ __('patient_booking.payment_retry') }}</span>
-                    <span wire:loading wire:target="initMyFatoorahEmbeddedV3">{{ __('patient_booking.payment_processing') }}</span>
-                </flux:button>
-            @elseif ($this->usesHyperPay())
+            @if ($this->usesHyperPay())
                 <flux:button
                     type="button"
                     variant="primary"
@@ -356,9 +365,7 @@
             @endif
 
             <p class="text-center text-[0.7rem] leading-relaxed text-slate-400">
-                @if ($this->usesMyFatoorah())
-                    {{ __('patient_booking.payment_embedded_v3_hint') }}
-                @elseif ($this->usesHyperPay())
+                @if ($this->usesHyperPay())
                     {{ __('patient_booking.payment_hyperpay_note') }}
                 @endif
             </p>

@@ -53,14 +53,15 @@ test('authenticated patient sees luxury checkout shell on mobile', function () {
         ->assertSee('data-test="patient-navbar-language-switch"', false);
 });
 
-test('myfatoorah checkout panel uses redirect payment without empty embed bar', function () {
+test('myfatoorah checkout panel uses embedded payment without hosted redirect', function () {
     $panel = file_get_contents(resource_path('views/partials/patient-checkout-payment-panel.blade.php'));
 
     expect($panel)
-        ->toContain('patient-checkout-pay-card')
-        ->toContain('payment_redirect_hint')
-        ->not->toContain('mf-form-element')
-        ->not->toContain('payment-card-field-guide');
+        ->toContain('unified-session')
+        ->toContain('shouldHandlePaymentUrl: true')
+        ->toContain('patient-checkout-mf-boot')
+        ->not->toContain('pay_now_fallback')
+        ->not->toContain('payment_redirect_hint');
 });
 
 test('guest cannot access checkout page', function () {

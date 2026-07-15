@@ -6,7 +6,7 @@ use App\Models\TemporaryAppointment;
 use App\Models\User;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
-use RuntimeException;
+use Illuminate\Support\Facades\Log;
 use Throwable;
 
 /**
@@ -17,62 +17,104 @@ use Throwable;
 class MyFatoorahEmbeddedV3Service
 {
     /**
-     * @return array{session_id: string, encryption_key: string, session_js_url: string}|null
+     * @return array{
+     *     ok: bool,
+     *     session_id?: string,
+     *     encryption_key?: string,
+     *     session_js_url?: string,
+     *     message?: string
+     * }
      */
-    public function createCompletePaymentSession(TemporaryAppointment $temporaryAppointment, float $amountDue, User $customer): ?array
+    public function createCompletePaymentSession(TemporaryAppointment $temporaryAppointment, float $amountDue, User $customer): array
     {
-        if ($amountDue <= 0 || empty(config('myfatoorah.api_key'))) {
-            return null;
+        if ($amountDue <= 0) {
+            return ['ok' => false, 'message' => __('patient_booking.wallet_covers_full')];
+        }
+
+        if (empty(config('myfatoorah.api_key'))) {
+            return ['ok' => false, 'message' => __('patient_booking.payment_api_missing')];
         }
 
         try {
-            $response = Http::withToken((string) config('myfatoorah.api_key'))
-                ->acceptJson()
-                ->asJson()
-                ->timeout(30)
-                ->post($this->apiBaseUrl().'/v3/sessions', [
-                    'PaymentMode' => 'COMPLETE_PAYMENT',
-                    'Order' => [
-                        'Amount' => $amountDue,
-                        'Currency' => 'SAR',
-                        'ExternalIdentifier' => (string) $temporaryAppointment->id,
-                    ],
-                    'Customer' => [
-                        'Name' => (string) ($temporaryAppointment->patient_name ?: $customer->name ?: 'Patient'),
-                        'Reference' => (string) $temporaryAppointment->id,
-                        'Email' => (string) ($temporaryAppointment->patient_email ?: $customer->email ?: ''),
-                    ],
-                    // Embedded-only methods — hosted methods (KNET, etc.) force a MyFatoorah page redirect.
-                    'SupportedPaymentMethods' => ['card', 'applepay', 'googlepay', 'stcpay'],
-                    'SupportedNetworks' => ['visa', 'masterCard', 'mada', 'amex'],
-                    'Language' => app()->getLocale() === 'ar' ? 'AR' : 'EN',
-                ]);
+            $customerPayload = [
+                'Name' => (string) ($temporaryAppointment->patient_name ?: $customer->name ?: 'Patient'),
+                'Reference' => (string) $temporaryAppointment->id,
+            ];
 
-            if (! $response->successful()) {
-                report(new RuntimeException('MyFatoorah v3 session failed: '.$response->body()));
-
-                return null;
+            $email = (string) ($temporaryAppointment->patient_email ?: $customer->email ?: '');
+            if ($email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                $customerPayload['Email'] = $email;
             }
 
-            /** @var array{IsSuccess?: bool, Data?: array{SessionId?: string, EncryptionKey?: string}} $json */
-            $json = $response->json();
+            $apiKey = trim((string) config('myfatoorah.api_key'));
 
-            if (! ($json['IsSuccess'] ?? false)) {
-                report(new RuntimeException('MyFatoorah v3 session rejected: '.$response->body()));
+            // WAMP/local PHP often lacks a CA bundle (cURL 60). Match HyperpayCheckoutService.
+            $http = Http::withToken($apiKey)
+                ->acceptJson()
+                ->asJson()
+                ->timeout(45);
 
-                return null;
+            if (app()->isLocal()) {
+                $http = $http->withoutVerifying();
+            }
+
+            $order = [
+                'Amount' => round($amountDue, 2),
+                'ExternalIdentifier' => (string) $temporaryAppointment->id,
+            ];
+
+            // Sandbox portal currency is KWD; live uses the account country currency.
+            if (! (bool) config('myfatoorah.is_test')) {
+                $order['Currency'] = match (strtoupper((string) config('myfatoorah.vc_code', 'SAU'))) {
+                    'ARE' => 'AED',
+                    'QAT' => 'QAR',
+                    'EGY' => 'EGP',
+                    'BHR' => 'BHD',
+                    'OMN' => 'OMR',
+                    'JOD' => 'JOD',
+                    'KWT' => 'KWD',
+                    default => 'SAR',
+                };
+            }
+
+            $response = $http->post($this->apiBaseUrl().'/v3/sessions', [
+                'PaymentMode' => 'COMPLETE_PAYMENT',
+                'Order' => $order,
+                'Customer' => $customerPayload,
+                // Card-only keeps checkout embedded (no hosted gateway redirect).
+                'SupportedPaymentMethods' => ['card'],
+                'Language' => app()->getLocale() === 'ar' ? 'AR' : 'EN',
+            ]);
+
+            /** @var array{IsSuccess?: bool, Message?: string, ValidationErrors?: mixed, Data?: array{SessionId?: string, EncryptionKey?: string}} $json */
+            $json = $response->json() ?? [];
+
+            if (! $response->successful() || ! ($json['IsSuccess'] ?? false)) {
+                $message = $this->humanMessageFromResponse($response->status(), $json, $response->body());
+
+                Log::warning('MyFatoorah v3 session failed', [
+                    'status' => $response->status(),
+                    'api' => $this->apiBaseUrl(),
+                    'body' => $response->body(),
+                ]);
+
+                return ['ok' => false, 'message' => $message];
             }
 
             $sessionId = (string) ($json['Data']['SessionId'] ?? '');
             $encryptionKey = (string) ($json['Data']['EncryptionKey'] ?? '');
 
             if ($sessionId === '' || $encryptionKey === '') {
-                return null;
+                return [
+                    'ok' => false,
+                    'message' => __('patient_booking.payment_start_failed'),
+                ];
             }
 
             $this->storeEncryptionKey($temporaryAppointment, $encryptionKey);
 
             return [
+                'ok' => true,
                 'session_id' => $sessionId,
                 'encryption_key' => $encryptionKey,
                 'session_js_url' => $this->sessionJsUrl(),
@@ -80,7 +122,19 @@ class MyFatoorahEmbeddedV3Service
         } catch (Throwable $e) {
             report($e);
 
-            return null;
+            $raw = strtolower($e->getMessage());
+
+            if (str_contains($raw, 'ssl') || str_contains($raw, 'certificate') || str_contains($raw, 'curl error 60')) {
+                return ['ok' => false, 'message' => __('patient_booking.payment_ssl_local')];
+            }
+
+            $message = __('patient_booking.payment_start_failed');
+
+            if (app()->isLocal() || app()->hasDebugModeEnabled()) {
+                $message .= ' ('.$e->getMessage().')';
+            }
+
+            return ['ok' => false, 'message' => $message];
         }
     }
 
@@ -171,6 +225,44 @@ class MyFatoorahEmbeddedV3Service
             'SAU' => 'https://api-sa.myfatoorah.com',
             default => 'https://api.myfatoorah.com',
         };
+    }
+
+    /**
+     * @param  array{Message?: string, ValidationErrors?: mixed}  $json
+     */
+    private function humanMessageFromResponse(int $status, array $json, string $rawBody): string
+    {
+        $apiMessage = trim((string) ($json['Message'] ?? ''));
+
+        if (is_array($json['ValidationErrors'] ?? null) && $json['ValidationErrors'] !== []) {
+            $parts = [];
+            foreach ($json['ValidationErrors'] as $error) {
+                if (is_array($error)) {
+                    $parts[] = trim((string) ($error['Error'] ?? $error['Name'] ?? json_encode($error)));
+                } elseif (is_string($error)) {
+                    $parts[] = $error;
+                }
+            }
+
+            $joined = implode(' · ', array_filter($parts));
+            if ($joined !== '') {
+                return $joined;
+            }
+        }
+
+        if ($apiMessage !== '') {
+            return $apiMessage;
+        }
+
+        if ($status === 401 || $status === 403) {
+            return __('patient_booking.payment_gateway_misconfigured');
+        }
+
+        if (app()->isLocal() || app()->hasDebugModeEnabled()) {
+            return __('patient_booking.payment_start_failed').' (HTTP '.$status.')';
+        }
+
+        return __('patient_booking.payment_start_failed');
     }
 
     private function encryptionCacheKey(TemporaryAppointment $temporaryAppointment): string
