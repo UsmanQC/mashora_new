@@ -42,8 +42,10 @@ return [
     'checkout_title' => 'الدفع',
     'checkout_subtitle' => 'راجع تفاصيل الجلسة وأكمل الدفع بأمان.',
 
-    'checkout_accepts' => 'طرق الدفع المقبولة',
-    'pay_through' => 'يمكنك الدفع من خلال',
+    'checkout_accepts' => 'أكمل عملية الدفع',
+    'secure_payment' => 'دفع آمن',
+    'ssl_badge' => 'مشفر',
+    'pay_through' => 'البطاقات المقبولة',
     'or_divider' => 'أو',
     'payment_brand_visa' => 'فيزا',
     'payment_brand_mastercard' => 'ماستركارد',
@@ -57,7 +59,7 @@ return [
 
     'pay_now' => 'ادفع بأمان',
     'payment_card_details' => 'تفاصيل البطاقة',
-    'payment_card_details_hint' => 'أدخل بيانات البطاقة في الحقول الآمنة أدناه. إذا لم تظهر، استخدم زر «المتابعة إلى صفحة الدفع الآمنة».',
+    'payment_card_details_hint' => 'تُدخل بيانات البطاقة في النموذج الآمن أدناه.',
     'payment_label_card_holder' => 'اسم حامل البطاقة',
     'payment_label_card_number' => 'رقم البطاقة',
     'payment_label_expiry' => 'تاريخ الانتهاء (شهر / سنة)',

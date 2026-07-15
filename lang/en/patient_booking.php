@@ -42,8 +42,10 @@ return [
     'checkout_title' => 'Payment',
     'checkout_subtitle' => 'Review your session and pay securely.',
 
-    'checkout_accepts' => 'Accepted payment methods',
-    'pay_through' => 'You can pay through',
+    'checkout_accepts' => 'Complete your payment',
+    'secure_payment' => 'Secure checkout',
+    'ssl_badge' => 'Encrypted',
+    'pay_through' => 'Accepted cards',
     'or_divider' => 'OR',
     'payment_brand_visa' => 'Visa',
     'payment_brand_mastercard' => 'Mastercard',
@@ -57,7 +59,7 @@ return [
 
     'pay_now' => 'Pay securely',
     'payment_card_details' => 'Card details',
-    'payment_card_details_hint' => 'Enter your card details in the secure fields below. If they do not appear, use “Continue to secure payment page”.',
+    'payment_card_details_hint' => 'Your card details are entered in the secure form below.',
     'payment_label_card_holder' => 'Name on card',
     'payment_label_card_number' => 'Card number',
     'payment_label_expiry' => 'Expiry (MM / YY)',

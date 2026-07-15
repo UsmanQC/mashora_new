@@ -96,25 +96,5 @@
         </section>
     @endif
 
-    <section class="overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-[0_8px_30px_-12px_rgba(15,23,42,0.12)]" data-test="patient-checkout-payment-card">
-        <div class="border-b border-slate-100 bg-gradient-to-b from-slate-50/90 to-white px-5 py-4">
-            <div class="flex items-start gap-3">
-                <span class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#10B981]/10 text-[#10B981] ring-1 ring-[#10B981]/15">
-                    <flux:icon name="lock-closed" variant="mini" class="size-4" />
-                </span>
-                <div class="min-w-0 flex-1">
-                    <h2 class="text-sm font-bold text-slate-900">{{ __('patient_booking.checkout_accepts') }}</h2>
-                    <p class="mt-0.5 text-xs leading-relaxed text-slate-500">{{ __('patient_booking.luxury.trust_badge') }}</p>
-                </div>
-            </div>
-        </div>
-
-        <div class="space-y-4 p-5">
-            @include('partials.patient-checkout-payment-panel')
-
-            <div class="border-t border-slate-100 pt-4">
-                @include('partials.patient-checkout-payment-methods', ['compact' => true, 'labelSurface' => 'bg-white'])
-            </div>
-        </div>
-    </section>
+    @include('partials.patient-checkout-payment-card', ['showBackHome' => false])
 </main>
