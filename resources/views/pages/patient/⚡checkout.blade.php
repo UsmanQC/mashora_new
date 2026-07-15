@@ -45,8 +45,6 @@ new #[Layout('layouts::patient')] #[Title('Payment')] class extends Component
 
         if ($this->usesHyperPay()) {
             $this->initHyperpayCheckout();
-        } elseif ($this->usesMyFatoorah()) {
-            $this->initEmbeddedPaymentSession();
         }
     }
 
@@ -666,93 +664,4 @@ new #[Layout('layouts::patient')] #[Title('Payment')] class extends Component
             </div>
         </div>
     </div>
-
-    @if ($this->usesMyFatoorah() && $embeddedReady && $this->amountDue() > 0)
-        <form id="embedded-exec-form" action="{{ route('patient.payment.execute', ['temporaryAppointment' => $temporaryAppointment->id]) }}" method="POST" class="hidden">
-            @csrf
-        </form>
-
-        <script src="{{ $mfJsDomain }}/cardview/v2/session.js" id="mf-session-js"></script>
-        <script>
-            (function () {
-                const hidePlaceholder = () => {
-                    document.getElementById('mf-form-placeholder')?.classList.add('hidden');
-                };
-
-                const showCardError = () => {
-                    hidePlaceholder();
-                    const box = document.getElementById('mf-card-error');
-                    if (box) {
-                        box.classList.remove('hidden');
-                    }
-                };
-
-                const startEmbedded = () => {
-                    if (!window.myFatoorah) {
-                        showCardError();
-                        return;
-                    }
-
-                    const mfConfig = {
-                        countryCode: @js($mfCountryCode),
-                        sessionId: @js($mfSessionId),
-                        cardViewId: "mf-form-element",
-                        style: {
-                            hideCardIcons: false,
-                            direction: @js(App::isLocale('ar') ? 'rtl' : 'ltr'),
-                            cardHeight: 220,
-                            input: {
-                                color: "#111827",
-                                fontSize: "14px",
-                                inputHeight: "42px",
-                                borderColor: "#d4d4d8",
-                                borderWidth: "1px",
-                                borderRadius: "10px",
-                                placeHolder: {
-                                    holderName: @js(__('patient_booking.payment_placeholder_card_holder')),
-                                    cardNumber: @js(__('patient_booking.payment_placeholder_card_number')),
-                                    expiryDate: @js(__('patient_booking.payment_placeholder_expiry')),
-                                    securityCode: @js(__('patient_booking.payment_placeholder_cvv')),
-                                },
-                            },
-                            label: {
-                                display: true,
-                                color: "#525252",
-                                fontSize: "12px",
-                            },
-                        },
-                    };
-
-                    window.myFatoorah.init(mfConfig);
-                    hidePlaceholder();
-                };
-
-                const scriptEl = document.getElementById('mf-session-js');
-                if (scriptEl) {
-                    scriptEl.addEventListener('error', showCardError);
-                }
-
-                if (window.myFatoorah) {
-                    startEmbedded();
-                } else {
-                    scriptEl?.addEventListener('load', startEmbedded, { once: true });
-                }
-
-                document.getElementById('embedded-pay-now')?.addEventListener('click', function () {
-                    if (!window.myFatoorah) {
-                        showCardError();
-                        return;
-                    }
-
-                    window.myFatoorah.submit()
-                        .then(function () {
-                            document.getElementById('embedded-exec-form')?.submit();
-                        })
-                        .catch(function () {
-                            showCardError();
-                        });
-                });
-            })();
-        </script>
-    @endif
 </div>

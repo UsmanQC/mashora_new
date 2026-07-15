@@ -60,6 +60,7 @@ return [
     'pay_now' => 'ادفع بأمان',
     'payment_card_details' => 'تفاصيل البطاقة',
     'payment_card_details_hint' => 'تُدخل بيانات البطاقة في النموذج الآمن أدناه.',
+    'payment_redirect_hint' => 'ستُدخل بيانات البطاقة في صفحة ماي فاتورة الآمنة — لا يُكتب شيء في هذه الشاشة.',
     'payment_label_card_holder' => 'اسم حامل البطاقة',
     'payment_label_card_number' => 'رقم البطاقة',
     'payment_label_expiry' => 'تاريخ الانتهاء (شهر / سنة)',

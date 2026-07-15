@@ -60,6 +60,7 @@ return [
     'pay_now' => 'Pay securely',
     'payment_card_details' => 'Card details',
     'payment_card_details_hint' => 'Your card details are entered in the secure form below.',
+    'payment_redirect_hint' => 'You will enter card details on MyFatoorah’s secure page — nothing is typed on this screen.',
     'payment_label_card_holder' => 'Name on card',
     'payment_label_card_number' => 'Card number',
     'payment_label_expiry' => 'Expiry (MM / YY)',
