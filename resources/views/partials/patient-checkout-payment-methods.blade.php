@@ -24,7 +24,7 @@
         aria-label="{{ __('patient_booking.checkout_accepts') }}"
     >
         @foreach ($methods as $method)
-            <li class="flex h-9 min-w-[4.25rem] items-center justify-center rounded-lg border border-slate-100/90 bg-slate-50/70 px-3">
+            <li class="flex h-9 min-w-[4.25rem] items-center justify-center rounded-lg border border-slate-100/90 bg-slate-50/70 px-3 transition hover:border-[#10B981] hover:bg-emerald-50 hover:shadow-[0_0_0_1px_rgba(16,185,129,0.35)]">
                 <img
                     src="{{ asset('images/payment/'.$method['file']) }}"
                     alt="{{ $method['label'] }}"

@@ -1750,6 +1750,7 @@ select:focus[data-flux-control] {
 .mf-embed-root iframe {
     border: 0 !important;
     border-radius: 10px;
+    transition: box-shadow 0.2s ease, outline-color 0.2s ease;
 }
 
 /* Equalize MF “Pay With” tiles when session.js wraps buttons in bordered cards */
@@ -1760,10 +1761,64 @@ select:focus[data-flux-control] {
 .mf-embed-root [class*='Apple'],
 .mf-embed-root [class*='Google'] {
     border-radius: 12px !important;
+    transition:
+        border-color 0.2s ease,
+        box-shadow 0.2s ease,
+        background-color 0.2s ease;
 }
 
 .mf-embed-root > div {
     gap: 0.75rem !important;
+}
+
+/* Green hover on wallet / payment-method tiles around Apple Pay & Google Pay */
+.mf-embed-root > div > div,
+.mf-embed-root button,
+.mf-embed-root [role='button'],
+.mf-embed-root a {
+    transition:
+        border-color 0.2s ease,
+        box-shadow 0.2s ease,
+        outline-color 0.2s ease,
+        transform 0.15s ease;
+}
+
+.mf-embed-root > div > div:hover,
+.mf-embed-root button:hover,
+.mf-embed-root [role='button']:hover,
+.mf-embed-root a:hover,
+.mf-embed-root [class*='apple']:hover,
+.mf-embed-root [class*='google']:hover,
+.mf-embed-root [class*='Apple']:hover,
+.mf-embed-root [class*='Google']:hover,
+.mf-embed-root [id*='apple']:hover,
+.mf-embed-root [id*='google']:hover {
+    border-color: #10b981 !important;
+    outline: 2px solid rgba(16, 185, 129, 0.35);
+    outline-offset: 2px;
+    box-shadow:
+        0 0 0 1px rgba(16, 185, 129, 0.45),
+        0 8px 20px -8px rgba(16, 185, 129, 0.55) !important;
+}
+
+.mf-embed-root iframe:hover {
+    outline: 2px solid rgba(16, 185, 129, 0.4);
+    outline-offset: 3px;
+    box-shadow: 0 8px 22px -10px rgba(16, 185, 129, 0.5);
+}
+
+/* Brand strip hover (if accepted-cards partial is re-enabled) */
+[data-test='patient-checkout-payment-methods'] li {
+    transition:
+        border-color 0.2s ease,
+        box-shadow 0.2s ease,
+        background-color 0.2s ease;
+}
+
+[data-test='patient-checkout-payment-methods'] li:hover {
+    border-color: #10b981 !important;
+    background-color: rgba(16, 185, 129, 0.08) !important;
+    box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.35);
 }
 
 @media (max-width: 639px) {
