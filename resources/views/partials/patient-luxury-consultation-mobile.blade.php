@@ -313,6 +313,7 @@
 
     <div
         id="incoming-call-banner"
+        wire:ignore
         class="hidden shrink-0 border-t border-emerald-200/80 bg-gradient-to-r from-emerald-50 to-white px-4 py-3 shadow-[0_-4px_20px_-8px_rgba(16,185,129,0.35)]"
         role="alert"
         data-test="patient-incoming-call-banner"

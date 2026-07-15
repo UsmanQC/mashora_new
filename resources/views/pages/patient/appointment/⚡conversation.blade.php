@@ -637,6 +637,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
 
     <div
         id="incoming-call-banner-desktop"
+        wire:ignore
         class="hidden rounded-2xl border border-emerald-300 bg-gradient-to-r from-emerald-50 via-emerald-50/95 to-white px-4 py-3 shadow-md shadow-emerald-900/10 ring-1 ring-inset ring-emerald-200/80 sm:px-5"
         role="alert"
         data-test="patient-incoming-call-banner-desktop"
@@ -1184,22 +1185,40 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 return mode === 'audio' ? 'audio' : 'video';
             }
 
-            function readStoredCallPayload() {
+            function readActiveStoredCallPayload() {
                 try {
                     const activeRaw = sessionStorage.getItem('mashora_active_call_' + appointmentId);
-                    const pendingRaw = sessionStorage.getItem('mashora_pending_call_' + appointmentId);
-                    const raw = activeRaw || pendingRaw;
 
-                    if (! raw) {
+                    if (! activeRaw) {
                         return null;
                     }
 
-                    const data = JSON.parse(raw);
+                    const data = JSON.parse(activeRaw);
 
                     return data?.agora_app_id && data?.agora_channel ? data : null;
                 } catch (_) {
                     return null;
                 }
+            }
+
+            function readPendingStoredCallPayload() {
+                try {
+                    const pendingRaw = sessionStorage.getItem('mashora_pending_call_' + appointmentId);
+
+                    if (! pendingRaw) {
+                        return null;
+                    }
+
+                    const data = JSON.parse(pendingRaw);
+
+                    return data?.agora_app_id && data?.agora_channel ? data : null;
+                } catch (_) {
+                    return null;
+                }
+            }
+
+            function readStoredCallPayload() {
+                return readActiveStoredCallPayload() || readPendingStoredCallPayload();
             }
 
             async function createLocalMediaTracks(mode) {
@@ -2282,7 +2301,6 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                     }
 
                     showIncomingCallBanner(data, { silent: true });
-                    persistActiveCall(data, data.call_type === 'audio' ? 'audio' : 'video');
 
                     return true;
                 } catch (_) {
@@ -2306,16 +2324,18 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                     return;
                 }
 
-                await restorePendingCallFromServer();
-                const stored = readStoredCallPayload();
+                const activeStored = readActiveStoredCallPayload();
 
-                if (! stored && ! incomingPayload?.agora_app_id) {
+                if (! activeStored) {
+                    restorePendingCallFromStorage();
+                    await restorePendingCallFromServer();
                     refreshCallUiState();
 
                     return;
                 }
 
-                const payload = incomingPayload?.agora_app_id ? incomingPayload : stored;
+                await restorePendingCallFromServer();
+                const payload = incomingPayload?.agora_app_id ? incomingPayload : activeStored;
                 const mode = resolveEffectiveCallMode(
                     payload?.call_type === 'audio' ? 'audio' : 'video',
                     payload,
@@ -2333,6 +2353,21 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                         restoreAndRejoinCall(attempt + 1).catch(() => {});
                     }, 1200 * (attempt + 1));
                 }
+            }
+
+            function restoreIncomingCallBanner() {
+                if (activeMode || callJoinInProgress || appointmentStatus !== 'in_process' || isSessionFinished()) {
+                    return;
+                }
+
+                if (incomingPayload?.agora_app_id) {
+                    incomingBannerEl()?.classList.remove('hidden');
+                    refreshCallUiState();
+
+                    return;
+                }
+
+                restorePendingCallFromStorage();
             }
 
             async function joinSessionCall() {
@@ -2452,6 +2487,11 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                     await resetPartialAgoraJoin();
                     showOverlay(false);
                     showCallToast(callErrorMessage(e, labelCallFailed, effectiveMode));
+
+                    if (incomingPayload?.agora_app_id && ! activeMode) {
+                        incomingBannerEl()?.classList.remove('hidden');
+                    }
+
                     refreshCallUiState();
                 } finally {
                     callJoinInProgress = false;
@@ -2517,6 +2557,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
             boot.__bindCallControlButtons = bindCallControlButtons;
             boot.__restorePendingCall = restorePendingCallFromStorage;
             boot.__restoreAndRejoinCall = restoreAndRejoinCall;
+            boot.__restoreIncomingCallBanner = restoreIncomingCallBanner;
 
             if (appointmentStatus === 'in_process') {
                 restoreAndRejoinCall().catch(() => {});
@@ -2718,6 +2759,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                             bootEl?.__observeSessionMetrics?.();
                             bootEl?.__syncSessionFromDom?.();
                             bootEl?.__syncSessionExpiryFromDom?.();
+                            bootEl?.__restoreIncomingCallBanner?.();
                             startSessionTimers();
                         });
                     });

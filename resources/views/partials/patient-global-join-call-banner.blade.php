@@ -1,6 +1,7 @@
 @auth
     <div
         id="patient-global-call-join-banner"
+        wire:ignore
         class="pointer-events-none fixed inset-x-0 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-[45] hidden px-3 sm:bottom-6 sm:px-4 sm:max-w-lg sm:left-auto sm:right-4"
         role="alert"
         aria-live="assertive"
