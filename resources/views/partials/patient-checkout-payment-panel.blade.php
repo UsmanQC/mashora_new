@@ -81,6 +81,159 @@
             wire:ignore
             wire:key="mf-v3-{{ $this->mfSessionId }}"
             data-test="patient-checkout-mf-embed"
+            x-data="{ booting: true, failed: false }"
+            x-init="
+                (() => {
+                    const completeUrl = @js($this->mfCompleteUrl);
+                    const sessionId = @js($this->mfSessionId);
+                    const scriptUrl = @js($this->mfSessionJsUrl);
+                    const csrf = @js(csrf_token());
+                    const lang = @js(app()->getLocale() === 'ar' ? 'ar' : 'en');
+                    const payLabel = @js(__('patient_booking.pay_now'));
+                    const cardLabel = @js(__('patient_booking.payment_card_details'));
+                    const placeholders = {
+                        holderName: @js(__('patient_booking.payment_placeholder_card_holder')),
+                        cardNumber: @js(__('patient_booking.payment_placeholder_card_number')),
+                        expiryDate: @js(__('patient_booking.payment_placeholder_expiry')),
+                        securityCode: @js(__('patient_booking.payment_placeholder_cvv')),
+                    };
+
+                    const fail = () => {
+                        booting = false;
+                        failed = true;
+                        document.getElementById('mf-card-error')?.classList.remove('hidden');
+                    };
+
+                    const finishPayment = (response) => {
+                        if (!response || !response.isSuccess) {
+                            fail();
+                            return;
+                        }
+
+                        if (response.paymentCompleted && response.paymentData) {
+                            fetch(completeUrl, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Accept': 'application/json',
+                                    'X-CSRF-TOKEN': csrf,
+                                    'X-Requested-With': 'XMLHttpRequest',
+                                },
+                                body: JSON.stringify({
+                                    paymentData: response.paymentData,
+                                    sessionId: response.sessionId || sessionId,
+                                }),
+                            })
+                                .then((res) => res.json().then((data) => ({ ok: res.ok, data })))
+                                .then(({ data }) => {
+                                    if (data?.redirect) {
+                                        window.location.href = data.redirect;
+                                        return;
+                                    }
+                                    fail();
+                                })
+                                .catch(fail);
+                            return;
+                        }
+
+                        if (response.redirectionUrl) {
+                            window.location.href = response.redirectionUrl;
+                            return;
+                        }
+
+                        fail();
+                    };
+
+                    const start = () => {
+                        if (!window.myfatoorah) {
+                            fail();
+                            return;
+                        }
+
+                        try {
+                            window.myfatoorah.init({
+                                sessionId,
+                                callback: finishPayment,
+                                containerId: 'payment-sessions',
+                                shouldHandlePaymentUrl: true,
+                                subscribedEvents: ['VIEW_READY'],
+                                eventListener: (event) => {
+                                    if (event?.name === 'VIEW_READY') {
+                                        booting = false;
+                                    }
+                                },
+                                settings: {
+                                    card: {
+                                        language: lang,
+                                        style: {
+                                            showCardholderName: true,
+                                            hideCardIcons: false,
+                                            cardHeight: '280px',
+                                            button: {
+                                                textContent: payLabel,
+                                                backgroundColor: '#10B981',
+                                                color: 'white',
+                                                borderRadius: '16px',
+                                                height: '48px',
+                                                width: '100%',
+                                                margin: '12px 0 0 0',
+                                                fontSize: '15px',
+                                                cursor: 'pointer',
+                                            },
+                                            separator: {
+                                                useCustomSeparator: false,
+                                                textContent: cardLabel,
+                                            },
+                                            input: {
+                                                color: '#111827',
+                                                fontSize: '14px',
+                                                inputHeight: '42px',
+                                                borderColor: '#e2e8f0',
+                                                borderWidth: '1px',
+                                                borderRadius: '12px',
+                                                placeHolder: placeholders,
+                                            },
+                                        },
+                                    },
+                                },
+                            });
+                        } catch (e) {
+                            fail();
+                        }
+
+                        setTimeout(() => {
+                            if (booting) {
+                                fail();
+                            }
+                        }, 12000);
+                    };
+
+                    if (!sessionId || !scriptUrl) {
+                        fail();
+                        return;
+                    }
+
+                    if (window.myfatoorah) {
+                        start();
+                        return;
+                    }
+
+                    const existing = document.querySelector('script[data-mf-v3-session]');
+                    if (existing) {
+                        existing.addEventListener('load', start, { once: true });
+                        existing.addEventListener('error', fail, { once: true });
+                        return;
+                    }
+
+                    const script = document.createElement('script');
+                    script.src = scriptUrl;
+                    script.async = true;
+                    script.dataset.mfV3Session = '1';
+                    script.addEventListener('load', start, { once: true });
+                    script.addEventListener('error', fail, { once: true });
+                    document.head.appendChild(script);
+                })()
+            "
         >
             <div class="flex items-center justify-between gap-3">
                 <div>
@@ -93,18 +246,51 @@
                 </span>
             </div>
 
-            <div class="overflow-hidden rounded-2xl border border-slate-200/90 bg-white p-3 sm:p-4">
-                <div id="payment-sessions" class="min-h-[18rem] w-full"></div>
+            <div class="relative overflow-hidden rounded-2xl border border-slate-200/90 bg-white p-3 sm:p-4">
+                <div
+                    x-show="booting && !failed"
+                    x-cloak
+                    class="pointer-events-none absolute inset-3 z-10 flex flex-col justify-center gap-3 sm:inset-4"
+                >
+                    <div class="h-10 animate-pulse rounded-xl bg-slate-100"></div>
+                    <div class="h-10 animate-pulse rounded-xl bg-slate-100"></div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="h-10 animate-pulse rounded-xl bg-slate-100"></div>
+                        <div class="h-10 animate-pulse rounded-xl bg-slate-100"></div>
+                    </div>
+                    <p class="text-center text-xs text-slate-400">{{ __('patient_booking.payment_processing') }}</p>
+                </div>
+
+                <div id="payment-sessions" class="relative z-0 min-h-[18rem] w-full"></div>
             </div>
 
-            <p id="mf-card-error" class="hidden rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+            <p id="mf-card-error" class="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900" x-cloak x-show="failed">
                 {{ __('patient_booking.payment_embedded_unavailable') }}
             </p>
-
-            <p class="text-center text-[0.7rem] leading-relaxed text-slate-400">
-                {{ __('patient_booking.payment_hyperpay_note') }}
-            </p>
         </div>
+
+        <flux:button
+            type="button"
+            variant="ghost"
+            class="min-h-11 w-full !rounded-2xl !border !border-slate-200 !bg-slate-50 !font-semibold !text-slate-700"
+            wire:click="startCardPayment"
+            wire:loading.attr="disabled"
+            data-test="patient-checkout-pay-card"
+        >
+            <span wire:loading.remove wire:target="startCardPayment">{{ __('patient_booking.pay_now_fallback') }}</span>
+            <span wire:loading wire:target="startCardPayment">{{ __('patient_booking.payment_processing') }}</span>
+        </flux:button>
+
+        <flux:button
+            type="button"
+            variant="ghost"
+            class="w-full !text-slate-500"
+            wire:click="initMyFatoorahEmbeddedV3"
+            wire:loading.attr="disabled"
+        >
+            <span wire:loading.remove wire:target="initMyFatoorahEmbeddedV3">{{ __('patient_booking.payment_retry') }}</span>
+            <span wire:loading wire:target="initMyFatoorahEmbeddedV3">{{ __('patient_booking.payment_processing') }}</span>
+        </flux:button>
     @else
         <div class="space-y-4" data-test="patient-checkout-redirect-pay">
             @if ($this->usesMyFatoorah())
