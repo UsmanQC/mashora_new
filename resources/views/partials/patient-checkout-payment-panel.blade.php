@@ -74,21 +74,32 @@
             <span wire:loading wire:target="initHyperpayCheckout">{{ __('patient_booking.payment_processing') }}</span>
         </flux:button>
     @elseif ($this->usesMyFatoorah() && $embeddedReady)
-        @include('partials.payment-card-field-guide')
-
-        <div id="mf-form-element" class="min-h-[11rem] w-full overflow-visible rounded-xl border border-slate-200 bg-white p-3 sm:min-h-[13rem]"></div>
-        <p id="mf-card-error" class="hidden rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-            {{ __('patient_booking.payment_embedded_unavailable') }}
-        </p>
-
-        <button
-            type="button"
-            id="embedded-pay-now"
-            class="min-h-12 w-full rounded-2xl border border-[#10B981] bg-[#10B981] py-3.5 text-sm font-bold text-white shadow-[0_8px_25px_-5px_rgba(16,185,129,0.3)] transition hover:brightness-[0.97]"
-            data-test="patient-checkout-pay-embedded"
+        {{-- Real card inputs are injected by MyFatoorah into #mf-form-element (not static labels). --}}
+        <div
+            class="space-y-4"
+            wire:ignore
+            wire:key="mf-embedded-{{ $this->mfSessionId }}"
+            data-test="patient-checkout-mf-embed"
         >
-            {{ __('patient_booking.pay_now') }}
-        </button>
+            <p class="text-xs text-slate-500">{{ __('patient_booking.payment_card_details_hint') }}</p>
+
+            <div
+                id="mf-form-element"
+                class="min-h-[13rem] w-full overflow-visible rounded-xl border border-slate-200 bg-white p-3 sm:min-h-[15rem]"
+            ></div>
+            <p id="mf-card-error" class="hidden rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                {{ __('patient_booking.payment_embedded_unavailable') }}
+            </p>
+
+            <button
+                type="button"
+                id="embedded-pay-now"
+                class="min-h-12 w-full rounded-2xl border border-[#10B981] bg-[#10B981] py-3.5 text-sm font-bold text-white shadow-[0_8px_25px_-5px_rgba(16,185,129,0.3)] transition hover:brightness-[0.97]"
+                data-test="patient-checkout-pay-embedded"
+            >
+                {{ __('patient_booking.pay_now') }}
+            </button>
+        </div>
 
         <flux:button
             type="button"

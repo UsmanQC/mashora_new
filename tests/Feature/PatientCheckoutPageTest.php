@@ -53,6 +53,14 @@ test('authenticated patient sees luxury checkout shell on mobile', function () {
         ->assertSee('data-test="patient-navbar-language-switch"', false);
 });
 
+test('myfatoorah checkout panel does not render fake non-interactive card fields', function () {
+    $panel = file_get_contents(resource_path('views/partials/patient-checkout-payment-panel.blade.php'));
+
+    expect($panel)
+        ->toContain('mf-form-element')
+        ->not->toContain('payment-card-field-guide');
+});
+
 test('guest cannot access checkout page', function () {
     $user = User::factory()->create(['profile_completed' => true]);
 

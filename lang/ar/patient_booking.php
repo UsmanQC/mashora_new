@@ -57,7 +57,7 @@ return [
 
     'pay_now' => 'ادفع بأمان',
     'payment_card_details' => 'تفاصيل البطاقة',
-    'payment_card_details_hint' => 'أدخل معلومات البطاقة في الحقول أدناه — يظهر اسم كل حقل فوق مربع الإدخال.',
+    'payment_card_details_hint' => 'أدخل بيانات البطاقة في الحقول الآمنة أدناه. إذا لم تظهر، استخدم زر «المتابعة إلى صفحة الدفع الآمنة».',
     'payment_label_card_holder' => 'اسم حامل البطاقة',
     'payment_label_card_number' => 'رقم البطاقة',
     'payment_label_expiry' => 'تاريخ الانتهاء (شهر / سنة)',

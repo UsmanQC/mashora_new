@@ -731,8 +731,9 @@ new #[Layout('layouts::patient')] #[Title('Payment')] class extends Component
                         sessionId: @js($mfSessionId),
                         cardViewId: "mf-form-element",
                         style: {
+                            hideCardIcons: false,
                             direction: @js(App::isLocale('ar') ? 'rtl' : 'ltr'),
-                            cardHeight: 160,
+                            cardHeight: 220,
                             input: {
                                 color: "#111827",
                                 fontSize: "14px",

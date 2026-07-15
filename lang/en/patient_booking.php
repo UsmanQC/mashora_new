@@ -57,7 +57,7 @@ return [
 
     'pay_now' => 'Pay securely',
     'payment_card_details' => 'Card details',
-    'payment_card_details_hint' => 'Fill in each field below — labels appear above the matching input.',
+    'payment_card_details_hint' => 'Enter your card details in the secure fields below. If they do not appear, use “Continue to secure payment page”.',
     'payment_label_card_holder' => 'Name on card',
     'payment_label_card_number' => 'Card number',
     'payment_label_expiry' => 'Expiry (MM / YY)',
