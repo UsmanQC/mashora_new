@@ -76,7 +76,7 @@
 
         <p class="text-center text-xs leading-relaxed text-slate-500">{{ __('patient_booking.payment_hyperpay_note') }}</p>
     @elseif ($this->usesMyFatoorah() && $embeddedReady)
-        {{-- Official MyFatoorah Embedded v3 sample UI: #unified-session + default styles. --}}
+        {{-- Embedded Payment v3 only (no hosted MyFatoorah redirect). --}}
         <div
             class="space-y-4"
             wire:ignore
@@ -89,6 +89,9 @@
                     const sessionId = @js($this->mfSessionId);
                     const scriptUrl = @js($this->mfSessionJsUrl);
                     const csrf = @js(csrf_token());
+                    const lang = @js(app()->getLocale() === 'ar' ? 'ar' : 'en');
+                    const payNow = @js(__('myfatoorah.payNow'));
+                    const insertCard = @js(__('myfatoorah.insertCardDetails'));
 
                     const fail = () => {
                         booting = false;
@@ -101,6 +104,7 @@
                             return;
                         }
 
+                        // Embedded card / wallets with shouldHandlePaymentUrl: true
                         if (response.paymentCompleted && response.paymentData) {
                             fetch(completeUrl, {
                                 method: 'POST',
@@ -127,11 +131,7 @@
                             return;
                         }
 
-                        if (response.redirectionUrl) {
-                            window.location.href = response.redirectionUrl;
-                            return;
-                        }
-
+                        // Do not open MyFatoorah hosted pages — stay embedded only.
                         fail();
                     };
 
@@ -167,6 +167,98 @@
                                 settings: {
                                     loader: {
                                         display: 'none',
+                                    },
+                                    card: {
+                                        language: lang,
+                                        style: {
+                                            showCardholderName: true,
+                                            hideCardIcons: false,
+                                            cardHeight: '220px',
+                                            tokenHeight: '220px',
+                                            input: {
+                                                color: 'black',
+                                                fontSize: '14px',
+                                                fontFamily: 'sans-serif',
+                                                inputHeight: '40px',
+                                                inputMargin: '0px',
+                                                borderColor: '#d1d5db',
+                                                borderWidth: '1px',
+                                                borderRadius: '8px',
+                                                placeHolder: {
+                                                    holderName: @js(__('myfatoorah.holderName')),
+                                                    cardNumber: @js(__('myfatoorah.cardNumber')),
+                                                    expiryDate: @js(__('myfatoorah.expiryDate')),
+                                                    securityCode: @js(__('myfatoorah.securityCode')),
+                                                },
+                                            },
+                                            label: {
+                                                display: false,
+                                            },
+                                            error: {
+                                                borderColor: 'red',
+                                                borderRadius: '8px',
+                                            },
+                                            button: {
+                                                useCustomButton: false,
+                                                textContent: payNow,
+                                                fontSize: '16px',
+                                                fontFamily: 'sans-serif',
+                                                color: 'white',
+                                                backgroundColor: 'black',
+                                                height: '44px',
+                                                borderRadius: '8px',
+                                                width: '100%',
+                                                margin: '12px auto 0 auto',
+                                                cursor: 'pointer',
+                                            },
+                                            separator: {
+                                                useCustomSeparator: false,
+                                                textContent: insertCard,
+                                                fontSize: '14px',
+                                                color: '#6b7280',
+                                                fontFamily: 'sans-serif',
+                                                textSpacing: '8px',
+                                                lineStyle: 'solid',
+                                                lineColor: '#e5e7eb',
+                                                lineThickness: '1px',
+                                            },
+                                        },
+                                    },
+                                    applePay: {
+                                        language: lang,
+                                        style: {
+                                            frameHeight: '44px',
+                                            frameWidth: '100%',
+                                            button: {
+                                                height: '44px',
+                                                type: 'pay',
+                                                borderRadius: '8px',
+                                            },
+                                        },
+                                    },
+                                    googlePay: {
+                                        language: lang,
+                                        style: {
+                                            frameHeight: '44px',
+                                            frameWidth: '100%',
+                                            button: {
+                                                height: '44px',
+                                                type: 'pay',
+                                                borderRadius: '8px',
+                                                color: 'black',
+                                            },
+                                        },
+                                    },
+                                    stcPay: {
+                                        language: lang,
+                                        style: {
+                                            frameHeight: '44px',
+                                            frameWidth: '100%',
+                                            button: {
+                                                borderRadius: '8px',
+                                                height: '44px',
+                                            },
+                                        },
                                     },
                                 },
                             });
@@ -212,11 +304,11 @@
                 <div x-show="booting && !failed" x-cloak class="space-y-3 py-6">
                     <div class="h-10 animate-pulse rounded-xl bg-slate-100"></div>
                     <div class="h-10 animate-pulse rounded-xl bg-slate-100"></div>
-                    <div class="h-24 animate-pulse rounded-xl bg-slate-100"></div>
+                    <div class="h-28 animate-pulse rounded-xl bg-slate-100"></div>
                     <p class="text-center text-xs text-slate-400">{{ __('patient_booking.payment_processing') }}</p>
                 </div>
 
-                <div id="unified-session" class="min-h-[22rem] w-full"></div>
+                <div id="unified-session" class="min-h-[24rem] w-full"></div>
             </div>
 
             <p class="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900" x-cloak x-show="failed">
@@ -227,21 +319,10 @@
         <flux:button
             type="button"
             variant="ghost"
-            class="min-h-11 w-full !rounded-2xl !border !border-slate-200 !bg-slate-50 !font-semibold !text-slate-700"
-            wire:click="startCardPayment"
-            wire:loading.attr="disabled"
-            data-test="patient-checkout-pay-card"
-        >
-            <span wire:loading.remove wire:target="startCardPayment">{{ __('patient_booking.pay_now_fallback') }}</span>
-            <span wire:loading wire:target="startCardPayment">{{ __('patient_booking.payment_processing') }}</span>
-        </flux:button>
-
-        <flux:button
-            type="button"
-            variant="ghost"
             class="w-full !text-slate-500"
             wire:click="initMyFatoorahEmbeddedV3"
             wire:loading.attr="disabled"
+            data-test="patient-checkout-mf-retry"
         >
             <span wire:loading.remove wire:target="initMyFatoorahEmbeddedV3">{{ __('patient_booking.payment_retry') }}</span>
             <span wire:loading wire:target="initMyFatoorahEmbeddedV3">{{ __('patient_booking.payment_processing') }}</span>
@@ -260,35 +341,23 @@
                     <span wire:loading.remove wire:target="initMyFatoorahEmbeddedV3">{{ __('patient_booking.payment_retry') }}</span>
                     <span wire:loading wire:target="initMyFatoorahEmbeddedV3">{{ __('patient_booking.payment_processing') }}</span>
                 </flux:button>
-
-                <flux:button
-                    type="button"
-                    variant="ghost"
-                    class="min-h-11 w-full !rounded-2xl !border !border-slate-200 !bg-slate-50 !font-semibold !text-slate-700"
-                    wire:click="startCardPayment"
-                    wire:loading.attr="disabled"
-                    data-test="patient-checkout-pay-card"
-                >
-                    <span wire:loading.remove wire:target="startCardPayment">{{ __('patient_booking.pay_now_fallback') }}</span>
-                    <span wire:loading wire:target="startCardPayment">{{ __('patient_booking.payment_processing') }}</span>
-                </flux:button>
-            @else
+            @elseif ($this->usesHyperPay())
                 <flux:button
                     type="button"
                     variant="primary"
                     class="min-h-12 w-full !rounded-2xl !border-[#10B981] !bg-[#10B981] !text-white shadow-[0_10px_28px_-8px_rgba(16,185,129,0.45)] hover:!brightness-[0.97]"
-                    wire:click="startCardPayment"
+                    wire:click="initHyperpayCheckout"
                     wire:loading.attr="disabled"
                     data-test="patient-checkout-pay-card"
                 >
-                    <span wire:loading.remove wire:target="startCardPayment">{{ __('patient_booking.pay_now') }}</span>
-                    <span wire:loading wire:target="startCardPayment">{{ __('patient_booking.payment_processing') }}</span>
+                    <span wire:loading.remove wire:target="initHyperpayCheckout">{{ __('patient_booking.payment_retry') }}</span>
+                    <span wire:loading wire:target="initHyperpayCheckout">{{ __('patient_booking.payment_processing') }}</span>
                 </flux:button>
             @endif
 
             <p class="text-center text-[0.7rem] leading-relaxed text-slate-400">
                 @if ($this->usesMyFatoorah())
-                    {{ __('patient_booking.payment_secure_note') }}
+                    {{ __('patient_booking.payment_embedded_v3_hint') }}
                 @elseif ($this->usesHyperPay())
                     {{ __('patient_booking.payment_hyperpay_note') }}
                 @endif

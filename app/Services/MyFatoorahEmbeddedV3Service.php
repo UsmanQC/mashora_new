@@ -42,9 +42,9 @@ class MyFatoorahEmbeddedV3Service
                         'Reference' => (string) $temporaryAppointment->id,
                         'Email' => (string) ($temporaryAppointment->patient_email ?: $customer->email ?: ''),
                     ],
-                    'IntegrationUrls' => [
-                        'Redirection' => route('patient.payment.success', ['temporaryAppointment' => $temporaryAppointment->id]),
-                    ],
+                    // Embedded-only methods — hosted methods (KNET, etc.) force a MyFatoorah page redirect.
+                    'SupportedPaymentMethods' => ['card', 'applepay', 'googlepay', 'stcpay'],
+                    'SupportedNetworks' => ['visa', 'masterCard', 'mada', 'amex'],
                     'Language' => app()->getLocale() === 'ar' ? 'AR' : 'EN',
                 ]);
 

@@ -417,7 +417,8 @@ new #[Layout('layouts::patient')] #[Title('Payment')] class extends Component
             return;
         }
 
-        $this->startMyFatoorahPayment();
+        // MyFatoorah: stay on embedded checkout — never start hosted SendPayment redirect.
+        $this->initMyFatoorahEmbeddedV3();
     }
 
     public function startStripePayment(): void
