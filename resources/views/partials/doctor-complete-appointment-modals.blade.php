@@ -59,8 +59,9 @@
                 <flux:button
                     :href="route('doctor.appointments.diagnosis', $appointment)"
                     wire:navigate
-                    class="w-full !border-0 bg-[#7066e0] text-white shadow-sm hover:brightness-105 sm:min-h-11"
+                    class="w-full !border-0 !bg-[#047857] !text-white shadow-sm hover:!brightness-95 sm:min-h-11"
                     variant="primary"
+                    data-test="doctor-diagnosis-required-modal-go"
                 >
                     {{ __('doctor.workspace.tab_diagnosis') }}
                 </flux:button>
