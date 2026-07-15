@@ -52,7 +52,9 @@
             'mfPreferDesktop' => $mfPreferDesktop ?? false,
         ])
 
+        {{-- Accepted cards strip (mada / Visa / Mastercard / Apple Pay)
         @include('partials.patient-checkout-payment-methods', ['compact' => true, 'labelSurface' => 'bg-white'])
+        --}}
     </div>
 
     @if ($showBackHome)
