@@ -46,8 +46,6 @@ class MyFatoorahEmbeddedV3Service
                         'Redirection' => route('patient.payment.success', ['temporaryAppointment' => $temporaryAppointment->id]),
                     ],
                     'Language' => app()->getLocale() === 'ar' ? 'AR' : 'EN',
-                    'SupportedPaymentMethods' => ['card', 'applepay', 'googlepay', 'stcpay'],
-                    'SupportedNetworks' => ['visa', 'masterCard', 'mada', 'amex'],
                 ]);
 
             if (! $response->successful()) {
