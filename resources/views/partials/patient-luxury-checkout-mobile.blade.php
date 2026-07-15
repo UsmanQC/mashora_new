@@ -96,5 +96,9 @@
         </section>
     @endif
 
-    @include('partials.patient-checkout-payment-card', ['showBackHome' => false])
+    @include('partials.patient-checkout-payment-card', [
+        'showBackHome' => false,
+        'mfContainerId' => 'mf-unified-mobile',
+        'mfPreferDesktop' => false,
+    ])
 </main>

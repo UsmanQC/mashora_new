@@ -100,6 +100,8 @@ new #[Layout('layouts::patient')] #[Title('Payment')] class extends Component
 
     public function initMyFatoorahEmbeddedV3(): void
     {
+        $this->js('window.__mfSessionBooted = null');
+
         if ($this->myFatoorahConfigError() !== null) {
             $this->paymentError = $this->myFatoorahConfigError() ?? '';
             $this->embeddedReady = false;
@@ -720,7 +722,11 @@ new #[Layout('layouts::patient')] #[Title('Payment')] class extends Component
             </div>
 
             <div class="order-1 lg:order-2">
-                @include('partials.patient-checkout-payment-card', ['showBackHome' => true])
+                @include('partials.patient-checkout-payment-card', [
+                    'showBackHome' => true,
+                    'mfContainerId' => 'mf-unified-desktop',
+                    'mfPreferDesktop' => true,
+                ])
             </div>
         </div>
     </div>

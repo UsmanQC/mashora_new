@@ -47,7 +47,10 @@
     </div>
 
     <div class="space-y-5 px-5 py-5 sm:px-6 sm:py-6">
-        @include('partials.patient-checkout-payment-panel')
+        @include('partials.patient-checkout-payment-panel', [
+            'mfContainerId' => $mfContainerId ?? 'mf-unified-session',
+            'mfPreferDesktop' => $mfPreferDesktop ?? false,
+        ])
 
         @include('partials.patient-checkout-payment-methods', ['compact' => true, 'labelSurface' => 'bg-white'])
     </div>
