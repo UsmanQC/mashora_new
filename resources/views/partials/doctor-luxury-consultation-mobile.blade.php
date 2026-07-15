@@ -10,14 +10,14 @@
     class="doctor-luxury-consultation relative flex h-svh max-h-svh min-h-0 flex-col overflow-hidden bg-slate-50 lg:hidden"
     data-test="doctor-luxury-consultation"
     wire:key="doctor-consultation-mobile-{{ $appointment->id }}"
-    x-data="{ tab: 'summary', chatOpen: false, callActive: false, chatCardMinimized: false, hasNewMessage: false }"
+    x-data="{ tab: 'summary', chatOpen: false, callActive: false, chatCardMinimized: false, hasNewMessage: false, unreadCount: 0 }"
     x-bind:class="{
         'doctor-consultation--call-active': callActive,
         'doctor-consultation--chat-open': chatOpen,
     }"
     x-on:consultation-call-active.window="if (! callActive) { chatOpen = false } callActive = true"
     x-on:consultation-call-ended.window="callActive = false; chatOpen = false"
-    x-on:doctor-chat-message-received.window="if (chatCardMinimized) hasNewMessage = true"
+    x-on:doctor-chat-message-received.window="if ((callActive && ! chatOpen) || chatCardMinimized) { hasNewMessage = true; unreadCount = Math.min(unreadCount + 1, 99) }"
 >
     <header class="shrink-0 border-b border-slate-100 bg-white px-4 pb-3 pt-[max(2rem,env(safe-area-inset-top))]">
         <div class="flex items-center gap-3">
@@ -151,14 +151,31 @@
                         <button
                             type="button"
                             id="agora-toggle-chat-mobile"
-                            x-on:click="chatOpen = !chatOpen"
+                            x-on:click="chatOpen = !chatOpen; if (chatOpen) { hasNewMessage = false; unreadCount = 0; chatCardMinimized = false }"
                             x-bind:aria-pressed="chatOpen"
-                            x-bind:title="chatOpen ? @js(__('doctor.consultation.close_chat')) : @js(__('doctor.consultation.open_chat'))"
-                            x-bind:class="chatOpen ? 'doctor-consultation-call-controls__btn--active' : ''"
-                            class="doctor-consultation-call-controls__btn hidden"
+                            x-bind:aria-label="hasNewMessage && !chatOpen ? @js(__('doctor.consultation.chat_new_message_hint')) : (chatOpen ? @js(__('doctor.consultation.close_chat')) : @js(__('doctor.consultation.open_chat')))"
+                            x-bind:title="hasNewMessage && !chatOpen ? @js(__('doctor.consultation.chat_new_message_hint')) : (chatOpen ? @js(__('doctor.consultation.close_chat')) : @js(__('doctor.consultation.open_chat')))"
+                            x-bind:class="{
+                                'doctor-consultation-call-controls__btn--active': chatOpen,
+                                'doctor-consultation-call-controls__btn--notify': hasNewMessage && !chatOpen,
+                            }"
+                            class="doctor-consultation-call-controls__btn relative hidden"
                             data-test="doctor-consultation-chat-toggle"
                         >
                             <flux:icon name="chat-bubble-left-right" variant="mini" class="size-5 shrink-0" />
+                            <span
+                                x-show="hasNewMessage && !chatOpen"
+                                x-cloak
+                                class="pointer-events-none absolute -end-0.5 -top-0.5"
+                                data-test="doctor-consultation-chat-unread-badge"
+                                aria-hidden="true"
+                            >
+                                <span class="absolute inset-0 animate-ping rounded-full bg-emerald-400/80"></span>
+                                <span
+                                    class="relative flex min-h-4 min-w-4 items-center justify-center rounded-full bg-[#10B981] px-1 text-[0.5625rem] font-bold leading-none text-white ring-2 ring-zinc-900"
+                                    x-text="unreadCount > 9 ? '9+' : (unreadCount > 1 ? unreadCount : '')"
+                                ></span>
+                            </span>
                         </button>
                         <button
                             type="button"

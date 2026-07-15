@@ -1427,6 +1427,12 @@ select:focus[data-flux-control] {
         background-color: rgb(6 78 59 / 0.95);
         box-shadow: 0 0 0 2px rgb(16 185 129 / 0.35);
     }
+
+    .doctor-consultation-call-controls__btn--notify {
+        border-color: rgb(16 185 129 / 0.8);
+        background-color: rgb(6 78 59 / 0.9);
+        box-shadow: 0 0 0 2px rgb(16 185 129 / 0.4);
+    }
 }
 
 .patient-consultation-inline-video--live .patient-consultation-video-idle {
