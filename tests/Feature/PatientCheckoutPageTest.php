@@ -47,6 +47,7 @@ test('authenticated patient sees luxury checkout shell on mobile', function () {
         ->assertSee('data-test="patient-luxury-checkout"', false)
         ->assertSee('data-test="patient-checkout-header"', false)
         ->assertSee('data-test="patient-checkout-step-payment"', false)
+        ->assertSee('data-test="patient-checkout-mobile-summary"', false)
         ->assertSee('data-test="patient-checkout-payment-card"', false)
         ->assertDontSee('data-test="patient-checkout-payment-methods"', false)
         ->assertSee('data-test="patient-navbar-language-switch"', false);
@@ -58,7 +59,7 @@ test('myfatoorah checkout panel uses embedded payment without hosted redirect', 
     expect($panel)
         ->toContain('mf-unified')
         ->toContain('shouldHandlePaymentUrl: true')
-        ->toContain("paymentOptions: ['GooglePay', 'ApplePay', 'Card']")
+        ->toContain("paymentOptions: ['ApplePay', 'GooglePay', 'Card']")
         ->toContain("backgroundColor: '#10B981'")
         ->toContain('CARD_IDENTIFIED')
         ->toContain('patient-checkout-mf-boot')
