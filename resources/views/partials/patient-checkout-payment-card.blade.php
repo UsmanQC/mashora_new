@@ -16,9 +16,9 @@
             aria-hidden="true"
         ></div>
 
-        <div class="relative flex items-start justify-between gap-4 px-5 py-5 sm:px-6">
+        <div class="relative flex flex-col gap-4 px-4 py-4 sm:flex-row sm:items-start sm:justify-between sm:gap-4 sm:px-6 sm:py-5">
             <div class="flex min-w-0 items-start gap-3">
-                <span class="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-[#10B981] text-white shadow-[0_8px_20px_-6px_rgba(16,185,129,0.55)]">
+                <span class="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-[#10B981] text-white shadow-[0_8px_20px_-6px_rgba(16,185,129,0.55)] sm:size-11">
                     <flux:icon name="lock-closed" variant="mini" class="size-5" />
                 </span>
                 <div class="min-w-0">
@@ -34,11 +34,11 @@
                 </div>
             </div>
 
-            <div class="shrink-0 rounded-2xl border border-emerald-100 bg-white/90 px-3.5 py-2.5 text-end shadow-sm backdrop-blur-sm">
+            <div class="flex w-full shrink-0 items-center justify-between rounded-2xl border border-emerald-100 bg-white/90 px-3.5 py-2.5 shadow-sm backdrop-blur-sm sm:w-auto sm:flex-col sm:items-end sm:justify-center sm:text-end">
                 <p class="text-[0.6rem] font-semibold uppercase tracking-[0.12em] text-slate-400">
                     {{ $showAmountDue ? __('patient_booking.amount_due') : __('patient_booking.total') }}
                 </p>
-                <p class="mt-0.5 text-xl font-bold tabular-nums tracking-tight text-[#059669] sm:text-2xl">
+                <p class="text-xl font-bold tabular-nums tracking-tight text-[#059669] sm:mt-0.5 sm:text-2xl">
                     {{ number_format($displayAmount, 2) }}
                     <span class="text-sm font-semibold">{{ __('patient_booking.sar') }}</span>
                 </p>
@@ -46,7 +46,7 @@
         </div>
     </div>
 
-    <div class="space-y-5 px-5 py-5 sm:px-6 sm:py-6">
+    <div class="space-y-4 px-3 py-4 sm:space-y-5 sm:px-6 sm:py-6">
         @include('partials.patient-checkout-payment-panel', [
             'mfContainerId' => $mfContainerId ?? 'mf-unified-session',
             'mfPreferDesktop' => $mfPreferDesktop ?? false,

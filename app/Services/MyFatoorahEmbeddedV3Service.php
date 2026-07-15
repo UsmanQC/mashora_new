@@ -77,11 +77,13 @@ class MyFatoorahEmbeddedV3Service
                 };
             }
 
-            // Omit SupportedPaymentMethods so account-enabled wallets appear (Apple Pay, GPay, etc.).
+            // Limit embed + wallets (drops KNET / Benefit). Card kept for Insert Card Details.
+            // Note: MyFatoorah docs only list card/applepay/googlepay (and stcpay) for embed — not samsungpay.
             $response = $http->post($this->apiBaseUrl().'/v3/sessions', [
                 'PaymentMode' => 'COMPLETE_PAYMENT',
                 'Order' => $order,
                 'Customer' => $customerPayload,
+                'SupportedPaymentMethods' => ['card', 'applepay', 'googlepay'],
                 'Language' => app()->getLocale() === 'ar' ? 'AR' : 'EN',
             ]);
 

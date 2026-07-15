@@ -95,6 +95,10 @@
                     const csrf = @js(csrf_token());
                     const containerId = @js($mfContainerId);
                     const preferDesktop = @js(($mfPreferDesktop ?? false));
+                    const lang = @js(app()->getLocale() === 'ar' ? 'ar' : 'en');
+                    const payNow = @js(__('myfatoorah.payNow'));
+                    const insertCard = @js(__('myfatoorah.insertCardDetails'));
+                    const isNarrow = ! window.matchMedia('(min-width: 640px)').matches;
 
                     const fail = (reason = '') => {
                         booting = false;
@@ -172,12 +176,14 @@
                         }
 
                         try {
-                            // Docs sample UI (default MyFatoorah chrome — custom card/applePay/googlePay left unset).
+                            // Default MyFatoorah layout + brand green Pay Now (mobile-friendly heights).
                             window.myfatoorah.init({
                                 sessionId: sessionId,
                                 callback: payment,
                                 containerId: containerId,
                                 shouldHandlePaymentUrl: true,
+                                // Wallet row filter (KNET / Benefit excluded). Card keeps Insert Card Details.
+                                paymentOptions: ['GooglePay', 'ApplePay', 'Card'],
                                 eventListener: eventHandler,
                                 subscribedEvents: [
                                     'VIEW_READY',
@@ -192,6 +198,87 @@
                                 settings: {
                                     loader: {
                                         display: 'none',
+                                    },
+                                    card: {
+                                        language: lang,
+                                        style: {
+                                            showCardholderName: true,
+                                            hideCardIcons: false,
+                                            cardHeight: isNarrow ? '280px' : '240px',
+                                            tokenHeight: isNarrow ? '280px' : '240px',
+                                            input: {
+                                                color: '#0f172a',
+                                                fontSize: isNarrow ? '16px' : '14px',
+                                                fontFamily: 'sans-serif',
+                                                inputHeight: isNarrow ? '44px' : '40px',
+                                                inputMargin: '0px',
+                                                borderColor: '#e2e8f0',
+                                                borderWidth: '1px',
+                                                borderRadius: '10px',
+                                                placeHolder: {
+                                                    holderName: @js(__('myfatoorah.holderName')),
+                                                    cardNumber: @js(__('myfatoorah.cardNumber')),
+                                                    expiryDate: @js(__('myfatoorah.expiryDate')),
+                                                    securityCode: @js(__('myfatoorah.securityCode')),
+                                                },
+                                            },
+                                            label: {
+                                                display: false,
+                                            },
+                                            error: {
+                                                borderColor: '#ef4444',
+                                                borderRadius: '10px',
+                                            },
+                                            button: {
+                                                useCustomButton: false,
+                                                textContent: payNow,
+                                                fontSize: isNarrow ? '16px' : '15px',
+                                                fontFamily: 'sans-serif',
+                                                color: 'white',
+                                                backgroundColor: '#10B981',
+                                                height: isNarrow ? '48px' : '44px',
+                                                borderRadius: '12px',
+                                                width: '100%',
+                                                margin: '14px auto 0 auto',
+                                                cursor: 'pointer',
+                                            },
+                                            separator: {
+                                                useCustomSeparator: false,
+                                                textContent: insertCard,
+                                                fontSize: '14px',
+                                                color: '#94a3b8',
+                                                fontFamily: 'sans-serif',
+                                                textSpacing: '10px',
+                                                lineStyle: 'solid',
+                                                lineColor: '#e2e8f0',
+                                                lineThickness: '1px',
+                                            },
+                                        },
+                                    },
+                                    applePay: {
+                                        language: lang,
+                                        style: {
+                                            frameHeight: isNarrow ? '48px' : '44px',
+                                            frameWidth: '100%',
+                                            button: {
+                                                height: isNarrow ? '48px' : '44px',
+                                                type: 'pay',
+                                                borderRadius: '12px',
+                                            },
+                                        },
+                                    },
+                                    googlePay: {
+                                        language: lang,
+                                        style: {
+                                            frameHeight: isNarrow ? '48px' : '44px',
+                                            frameWidth: '100%',
+                                            button: {
+                                                height: isNarrow ? '48px' : '44px',
+                                                type: 'pay',
+                                                borderRadius: '12px',
+                                                color: 'black',
+                                            },
+                                        },
                                     },
                                 },
                             });
@@ -238,7 +325,7 @@
                 })()
             "
         >
-            <div class="mx-auto w-full max-w-[400px] bg-white" style="width: 400px; max-width: 100%; margin: auto;">
+            <div class="mx-auto w-full max-w-[400px] bg-white px-0 sm:px-0">
                 <div x-show="booting && !failed" x-cloak class="space-y-3 py-6">
                     <div class="h-10 animate-pulse rounded-xl bg-slate-100"></div>
                     <div class="h-10 animate-pulse rounded-xl bg-slate-100"></div>
@@ -246,7 +333,7 @@
                     <p class="text-center text-xs text-slate-400">{{ __('patient_booking.payment_processing') }}</p>
                 </div>
 
-                <div id="{{ $mfContainerId }}" class="w-full bg-white"></div>
+                <div id="{{ $mfContainerId }}" class="min-h-[22rem] w-full bg-white sm:min-h-[20rem]"></div>
             </div>
 
             <div class="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900" x-cloak x-show="failed">

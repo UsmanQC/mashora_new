@@ -4,7 +4,7 @@
     $showAmountDue = $this->walletApplied() > 0 && $checkoutDue < $checkoutTotal;
 @endphp
 
-<main class="space-y-6 px-4 py-6" data-test="patient-checkout-step-payment">
+<main class="space-y-5 px-3 py-5 sm:space-y-6 sm:px-4 sm:py-6" data-test="patient-checkout-step-payment">
     @if (session('flash_payment'))
         <p class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">{{ session('flash_payment') }}</p>
     @endif
