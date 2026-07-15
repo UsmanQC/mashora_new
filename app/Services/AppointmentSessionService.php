@@ -27,7 +27,8 @@ final class AppointmentSessionService
             return false;
         }
 
-        if ($appointment->isSessionStartRequestPending()) {
+        // Early-start request still pending — doctor waits unless scheduled time has arrived.
+        if ($appointment->isSessionStartRequestPending() && ! $this->canDoctorStartWithoutPatientApproval($appointment)) {
             return false;
         }
 
@@ -35,16 +36,20 @@ final class AppointmentSessionService
             return true;
         }
 
+        return $this->canDoctorStartWithoutPatientApproval($appointment);
+    }
+
+    /**
+     * Patient approval is required only for early starts (before scheduled clock time).
+     * At/after the appointment start time the doctor may begin and the patient just answers the call.
+     */
+    public function canDoctorStartWithoutPatientApproval(Appointment $appointment): bool
+    {
         if ((bool) config('appointments.relaxed_session_limits', false)) {
             return true;
         }
 
-        return false;
-    }
-
-    public function canDoctorStartWithoutPatientApproval(Appointment $appointment): bool
-    {
-        return (bool) config('appointments.relaxed_session_limits', false);
+        return $appointment->isScheduledSessionTimeReached();
     }
 
     public function canPatientJoin(Appointment $appointment): bool
@@ -147,11 +152,23 @@ final class AppointmentSessionService
             abort(403);
         }
 
-        if ($appointment->isSessionStartRequestPending()) {
+        $mayStartWithoutApproval = $this->canDoctorStartWithoutPatientApproval($appointment);
+
+        // Still waiting on early-start approval.
+        if ($appointment->isSessionStartRequestPending() && ! $mayStartWithoutApproval) {
             return false;
         }
 
-        if (! $appointment->isSessionStartApproved() && ! $this->canDoctorStartWithoutPatientApproval($appointment)) {
+        // Early request is obsolete once the scheduled clock time is reached.
+        if ($appointment->isSessionStartRequestPending() && $mayStartWithoutApproval) {
+            $appointment->update([
+                'session_start_requested_at' => null,
+                'session_start_approved_at' => $appointment->session_start_approved_at ?? now(),
+            ]);
+            $appointment->refresh();
+        }
+
+        if (! $appointment->isSessionStartApproved() && ! $mayStartWithoutApproval) {
             return $this->requestStart($doctor, $appointment);
         }
 

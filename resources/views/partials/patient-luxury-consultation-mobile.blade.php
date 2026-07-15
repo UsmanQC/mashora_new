@@ -12,7 +12,7 @@
         'patient-consultation--call-active': callActive,
         'patient-consultation--chat-open': chatOpen,
     }"
-    x-on:patient-consultation-call-active.window="callActive = true; chatOpen = false"
+    x-on:patient-consultation-call-active.window="if (! callActive) { chatOpen = false } callActive = true"
     x-on:patient-consultation-call-ended.window="callActive = false; chatOpen = false"
     x-on:patient-chat-message-received.window="if (chatCardMinimized) hasNewMessage = true"
 >
@@ -137,9 +137,9 @@
                 </div>
             @endif
 
-            @if ($appointment->allowsPatientCalls())
+            @if ($appointment->allowsPatientCalls() && $appointment->status === 'in_process')
                 <div class="flex flex-wrap items-center gap-2">
-                    @if ($appointment->status === 'in_process' && $this->sessionTimeExpired())
+                    @if ($this->sessionTimeExpired())
                         <span
                             id="patient-session-finished-chip"
                             class="inline-flex rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-semibold text-slate-600 shadow-sm"
@@ -149,25 +149,23 @@
                     @else
                         <span
                             id="patient-call-started-chip"
-                            class="hidden inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700"
+                            class="hidden items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700"
                         >
                             <span id="patient-call-chip-label">{{ __('patient.appointments.call_in_progress') }}</span>
                             <span id="patient-call-chip-duration" class="font-mono tabular-nums">00:00</span>
                         </span>
                         <span
                             id="patient-session-finished-chip"
-                            class="hidden inline-flex rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-semibold text-slate-600 shadow-sm"
+                            class="hidden rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-semibold text-slate-600 shadow-sm"
                         >
                             {{ __('patient.appointments.session_finished') }}
                         </span>
-                        @if ($appointment->status === 'in_process')
-                            <span
-                                id="patient-waiting-for-call-chip"
-                                class="inline-flex rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-600 shadow-sm"
-                            >
-                                {{ __('patient.appointments.waiting_for_specialist_call') }}
-                            </span>
-                        @endif
+                        <span
+                            id="patient-waiting-for-call-chip"
+                            class="inline-flex rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-600 shadow-sm"
+                        >
+                            {{ __('patient.appointments.waiting_for_specialist_call') }}
+                        </span>
                     @endif
                 </div>
             @endif
@@ -214,7 +212,7 @@
 
                     <div
                     id="patient-consultation-call-controls-wrap"
-                    class="pointer-events-none absolute inset-x-0 bottom-0 z-20 hidden flex justify-center px-4 pb-4 pt-8"
+                    class="pointer-events-none absolute inset-x-0 bottom-0 z-20 hidden justify-center px-4 pb-4 pt-8"
                     >
                         <div
                             class="doctor-consultation-call-controls pointer-events-auto flex items-center justify-center gap-3 rounded-full border border-white/10 bg-zinc-900/90 px-3 py-2 shadow-xl backdrop-blur-md"

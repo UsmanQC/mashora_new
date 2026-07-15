@@ -394,11 +394,12 @@ test('appointment session service rejects patient-side start attempts', function
 
     $service = app(AppointmentSessionService::class);
 
+    // At scheduled time the doctor may start; the patient still cannot join until in_process.
     expect($service->canPatientJoin($appointment))->toBeFalse()
-        ->and($service->canDoctorStart($appointment))->toBeFalse();
+        ->and($service->canDoctorStart($appointment))->toBeTrue();
 });
 
-test('doctor cannot start session more than one hour before scheduled time without patient approval', function () {
+test('doctor cannot start or request session more than one hour before scheduled time', function () {
     config(['appointments.relaxed_session_limits' => false]);
 
     $user = User::factory()->create();
@@ -415,14 +416,15 @@ test('doctor cannot start session more than one hour before scheduled time witho
 
     $service = app(AppointmentSessionService::class);
 
-    expect($service->canDoctorStart($appointment))->toBeFalse();
+    expect($service->canDoctorStart($appointment))->toBeFalse()
+        ->and($service->canDoctorOfferSessionStart($appointment))->toBeFalse();
 
     Livewire::actingAs($doctor, 'doctor')
         ->test('pages::doctor.appointment.conversation', ['appointment' => $appointment])
         ->call('startSession');
 
     expect($appointment->fresh()->status)->toBe('new')
-        ->and($appointment->fresh()->session_start_requested_at)->not->toBeNull();
+        ->and($appointment->fresh()->session_start_requested_at)->toBeNull();
 });
 
 test('doctor conversation refreshes start session button after patient approval without remounting', function () {
@@ -535,7 +537,7 @@ test('doctor must request patient approval within one hour before scheduled time
         ->and($appointment->fresh()->status)->toBe('new');
 });
 
-test('doctor must request patient approval even at scheduled session time', function () {
+test('doctor can start session at scheduled time without patient approval', function () {
     config(['appointments.relaxed_session_limits' => false]);
 
     $user = User::factory()->create();
@@ -553,16 +555,46 @@ test('doctor must request patient approval even at scheduled session time', func
 
     $service = app(AppointmentSessionService::class);
 
-    expect($service->canDoctorStart($appointment))->toBeFalse()
-        ->and($service->canDoctorStartWithoutPatientApproval($appointment))->toBeFalse()
+    expect($service->canDoctorStart($appointment))->toBeTrue()
+        ->and($service->canDoctorStartWithoutPatientApproval($appointment))->toBeTrue()
         ->and($appointment->isDoctorChatOpen())->toBeTrue();
 
     Livewire::actingAs($doctor, 'doctor')
         ->test('pages::doctor.appointment.conversation', ['appointment' => $appointment])
         ->call('startSession');
 
-    expect($appointment->fresh()->session_start_requested_at)->not->toBeNull()
-        ->and($appointment->fresh()->status)->toBe('new');
+    $fresh = $appointment->fresh();
+    expect($fresh->status)->toBe('in_process')
+        ->and($fresh->session_start_requested_at)->toBeNull()
+        ->and($fresh->actual_start_at)->not->toBeNull();
+});
+
+test('pending early approval is cleared when doctor starts at scheduled time', function () {
+    config(['appointments.relaxed_session_limits' => false]);
+
+    $user = User::factory()->create();
+    $doctor = Doctor::factory()->create(['profile_completed' => true]);
+
+    $appointment = Appointment::factory()->create([
+        'doctor_id' => $doctor->id,
+        'user_id' => $user->id,
+        'status' => 'new',
+        'duration' => 15,
+        'scheduled_at' => null,
+        'appointment_date' => now()->toDateString(),
+        'start_time' => now()->subMinute()->format('H:i:s'),
+        'session_start_requested_at' => now()->subMinutes(10),
+        'session_start_approved_at' => null,
+    ]);
+
+    Livewire::actingAs($doctor, 'doctor')
+        ->test('pages::doctor.appointment.conversation', ['appointment' => $appointment])
+        ->call('startSession');
+
+    $fresh = $appointment->fresh();
+    expect($fresh->status)->toBe('in_process')
+        ->and($fresh->session_start_requested_at)->toBeNull()
+        ->and($fresh->actual_start_at)->not->toBeNull();
 });
 
 test('session start request creates patient notification with approve action', function () {
@@ -572,13 +604,14 @@ test('session start request creates patient notification with approve action', f
     $user = User::factory()->create();
     $doctor = Doctor::factory()->create(['profile_completed' => true, 'name' => 'Test Doctor']);
 
+    // Early start window (within 1 hour, before clock time) — approval required.
     $appointment = Appointment::factory()->create([
         'doctor_id' => $doctor->id,
         'user_id' => $user->id,
         'status' => 'new',
         'scheduled_at' => null,
-        'appointment_date' => now()->addDay()->toDateString(),
-        'start_time' => '10:00:00',
+        'appointment_date' => now()->toDateString(),
+        'start_time' => now()->addMinutes(30)->format('H:i:s'),
     ]);
 
     Livewire::actingAs($doctor, 'doctor')

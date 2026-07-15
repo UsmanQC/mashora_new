@@ -1424,15 +1424,62 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                 return res.json();
             }
 
-            function showOverlay(show) {
+            function playerHasPlayingVideo(playerId) {
+                const el = document.getElementById(playerId);
+
+                return Boolean(el?.querySelector('video'));
+            }
+
+            function shouldReplayVideoTracks() {
+                const localTrack = boot.__localVideo || localVideo;
+
+                if (localTrack && ! playerHasPlayingVideo(agoraLocalPlayerId())) {
+                    return true;
+                }
+
+                if (! agoraClient) {
+                    return false;
+                }
+
+                const hasRemoteVideo = agoraClient.remoteUsers.some((user) => Boolean(user.videoTrack));
+
+                return hasRemoteVideo && ! playerHasPlayingVideo(agoraRemotePlayerId());
+            }
+
+            function isInlineCallLive() {
+                if (isConsultationMobile()) {
+                    return document
+                        .getElementById('doctor-consultation-inline-video')
+                        ?.classList
+                        .contains('doctor-consultation-inline-video--live') === true;
+                }
+
+                const overlayEl = document.getElementById('agora-call-overlay');
+
+                return Boolean(overlayEl && ! overlayEl.classList.contains('hidden'));
+            }
+
+            function setMobileCallControlsVisible(visible) {
+                const controlsWrap = document.getElementById('doctor-consultation-call-controls-wrap');
+
+                if (! controlsWrap) {
+                    return;
+                }
+
+                controlsWrap.classList.toggle('hidden', ! visible);
+                controlsWrap.classList.toggle('flex', visible);
+            }
+
+            function showOverlay(show, { forceReplay = true } = {}) {
                 const inline = document.getElementById('doctor-consultation-inline-video');
                 const idle = document.getElementById('doctor-consultation-video-idle');
                 const quality = document.getElementById('doctor-consultation-call-quality');
                 const leaveMobile = document.getElementById('agora-leave-btn-mobile');
-                const controlsWrap = document.getElementById('doctor-consultation-call-controls-wrap');
                 const el = document.getElementById('agora-call-overlay');
 
                 if (isConsultationMobile()) {
+                    const wasLive = inline?.classList.contains('doctor-consultation-inline-video--live') === true;
+
                     el?.classList.add('hidden');
                     el?.setAttribute('aria-hidden', 'true');
                     inline?.classList.toggle('doctor-consultation-inline-video--live', show);
@@ -1441,19 +1488,21 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                     quality?.classList.toggle('inline-flex', show);
                     leaveMobile?.classList.toggle('hidden', !show);
                     leaveMobile?.classList.toggle('inline-flex', show);
-                    controlsWrap?.classList.toggle('hidden', !show);
+                    setMobileCallControlsVisible(show);
 
                     const chatToggle = document.getElementById('agora-toggle-chat-mobile');
                     chatToggle?.classList.toggle('hidden', !show);
                     chatToggle?.classList.toggle('inline-flex', show);
 
-                    window.dispatchEvent(new CustomEvent(show ? 'consultation-call-active' : 'consultation-call-ended'));
+                    if (show !== wasLive) {
+                        window.dispatchEvent(new CustomEvent(show ? 'consultation-call-active' : 'consultation-call-ended'));
+                    }
 
                     document.querySelectorAll('#doctor-consultation-inline-video .doctor-consultation-call-controls__btn:not(.hidden)').forEach((btn) => {
                         btn.classList.add('inline-flex');
                     });
 
-                    if (show) {
+                    if (show && (forceReplay || shouldReplayVideoTracks())) {
                         window.requestAnimationFrame(() => {
                             window.requestAnimationFrame(() => {
                                 replayActiveVideoTracks();
@@ -1468,10 +1517,12 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                     return;
                 }
 
+                const wasVisible = ! el.classList.contains('hidden');
+
                 el.classList.toggle('hidden', !show);
                 el.setAttribute('aria-hidden', show ? 'false' : 'true');
 
-                if (show) {
+                if (show && (forceReplay || shouldReplayVideoTracks() || ! wasVisible)) {
                     window.requestAnimationFrame(() => {
                         window.requestAnimationFrame(() => {
                             replayActiveVideoTracks();
@@ -2011,15 +2062,13 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
 
                 currentMode = mode;
                 boot.__currentMode = mode;
-                showOverlay(true);
+
+                // Soft sync on Livewire poll/morph: keep the call UI without restarting Agora video.
+                const forceReplay = ! isInlineCallLive() || shouldReplayVideoTracks();
+                showOverlay(true, { forceReplay });
                 showMediaControlsForMode(mode);
                 syncMediaControlUi(mode);
                 updateActiveCallOverlayUi();
-                window.requestAnimationFrame(() => {
-                    window.requestAnimationFrame(() => {
-                        replayActiveVideoTracks();
-                    });
-                });
             };
 
             function registerDoctorConversationMorphHook() {
@@ -2030,9 +2079,19 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                 window.__doctorConversationMorphHook = true;
 
                 const registerHook = () => {
-                    Livewire.hook('morph.updated', () => {
+                    Livewire.hook('morph.updated', ({ el }) => {
                         const bootEl = document.getElementById('doctor-conversation-bootstrap');
-                        if (bootEl?.__currentMode) {
+                        if (! bootEl?.__currentMode) {
+                            return;
+                        }
+
+                        if (
+                            el?.id === 'doctor-consultation-inline-video'
+                            || el?.closest?.('#doctor-consultation-inline-video')
+                            || el?.querySelector?.(
+                                '#doctor-consultation-inline-video, #agora-toggle-mic-mobile, #agora-leave-btn-mobile, #agora-local-player-mobile, #agora-remote-player-mobile',
+                            )
+                        ) {
                             bootEl.__syncCallOverlay?.();
                         }
                     });

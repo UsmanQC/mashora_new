@@ -15,7 +15,7 @@
         'doctor-consultation--call-active': callActive,
         'doctor-consultation--chat-open': chatOpen,
     }"
-    x-on:consultation-call-active.window="callActive = true; chatOpen = false"
+    x-on:consultation-call-active.window="if (! callActive) { chatOpen = false } callActive = true"
     x-on:consultation-call-ended.window="callActive = false; chatOpen = false"
     x-on:doctor-chat-message-received.window="if (chatCardMinimized) hasNewMessage = true"
 >
@@ -121,7 +121,7 @@
 
                 <div
                     id="doctor-consultation-call-controls-wrap"
-                    class="pointer-events-none absolute inset-x-0 bottom-0 z-20 hidden flex justify-center px-4 pb-4 pt-8"
+                    class="pointer-events-none absolute inset-x-0 bottom-0 z-20 hidden justify-center px-4 pb-4 pt-8"
                 >
                     <div
                         class="doctor-consultation-call-controls pointer-events-auto flex items-center justify-center gap-3 rounded-full border border-white/10 bg-zinc-900/90 px-3 py-2 shadow-xl backdrop-blur-md"

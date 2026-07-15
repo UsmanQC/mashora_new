@@ -1326,6 +1326,11 @@ select:focus[data-flux-control] {
     display: none;
 }
 
+#doctor-consultation-call-controls-wrap.hidden,
+#patient-consultation-call-controls-wrap.hidden {
+    display: none !important;
+}
+
 .doctor-consultation-call-controls {
     min-height: 3.25rem;
 }

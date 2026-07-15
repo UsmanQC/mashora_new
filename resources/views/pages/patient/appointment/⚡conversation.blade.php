@@ -461,19 +461,19 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
         </div>
     </header>
 
-    @if ($appointment->allowsPatientCalls())
+    @if ($appointment->allowsPatientCalls() && $appointment->status === 'in_process')
         <div class="hidden flex-wrap items-center gap-2 sm:flex">
-            @if ($appointment->status === 'in_process' && $this->sessionTimeExpired())
+            @if ($this->sessionTimeExpired())
                 <span
                     id="patient-session-finished-chip-desktop"
-                    class="rounded-full border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-[11px] font-semibold text-zinc-600"
+                    class="inline-flex rounded-full border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-[11px] font-semibold text-zinc-600"
                 >
                     {{ __('patient.appointments.session_finished') }}
                 </span>
             @else
                 <span
                     id="patient-call-started-chip-desktop"
-                    class="hidden inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700"
+                    class="hidden items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700"
                 >
                     <span id="patient-call-chip-label-desktop">{{ __('patient.appointments.call_in_progress') }}</span>
                     <span id="patient-call-chip-duration-desktop" class="font-mono tabular-nums">00:00</span>
@@ -484,14 +484,12 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 >
                     {{ __('patient.appointments.session_finished') }}
                 </span>
-                @if ($appointment->status === 'in_process')
-                    <span
-                        id="patient-waiting-for-call-chip-desktop"
-                        class="rounded-full border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-[11px] font-semibold text-zinc-600"
-                    >
-                        {{ __('patient.appointments.waiting_for_specialist_call') }}
-                    </span>
-                @endif
+                <span
+                    id="patient-waiting-for-call-chip-desktop"
+                    class="inline-flex rounded-full border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-[11px] font-semibold text-zinc-600"
+                >
+                    {{ __('patient.appointments.waiting_for_specialist_call') }}
+                </span>
             @endif
         </div>
     @endif
@@ -1317,43 +1315,45 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 return new Date(endIso).getTime() <= Date.now();
             }
 
+            function setChipVisible(el, visible, displayClass = 'inline-flex') {
+                if (! el) {
+                    return;
+                }
+
+                el.classList.toggle('hidden', ! visible);
+                el.classList.toggle(displayClass, visible);
+            }
+
             function refreshCallUiState() {
                 const sessionFinished = isSessionFinished();
                 const sessionActive = callEnabled && appointmentStatus === 'in_process' && ! sessionFinished;
                 const ui = callUiEls();
                 const incomingBanner = incomingBannerEl();
-
-                if (ui.waiting) {
-                    ui.waiting.classList.toggle(
-                        'hidden',
-                        sessionFinished
-                            || !sessionActive
-                            || activeMode
-                            || incomingPayload
-                            || (incomingBanner && !incomingBanner.classList.contains('hidden')),
-                    );
-                }
-
-                if (ui.chip) {
-                    ui.chip.classList.toggle('hidden', sessionFinished || !activeMode);
-                }
-
-                document.getElementById('patient-call-started-chip-desktop')?.classList.toggle(
-                    'hidden',
-                    sessionFinished || !activeMode,
-                );
-                document.getElementById('patient-waiting-for-call-chip-desktop')?.classList.toggle(
-                    'hidden',
-                    sessionFinished
-                        || !sessionActive
-                        || activeMode
-                        || incomingPayload
-                        || (incomingBanner && !incomingBanner.classList.contains('hidden')),
-                );
-
-                const sessionLiveBanner = document.getElementById('patient-session-live-banner');
                 const hasIncomingCall = Boolean(incomingPayload)
                     || (incomingBanner && !incomingBanner.classList.contains('hidden'));
+                const showWaiting = sessionActive
+                    && ! activeMode
+                    && ! hasIncomingCall
+                    && ! sessionFinished;
+                const showCallChip = Boolean(activeMode) && ! sessionFinished;
+
+                setChipVisible(ui.waiting, showWaiting);
+                setChipVisible(ui.chip, showCallChip);
+
+                setChipVisible(
+                    document.getElementById('patient-call-started-chip-desktop'),
+                    showCallChip,
+                );
+                setChipVisible(
+                    document.getElementById('patient-waiting-for-call-chip-desktop'),
+                    showWaiting,
+                );
+
+                // Always keep both mobile/desktop call chips consistent.
+                setChipVisible(document.getElementById('patient-call-started-chip'), showCallChip);
+                setChipVisible(document.getElementById('patient-waiting-for-call-chip'), showWaiting);
+
+                const sessionLiveBanner = document.getElementById('patient-session-live-banner');
 
                 if (sessionLiveBanner) {
                     if (sessionFinished || !sessionActive) {
@@ -1365,8 +1365,11 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 }
 
                 if (sessionFinished) {
-                    document.getElementById('patient-session-finished-chip')?.classList.remove('hidden');
-                    document.getElementById('patient-session-finished-chip-desktop')?.classList.remove('hidden');
+                    setChipVisible(document.getElementById('patient-session-finished-chip'), true, 'inline-flex');
+                    setChipVisible(document.getElementById('patient-session-finished-chip-desktop'), true, 'inline-flex');
+                    setChipVisible(ui.chip, false);
+                    setChipVisible(document.getElementById('patient-call-started-chip'), false);
+                    setChipVisible(document.getElementById('patient-call-started-chip-desktop'), false);
                 }
             }
 
@@ -1584,18 +1587,63 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 });
             }
 
-            function showOverlay(show) {
+            function playerHasPlayingVideo(playerId) {
+                const el = document.getElementById(playerId);
+
+                return Boolean(el?.querySelector('video'));
+            }
+
+            function shouldReplayVideoTracks() {
+                const localTrack = boot.__localVideo || localVideo;
+
+                if (localTrack && ! playerHasPlayingVideo(agoraLocalPlayerId())) {
+                    return true;
+                }
+
+                if (! agoraClient) {
+                    return false;
+                }
+
+                const hasRemoteVideo = agoraClient.remoteUsers.some((user) => Boolean(user.videoTrack));
+
+                return hasRemoteVideo && ! playerHasPlayingVideo(agoraRemotePlayerId());
+            }
+
+            function isInlineCallLive() {
+                if (isPatientConsultationMobile()) {
+                    return document
+                        .getElementById('patient-consultation-inline-video')
+                        ?.classList
+                        .contains('patient-consultation-inline-video--live') === true;
+                }
+
+                return Boolean(overlay && ! overlay.classList.contains('hidden'));
+            }
+
+            function setMobileCallControlsVisible(visible) {
+                const controlsWrap = document.getElementById('patient-consultation-call-controls-wrap');
+
+                if (! controlsWrap) {
+                    return;
+                }
+
+                controlsWrap.classList.toggle('hidden', ! visible);
+                controlsWrap.classList.toggle('flex', visible);
+            }
+
+            function showOverlay(show, { forceReplay = true } = {}) {
                 const inline = document.getElementById('patient-consultation-inline-video');
                 const idle = document.getElementById('patient-consultation-video-idle');
-                const controlsWrap = document.getElementById('patient-consultation-call-controls-wrap');
                 const leaveMobile = document.getElementById('patient-agora-leave-mobile');
 
                 if (isPatientConsultationMobile()) {
+                    const wasLive = inline?.classList.contains('patient-consultation-inline-video--live') === true;
+
                     overlay?.classList.add('hidden');
                     overlay?.setAttribute('aria-hidden', 'true');
                     inline?.classList.toggle('patient-consultation-inline-video--live', show);
                     idle?.classList.toggle('hidden', show);
-                    controlsWrap?.classList.toggle('hidden', !show);
+                    setMobileCallControlsVisible(show);
                     leaveMobile?.classList.toggle('hidden', !show);
                     leaveMobile?.classList.toggle('inline-flex', show);
 
@@ -1603,13 +1651,15 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                     chatToggle?.classList.toggle('hidden', !show);
                     chatToggle?.classList.toggle('inline-flex', show);
 
-                    window.dispatchEvent(new CustomEvent(show ? 'patient-consultation-call-active' : 'patient-consultation-call-ended'));
+                    if (show !== wasLive) {
+                        window.dispatchEvent(new CustomEvent(show ? 'patient-consultation-call-active' : 'patient-consultation-call-ended'));
+                    }
 
                     document.querySelectorAll('#patient-consultation-inline-video .doctor-consultation-call-controls__btn:not(.hidden)').forEach((btn) => {
                         btn.classList.add('inline-flex');
                     });
 
-                    if (show) {
+                    if (show && (forceReplay || shouldReplayVideoTracks())) {
                         window.requestAnimationFrame(() => {
                             window.requestAnimationFrame(() => {
                                 replayActiveVideoTracks();
@@ -1624,10 +1674,12 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                     return;
                 }
 
+                const wasVisible = ! overlay.classList.contains('hidden');
+
                 overlay.classList.toggle('hidden', !show);
                 overlay.setAttribute('aria-hidden', show ? 'false' : 'true');
 
-                if (show) {
+                if (show && (forceReplay || shouldReplayVideoTracks() || ! wasVisible)) {
                     window.requestAnimationFrame(() => {
                         window.requestAnimationFrame(() => {
                             replayActiveVideoTracks();
@@ -1709,6 +1761,9 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 if (clearStoredCall) {
                     clearPendingCallStorage();
                 }
+
+                refreshCallUiState();
+                window.dispatchEvent(new CustomEvent('patient-consultation-call-ended'));
             }
 
             async function postEndCall() {
@@ -1862,12 +1917,12 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 document.getElementById('patient-consultation-inline-video')?.setAttribute('aria-hidden', 'true');
 
                 const ui = callUiEls();
-                ui.chip?.classList.add('hidden');
-                ui.waiting?.classList.add('hidden');
-                document.getElementById('patient-call-started-chip')?.classList.add('hidden');
-                document.getElementById('patient-call-started-chip-desktop')?.classList.add('hidden');
-                document.getElementById('patient-waiting-for-call-chip')?.classList.add('hidden');
-                document.getElementById('patient-waiting-for-call-chip-desktop')?.classList.add('hidden');
+                setChipVisible(ui.chip, false);
+                setChipVisible(ui.waiting, false);
+                setChipVisible(document.getElementById('patient-call-started-chip'), false);
+                setChipVisible(document.getElementById('patient-call-started-chip-desktop'), false);
+                setChipVisible(document.getElementById('patient-waiting-for-call-chip'), false);
+                setChipVisible(document.getElementById('patient-waiting-for-call-chip-desktop'), false);
                 document.getElementById('patient-session-live-banner')?.classList.add('hidden');
                 document.getElementById('patient-live-now-badge')?.classList.add('hidden');
                 document.getElementById('patient-chat-live-now-badge')?.classList.add('hidden');
@@ -1884,8 +1939,8 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                     remainingDesktop.textContent = finishedLabel;
                 }
 
-                document.getElementById('patient-session-finished-chip')?.classList.remove('hidden');
-                document.getElementById('patient-session-finished-chip-desktop')?.classList.remove('hidden');
+                setChipVisible(document.getElementById('patient-session-finished-chip'), true);
+                setChipVisible(document.getElementById('patient-session-finished-chip-desktop'), true);
 
                 const statusLabel = document.getElementById('patient-conversation-status-label');
                 if (statusLabel) {
@@ -2169,7 +2224,16 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
             async function restoreAndRejoinCall(attempt = 0) {
                 syncPatientSessionFromDom(boot);
 
-                if (appointmentStatus !== 'in_process' || activeMode || callJoinInProgress) {
+                if (appointmentStatus !== 'in_process' || isSessionFinished()) {
+                    clearPendingCallStorage();
+                    activeMode = null;
+                    boot.__activeMode = null;
+                    refreshCallUiState();
+
+                    return;
+                }
+
+                if (activeMode || callJoinInProgress) {
                     return;
                 }
 
@@ -2534,11 +2598,13 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
 
                 activeMode = mode;
                 boot.__activeMode = mode;
-                showOverlay(true);
+
+                // Soft sync on Livewire poll/morph: keep the call UI without restarting Agora video.
+                const forceReplay = ! isInlineCallLive() || shouldReplayVideoTracks();
+                showOverlay(true, { forceReplay });
                 showMediaControlsForMode(mode);
                 syncMediaControlUi(mode);
                 updateActiveCallOverlayUi();
-                replayActiveVideoTracks();
             };
 
             function registerPatientConversationMorphHook() {
