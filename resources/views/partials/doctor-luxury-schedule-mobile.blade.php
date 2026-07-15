@@ -91,47 +91,53 @@
                     @php
                         $badge = $this->mobileInlineBadge($appointment);
                         $showStartTimer = $this->shouldShowStartTimer($appointment);
+                        $canManageFollowUp = $this->canManageFollowUpActions($appointment);
+                        $followUpRescheduleHref = $canManageFollowUp ? $this->followUpRescheduleHref($appointment) : null;
                     @endphp
-                    <a
-                        href="{{ $this->mobileCardHref($appointment) }}"
-                        wire:navigate
+                    <div
                         wire:key="doctor-luxury-appt-{{ $appointment->id }}"
                         @class([
-                            'doctor-luxury-schedule-card block rounded-2xl border border-slate-100 bg-white shadow-[0_4px_20px_-2px_rgba(0,0,0,0.03)] transition active:scale-[0.99]',
+                            'doctor-luxury-schedule-card overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-[0_4px_20px_-2px_rgba(0,0,0,0.03)]',
                             'border-s-4 '.$this->mobileCardAccentClass($appointment),
                         ])
                     >
-                        <div class="flex items-center gap-3 p-4">
-                            <div class="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-[#10B981]/10 text-sm font-bold text-[#047857]">
-                                {{ $this->initialsFor($appointment->patient_name) }}
-                            </div>
-
-                            <div class="min-w-0 flex-1">
-                                <div class="mb-0.5 flex flex-wrap items-center gap-2">
-                                    <p class="truncate text-sm font-bold text-slate-900">{{ $appointment->patient_name }}</p>
-                                    @if ($badge)
-                                        <span @class(['inline-flex items-center rounded-full px-2 py-0.5 text-[0.625rem] font-semibold', $badge['classes']])>
-                                            @if ($badge['label'] === __('doctor.mobile.badge_now'))
-                                                <span class="me-1 size-1.5 rounded-full bg-emerald-500" aria-hidden="true"></span>
-                                            @endif
-                                            {{ $badge['label'] }}
-                                        </span>
-                                    @endif
+                        <a
+                            href="{{ $this->mobileCardHref($appointment) }}"
+                            wire:navigate
+                            class="block transition active:scale-[0.99]"
+                        >
+                            <div class="flex items-center gap-3 p-4">
+                                <div class="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-[#10B981]/10 text-sm font-bold text-[#047857]">
+                                    {{ $this->initialsFor($appointment->patient_name) }}
                                 </div>
-                                <p class="truncate text-[0.6875rem] text-slate-500">
-                                    {{ $this->mobileSessionLine($appointment) }}
-                                </p>
-                            </div>
 
-                            <div class="shrink-0 text-end">
-                                <p class="text-sm font-bold tabular-nums text-slate-900">
-                                    {{ $appointment->formattedSessionStart() ?: \Illuminate\Support\Str::limit((string) $appointment->start_time, 5, '') }}
-                                </p>
-                                <p class="text-[0.625rem] font-medium text-slate-400">
-                                    {{ __('doctor.dashboard.minutes_label', ['m' => $appointment->duration]) }}
-                                </p>
+                                <div class="min-w-0 flex-1">
+                                    <div class="mb-0.5 flex flex-wrap items-center gap-2">
+                                        <p class="truncate text-sm font-bold text-slate-900">{{ $appointment->patient_name }}</p>
+                                        @if ($badge)
+                                            <span @class(['inline-flex items-center rounded-full px-2 py-0.5 text-[0.625rem] font-semibold', $badge['classes']])>
+                                                @if ($badge['label'] === __('doctor.mobile.badge_now'))
+                                                    <span class="me-1 size-1.5 rounded-full bg-emerald-500" aria-hidden="true"></span>
+                                                @endif
+                                                {{ $badge['label'] }}
+                                            </span>
+                                        @endif
+                                    </div>
+                                    <p class="truncate text-[0.6875rem] text-slate-500">
+                                        {{ $this->mobileSessionLine($appointment) }}
+                                    </p>
+                                </div>
+
+                                <div class="shrink-0 text-end">
+                                    <p class="text-sm font-bold tabular-nums text-slate-900">
+                                        {{ $appointment->formattedSessionStart() ?: \Illuminate\Support\Str::limit((string) $appointment->start_time, 5, '') }}
+                                    </p>
+                                    <p class="text-[0.625rem] font-medium text-slate-400">
+                                        {{ __('doctor.dashboard.minutes_label', ['m' => $appointment->duration]) }}
+                                    </p>
+                                </div>
                             </div>
-                        </div>
+                        </a>
 
                         @if ($showStartTimer)
                             <div
@@ -145,7 +151,30 @@
                                 </p>
                             </div>
                         @endif
-                    </a>
+
+                        @if ($canManageFollowUp)
+                            <div class="flex gap-2 border-t border-slate-100 px-4 py-3" data-test="doctor-follow-up-mobile-actions">
+                                @if ($followUpRescheduleHref)
+                                    <a
+                                        href="{{ $followUpRescheduleHref }}"
+                                        wire:navigate
+                                        class="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-2.5 text-xs font-semibold text-indigo-800 transition active:scale-[0.98]"
+                                    >
+                                        <flux:icon name="calendar-days" variant="mini" class="size-3.5 shrink-0" />
+                                        {{ __('doctor.follow_up.reschedule') }}
+                                    </a>
+                                @endif
+                                <button
+                                    type="button"
+                                    wire:click="promptCancelAppointment({{ $appointment->id }})"
+                                    class="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2.5 text-xs font-semibold text-rose-700 transition active:scale-[0.98]"
+                                >
+                                    <flux:icon name="x-circle" variant="mini" class="size-3.5 shrink-0" />
+                                    {{ __('doctor.follow_up.cancel') }}
+                                </button>
+                            </div>
+                        @endif
+                    </div>
                 @endforeach
             </div>
         @endif

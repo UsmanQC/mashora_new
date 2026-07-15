@@ -183,7 +183,7 @@
                     @if (! $appointment->is_follow_up)
                         <p class="mt-2 text-center text-xs text-emerald-800/80">
                             {{ __('patient.appointments.chat_open_until_card', [
-                                'date' => $appointment->chatOpenUntil()->locale(app()->getLocale())->translatedFormat('d M Y'),
+                                'date' => $appointment->chatOpenUntil()->locale(app()->getLocale())->translatedFormat('d M Y · g:i A'),
                             ]) }}
                         </p>
                     @endif

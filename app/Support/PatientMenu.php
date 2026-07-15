@@ -41,7 +41,8 @@ final class PatientMenu
             [
                 'heading' => __('patient.sidebar.group_health'),
                 'items' => [
-                    self::item('patient.menu.diagnoses', 'patient.menu.diagnoses_sub', 'document-text', 'patient.diagnoses'),
+                    // Diagnosis reports temporarily hidden from the patient app.
+                    // self::item('patient.menu.diagnoses', 'patient.menu.diagnoses_sub', 'document-text', 'patient.diagnoses'),
                     self::item('patient.menu.medications', 'patient.menu.medications_sub', 'clipboard-document', 'patient.medications'),
                     self::item('patient.menu.favorites', 'patient.menu.favorites_sub', 'heart', 'patient.favorites'),
                 ],

@@ -403,6 +403,27 @@ new #[Layout('layouts::doctor')] #[Title('Appointments')] class extends Componen
             : __('doctor.appointments.cancel_appointment');
     }
 
+    public function canManageFollowUpActions(Appointment $appointment): bool
+    {
+        return app(FollowUpAppointmentService::class)->canManageFollowUp($appointment);
+    }
+
+    public function canRescheduleFollowUp(Appointment $appointment): bool
+    {
+        return app(FollowUpAppointmentService::class)->canRescheduleFollowUp($appointment);
+    }
+
+    public function followUpRescheduleHref(Appointment $appointment): ?string
+    {
+        if (! $this->canRescheduleFollowUp($appointment)) {
+            return null;
+        }
+
+        $parent = app(FollowUpAppointmentService::class)->resolveParent($appointment);
+
+        return route('doctor.appointments.follow-up', $parent).'?reschedule=1';
+    }
+
     public function cancelSuccessMessage(Appointment $appointment): string
     {
         return $this->cancelRequiresRefund($appointment)
@@ -523,7 +544,7 @@ new #[Layout('layouts::doctor')] #[Title('Appointments')] class extends Componen
     }
 
     /** @var list<string> */
-    public const CANCELLABLE_STATUSES = ['new', 'rescheduled', 'in_process'];
+    public const CANCELLABLE_STATUSES = ['new', 'rescheduled', 'in_process', 'pending_follow_up'];
 
     public bool $showCancelModal = false;
 
@@ -837,6 +858,17 @@ new #[Layout('layouts::doctor')] #[Title('Appointments')] class extends Componen
                                             <flux:icon name="video-camera" variant="mini" class="size-3.5 shrink-0" />
                                             {{ __('doctor.appointments.open_session') }}
                                         </a>
+                                        @if ($this->canRescheduleFollowUp($row) && ($followUpRescheduleHref = $this->followUpRescheduleHref($row)))
+                                            <a
+                                                href="{{ $followUpRescheduleHref }}"
+                                                wire:navigate
+                                                class="inline-flex shrink-0 items-center justify-center gap-1 rounded-lg border border-indigo-200 bg-indigo-50 px-2 py-1.5 text-[0.6875rem] font-semibold whitespace-nowrap text-indigo-800 transition hover:bg-indigo-100"
+                                                data-test="doctor-follow-up-list-reschedule"
+                                            >
+                                                <flux:icon name="calendar-days" variant="mini" class="size-3.5 shrink-0" />
+                                                {{ __('doctor.follow_up.reschedule') }}
+                                            </a>
+                                        @endif
                                         <button
                                             type="button"
                                             wire:click="promptCancelAppointment({{ $row->id }})"
@@ -887,22 +919,34 @@ new #[Layout('layouts::doctor')] #[Title('Appointments')] class extends Componen
                                         </a>
                                     </div>
                                 @elseif ($row->status === 'pending_follow_up' && $row->parentAppointment instanceof \App\Models\Appointment)
-                                    <div class="mx-auto inline-flex w-full min-w-[11rem] max-w-[13rem] flex-col">
-                                        <a
-                                            href="{{ route('doctor.appointments.follow-up', $row->parentAppointment) }}"
-                                            wire:navigate
-                                            class="inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-violet-300 bg-violet-50 px-3 py-2 text-xs font-semibold text-violet-800 transition hover:bg-violet-100"
+                                    <div class="mx-auto inline-flex w-full min-w-[11rem] max-w-[13rem] flex-col gap-1.5">
+                                        @if ($this->canRescheduleFollowUp($row) && ($followUpRescheduleHref = $this->followUpRescheduleHref($row)))
+                                            <a
+                                                href="{{ $followUpRescheduleHref }}"
+                                                wire:navigate
+                                                class="inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-semibold text-indigo-800 transition hover:bg-indigo-100"
+                                                data-test="doctor-follow-up-list-reschedule"
+                                            >
+                                                <flux:icon name="calendar-days" variant="mini" class="size-4 shrink-0" />
+                                                {{ __('doctor.follow_up.reschedule') }}
+                                            </a>
+                                        @endif
+                                        <button
+                                            type="button"
+                                            wire:click="promptCancelAppointment({{ $row->id }})"
+                                            class="inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-100"
+                                            data-test="doctor-follow-up-list-cancel"
                                         >
-                                            <flux:icon name="calendar-days" variant="mini" class="size-4 shrink-0" />
-                                            {{ __('doctor.appointments.follow_up_pending') }}
-                                        </a>
+                                            <flux:icon name="x-circle" variant="mini" class="size-4 shrink-0" />
+                                            {{ $this->cancelActionLabel($row) }}
+                                        </button>
                                     </div>
                                 @elseif ($row->status === 'completed' && $this->canOpenChat($row))
                                     <a
                                         href="{{ route('doctor.appointments.conversation', $row) }}"
                                         wire:navigate
                                         class="inline-flex shrink-0 items-center justify-center gap-1 rounded-lg border border-[#047857]/30 bg-[#047857]/5 px-2.5 py-1.5 text-[0.6875rem] font-semibold whitespace-nowrap text-[#047857] transition hover:bg-[#047857]/10"
-                                        title="{{ __('doctor.appointments.chat_open_until', ['date' => $row->chatOpenUntil()->locale(app()->getLocale())->translatedFormat('d M Y')]) }}"
+                                        title="{{ __('doctor.appointments.chat_open_until', ['date' => $row->chatOpenUntil()->locale(app()->getLocale())->translatedFormat('d M Y · g:i A')]) }}"
                                     >
                                         <flux:icon name="chat-bubble-left-right" variant="mini" class="size-3.5 shrink-0" />
                                         {{ __('doctor.appointments.open_chat') }}

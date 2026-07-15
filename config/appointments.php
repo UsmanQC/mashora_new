@@ -55,12 +55,23 @@ return [
     |--------------------------------------------------------------------------
     |
     | Days after the parent session date when a doctor may offer a free
-    | follow-up using their available working hours. Also defines how long
-    | post-session chat stays open for doctors and patients.
+    | follow-up using their available working hours.
     |
     */
 
     'follow_up_window_days' => (int) env('APPOINTMENT_FOLLOW_UP_WINDOW_DAYS', 14),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Post-session chat window
+    |--------------------------------------------------------------------------
+    |
+    | Hours after the session ends when chat stays open for patients and
+    | doctors (completed appointments and confirmed follow-ups).
+    |
+    */
+
+    'post_session_chat_window_hours' => (int) env('APPOINTMENT_POST_SESSION_CHAT_WINDOW_HOURS', 24),
 
     /*
     |--------------------------------------------------------------------------

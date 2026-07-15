@@ -530,6 +530,18 @@ return [
         'no_need_already_marked' => 'This session was marked as not needing a follow-up.',
         'not_eligible_decline' => 'Follow-up decisions apply only to the original session.',
         'back_to_appointments' => 'Back to appointments',
+        'reschedule' => 'Reschedule',
+        'cancel' => 'Cancel',
+        'reschedule_title' => 'Reschedule follow-up',
+        'reschedule_body' => 'Pick a new time within :days days of the original session.',
+        'reschedule_submit' => 'Save new follow-up time',
+        'reschedule_success' => 'Follow-up rescheduled to :date at :time.',
+        'cancel_success' => 'Follow-up appointment cancelled.',
+        'cancel_modal_title' => 'Cancel follow-up?',
+        'cancel_modal_body' => 'The patient will be notified. You can schedule a new follow-up later within the allowed window.',
+        'cancel_modal_confirm' => 'Cancel follow-up',
+        'not_eligible_manage' => 'This follow-up cannot be changed right now.',
+        'manage_actions_hint' => 'You can reschedule within the original session window, or cancel this follow-up.',
     ],
 
     'scheduled_appointment' => [
@@ -850,7 +862,7 @@ return [
         'live' => 'Live',
         'session_time_ended' => 'Session time has ended. The call was disconnected.',
         'chat_open_after_completed' => 'Session completed. Chat stays open until :date for follow-up messages.',
-        'chat_closed_after_window' => 'Chat closed after the 14-day follow-up period.',
+        'chat_closed_after_window' => 'Chat closed after the 24-hour follow-up period.',
     ],
 
     'consultation' => [

@@ -272,7 +272,7 @@ return [
         'session_start_request_cannot_approve' => 'غير قادر على الموافقة على طلب بدء الجلسة.',
         'session_start_request_cannot_decline' => 'غير قادر على رفض طلب بدء الجلسة.',
         'session_doctor_must_start' => 'يجب أن يبدأ الأخصائي الجلسة أولاً.',
-        'session_closed' => 'اكتملت هذه الجلسة. أُغلقت المحادثة بعد فترة المتابعة البالغة 14 يومًا.',
+        'session_closed' => 'اكتملت هذه الجلسة. أُغلقت المحادثة بعد فترة المتابعة البالغة 24 ساعة.',
         'chat_open_after_completed' => 'اكتملت الجلسة. تبقى المحادثة مفتوحة حتى :date لرسائل المتابعة.',
         'status_new' => 'بانتظار بدء الجلسة',
         'starts_in' => 'يبدأ خلال :time',

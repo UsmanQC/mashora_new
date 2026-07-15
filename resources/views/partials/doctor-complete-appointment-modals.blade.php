@@ -18,9 +18,10 @@
         <div class="mt-8 flex w-full max-w-sm flex-row gap-3 sm:justify-center">
             <flux:button
                 type="button"
-                class="flex-1 !border-0 bg-[#7066e0] text-white shadow-sm hover:brightness-105 sm:min-h-11"
+                class="flex-1 !border-0 !bg-[#047857] !text-white shadow-sm hover:!brightness-95 sm:min-h-11"
                 variant="primary"
                 wire:click="confirmCompleteAppointment"
+                data-test="doctor-complete-modal-confirm"
             >
                 {{ __('doctor.complete_modal.confirm') }}
             </flux:button>

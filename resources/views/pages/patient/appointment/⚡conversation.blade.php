@@ -591,7 +591,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
     @elseif ($appointment->status === 'completed' && $appointment->isChatOpen())
         <flux:callout variant="secondary" icon="chat-bubble-left-right" class="border-zinc-200 bg-white scheme-light !text-zinc-900">
             <span class="text-sm text-zinc-900">{{ __('patient.appointments.chat_open_after_completed', [
-                'date' => $appointment->chatOpenUntil()->locale(app()->getLocale())->translatedFormat('d M Y'),
+                'date' => $appointment->chatOpenUntil()->locale(app()->getLocale())->translatedFormat('d M Y · g:i A'),
             ]) }}</span>
         </flux:callout>
     @endif

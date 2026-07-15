@@ -5,7 +5,7 @@ use App\Http\Controllers\AiChatbotController;
 use App\Http\Controllers\Patient\DeviceTokenController;
 use App\Http\Controllers\Patient\FollowUpPaymentController;
 use App\Http\Controllers\Patient\PatientAppointmentRealtimeController;
-use App\Http\Controllers\Patient\PatientDiagnosisController;
+// use App\Http\Controllers\Patient\PatientDiagnosisController;
 use App\Http\Controllers\Patient\PatientPaymentController;
 use App\Http\Controllers\Patient\PatientPrescriptionController;
 use App\Http\Controllers\WebManifestController;
@@ -164,17 +164,18 @@ Route::livewire('patient/medications', 'pages::patient.medications')
     ->middleware(['auth', 'patient.profile'])
     ->name('patient.medications');
 
-Route::livewire('patient/diagnoses', 'pages::patient.diagnoses')
-    ->middleware(['auth', 'patient.profile'])
-    ->name('patient.diagnoses');
-
-Route::get('patient/diagnoses/{appointment}/preview', [PatientDiagnosisController::class, 'preview'])
-    ->middleware(['auth', 'patient.profile'])
-    ->name('patient.diagnoses.preview');
-
-Route::get('patient/diagnoses/{appointment}/pdf', [PatientDiagnosisController::class, 'download'])
-    ->middleware(['auth', 'patient.profile'])
-    ->name('patient.diagnoses.pdf');
+// Diagnosis reports temporarily hidden from the patient app.
+// Route::livewire('patient/diagnoses', 'pages::patient.diagnoses')
+//     ->middleware(['auth', 'patient.profile'])
+//     ->name('patient.diagnoses');
+//
+// Route::get('patient/diagnoses/{appointment}/preview', [PatientDiagnosisController::class, 'preview'])
+//     ->middleware(['auth', 'patient.profile'])
+//     ->name('patient.diagnoses.preview');
+//
+// Route::get('patient/diagnoses/{appointment}/pdf', [PatientDiagnosisController::class, 'download'])
+//     ->middleware(['auth', 'patient.profile'])
+//     ->name('patient.diagnoses.pdf');
 
 Route::get('patient/prescriptions/{appointment}/preview', [PatientPrescriptionController::class, 'preview'])
     ->middleware(['auth', 'patient.profile'])

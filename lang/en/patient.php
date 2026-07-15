@@ -269,7 +269,7 @@ return [
         'session_start_request_cannot_approve' => 'Unable to approve the session start request.',
         'session_start_request_cannot_decline' => 'Unable to decline the session start request.',
         'session_doctor_must_start' => 'The specialist must start the session first.',
-        'session_closed' => 'This session is completed. The chat closed after the 14-day follow-up period.',
+        'session_closed' => 'This session is completed. The chat closed after the 24-hour follow-up period.',
         'chat_open_after_completed' => 'Session completed. Chat stays open until :date for follow-up messages.',
         'status_new' => 'Waiting to start',
         'starts_in' => 'Starts in :time',

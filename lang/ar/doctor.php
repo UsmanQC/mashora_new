@@ -531,6 +531,18 @@ return [
         'no_need_already_marked' => 'تم تعليم هذه الجلسة بأنها لا تحتاج متابعة.',
         'not_eligible_decline' => 'قرار المتابعة ينطبق على الجلسة الأصلية فقط.',
         'back_to_appointments' => 'العودة إلى المواعيد',
+        'reschedule' => 'إعادة الجدولة',
+        'cancel' => 'إلغاء',
+        'reschedule_title' => 'إعادة جدولة المتابعة',
+        'reschedule_body' => 'اختر وقتًا جديدًا خلال :days يومًا من الجلسة الأصلية.',
+        'reschedule_submit' => 'حفظ وقت المتابعة الجديد',
+        'reschedule_success' => 'أُعيدت جدولة المتابعة إلى :date الساعة :time.',
+        'cancel_success' => 'تم إلغاء موعد المتابعة.',
+        'cancel_modal_title' => 'إلغاء المتابعة؟',
+        'cancel_modal_body' => 'سيُخطر المريض. يمكنك جدولة متابعة جديدة لاحقًا ضمن الفترة المسموحة.',
+        'cancel_modal_confirm' => 'إلغاء المتابعة',
+        'not_eligible_manage' => 'لا يمكن تعديل هذه المتابعة حاليًا.',
+        'manage_actions_hint' => 'يمكنك إعادة الجدولة ضمن نافذة الجلسة الأصلية، أو إلغاء هذه المتابعة.',
     ],
 
     'scheduled_appointment' => [
@@ -851,7 +863,7 @@ return [
         'live' => 'مباشر',
         'session_time_ended' => 'انتهى وقت الجلسة. تم قطع المكالمة.',
         'chat_open_after_completed' => 'اكتملت الجلسة. تبقى المحادثة مفتوحة حتى :date لرسائل المتابعة.',
-        'chat_closed_after_window' => 'أُغلقت المحادثة بعد فترة المتابعة البالغة 14 يومًا.',
+        'chat_closed_after_window' => 'أُغلقت المحادثة بعد فترة المتابعة البالغة 24 ساعة.',
     ],
 
     'consultation' => [

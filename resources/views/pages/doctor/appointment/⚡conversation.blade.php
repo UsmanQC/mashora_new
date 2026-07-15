@@ -781,7 +781,7 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                     @elseif ($appointment->status === 'completed' && $appointment->isChatOpen())
                         <p class="mt-2.5 text-center text-xs text-zinc-900">
                             {{ __('doctor.conversation.chat_open_after_completed', [
-                                'date' => $appointment->chatOpenUntil()->locale(app()->getLocale())->translatedFormat('d M Y'),
+                                'date' => $appointment->chatOpenUntil()->locale(app()->getLocale())->translatedFormat('d M Y · g:i A'),
                             ]) }}
                         </p>
                     @elseif ($appointment->status === 'completed')
