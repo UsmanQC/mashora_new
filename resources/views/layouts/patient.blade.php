@@ -154,7 +154,7 @@
                 <livewire:patient-mood-picker-modal />
             @endauth
             <div @class([
-                'mx-auto w-full max-w-6xl flex-1',
+                'portal-desktop-scroll mx-auto w-full max-w-6xl flex-1',
                 'px-0 py-0 max-sm:h-full max-sm:overflow-hidden sm:px-6 sm:py-6 sm:pb-8 lg:pb-8' => $patientLuxuryHome,
                 'px-0 py-0 sm:px-6 sm:py-6 sm:pb-8 lg:pb-8' => $patientLuxuryMobileShell && ! $patientLuxuryHome,
                 'px-4 py-6 pb-28 sm:px-6 lg:pb-8' => ! $patientLuxuryMobileShell,

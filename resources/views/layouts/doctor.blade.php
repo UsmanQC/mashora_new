@@ -105,9 +105,9 @@
 
         <div
             @class([
-                'flex min-w-0 flex-col lg:ps-64',
-                'h-svh max-h-svh min-h-0 overflow-hidden' => $doctorLuxuryFullBleed,
-                'min-h-svh' => ! $doctorLuxuryFullBleed,
+                'flex min-w-0 flex-col lg:ps-64 min-h-svh',
+                /* Lock viewport scroll only on small screens; desktop must page-scroll. */
+                'max-lg:h-svh max-lg:max-h-svh max-lg:min-h-0 max-lg:overflow-hidden' => $doctorLuxuryFullBleed,
             ])
             x-data="{ doctorMenuOpen: false }"
             @keydown.escape.window="doctorMenuOpen = false"
