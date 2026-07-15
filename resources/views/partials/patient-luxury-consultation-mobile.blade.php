@@ -427,7 +427,7 @@
             x-show="!chatCardMinimized"
             id="patient-chat-messages-mobile"
             class="patient-consultation-chat-messages max-h-44 space-y-3 overflow-y-auto px-4 py-3"
-            wire:ignore.self
+            wire:ignore
         >
             @forelse ($messages as $msg)
                 <div

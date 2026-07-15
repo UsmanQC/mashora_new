@@ -889,6 +889,7 @@ return [
         'scheduled_for' => 'مجدول في',
         'ends_at' => 'ينتهي الساعة :time',
         'ends_in' => 'ينتهي خلال',
+        'session_finished' => 'انتهت الجلسة',
         'waiting_for_call' => 'اضغط فيديو أو صوت أعلاه للاتصال',
         'session_slot' => ':date · :time',
         'session_not_started' => 'لم تبدأ الجلسة',

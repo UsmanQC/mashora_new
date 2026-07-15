@@ -9,6 +9,7 @@ use App\Services\AppointmentSessionService;
 use App\Services\PatientMissedAppointmentService;
 use App\Support\DoctorAgoraChannel;
 use Flux\Flux;
+use Illuminate\Support\Js;
 use Illuminate\Support\Str;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\On;
@@ -159,10 +160,23 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
             'seen' => false,
         ]);
 
-        broadcast(new AppointmentChatMessageSent($message));
+        broadcast(new AppointmentChatMessageSent($message))->toOthers();
 
         $this->reset('draft');
         $this->loadMessages();
+
+        $this->js(
+            'window.dispatchEvent(new CustomEvent("mashora:chat-message-sent", { detail: '
+            .Js::from([
+                'id' => $message->id,
+                'body' => $message->body,
+                'send_by' => 'patient',
+                'from_id' => $patient->id,
+                'created_at' => $message->created_at?->toIso8601String(),
+                'self' => true,
+            ])
+            .' }))'
+        );
     }
 
     public function loadMessages(): void
@@ -670,7 +684,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
     >
         <div class="grid min-h-[34rem] grid-cols-1 max-sm:min-h-[min(32rem,calc(100dvh-18rem))] lg:grid-cols-12">
             <div class="flex min-h-[30rem] flex-col border-zinc-200 max-sm:min-h-[min(28rem,calc(100dvh-20rem))] lg:col-span-8 lg:border-e">
-                <div id="patient-chat-messages" class="min-h-0 flex-1 space-y-3 overflow-y-auto bg-gradient-to-b from-zinc-50/90 via-zinc-50/70 to-zinc-100/70 px-4 py-4 sm:px-5">
+                <div id="patient-chat-messages" class="min-h-0 flex-1 space-y-3 overflow-y-auto bg-gradient-to-b from-zinc-50/90 via-zinc-50/70 to-zinc-100/70 px-4 py-4 sm:px-5" wire:ignore>
             @forelse ($messages as $msg)
                 <div @class(['flex', 'justify-end' => $msg['send_by'] === 'patient', 'justify-start' => $msg['send_by'] !== 'patient']) wire:key="patient-chat-{{ $msg['id'] }}">
                     <div @class([
@@ -968,7 +982,6 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
             const pusherCluster = boot.dataset.pusherCluster || 'mt1';
             const callEnabled = boot.dataset.agoraReady === '1';
             let appointmentStatus = boot.dataset.appointmentStatus || 'new';
-            const messagesWrap = chatMessagesEl();
             const seen = new Set();
 
             function metricsEl() {
@@ -982,35 +995,91 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
             document.querySelectorAll('#patient-chat-messages [wire\\:key^="patient-chat-"], #patient-chat-messages-mobile [wire\\:key^="patient-chat-mobile-"]').forEach((el) => {
                 const key = el.getAttribute('wire:key') || '';
                 const id = key.replace('patient-chat-mobile-', '').replace('patient-chat-', '');
-                if (id) seen.add(id);
+                if (id) seen.add(String(id));
             });
 
-            function appendMessageRow(payload) {
-                if (!messagesWrap || !payload.id || seen.has(payload.id)) return;
-                if (payload.send_by === 'patient' && Number(payload.from_id || 0) === patientId) return;
-                seen.add(payload.id);
+            function patientMessageListEls() {
+                return [
+                    document.getElementById('patient-chat-messages-mobile'),
+                    document.getElementById('patient-chat-messages'),
+                ].filter(Boolean);
+            }
 
-                const emptyState = messagesWrap.querySelector('.flex.min-h-\\[18rem\\], .patient-consultation-chat-empty');
-                if (emptyState) emptyState.remove();
+            function appendMessageIntoPatientWrap(wrap, payload) {
+                const emptyState = wrap.querySelector('.flex.min-h-\\[18rem\\], .patient-consultation-chat-empty');
+                if (emptyState) {
+                    emptyState.remove();
+                }
 
                 const row = document.createElement('div');
                 const mine = payload.send_by === 'patient';
-                row.className = mine ? 'flex justify-end' : 'flex justify-start';
+                const mobileChat = wrap.id === 'patient-chat-messages-mobile';
 
-                const bubble = document.createElement('div');
-                bubble.className = mine
-                    ? 'max-w-[min(86%,30rem)] rounded-2xl bg-[#10B981] px-3.5 py-2.5 text-sm text-white shadow-sm'
-                    : 'max-w-[min(86%,30rem)] rounded-2xl border border-zinc-200 bg-white px-3.5 py-2.5 text-sm text-zinc-800 shadow-sm';
+                if (mobileChat) {
+                    row.className = mine ? 'flex flex-row-reverse gap-2' : 'flex gap-2';
 
-                const p = document.createElement('p');
-                p.className = 'whitespace-pre-wrap break-words';
-                p.textContent = payload.body || '';
-                bubble.appendChild(p);
-                row.appendChild(bubble);
-                messagesWrap.appendChild(row);
-                messagesWrap.scrollTop = messagesWrap.scrollHeight;
-                window.dispatchEvent(new CustomEvent('patient-chat-message-received'));
+                    const stack = document.createElement('div');
+                    stack.className = 'min-w-0 max-w-[78%]'.concat(mine ? ' text-end' : '');
+
+                    const bubble = document.createElement('div');
+                    bubble.className = mine
+                        ? 'inline-block rounded-2xl rounded-br-md bg-[#10B981] px-3.5 py-2 text-sm text-white shadow-sm'
+                        : 'inline-block rounded-2xl rounded-bl-md border border-slate-100 bg-slate-50 px-3.5 py-2 text-sm text-slate-800 shadow-sm';
+
+                    const p = document.createElement('p');
+                    p.className = 'whitespace-pre-wrap break-words text-start';
+                    p.textContent = payload.body || '';
+                    bubble.appendChild(p);
+                    stack.appendChild(bubble);
+
+                    if (payload.created_at) {
+                        const time = document.createElement('time');
+                        time.className = 'mt-1 block text-[0.625rem] text-slate-400'.concat(mine ? ' text-end' : '');
+                        const d = new Date(payload.created_at);
+                        time.textContent = d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+                        stack.appendChild(time);
+                    }
+
+                    row.appendChild(stack);
+                } else {
+                    row.className = mine ? 'flex justify-end' : 'flex justify-start';
+
+                    const bubble = document.createElement('div');
+                    bubble.className = mine
+                        ? 'max-w-[min(86%,30rem)] rounded-2xl bg-[#10B981] px-3.5 py-2.5 text-sm text-white shadow-sm'
+                        : 'max-w-[min(86%,30rem)] rounded-2xl border border-zinc-200 bg-white px-3.5 py-2.5 text-sm text-zinc-800 shadow-sm';
+
+                    const p = document.createElement('p');
+                    p.className = 'whitespace-pre-wrap break-words';
+                    p.textContent = payload.body || '';
+                    bubble.appendChild(p);
+                    row.appendChild(bubble);
+                }
+
+                wrap.appendChild(row);
+                wrap.scrollTop = wrap.scrollHeight;
             }
+
+            function appendMessageRow(payload, { fromSelf = false } = {}) {
+                if (! payload?.id || seen.has(String(payload.id))) {
+                    return;
+                }
+
+                seen.add(String(payload.id));
+
+                const lists = patientMessageListEls();
+                if (lists.length === 0) {
+                    return;
+                }
+
+                lists.forEach((wrap) => appendMessageIntoPatientWrap(wrap, payload));
+
+                if (! fromSelf && payload.send_by !== 'patient') {
+                    window.dispatchEvent(new CustomEvent('patient-chat-message-received'));
+                }
+            }
+
+            boot.__appendChatMessage = (payload, options = {}) => appendMessageRow(payload, options);
 
             let incomingPayload = null;
 
@@ -2524,6 +2593,16 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
 
                 document.addEventListener('livewire:navigating', () => {
                     teardownPatientConversationRealtime();
+                });
+
+                window.addEventListener('mashora:chat-message-sent', (event) => {
+                    const detail = event.detail || {};
+                    if (detail.send_by !== 'patient') {
+                        return;
+                    }
+
+                    const bootEl = document.getElementById('patient-conversation-bootstrap');
+                    bootEl?.__appendChatMessage?.(detail, { fromSelf: Boolean(detail.self) });
                 });
 
                 // Persist call creds across hard refreshes; never end the remote call automatically.

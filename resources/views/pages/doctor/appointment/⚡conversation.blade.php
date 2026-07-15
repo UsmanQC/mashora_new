@@ -12,6 +12,7 @@ use App\Support\DoctorAgoraChannel;
 use Flux\Flux;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Js;
 use Illuminate\Support\Str;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
@@ -371,10 +372,23 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
             'seen' => false,
         ]);
 
-        broadcast(new AppointmentChatMessageSent($message));
+        broadcast(new AppointmentChatMessageSent($message))->toOthers();
 
         $this->reset('draft');
         $this->loadMessages();
+
+        $this->js(
+            'window.dispatchEvent(new CustomEvent("mashora:chat-message-sent", { detail: '
+            .Js::from([
+                'id' => $message->id,
+                'body' => $message->body,
+                'send_by' => 'doctor',
+                'from_id' => $doctor->id,
+                'created_at' => $message->created_at?->toIso8601String(),
+                'self' => true,
+            ])
+            .' }))'
+        );
     }
 
     public function loadMessages(): void
@@ -524,10 +538,19 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                                     <p class="text-[0.65rem] font-semibold uppercase tracking-wider text-zinc-400">{{ __('doctor.conversation.session_elapsed_label') }}</p>
                                     <p id="timer-session-elapsed" class="mt-0.5 font-mono text-lg font-semibold tabular-nums text-zinc-900">00:00</p>
                                 </div>
-                                @if ($appointment->extend_at)
+                                @if ($appointment->extend_at && ! $this->sessionTimeExpired())
                                     <div id="wrap-session-remaining" class="flex min-w-[7.5rem] flex-1 flex-col justify-center rounded-xl border border-zinc-200/80 bg-gradient-to-br from-white to-zinc-50 px-3 py-2 shadow-sm backdrop-blur-sm sm:flex-initial sm:min-w-[8.5rem]">
                                         <p class="text-[0.65rem] font-semibold uppercase tracking-wider text-zinc-400">{{ __('doctor.conversation.session_remaining_label') }}</p>
                                         <p id="timer-session-remaining" class="mt-0.5 font-mono text-lg font-semibold tabular-nums text-[#047857]">--:--</p>
+                                    </div>
+                                @elseif ($appointment->status === 'in_process' && $this->sessionTimeExpired())
+                                    <div
+                                        id="doctor-session-finished-chip-desktop"
+                                        class="flex min-w-[7.5rem] flex-1 flex-col justify-center rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 shadow-sm sm:flex-initial sm:min-w-[8.5rem]"
+                                        data-test="doctor-session-finished-chip-desktop"
+                                    >
+                                        <p class="text-[0.65rem] font-semibold uppercase tracking-wider text-slate-400">{{ __('doctor.conversation.session_remaining_label') }}</p>
+                                        <p class="mt-0.5 text-sm font-semibold text-slate-600">{{ __('doctor.consultation.session_finished') }}</p>
                                     </div>
                                 @endif
                                 <div id="call-status-chip" class="hidden min-w-0 flex-1 items-center gap-2.5 rounded-xl border border-emerald-200/80 bg-gradient-to-br from-emerald-50 to-emerald-100/70 px-3 py-2 shadow-sm sm:flex-initial sm:min-w-[11rem]">
@@ -684,7 +707,7 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                     data-token-url="{{ route('doctor.appointments.realtime.agora-token', $appointment) }}"
                     data-csrf="{{ csrf_token() }}"
                 >
-                    <div class="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-4 sm:px-5" id="doctor-chat-messages" wire:ignore.self>
+                    <div class="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-4 sm:px-5" id="doctor-chat-messages" wire:ignore>
                         @forelse ($messages as $msg)
                             <div
                                 wire:key="doc-chat-{{ $msg['id'] }}"
@@ -1014,7 +1037,7 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
             document.querySelectorAll('#doctor-chat-messages-mobile [wire\\:key^="doc-chat-mobile-"], #doctor-chat-messages [wire\\:key^="doc-chat-"]').forEach((el) => {
                 const key = el.getAttribute('wire:key') || '';
                 const id = key.replace('doc-chat-mobile-', '').replace('doc-chat-', '');
-                if (id) seenMessageIds.add(id);
+                if (id) seenMessageIds.add(String(id));
             });
 
             function formatDuration(totalSeconds) {
@@ -1057,6 +1080,20 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                 document.getElementById('btn-agora-audio-mobile')?.classList.add('hidden');
                 document.getElementById('btn-agora-video')?.classList.add('hidden');
                 document.getElementById('btn-agora-audio')?.classList.add('hidden');
+
+                document.getElementById('doctor-session-ends-in-mobile')?.classList.add('hidden');
+                document.getElementById('wrap-session-remaining')?.classList.add('hidden');
+
+                const finishedChip = document.getElementById('doctor-session-finished-chip');
+                if (finishedChip) {
+                    finishedChip.classList.remove('hidden');
+                    finishedChip.classList.add('inline-flex');
+                }
+
+                const finishedDesktop = document.getElementById('doctor-session-finished-chip-desktop');
+                if (finishedDesktop) {
+                    finishedDesktop.classList.remove('hidden');
+                }
 
                 window.dispatchEvent(new CustomEvent('consultation-call-ended'));
             }
@@ -1151,6 +1188,8 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
 
                 if (status !== 'in_process' || !startIso) {
                     if (remainingEl) remainingEl.textContent = '—';
+                    document.getElementById('doctor-session-ends-in-mobile')?.classList.add('hidden');
+                    document.getElementById('wrap-session-remaining')?.classList.add('hidden');
                     return;
                 }
 
@@ -1159,6 +1198,15 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                 if (remainingEl && endIso) {
                     const end = new Date(endIso).getTime();
                     const left = (end - now) / 1000;
+
+                    if (left <= 0) {
+                        document.getElementById('doctor-session-ends-in-mobile')?.classList.add('hidden');
+                        document.getElementById('wrap-session-remaining')?.classList.add('hidden');
+                        maybeEndCallWhenSessionExpired(left);
+                        maybeRefreshWhenSessionExpires(left);
+                        return;
+                    }
+
                     remainingEl.textContent = formatDuration(left);
                     remainingEl.classList.toggle('text-amber-700', left > 0 && left <= 300);
                     remainingEl.classList.toggle('text-rose-600', left <= 0);
@@ -1296,80 +1344,99 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
 
             startSessionTimers();
 
-            function appendMessageRow(payload) {
-                const wrap = chatMessagesEl();
-                if (!wrap || !payload.id) return;
-                if (seenMessageIds.has(payload.id)) return;
-                if (payload.send_by === 'doctor' && doctorId && Number(payload.from_id) === doctorId) {
+            function appendMessageRow(payload, { fromSelf = false } = {}) {
+                if (! payload?.id) {
                     return;
                 }
-                seenMessageIds.add(payload.id);
 
-                const emptyCard = wrap.querySelector('.doctor-consultation-chat-empty')
-                    || wrap.querySelector('.flex.flex-col.items-center.justify-center');
-                if (emptyCard) emptyCard.remove();
+                const messageId = String(payload.id);
+                if (seenMessageIds.has(messageId)) {
+                    return;
+                }
 
-                const row = document.createElement('div');
+                seenMessageIds.add(messageId);
+
+                const wraps = [
+                    document.getElementById('doctor-chat-messages-mobile'),
+                    document.getElementById('doctor-chat-messages'),
+                ].filter(Boolean);
+
+                if (wraps.length === 0) {
+                    return;
+                }
+
                 const isDoctor = payload.send_by === 'doctor';
-                const mobileChat = isConsultationMobile() && wrap.id === 'doctor-chat-messages-mobile';
 
-                if (mobileChat) {
-                    row.className = isDoctor ? 'flex flex-row-reverse gap-2' : 'flex gap-2';
-
-                    const stack = document.createElement('div');
-                    stack.className = 'min-w-0 max-w-[78%]'.concat(isDoctor ? ' text-end' : '');
-
-                    const bubble = document.createElement('div');
-                    bubble.className = isDoctor
-                        ? 'inline-block rounded-2xl rounded-br-md bg-[#047857] px-3.5 py-2 text-sm text-white shadow-sm'
-                        : 'inline-block rounded-2xl rounded-bl-md border border-slate-100 bg-slate-50 px-3.5 py-2 text-sm text-slate-800 shadow-sm';
-
-                    const text = document.createElement('p');
-                    text.className = 'whitespace-pre-wrap break-words text-start';
-                    text.textContent = payload.body || '';
-                    bubble.appendChild(text);
-                    stack.appendChild(bubble);
-
-                    if (payload.created_at) {
-                        const time = document.createElement('time');
-                        time.className = 'mt-1 block text-[0.625rem] text-slate-400'.concat(isDoctor ? ' text-end' : '');
-                        const d = new Date(payload.created_at);
-                        time.textContent = d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
-                        stack.appendChild(time);
+                wraps.forEach((wrap) => {
+                    const emptyCard = wrap.querySelector('.doctor-consultation-chat-empty')
+                        || wrap.querySelector('.flex.flex-col.items-center.justify-center');
+                    if (emptyCard) {
+                        emptyCard.remove();
                     }
 
-                    row.appendChild(stack);
+                    const row = document.createElement('div');
+                    const mobileChat = wrap.id === 'doctor-chat-messages-mobile';
+
+                    if (mobileChat) {
+                        row.className = isDoctor ? 'flex flex-row-reverse gap-2' : 'flex gap-2';
+
+                        const stack = document.createElement('div');
+                        stack.className = 'min-w-0 max-w-[78%]'.concat(isDoctor ? ' text-end' : '');
+
+                        const bubble = document.createElement('div');
+                        bubble.className = isDoctor
+                            ? 'inline-block rounded-2xl rounded-br-md bg-[#047857] px-3.5 py-2 text-sm text-white shadow-sm'
+                            : 'inline-block rounded-2xl rounded-bl-md border border-slate-100 bg-slate-50 px-3.5 py-2 text-sm text-slate-800 shadow-sm';
+
+                        const text = document.createElement('p');
+                        text.className = 'whitespace-pre-wrap break-words text-start';
+                        text.textContent = payload.body || '';
+                        bubble.appendChild(text);
+                        stack.appendChild(bubble);
+
+                        if (payload.created_at) {
+                            const time = document.createElement('time');
+                            time.className = 'mt-1 block text-[0.625rem] text-slate-400'.concat(isDoctor ? ' text-end' : '');
+                            const d = new Date(payload.created_at);
+                            time.textContent = d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+                            stack.appendChild(time);
+                        }
+
+                        row.appendChild(stack);
+                    } else {
+                        row.className = isDoctor ? 'flex justify-end' : 'flex justify-start';
+
+                        const bubble = document.createElement('div');
+                        bubble.className = isDoctor
+                            ? 'max-w-[min(85%,28rem)] rounded-2xl bg-[#047857] px-3.5 py-2.5 text-sm text-white shadow-sm shadow-[#047857]/25'
+                            : 'max-w-[min(85%,28rem)] rounded-2xl border border-zinc-200/90 bg-white px-3.5 py-2.5 text-sm text-zinc-800 shadow-sm shadow-zinc-200/30';
+
+                        const text = document.createElement('p');
+                        text.className = 'whitespace-pre-wrap break-words';
+                        text.textContent = payload.body || '';
+                        bubble.appendChild(text);
+
+                        if (payload.created_at) {
+                            const time = document.createElement('p');
+                            time.className = isDoctor ? 'mt-1 text-[0.65rem] text-white/70' : 'mt-1 text-[0.65rem] text-zinc-400';
+                            const d = new Date(payload.created_at);
+                            time.textContent = d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+                            bubble.appendChild(time);
+                        }
+
+                        row.appendChild(bubble);
+                    }
+
                     wrap.appendChild(row);
                     wrap.scrollTop = wrap.scrollHeight;
+                });
+
+                if (! fromSelf && ! isDoctor) {
                     window.dispatchEvent(new CustomEvent('doctor-chat-message-received'));
-
-                    return;
                 }
-
-                row.className = isDoctor ? 'flex justify-end' : 'flex justify-start';
-
-                const bubble = document.createElement('div');
-                bubble.className = isDoctor
-                    ? 'max-w-[min(85%,28rem)] rounded-2xl bg-[#047857] px-3.5 py-2.5 text-sm text-white shadow-sm shadow-[#047857]/25'
-                    : 'max-w-[min(85%,28rem)] rounded-2xl border border-zinc-200/90 bg-white px-3.5 py-2.5 text-sm text-zinc-800 shadow-sm shadow-zinc-200/30';
-
-                const text = document.createElement('p');
-                text.className = 'whitespace-pre-wrap break-words';
-                text.textContent = payload.body || '';
-                bubble.appendChild(text);
-
-                if (payload.created_at) {
-                    const time = document.createElement('p');
-                    time.className = isDoctor ? 'mt-1 text-[0.65rem] text-white/70' : 'mt-1 text-[0.65rem] text-zinc-400';
-                    const d = new Date(payload.created_at);
-                    time.textContent = d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
-                    bubble.appendChild(time);
-                }
-
-                row.appendChild(bubble);
-                wrap.appendChild(row);
-                wrap.scrollTop = wrap.scrollHeight;
             }
+
+            boot.__appendChatMessage = (payload, options = {}) => appendMessageRow(payload, options);
 
             if (pusherKey) {
                 const pusher = new Pusher(pusherKey, {
@@ -2173,6 +2240,16 @@ new #[Layout('layouts::doctor')] #[Title('Conversation')] class extends Componen
                         delete bootEl.dataset.initialized;
                         delete bootEl.dataset.boundAppointmentId;
                     }
+                });
+
+                window.addEventListener('mashora:chat-message-sent', (event) => {
+                    const detail = event.detail || {};
+                    if (detail.send_by !== 'doctor') {
+                        return;
+                    }
+
+                    const bootEl = document.getElementById('doctor-conversation-bootstrap');
+                    bootEl?.__appendChatMessage?.(detail, { fromSelf: Boolean(detail.self) });
                 });
             }
 

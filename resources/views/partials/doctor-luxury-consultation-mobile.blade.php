@@ -248,17 +248,46 @@
                                 <p class="text-sm font-bold text-slate-900">{{ $this->appointmentTimeRangeLabel() }}</p>
                             @endif
 
-                            @if ($appointment->status === 'in_process' && $this->appointmentEndsAtLabel())
-                                <div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-slate-200/80 pt-2">
+                            @if ($appointment->status === 'in_process' && ! $this->sessionTimeExpired() && $this->appointmentEndsAtLabel())
+                                <div
+                                    id="doctor-session-countdown-mobile"
+                                    class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-slate-200/80 pt-2"
+                                    data-test="doctor-session-countdown-mobile"
+                                >
                                     <p class="text-xs text-slate-500">
                                         {{ __('doctor.consultation.ends_at', ['time' => $this->appointmentEndsAtLabel()]) }}
                                     </p>
                                     @if ($appointment->extend_at)
-                                        <p class="inline-flex items-center gap-1.5 text-xs font-bold text-[#047857]">
+                                        <p
+                                            id="doctor-session-ends-in-mobile"
+                                            class="inline-flex items-center gap-1.5 text-xs font-bold text-[#047857]"
+                                        >
                                             <span>{{ __('doctor.consultation.ends_in') }}</span>
                                             <span id="timer-session-remaining-mobile" class="font-mono tabular-nums">--:--</span>
                                         </p>
                                     @endif
+                                    <span
+                                        id="doctor-session-finished-chip"
+                                        class="hidden rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-semibold text-slate-600 shadow-sm"
+                                        data-test="doctor-session-finished-chip"
+                                    >
+                                        {{ __('doctor.consultation.session_finished') }}
+                                    </span>
+                                </div>
+                            @elseif ($appointment->status === 'in_process' && $this->sessionTimeExpired())
+                                <div class="mt-2 flex flex-wrap items-center gap-2 border-t border-slate-200/80 pt-2">
+                                    @if ($this->appointmentEndsAtLabel())
+                                        <p class="text-xs text-slate-500">
+                                            {{ __('doctor.consultation.ends_at', ['time' => $this->appointmentEndsAtLabel()]) }}
+                                        </p>
+                                    @endif
+                                    <span
+                                        id="doctor-session-finished-chip"
+                                        class="inline-flex rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-semibold text-slate-600 shadow-sm"
+                                        data-test="doctor-session-finished-chip"
+                                    >
+                                        {{ __('doctor.consultation.session_finished') }}
+                                    </span>
                                 </div>
                             @elseif ($this->appointmentEndsAtLabel())
                                 <p class="mt-1 text-xs font-medium text-slate-500">
@@ -476,7 +505,7 @@
             x-show="!chatCardMinimized"
             id="doctor-chat-messages-mobile"
             class="doctor-consultation-chat-messages max-h-44 space-y-3 overflow-y-auto px-4 py-3"
-            wire:ignore.self
+            wire:ignore
         >
             @forelse ($messages as $msg)
                 <div

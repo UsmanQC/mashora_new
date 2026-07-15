@@ -888,6 +888,7 @@ return [
         'scheduled_for' => 'Scheduled for',
         'ends_at' => 'Ends at :time',
         'ends_in' => 'Ends in',
+        'session_finished' => 'Session finished',
         'waiting_for_call' => 'Tap Video or Voice above to connect',
         'session_slot' => ':date · :time',
         'session_not_started' => 'Session not started',
