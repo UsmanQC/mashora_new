@@ -229,6 +229,89 @@ class MyFatoorahEmbeddedV3Service
     }
 
     /**
+     * Register a domain for Embedded Apple Pay after the verification file is hosted.
+     *
+     * @see https://docs.myfatoorah.com/reference/register-apple-pay-domain
+     *
+     * @return array{ok: bool, message: string, body?: mixed}
+     */
+    public function registerApplePayDomain(string $domainName): array
+    {
+        $domain = strtolower(trim($domainName));
+        $domain = preg_replace('#^https?://#', '', $domain) ?? $domain;
+        $domain = rtrim(explode('/', $domain)[0] ?? $domain, '/');
+
+        if ($domain === '' || ! str_contains($domain, '.')) {
+            return [
+                'ok' => false,
+                'message' => 'DomainName must look like example.com (no https://).',
+            ];
+        }
+
+        $apiKey = trim((string) config('myfatoorah.api_key'));
+
+        if ($apiKey === '') {
+            return [
+                'ok' => false,
+                'message' => __('patient_booking.payment_api_missing'),
+            ];
+        }
+
+        try {
+            $http = Http::withToken($apiKey)
+                ->acceptJson()
+                ->asJson()
+                ->timeout(45);
+
+            if (app()->isLocal()) {
+                $http = $http->withoutVerifying();
+            }
+
+            $response = $http->post($this->apiBaseUrl().'/v2/RegisterApplePayDomain', [
+                'DomainName' => $domain,
+            ]);
+
+            /** @var array{IsSuccess?: bool, Message?: string, ValidationErrors?: mixed, Data?: mixed} $json */
+            $json = $response->json() ?? [];
+
+            if (! $response->successful() || ! ($json['IsSuccess'] ?? false)) {
+                $message = $this->humanMessageFromResponse($response->status(), $json, $response->body());
+
+                Log::warning('MyFatoorah RegisterApplePayDomain failed', [
+                    'domain' => $domain,
+                    'status' => $response->status(),
+                    'api' => $this->apiBaseUrl(),
+                    'body' => $response->body(),
+                ]);
+
+                return [
+                    'ok' => false,
+                    'message' => $message,
+                    'body' => $json !== [] ? $json : $response->body(),
+                ];
+            }
+
+            Log::info('MyFatoorah RegisterApplePayDomain succeeded', [
+                'domain' => $domain,
+                'api' => $this->apiBaseUrl(),
+            ]);
+
+            return [
+                'ok' => true,
+                'message' => (string) ($json['Message'] ?? 'OK'),
+                'body' => $json,
+            ];
+        } catch (Throwable $e) {
+            report($e);
+
+            return [
+                'ok' => false,
+                'message' => $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
      * @param  array{Message?: string, ValidationErrors?: mixed}  $json
      */
     private function humanMessageFromResponse(int $status, array $json, string $rawBody): string
