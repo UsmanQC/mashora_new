@@ -111,24 +111,7 @@ final class DoctorRefundRequestService
             return AppointmentRefundRequest::query()->create($payload);
         });
 
-        $requestId = (int) $request->id;
-        $callback = function () use ($requestId): void {
-            try {
-                $fresh = AppointmentRefundRequest::query()->find($requestId);
-
-                if ($fresh instanceof AppointmentRefundRequest) {
-                    app(AppointmentRefundRequestNotifier::class)->notifySubmitted($fresh);
-                }
-            } catch (\Throwable $e) {
-                report($e);
-            }
-        };
-
-        if (app()->runningUnitTests()) {
-            $callback();
-        } else {
-            dispatch($callback)->afterResponse();
-        }
+        app(AppointmentRefundRequestNotifier::class)->queue('notifySubmitted', (int) $request->id);
 
         return $request;
     }

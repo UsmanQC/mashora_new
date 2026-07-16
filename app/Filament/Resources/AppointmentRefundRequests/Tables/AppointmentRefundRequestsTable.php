@@ -57,6 +57,7 @@ class AppointmentRefundRequestsTable
                 TextColumn::make('refund_destination')
                     ->label('Destination')
                     ->badge()
+                    ->placeholder('Wallet')
                     ->formatStateUsing(fn (?string $state): string => match ($state) {
                         'payment_account' => 'Payment account',
                         default => 'Wallet',
@@ -106,7 +107,7 @@ class AppointmentRefundRequestsTable
                             'admin_note' => null,
                         ]);
 
-                        app(AppointmentRefundRequestNotifier::class)->notifyApproved($record->fresh() ?? $record);
+                        app(AppointmentRefundRequestNotifier::class)->queue('notifyApproved', (int) $record->id);
 
                         Notification::make()
                             ->title('Refund request approved')
@@ -132,7 +133,7 @@ class AppointmentRefundRequestsTable
                             'admin_note' => $data['admin_note'] ?? null,
                         ]);
 
-                        app(AppointmentRefundRequestNotifier::class)->notifyRejected($record->fresh() ?? $record);
+                        app(AppointmentRefundRequestNotifier::class)->queue('notifyRejected', (int) $record->id);
 
                         Notification::make()
                             ->title('Refund request rejected')

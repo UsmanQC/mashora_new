@@ -164,7 +164,7 @@ class ProcessAppointmentRefundAction
                     'admin_note' => $data['admin_note'] ?? null,
                 ]);
 
-                app(AppointmentRefundRequestNotifier::class)->notifyProcessed($record->fresh() ?? $record);
+                app(AppointmentRefundRequestNotifier::class)->queue('notifyProcessed', (int) $record->id);
 
                 $title = $destination === AppointmentRefundProcessingService::DESTINATION_PAYMENT_ACCOUNT
                     ? 'Refund processed and sent to patient payment account'
