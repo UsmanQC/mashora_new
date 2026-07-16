@@ -30,6 +30,7 @@ class DoctorAccountApprovedMail extends Mailable
             with: [
                 'doctor' => $this->doctor,
                 'loginUrl' => route('doctor.login'),
+                'logoUrl' => asset('images/awan_logo.png'),
             ],
         );
     }
