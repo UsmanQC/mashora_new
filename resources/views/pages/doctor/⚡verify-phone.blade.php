@@ -60,13 +60,23 @@ new #[Layout('layouts::doctor-guest')] #[Title('Verify mobile number')] class ex
 
         $message = __('doctor.auth.verification_sms', ['code' => $code]);
         $sms = app(SmsService::class);
-        $sms->send($message, $this->phone, $code);
+        $result = $sms->send($message, $this->phone, $code);
 
         VerifyPhoneNumber::query()->create([
             'phone' => $this->phone,
             'verification_code' => $code,
             'user_type' => 'doctor',
         ]);
+
+        if ($sms->isLive() && ! ($result['ok'] ?? false)) {
+            $this->devOtpDisplay = null;
+            $this->addError(
+                'code',
+                (string) ($result['error'] ?? __('doctor.auth.otp_send_failed')),
+            );
+
+            return;
+        }
 
         $this->devOtpDisplay = $sms->isLive() ? null : $code;
     }

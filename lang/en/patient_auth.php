@@ -84,7 +84,8 @@ return [
     'otp_label' => 'Verification code',
     'otp_verify' => 'Verify and continue',
     'otp_resend' => 'Resend code',
-    'otp_invalid' => 'That code is incorrect. Try again or request a new code.',
-    'verification_sms' => 'Your Awaan verification code is :code.',
-    'otp_dev_banner' => 'Local / test mode: SMS is not sent. Use this code: :code',
+        'otp_invalid' => 'That code is incorrect. Try again or request a new code.',
+        'otp_send_failed' => 'We could not send the SMS right now. Please try again.',
+        'verification_sms' => 'Your Awaan verification code is :code.',
+        'otp_dev_banner' => 'Local / test mode: SMS is not sent. Use this code: :code',
 ];
