@@ -51,8 +51,7 @@ new #[Layout('layouts::doctor-guest')] #[Title('Verify mobile number')] class ex
 
     public function sendOtp(): void
     {
-        // TESTING: static OTP. Restore `sprintf('%04d', random_int(0, 9999))` and uncomment the SMS send below before going live.
-        $code = '1111';
+        $code = sprintf('%04d', random_int(0, 9999));
 
         VerifyPhoneNumber::query()
             ->where('phone', $this->phone)
@@ -61,7 +60,7 @@ new #[Layout('layouts::doctor-guest')] #[Title('Verify mobile number')] class ex
 
         $message = __('doctor.auth.verification_sms', ['code' => $code]);
         $sms = app(SmsService::class);
-        // $sms->send($message, $this->phone, $code);
+        $sms->send($message, $this->phone, $code);
 
         VerifyPhoneNumber::query()->create([
             'phone' => $this->phone,
