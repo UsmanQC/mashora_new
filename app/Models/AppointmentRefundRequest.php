@@ -7,6 +7,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class AppointmentRefundRequest extends Model
 {
+    public const REFUND_DESTINATION_WALLET = 'wallet';
+
+    public const REFUND_DESTINATION_PAYMENT_ACCOUNT = 'payment_account';
+
     /**
      * @var list<string>
      */
@@ -20,6 +24,7 @@ class AppointmentRefundRequest extends Model
         'reason_note',
         'status',
         'resolution_type',
+        'refund_destination',
         'requested_amount',
         'processed_amount',
         'admin_note',
@@ -31,6 +36,16 @@ class AppointmentRefundRequest extends Model
     public function wasRequestedByDoctor(): bool
     {
         return $this->requested_by === 'doctor';
+    }
+
+    public function refundsToWallet(): bool
+    {
+        return ($this->refund_destination ?? self::REFUND_DESTINATION_WALLET) === self::REFUND_DESTINATION_WALLET;
+    }
+
+    public function refundsToPaymentAccount(): bool
+    {
+        return $this->refund_destination === self::REFUND_DESTINATION_PAYMENT_ACCOUNT;
     }
 
     protected function casts(): array

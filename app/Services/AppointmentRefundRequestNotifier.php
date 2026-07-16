@@ -130,19 +130,27 @@ final class AppointmentRefundRequestNotifier
 
         $amount = number_format((float) ($request->processed_amount ?? $request->requested_amount), 2);
 
+        $messageKey = $request->refundsToPaymentAccount()
+            ? 'patient.notifications.refund_request_processed_account_body'
+            : 'patient.notifications.refund_request_processed_wallet_body';
+
         $this->notifyPatient($request, $appointment, [
             'type' => 'refund_request_processed',
             'title' => __('patient.notifications.refund_request_processed_title'),
-            'message' => __('patient.notifications.refund_request_processed_body', [
+            'message' => __($messageKey, [
                 'amount' => $amount,
             ]),
-            'action' => route('patient.wallet'),
+            'action' => $request->refundsToWallet() ? route('patient.wallet') : route('patient.appointments', ['tab' => 'missed']),
         ]);
+
+        $doctorMessageKey = $request->refundsToPaymentAccount()
+            ? 'doctor.notifications.refund_request_processed_account_body'
+            : 'doctor.notifications.refund_request_processed_wallet_body';
 
         $this->notifyDoctor($request, $appointment, [
             'type' => 'refund_request_processed',
             'title' => __('doctor.notifications.refund_request_processed_title'),
-            'message' => __('doctor.notifications.refund_request_processed_body', [
+            'message' => __($doctorMessageKey, [
                 'patient' => $this->patientName($appointment),
                 'amount' => $amount,
             ]),

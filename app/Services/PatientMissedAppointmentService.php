@@ -77,6 +77,7 @@ final class PatientMissedAppointmentService
         Appointment $appointment,
         string $reasonKey,
         ?string $reasonNote = null,
+        string $refundDestination = AppointmentRefundRequest::REFUND_DESTINATION_WALLET,
     ): AppointmentRefundRequest {
         if ((int) $appointment->user_id !== (int) $user->id) {
             abort(403);
@@ -100,7 +101,32 @@ final class PatientMissedAppointmentService
             ]);
         }
 
-        $request = DB::transaction(function () use ($appointment, $user, $reasonKey, $reasonNote): AppointmentRefundRequest {
+        $refundDestination = in_array($refundDestination, [
+            AppointmentRefundRequest::REFUND_DESTINATION_WALLET,
+            AppointmentRefundRequest::REFUND_DESTINATION_PAYMENT_ACCOUNT,
+        ], true)
+            ? $refundDestination
+            : AppointmentRefundRequest::REFUND_DESTINATION_WALLET;
+
+        if (
+            $refundDestination === AppointmentRefundRequest::REFUND_DESTINATION_PAYMENT_ACCOUNT
+            && ! filled($appointment->payment_invoice_id)
+        ) {
+            throw ValidationException::withMessages([
+                'refundDestination' => __('patient.missed.refund_account_missing'),
+            ]);
+        }
+
+        $processing = app(AppointmentRefundProcessingService::class);
+        $requestedAmount = $processing->maximumRefundableAmount($appointment, $refundDestination);
+
+        if ($requestedAmount < 0.01) {
+            throw ValidationException::withMessages([
+                'appointment' => __('patient.missed.not_eligible'),
+            ]);
+        }
+
+        $request = DB::transaction(function () use ($appointment, $user, $reasonKey, $reasonNote, $refundDestination, $requestedAmount): AppointmentRefundRequest {
             $appointment->loadMissing('doctor');
 
             return AppointmentRefundRequest::query()->create([
@@ -111,7 +137,8 @@ final class PatientMissedAppointmentService
                 'reason_key' => $reasonKey,
                 'reason_note' => $reasonNote,
                 'status' => 'pending_review',
-                'requested_amount' => (float) $appointment->total,
+                'refund_destination' => $refundDestination,
+                'requested_amount' => $requestedAmount,
             ]);
         });
 

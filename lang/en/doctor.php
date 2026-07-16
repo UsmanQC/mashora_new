@@ -942,6 +942,7 @@ return [
         'refund_request_rejected_title' => 'Refund request rejected',
         'refund_request_rejected_body' => 'Admin rejected the refund request from :patient.',
         'refund_request_processed_title' => 'Refund processed',
-        'refund_request_processed_body' => 'Refund of :amount SAR for :patient was processed and credited to the patient wallet.',
+        'refund_request_processed_wallet_body' => 'Refund of :amount SAR for :patient was processed and credited to the patient wallet.',
+        'refund_request_processed_account_body' => 'Refund of :amount SAR for :patient was processed and sent to the patient payment account.',
     ],
 ];

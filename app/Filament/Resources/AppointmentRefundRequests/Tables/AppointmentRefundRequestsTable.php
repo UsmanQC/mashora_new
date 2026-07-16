@@ -54,6 +54,14 @@ class AppointmentRefundRequestsTable
                     ->label('Requested')
                     ->money('SAR')
                     ->sortable(),
+                TextColumn::make('refund_destination')
+                    ->label('Destination')
+                    ->badge()
+                    ->formatStateUsing(fn (?string $state): string => match ($state) {
+                        'payment_account' => 'Payment account',
+                        default => 'Wallet',
+                    })
+                    ->color(fn (?string $state): string => $state === 'payment_account' ? 'info' : 'gray'),
                 TextColumn::make('processed_amount')
                     ->label('Processed')
                     ->money('SAR')

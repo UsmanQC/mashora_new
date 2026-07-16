@@ -78,7 +78,19 @@ final class DoctorRefundRequestService
             ]);
         }
 
-        $request = DB::transaction(function () use ($appointment, $doctor, $reasonNote): AppointmentRefundRequest {
+        $processing = app(AppointmentRefundProcessingService::class);
+        $requestedAmount = $processing->maximumRefundableAmount(
+            $appointment,
+            AppointmentRefundRequest::REFUND_DESTINATION_WALLET,
+        );
+
+        if ($requestedAmount < 0.01) {
+            throw ValidationException::withMessages([
+                'appointment' => __('doctor.refund.not_paid'),
+            ]);
+        }
+
+        $request = DB::transaction(function () use ($appointment, $doctor, $reasonNote, $requestedAmount): AppointmentRefundRequest {
             $appointment->loadMissing('user');
 
             return AppointmentRefundRequest::query()->create([
@@ -89,7 +101,8 @@ final class DoctorRefundRequestService
                 'reason_key' => self::REASON_KEY,
                 'reason_note' => $reasonNote,
                 'status' => 'pending_review',
-                'requested_amount' => (float) $appointment->total,
+                'refund_destination' => AppointmentRefundRequest::REFUND_DESTINATION_WALLET,
+                'requested_amount' => $requestedAmount,
             ]);
         });
 

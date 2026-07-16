@@ -943,6 +943,7 @@ return [
         'refund_request_rejected_title' => 'تم رفض طلب الاسترداد',
         'refund_request_rejected_body' => 'رفضت الإدارة طلب الاسترداد من :patient.',
         'refund_request_processed_title' => 'تمت معالجة الاسترداد',
-        'refund_request_processed_body' => 'تمت معالجة استرداد بمبلغ :amount ر.س للمريض :patient وإضافته إلى محفظته.',
+        'refund_request_processed_wallet_body' => 'تمت معالجة استرداد بمبلغ :amount ر.س للمريض :patient وإضافته إلى محفظته.',
+        'refund_request_processed_account_body' => 'تمت معالجة استرداد بمبلغ :amount ر.س للمريض :patient وتحويله إلى حساب الدفع الخاص به.',
     ],
 ];
