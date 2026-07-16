@@ -114,7 +114,7 @@
                     const sessionId = @js($this->mfSessionId);
                     const scriptUrl = @js($this->mfSessionJsUrl);
                     const successUrl = @js(route('patient.payment.success', ['temporaryAppointment' => $this->temporaryAppointment->id]));
-                    const csrf = @js(csrf_token());
+                    const csrfMeta = () => document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || @js(csrf_token());
                     const containerId = @js($mfContainerId);
                     const preferDesktop = @js(($mfPreferDesktop ?? false));
                     const lang = @js(app()->getLocale() === 'ar' ? 'ar' : 'en');
@@ -182,25 +182,51 @@
                     const completeBooking = (payload) => {
                         paying = true;
                         softError = '';
+
+                        const body = { sessionId: payload.sessionId || sessionId };
+                        if (payload.paymentData) {
+                            body.paymentData = typeof payload.paymentData === 'string'
+                                ? payload.paymentData
+                                : String(payload.paymentData);
+                        }
+                        if (payload.paymentId) {
+                            body.paymentId = String(payload.paymentId);
+                        }
+
                         fetch(completeUrl, {
                             method: 'POST',
+                            credentials: 'same-origin',
                             headers: {
                                 'Content-Type': 'application/json',
                                 'Accept': 'application/json',
-                                'X-CSRF-TOKEN': csrf,
+                                'X-CSRF-TOKEN': csrfMeta(),
                                 'X-Requested-With': 'XMLHttpRequest',
                             },
-                            body: JSON.stringify(payload),
+                            body: JSON.stringify(body),
                         })
-                            .then((res) => res.json().then((data) => ({ ok: res.ok, data })))
-                            .then(({ data }) => {
+                            .then(async (res) => {
+                                let data = null;
+                                try {
+                                    data = await res.json();
+                                } catch (e) {
+                                    data = null;
+                                }
+                                return { ok: res.ok, status: res.status, data };
+                            })
+                            .then(({ ok, status, data }) => {
                                 if (data?.redirect) {
                                     window.location.href = data.redirect;
                                     return;
                                 }
-                                softFail('booking completion failed');
+
+                                // Money may already be taken — recover via success page CustomerReference lookup.
+                                softFail(data?.message || ('booking completion failed (' + status + ')'));
+                                setTimeout(() => { window.location.href = successUrl; }, 2000);
                             })
-                            .catch(() => softFail('booking completion network error'));
+                            .catch(() => {
+                                softFail('booking completion network error');
+                                setTimeout(() => { window.location.href = successUrl; }, 2000);
+                            });
                     };
 
                     const payment = (response) => {
@@ -213,11 +239,18 @@
                         }
 
                         const paymentId = extractPaymentId(response);
+                        let paymentData = response.paymentData;
+                        if (paymentData && typeof paymentData !== 'string') {
+                            paymentData = paymentData.paymentData || paymentData.data || null;
+                            if (paymentData && typeof paymentData !== 'string') {
+                                paymentData = null;
+                            }
+                        }
 
-                        if (response.paymentCompleted && response.paymentData) {
+                        if (response.paymentCompleted && paymentData) {
                             completeBooking({
-                                paymentData: response.paymentData,
-                                paymentId: paymentId || null,
+                                paymentData: paymentData,
+                                paymentId: paymentId || undefined,
                                 sessionId: response.sessionId || sessionId,
                             });
                             return;
@@ -237,7 +270,7 @@
                             return;
                         }
 
-                        // Last resort: send user to success page so server can resolve via CustomerReference.
+                        // Last resort: success page confirms via CustomerReference / paymentId query.
                         if (response.paymentCompleted === true) {
                             window.location.href = successUrl;
                             return;
