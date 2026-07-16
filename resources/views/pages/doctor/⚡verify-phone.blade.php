@@ -19,6 +19,8 @@ new #[Layout('layouts::doctor-guest')] #[Title('Verify mobile number')] class ex
 
     public ?string $devOtpDisplay = null;
 
+    public ?string $smsError = null;
+
     public function mount(): void
     {
         if ($this->redirectAuthenticatedDoctorAwayFromGuestPages()) {
@@ -51,34 +53,43 @@ new #[Layout('layouts::doctor-guest')] #[Title('Verify mobile number')] class ex
 
     public function sendOtp(): void
     {
-        $code = sprintf('%04d', random_int(0, 9999));
+        $this->smsError = null;
+        $this->resetErrorBag('code');
 
-        VerifyPhoneNumber::query()
-            ->where('phone', $this->phone)
-            ->where('user_type', 'doctor')
-            ->delete();
+        try {
+            $code = sprintf('%04d', random_int(0, 9999));
 
-        $message = __('doctor.auth.verification_sms', ['code' => $code]);
-        $sms = app(SmsService::class);
-        $result = $sms->send($message, $this->phone, $code);
+            VerifyPhoneNumber::query()
+                ->where('phone', $this->phone)
+                ->where('user_type', 'doctor')
+                ->delete();
 
-        VerifyPhoneNumber::query()->create([
-            'phone' => $this->phone,
-            'verification_code' => $code,
-            'user_type' => 'doctor',
-        ]);
+            VerifyPhoneNumber::query()->create([
+                'phone' => $this->phone,
+                'verification_code' => $code,
+                'user_type' => 'doctor',
+            ]);
 
-        if ($sms->isLive() && ! ($result['ok'] ?? false)) {
+            $message = __('doctor.auth.verification_sms', ['code' => $code]);
+            $sms = app(SmsService::class);
+            $result = $sms->send($message, $this->phone, $code);
+            $ok = is_array($result) ? (bool) ($result['ok'] ?? false) : (bool) $result;
+
+            if ($sms->isLive() && ! $ok) {
+                $this->devOtpDisplay = null;
+                $this->smsError = is_array($result)
+                    ? (string) ($result['error'] ?? __('doctor.auth.otp_send_failed'))
+                    : __('doctor.auth.otp_send_failed');
+
+                return;
+            }
+
+            $this->devOtpDisplay = $sms->isLive() ? null : $code;
+        } catch (\Throwable $e) {
+            report($e);
             $this->devOtpDisplay = null;
-            $this->addError(
-                'code',
-                (string) ($result['error'] ?? __('doctor.auth.otp_send_failed')),
-            );
-
-            return;
+            $this->smsError = __('doctor.auth.otp_send_failed');
         }
-
-        $this->devOtpDisplay = $sms->isLive() ? null : $code;
     }
 
     public function verifyOtp(): void
@@ -137,6 +148,12 @@ new #[Layout('layouts::doctor-guest')] #[Title('Verify mobile number')] class ex
     @if (filled($devOtpDisplay))
         <div class="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950 sm:mt-4" role="status">
             {{ __('doctor.auth.otp_dev_banner', ['code' => $devOtpDisplay]) }}
+        </div>
+    @endif
+
+    @if (filled($smsError))
+        <div class="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-900 sm:mt-4" role="alert">
+            {{ $smsError }}
         </div>
     @endif
 

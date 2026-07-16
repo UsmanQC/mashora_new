@@ -188,11 +188,15 @@ final class SmsService
      */
     private function debugLog(string $message, array $context = []): void
     {
-        Log::warning($message, $context);
+        try {
+            Log::warning($message, $context);
+        } catch (Throwable) {
+            // Logging must never break OTP flow on live.
+        }
 
         try {
             $line = '['.now()->toDateTimeString().'] '.$message.' '.json_encode($context, JSON_UNESCAPED_UNICODE).PHP_EOL;
-            file_put_contents(storage_path('logs/sms-debug.log'), $line, FILE_APPEND | LOCK_EX);
+            @file_put_contents(storage_path('logs/sms-debug.log'), $line, FILE_APPEND | LOCK_EX);
         } catch (Throwable) {
             //
         }
