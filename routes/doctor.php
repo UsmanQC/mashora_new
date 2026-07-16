@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Doctor\DeviceTokenController;
 use App\Http\Controllers\Doctor\DoctorAppointmentRealtimeController;
 use App\Http\Controllers\Doctor\DoctorInvoiceController;
 use App\Http\Controllers\Doctor\DoctorPrescriptionController;
@@ -33,6 +34,12 @@ Route::middleware('doctor.guest')->group(function (): void {
 
 Route::middleware('auth:doctor')->group(function (): void {
     Route::post('logout', [DoctorSessionController::class, 'destroy'])->name('logout');
+
+    Route::post('device-token', [DeviceTokenController::class, 'store'])
+        ->name('device-token.store');
+
+    Route::delete('device-token', [DeviceTokenController::class, 'destroy'])
+        ->name('device-token.destroy');
 
     Route::livewire('register/basic-info', 'pages::doctor.register-basic-info')
         ->middleware('doctor.active')

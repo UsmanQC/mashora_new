@@ -2,8 +2,10 @@
 
 use App\Http\Controllers\AiChatbotBookingController;
 use App\Http\Controllers\AiChatbotController;
+use App\Http\Controllers\Patient\DeviceTokenController;
 use App\Http\Controllers\Patient\FollowUpPaymentController;
 use App\Http\Controllers\Patient\PatientAppointmentRealtimeController;
+// use App\Http\Controllers\Patient\PatientDiagnosisController;
 use App\Http\Controllers\Patient\PatientPaymentController;
 use App\Http\Controllers\Patient\PatientPrescriptionController;
 use App\Http\Controllers\WebManifestController;
@@ -126,6 +128,14 @@ Route::livewire('patient/notifications', 'pages::patient.notifications')
     ->middleware(['auth', 'patient.profile'])
     ->name('patient.notifications');
 
+Route::post('patient/device-token', [DeviceTokenController::class, 'store'])
+    ->middleware(['auth', 'patient.profile'])
+    ->name('patient.device-token.store');
+
+Route::delete('patient/device-token', [DeviceTokenController::class, 'destroy'])
+    ->middleware(['auth', 'patient.profile'])
+    ->name('patient.device-token.destroy');
+
 Route::livewire('patient/wallet', 'pages::patient.wallet')
     ->middleware(['auth', 'patient.profile'])
     ->name('patient.wallet');
@@ -153,6 +163,19 @@ Route::post('patient/follow-up/payment/execute/{appointment}', [FollowUpPaymentC
 Route::livewire('patient/medications', 'pages::patient.medications')
     ->middleware(['auth', 'patient.profile'])
     ->name('patient.medications');
+
+// Diagnosis reports temporarily hidden from the patient app.
+// Route::livewire('patient/diagnoses', 'pages::patient.diagnoses')
+//     ->middleware(['auth', 'patient.profile'])
+//     ->name('patient.diagnoses');
+//
+// Route::get('patient/diagnoses/{appointment}/preview', [PatientDiagnosisController::class, 'preview'])
+//     ->middleware(['auth', 'patient.profile'])
+//     ->name('patient.diagnoses.preview');
+//
+// Route::get('patient/diagnoses/{appointment}/pdf', [PatientDiagnosisController::class, 'download'])
+//     ->middleware(['auth', 'patient.profile'])
+//     ->name('patient.diagnoses.pdf');
 
 Route::get('patient/prescriptions/{appointment}/preview', [PatientPrescriptionController::class, 'preview'])
     ->middleware(['auth', 'patient.profile'])
@@ -216,6 +239,10 @@ Route::get('patient/payment/failed/{temporaryAppointment}', [PatientPaymentContr
 Route::post('patient/payment/execute/{temporaryAppointment}', [PatientPaymentController::class, 'executePayment'])
     ->middleware(['auth', 'patient.profile'])
     ->name('patient.payment.execute');
+
+Route::post('patient/payment/embedded/{temporaryAppointment}', [PatientPaymentController::class, 'completeEmbedded'])
+    ->middleware(['auth', 'patient.profile'])
+    ->name('patient.payment.embedded');
 
 Route::post('patient/appointments/{appointment}/realtime/notify-call', [PatientAppointmentRealtimeController::class, 'notifyCall'])
     ->middleware(['auth', 'patient.profile'])

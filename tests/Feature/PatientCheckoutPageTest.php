@@ -47,10 +47,25 @@ test('authenticated patient sees luxury checkout shell on mobile', function () {
         ->assertSee('data-test="patient-luxury-checkout"', false)
         ->assertSee('data-test="patient-checkout-header"', false)
         ->assertSee('data-test="patient-checkout-step-payment"', false)
+        ->assertSee('data-test="patient-checkout-mobile-summary"', false)
         ->assertSee('data-test="patient-checkout-payment-card"', false)
-        ->assertSee('data-test="patient-checkout-payment-methods"', false)
-        ->assertSee(__('patient_booking.pay_through'), false)
+        ->assertDontSee('data-test="patient-checkout-payment-methods"', false)
         ->assertSee('data-test="patient-navbar-language-switch"', false);
+});
+
+test('myfatoorah checkout panel uses embedded payment without hosted redirect', function () {
+    $panel = file_get_contents(resource_path('views/partials/patient-checkout-payment-panel.blade.php'));
+
+    expect($panel)
+        ->toContain('mf-unified')
+        ->toContain('shouldHandlePaymentUrl: true')
+        ->toContain("paymentOptions: ['ApplePay', 'GooglePay', 'Card']")
+        ->toContain("backgroundColor: '#10B981'")
+        ->toContain('CARD_IDENTIFIED')
+        ->toContain('patient-checkout-mf-boot')
+        ->toContain('isThisViewport')
+        ->not->toContain('pay_now_fallback')
+        ->not->toContain('payment_redirect_hint');
 });
 
 test('guest cannot access checkout page', function () {

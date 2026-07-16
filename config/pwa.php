@@ -10,7 +10,7 @@ return [
 
     'dir' => env('PWA_DIR', 'auto'),
 
-    'cache_version' => env('PWA_CACHE_VERSION', 'awaan-v2'),
+    'cache_version' => env('PWA_CACHE_VERSION', 'awaan-v3'),
 
     'apps' => [
         'patient' => [
@@ -42,6 +42,8 @@ return [
     'icons' => [
         ['path' => 'images/pwa/icon-192-v3.png', 'sizes' => '192x192', 'purpose' => 'any'],
         ['path' => 'images/pwa/icon-512-v3.png', 'sizes' => '512x512', 'purpose' => 'any'],
+        ['path' => 'images/pwa/icon-192-maskable-v3.png', 'sizes' => '192x192', 'purpose' => 'maskable'],
+        ['path' => 'images/pwa/icon-512-maskable-v3.png', 'sizes' => '512x512', 'purpose' => 'maskable'],
     ],
 
 ];

@@ -303,10 +303,19 @@ class Appointment extends Model
             }
         }
 
-        return app(FollowUpAppointmentService::class)
-            ->windowEnd($reference)
-            ->copy()
-            ->endOfDay();
+        $timezone = config('app.timezone');
+        $hours = max(1, (int) config('appointments.post_session_chat_window_hours', 24));
+
+        $sessionEndedAt = $reference->extend_at
+            ?? $reference->sessionEndsAt()
+            ?? $reference->actual_start_at
+            ?? $reference->sessionStartsAt();
+
+        if ($sessionEndedAt === null) {
+            return now($timezone)->addHours($hours);
+        }
+
+        return $sessionEndedAt->copy()->timezone($timezone)->addHours($hours);
     }
 
     public function isChatOpen(?CarbonInterface $now = null): bool
@@ -443,5 +452,12 @@ class Appointment extends Model
     public function hasRefundRequest(): bool
     {
         return $this->refundRequests()->exists();
+    }
+
+    public function hasOpenRefundRequest(): bool
+    {
+        return $this->refundRequests()
+            ->whereIn('status', ['pending_review', 'approved'])
+            ->exists();
     }
 }

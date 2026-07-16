@@ -32,6 +32,7 @@
             'patient.important-numbers',
             'patient.wallet',
             'patient.medications',
+            // 'patient.diagnoses',
             'patient.favorites',
             'patient.privacy',
             'patient.support',
@@ -153,7 +154,7 @@
                 <livewire:patient-mood-picker-modal />
             @endauth
             <div @class([
-                'mx-auto w-full max-w-6xl flex-1',
+                'portal-desktop-scroll mx-auto w-full max-w-6xl flex-1',
                 'px-0 py-0 max-sm:h-full max-sm:overflow-hidden sm:px-6 sm:py-6 sm:pb-8 lg:pb-8' => $patientLuxuryHome,
                 'px-0 py-0 sm:px-6 sm:py-6 sm:pb-8 lg:pb-8' => $patientLuxuryMobileShell && ! $patientLuxuryHome,
                 'px-4 py-6 pb-28 sm:px-6 lg:pb-8' => ! $patientLuxuryMobileShell,
@@ -175,7 +176,15 @@
         @include('partials.patient-global-join-call-banner')
         @stack('scripts')
 
-        @include('partials.pwa-install-prompt', ['pwaApp' => 'patient'])
+        @include('partials.pwa-install-prompt', [
+            'pwaApp' => 'patient',
+            'showPush' => false, // notification dialog temporarily disabled
+        ])
+
+        {{-- FCM config must load for logged-in patients --}}
+        @auth
+            @include('partials.fcm-web', ['portal' => 'patient'])
+        @endauth
 
         @persist('awaan-ai-chatbot')
             @include('partials.ai-chatbot-widget', [

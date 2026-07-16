@@ -14,6 +14,7 @@ class AppointmentRefundRequest extends Model
         'appointment_id',
         'patient_id',
         'doctor_id',
+        'requested_by',
         'processed_by_admin_id',
         'reason_key',
         'reason_note',
@@ -26,6 +27,11 @@ class AppointmentRefundRequest extends Model
         'rejected_at',
         'processed_at',
     ];
+
+    public function wasRequestedByDoctor(): bool
+    {
+        return $this->requested_by === 'doctor';
+    }
 
     protected function casts(): array
     {

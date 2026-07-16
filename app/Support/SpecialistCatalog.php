@@ -225,6 +225,13 @@ final class SpecialistCatalog
             ->values()
             ->all();
 
+        /** @var array<string, int> $durationPrices */
+        $durationPrices = $offeredDurations
+            ->mapWithKeys(static fn ($duration): array => [
+                (string) $duration->duration => (int) round((float) ($duration->pivot?->price ?? 0)),
+            ])
+            ->all();
+
         $preferredDuration = (string) (session('session_filter_preferences.duration_minutes') ?? '');
         $selectedDuration = $offeredDurations->first();
 
@@ -279,11 +286,13 @@ final class SpecialistCatalog
             'voice' => in_array('voice_call', $communicationCodes, true),
         ];
 
+        $slotStepMinutes = max(15, (int) ($sessionMinutes > 0 ? $sessionMinutes : 15));
+
         /** @var list<string> $slots */
         $slots = collect($doctor->workingDays)
             ->where('is_working', true)
-            ->flatMap(static function ($workingDay) {
-                return $workingDay->workingHours->flatMap(static function ($hour) {
+            ->flatMap(static function ($workingDay) use ($slotStepMinutes) {
+                return $workingDay->workingHours->flatMap(static function ($hour) use ($slotStepMinutes) {
                     if (! filled($hour->start_time) || ! filled($hour->end_time)) {
                         return [];
                     }
@@ -292,9 +301,9 @@ final class SpecialistCatalog
                     $end = Carbon::createFromFormat('H:i:s', (string) $hour->end_time);
                     $times = [];
 
-                    while ($start < $end) {
+                    while ($start->copy()->addMinutes($slotStepMinutes)->lessThanOrEqualTo($end)) {
                         $times[] = $start->format('H:i');
-                        $start = $start->addMinutes(15);
+                        $start = $start->addMinutes($slotStepMinutes);
                     }
 
                     return $times;
@@ -326,6 +335,7 @@ final class SpecialistCatalog
             'price_sar' => $price,
             'session_minutes' => $sessionMinutes,
             'offered_duration_minutes' => $offeredDurationMinutes,
+            'duration_prices' => $durationPrices,
             'channels' => $channels,
             'slots' => $slots,
             'tags' => $tags,
@@ -391,6 +401,9 @@ final class SpecialistCatalog
             'price_sar' => (int) ($entry['price_sar'] ?? 0),
             'session_minutes' => (int) ($entry['session_minutes'] ?? 15),
             'offered_duration_minutes' => [(string) ($entry['session_minutes'] ?? 15)],
+            'duration_prices' => [
+                (string) ($entry['session_minutes'] ?? 15) => (int) ($entry['price_sar'] ?? 0),
+            ],
             'channels' => is_array($entry['channels'] ?? null) ? $entry['channels'] : [],
             'slots' => is_array($entry['slots'] ?? null) ? $entry['slots'] : [],
             'tags' => $tags,

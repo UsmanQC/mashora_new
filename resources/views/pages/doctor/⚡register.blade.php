@@ -1,5 +1,6 @@
 <?php
 
+use App\Livewire\Concerns\RedirectsAuthenticatedDoctorsFromGuestPages;
 use App\Models\Doctor;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
@@ -9,6 +10,8 @@ use Livewire\Component;
 
 new #[Layout('layouts::doctor-guest')] #[Title('Doctor registration')] class extends Component
 {
+    use RedirectsAuthenticatedDoctorsFromGuestPages;
+
     public string $phone = '';
 
     public string $email = '';
@@ -19,6 +22,10 @@ new #[Layout('layouts::doctor-guest')] #[Title('Doctor registration')] class ext
 
     public function mount(): void
     {
+        if ($this->redirectAuthenticatedDoctorAwayFromGuestPages()) {
+            return;
+        }
+
         $raw = (string) request()->string('phone');
         $normalized = (string) (preg_replace('/\D/', '', $raw) ?? '');
 
@@ -39,6 +46,9 @@ new #[Layout('layouts::doctor-guest')] #[Title('Doctor registration')] class ext
 
     public function register(): void
     {
+        if ($this->redirectAuthenticatedDoctorAwayFromGuestPages()) {
+            return;
+        }
         $normalized = (string) (preg_replace('/\D/', '', $this->phone) ?? '');
         $this->phone = $normalized;
 

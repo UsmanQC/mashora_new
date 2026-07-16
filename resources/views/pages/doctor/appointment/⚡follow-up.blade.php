@@ -30,15 +30,29 @@ new #[Layout('layouts::doctor')] #[Title('Follow Up')] class extends Component
 
     public bool $followUpNotNeeded = false;
 
+    public bool $isRescheduling = false;
+
+    public bool $showCancelFollowUpModal = false;
+
     public function mount(Appointment $appointment): void
     {
         $this->appointment = $appointment;
         $this->durationMinutes = $this->resolveFollowUpPageDurationMinutes($appointment);
         $this->followUpNotNeeded = app(FollowUpAppointmentService::class)->parentDeclinedFollowUp($appointment);
 
+        if (request()->boolean('reschedule')) {
+            $service = app(FollowUpAppointmentService::class);
+            $followUp = $service->existingFollowUpFor($this->windowParent());
+
+            if ($followUp instanceof Appointment && $service->canRescheduleFollowUp($followUp)) {
+                $this->isRescheduling = true;
+                $this->durationMinutes = max(1, (int) ($followUp->duration ?: FollowUpAppointmentService::sessionDurationMinutes()));
+            }
+        }
+
         $followUpService = app(FollowUpAppointmentService::class);
         $timezone = AppTimezone::name();
-        $maxDate = $followUpService->maxSelectableDate($appointment);
+        $maxDate = $followUpService->maxSelectableDate($this->windowParent());
         $suggested = $appointment->appointment_date
             ? Carbon::parse($appointment->appointment_date, $timezone)->addDays(min(7, FollowUpAppointmentService::windowDays()))
             : now($timezone)->addDay();
@@ -71,6 +85,11 @@ new #[Layout('layouts::doctor')] #[Title('Follow Up')] class extends Component
 
         $this->newDate = $preferredDate;
         $this->paidNewDate = $preferredDate;
+    }
+
+    public function windowParent(): Appointment
+    {
+        return app(FollowUpAppointmentService::class)->resolveParent($this->appointment);
     }
 
     private function resolveFollowUpPageDurationMinutes(Appointment $appointment): int
@@ -196,18 +215,20 @@ new #[Layout('layouts::doctor')] #[Title('Follow Up')] class extends Component
     public function minDate(): string
     {
         return app(FollowUpAppointmentService::class)
-            ->windowStartFor($this->appointment)
+            ->windowStartFor($this->windowParent())
             ->format('Y-m-d');
     }
 
     public function sessionDateLabel(): string
     {
-        if ($this->appointment->appointment_date === null) {
+        $parent = $this->windowParent();
+
+        if ($parent->appointment_date === null) {
             return '';
         }
 
         try {
-            return Carbon::parse($this->appointment->appointment_date, AppTimezone::name())
+            return Carbon::parse($parent->appointment_date, AppTimezone::name())
                 ->locale(app()->getLocale())
                 ->translatedFormat('d M Y');
         } catch (\Throwable) {
@@ -218,7 +239,7 @@ new #[Layout('layouts::doctor')] #[Title('Follow Up')] class extends Component
     public function maxDate(): string
     {
         return app(FollowUpAppointmentService::class)
-            ->maxSelectableDate($this->appointment)
+            ->maxSelectableDate($this->windowParent())
             ->format('Y-m-d');
     }
 
@@ -259,35 +280,146 @@ new #[Layout('layouts::doctor')] #[Title('Follow Up')] class extends Component
             return [];
         }
 
+        $excludeId = null;
+
+        if ($this->isRescheduling && $this->existingFollowUp instanceof Appointment) {
+            $excludeId = (int) $this->existingFollowUp->id;
+        }
+
         return app(DoctorAvailabilityService::class)->availableSlots(
             $this->doctor(),
             $this->newDate,
             $this->durationMinutes,
+            $excludeId,
         );
     }
 
     public function getCanScheduleFollowUpProperty(): bool
     {
-        return app(FollowUpAppointmentService::class)->parentCanScheduleFollowUp($this->appointment);
+        return app(FollowUpAppointmentService::class)->parentCanScheduleFollowUp($this->windowParent());
     }
 
     public function getPendingFollowUpProperty(): ?Appointment
     {
-        return app(FollowUpAppointmentService::class)->pendingFollowUpFor($this->appointment);
+        return app(FollowUpAppointmentService::class)->pendingFollowUpFor($this->windowParent());
     }
 
     public function getExistingFollowUpProperty(): ?Appointment
     {
-        return app(FollowUpAppointmentService::class)->existingFollowUpFor($this->appointment);
+        return app(FollowUpAppointmentService::class)->existingFollowUpFor($this->windowParent());
+    }
+
+    public function startRescheduleFollowUp(): void
+    {
+        $followUp = $this->existingFollowUp;
+
+        if (! $followUp instanceof Appointment || ! app(FollowUpAppointmentService::class)->canRescheduleFollowUp($followUp)) {
+            Flux::toast(variant: 'warning', text: __('doctor.follow_up.not_eligible_manage'));
+
+            return;
+        }
+
+        $this->isRescheduling = true;
+        $this->durationMinutes = max(1, (int) ($followUp->duration ?: FollowUpAppointmentService::sessionDurationMinutes()));
+        $this->selectedTime = '';
+        $this->showCancelFollowUpModal = false;
+    }
+
+    public function dismissRescheduleFollowUp(): void
+    {
+        $this->isRescheduling = false;
+        $this->selectedTime = '';
+        $this->durationMinutes = $this->resolveFollowUpPageDurationMinutes($this->appointment);
+    }
+
+    public function promptCancelFollowUp(): void
+    {
+        $followUp = $this->existingFollowUp;
+
+        if (! $followUp instanceof Appointment || ! app(FollowUpAppointmentService::class)->canManageFollowUp($followUp)) {
+            Flux::toast(variant: 'warning', text: __('doctor.follow_up.not_eligible_manage'));
+
+            return;
+        }
+
+        $this->showCancelFollowUpModal = true;
+        $this->isRescheduling = false;
+    }
+
+    public function dismissCancelFollowUpModal(): void
+    {
+        $this->showCancelFollowUpModal = false;
+    }
+
+    public function confirmCancelFollowUp(): void
+    {
+        $followUp = $this->existingFollowUp;
+
+        if (! $followUp instanceof Appointment) {
+            $this->dismissCancelFollowUpModal();
+
+            return;
+        }
+
+        try {
+            app(FollowUpAppointmentService::class)->cancel($this->doctor(), $followUp);
+        } catch (ValidationException $exception) {
+            throw $exception;
+        }
+
+        $this->dismissCancelFollowUpModal();
+        $this->isRescheduling = false;
+
+        Flux::toast(variant: 'success', text: __('doctor.follow_up.cancel_success'));
+
+        $this->redirectRoute('doctor.appointments', navigate: true);
+    }
+
+    public function saveReschedule(): void
+    {
+        $followUp = $this->existingFollowUp;
+
+        if (! $followUp instanceof Appointment) {
+            Flux::toast(variant: 'warning', text: __('doctor.follow_up.not_eligible_manage'));
+
+            return;
+        }
+
+        $this->validate([
+            'newDate' => ['required', 'date', 'after_or_equal:'.$this->minDate(), 'before_or_equal:'.$this->maxDate()],
+            'selectedTime' => ['required', 'string'],
+        ]);
+
+        try {
+            app(FollowUpAppointmentService::class)->reschedule(
+                $this->doctor(),
+                $followUp,
+                $this->newDate,
+                $this->selectedTime,
+            );
+        } catch (ValidationException $exception) {
+            throw $exception;
+        }
+
+        Flux::toast(
+            variant: 'success',
+            text: __('doctor.follow_up.reschedule_success', [
+                'date' => Carbon::parse($this->newDate)->locale(app()->getLocale())->translatedFormat('d M Y'),
+                'time' => $this->displaySlot($this->selectedTime),
+            ]),
+        );
+
+        $this->redirectRoute('doctor.appointments', navigate: true);
     }
 
     public function updatedFollowUpNotNeeded(bool $value): void
     {
         $service = app(FollowUpAppointmentService::class);
+        $parent = $this->windowParent();
 
         try {
             if ($value) {
-                $service->markFollowUpNotNeeded($this->doctor(), $this->appointment);
+                $service->markFollowUpNotNeeded($this->doctor(), $parent);
                 $this->selectedTime = '';
 
                 Flux::toast(
@@ -298,14 +430,14 @@ new #[Layout('layouts::doctor')] #[Title('Follow Up')] class extends Component
                 return;
             }
 
-            $service->clearFollowUpNotNeeded($this->doctor(), $this->appointment);
+            $service->clearFollowUpNotNeeded($this->doctor(), $parent);
 
             Flux::toast(
                 variant: 'success',
                 text: __('doctor.follow_up.no_need_cleared'),
             );
         } catch (ValidationException $exception) {
-            $this->followUpNotNeeded = app(FollowUpAppointmentService::class)->parentDeclinedFollowUp($this->appointment);
+            $this->followUpNotNeeded = $service->parentDeclinedFollowUp($parent);
 
             throw $exception;
         }
@@ -405,7 +537,19 @@ new #[Layout('layouts::doctor')] #[Title('Follow Up')] class extends Component
         <flux:heading size="lg" class="font-semibold text-zinc-900">{{ __('doctor.follow_up.title') }}</flux:heading>
 
         @if ($appointment->is_follow_up)
-            @if ($this->pendingPaidAppointment)
+            @php
+                $manageableFollowUp = $this->existingFollowUp;
+                $canManageFollowUp = $manageableFollowUp instanceof \App\Models\Appointment
+                    && app(\App\Services\FollowUpAppointmentService::class)->canManageFollowUp($manageableFollowUp);
+                $canRescheduleFollowUp = $manageableFollowUp instanceof \App\Models\Appointment
+                    && app(\App\Services\FollowUpAppointmentService::class)->canRescheduleFollowUp($manageableFollowUp);
+            @endphp
+            @if ($canManageFollowUp)
+                @include('partials.doctor-follow-up-manage', [
+                    'followUp' => $manageableFollowUp,
+                    'canReschedule' => $canRescheduleFollowUp,
+                ])
+            @elseif ($this->pendingPaidAppointment)
                 <flux:callout variant="warning" icon="clock" class="mt-6">
                     <div class="space-y-2">
                         <p class="font-semibold">{{ __('doctor.scheduled_appointment.pending_title') }}</p>
@@ -490,49 +634,63 @@ new #[Layout('layouts::doctor')] #[Title('Follow Up')] class extends Component
         @else
         <flux:text class="mt-2 text-zinc-600">{{ __('doctor.follow_up.subtitle', ['days' => $this->windowDays()]) }}</flux:text>
 
-        @if ($this->pendingFollowUp)
-            <flux:callout variant="success" icon="check-circle" class="mt-6">
-                <div class="space-y-2">
-                    <p class="font-semibold">{{ __('doctor.follow_up.pending_title') }}</p>
-                    <p class="text-sm">{{ __('doctor.follow_up.pending_body') }}</p>
-                    <p class="text-sm font-medium">
-                        {{ __('doctor.follow_up.pending_status') }} —
-                        {{ $this->pendingFollowUp->appointment_date?->format('d/m/Y') }}
-                        {{ $this->displaySlot(substr((string) $this->pendingFollowUp->start_time, 0, 5)) }}
-                    </p>
-                </div>
-            </flux:callout>
-        @elseif ($this->existingFollowUp)
-            <flux:callout
-                variant="success"
-                icon="information-circle"
-                class="mt-6 !border-[#10B981]/40 !bg-[#D1FAE5] [&_*]:!text-black"
-            >
-                <div class="space-y-2">
-                    <p class="font-semibold">{{ __('doctor.follow_up.scheduled_title') }}</p>
-                    <p class="text-sm">{{ __('doctor.follow_up.scheduled_body') }}</p>
-                    <p class="text-sm font-medium">
-                        {{ $this->existingFollowUp->appointment_date?->format('d/m/Y') }}
-                        {{ $this->displaySlot(substr((string) $this->existingFollowUp->start_time, 0, 5)) }}
-                        — {{ $this->followUpStatusLabel($this->existingFollowUp) }}
-                    </p>
-                </div>
-            </flux:callout>
+        @if ($this->pendingFollowUp || $this->existingFollowUp)
+            @php
+                $manageableFollowUp = $this->existingFollowUp;
+                $canManageFollowUp = $manageableFollowUp instanceof \App\Models\Appointment
+                    && app(\App\Services\FollowUpAppointmentService::class)->canManageFollowUp($manageableFollowUp);
+                $canRescheduleFollowUp = $manageableFollowUp instanceof \App\Models\Appointment
+                    && app(\App\Services\FollowUpAppointmentService::class)->canRescheduleFollowUp($manageableFollowUp);
+            @endphp
+            @if ($canManageFollowUp)
+                @include('partials.doctor-follow-up-manage', [
+                    'followUp' => $manageableFollowUp,
+                    'canReschedule' => $canRescheduleFollowUp,
+                ])
+            @elseif ($this->pendingFollowUp)
+                <flux:callout variant="success" icon="check-circle" class="mt-6">
+                    <div class="space-y-2">
+                        <p class="font-semibold">{{ __('doctor.follow_up.pending_title') }}</p>
+                        <p class="text-sm">{{ __('doctor.follow_up.pending_body') }}</p>
+                        <p class="text-sm font-medium">
+                            {{ __('doctor.follow_up.pending_status') }} —
+                            {{ $this->pendingFollowUp->appointment_date?->format('d/m/Y') }}
+                            {{ $this->displaySlot(substr((string) $this->pendingFollowUp->start_time, 0, 5)) }}
+                        </p>
+                    </div>
+                </flux:callout>
+            @else
+                <flux:callout
+                    variant="success"
+                    icon="information-circle"
+                    class="mt-6 !border-[#10B981]/40 !bg-[#D1FAE5] [&_*]:!text-black"
+                >
+                    <div class="space-y-2">
+                        <p class="font-semibold">{{ __('doctor.follow_up.scheduled_title') }}</p>
+                        <p class="text-sm">{{ __('doctor.follow_up.scheduled_body') }}</p>
+                        <p class="text-sm font-medium">
+                            {{ $this->existingFollowUp->appointment_date?->format('d/m/Y') }}
+                            {{ $this->displaySlot(substr((string) $this->existingFollowUp->start_time, 0, 5)) }}
+                            — {{ $this->followUpStatusLabel($this->existingFollowUp) }}
+                        </p>
+                    </div>
+                </flux:callout>
+            @endif
         @elseif ($followUpNotNeeded)
-            <flux:callout variant="success" icon="check-circle" class="mt-6">
+            <div class="mt-6 rounded-2xl border border-[#10B981]/40 bg-[#D1FAE5] p-5 text-black shadow-sm [&_[data-flux-text]]:text-black">
                 <div class="space-y-2">
-                    <p class="font-semibold">{{ __('doctor.follow_up.no_need_title') }}</p>
-                    <p class="text-sm">{{ __('doctor.follow_up.no_need_body') }}</p>
+                    <p class="font-semibold text-black">{{ __('doctor.follow_up.no_need_title') }}</p>
+                    <p class="text-sm text-black">{{ __('doctor.follow_up.no_need_body') }}</p>
                 </div>
-            </flux:callout>
+            </div>
 
-            <div class="mt-6 rounded-2xl border border-zinc-200/90 bg-white p-5 shadow-sm">
+            <div class="mt-6 rounded-2xl border border-zinc-200/90 bg-white p-5 text-black shadow-sm [&_[data-flux-heading]]:text-black [&_[data-flux-text]]:text-black">
                 <div class="flex items-center justify-between gap-4">
-                    <div>
-                        <flux:heading size="md" class="font-semibold text-zinc-900">
+                    <div class="min-w-0">
+                        <flux:heading size="md" class="font-semibold !text-black">
                             {{ __('doctor.follow_up.no_need_toggle_label') }}
                         </flux:heading>
-                        <flux:text class="mt-1 text-sm text-zinc-600">
+                        <flux:text class="mt-1 text-sm !text-black">
                             {{ __('doctor.follow_up.no_need_locked') }}
                         </flux:text>
                     </div>
@@ -631,14 +789,17 @@ new #[Layout('layouts::doctor')] #[Title('Follow Up')] class extends Component
         </form>
             </div>
 
-            <div class="rounded-2xl border border-zinc-200/90 bg-white p-5 shadow-sm sm:p-6 xl:col-span-5">
-                <flux:heading size="md" class="font-semibold text-zinc-900">{{ __('doctor.follow_up.option_no_need_title') }}</flux:heading>
-                <flux:text class="mt-1 text-sm text-zinc-600">{{ __('doctor.follow_up.option_no_need_body') }}</flux:text>
+            <div
+                class="rounded-2xl border border-zinc-200/90 bg-white p-5 text-black shadow-sm sm:p-6 xl:col-span-5 [&_[data-flux-heading]]:text-black [&_[data-flux-text]]:text-black"
+                data-test="doctor-follow-up-no-need-box"
+            >
+                <flux:heading size="md" class="font-semibold !text-black">{{ __('doctor.follow_up.option_no_need_title') }}</flux:heading>
+                <flux:text class="mt-1 text-sm !text-black">{{ __('doctor.follow_up.option_no_need_body') }}</flux:text>
 
-                <div class="mt-5 flex items-center justify-between gap-4 rounded-xl border border-zinc-200 bg-zinc-50/80 px-4 py-4">
+                <div class="mt-5 flex items-center justify-between gap-4 rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-4">
                     <div class="min-w-0">
-                        <p class="text-sm font-semibold text-zinc-900">{{ __('doctor.follow_up.no_need_toggle_label') }}</p>
-                        <p class="mt-0.5 text-xs text-zinc-600">{{ __('doctor.follow_up.no_need_toggle_hint') }}</p>
+                        <p class="text-sm font-semibold text-black">{{ __('doctor.follow_up.no_need_toggle_label') }}</p>
+                        <p class="mt-0.5 text-xs text-black">{{ __('doctor.follow_up.no_need_toggle_hint') }}</p>
                     </div>
                     <div class="shrink-0 [--color-accent:#10B981] [--color-accent-foreground:#ffffff]">
                         <flux:switch wire:model.live="followUpNotNeeded" />
@@ -650,4 +811,24 @@ new #[Layout('layouts::doctor')] #[Title('Follow Up')] class extends Component
         @endif
         @endif
     </div>
+
+    <flux:modal wire:model="showCancelFollowUpModal" class="max-w-md">
+        <div class="space-y-4">
+            <flux:heading size="lg">{{ __('doctor.follow_up.cancel_modal_title') }}</flux:heading>
+            <flux:text>{{ __('doctor.follow_up.cancel_modal_body') }}</flux:text>
+            <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <flux:button type="button" wire:click="dismissCancelFollowUpModal" class="!border-zinc-300 !bg-white !text-zinc-800">
+                    {{ __('doctor.appointments.cancel_modal.dismiss') }}
+                </flux:button>
+                <flux:button
+                    type="button"
+                    wire:click="confirmCancelFollowUp"
+                    class="!bg-rose-600 !text-white hover:!brightness-95"
+                    data-test="doctor-follow-up-cancel-confirm"
+                >
+                    {{ __('doctor.follow_up.cancel_modal_confirm') }}
+                </flux:button>
+            </div>
+        </div>
+    </flux:modal>
 </div>

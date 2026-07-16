@@ -137,6 +137,7 @@
 
         @include('partials.intl-tel-input-patient-scripts')
         @stack('scripts')
+        @include('partials.pwa-install-prompt', ['pwaApp' => 'patient'])
         @fluxScripts
     </body>
 </html>

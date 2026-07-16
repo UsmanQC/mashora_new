@@ -209,6 +209,135 @@ final class FollowUpAppointmentService
             ->first();
     }
 
+    /**
+     * Statuses that allow a doctor to reschedule or cancel a free follow-up.
+     *
+     * @var list<string>
+     */
+    public const MANAGEABLE_FOLLOW_UP_STATUSES = ['pending_follow_up', 'new', 'rescheduled'];
+
+    public function resolveParent(Appointment $appointment): Appointment
+    {
+        if (! $appointment->is_follow_up) {
+            return $appointment;
+        }
+
+        $parent = $appointment->parentAppointment;
+
+        if ($parent instanceof Appointment) {
+            return $parent;
+        }
+
+        if ($appointment->parent_id === null) {
+            return $appointment;
+        }
+
+        $loaded = Appointment::query()->find($appointment->parent_id);
+
+        return $loaded instanceof Appointment ? $loaded : $appointment;
+    }
+
+    public function canManageFollowUp(Appointment $followUp): bool
+    {
+        return $followUp->is_follow_up
+            && in_array((string) $followUp->status, self::MANAGEABLE_FOLLOW_UP_STATUSES, true);
+    }
+
+    public function canRescheduleFollowUp(Appointment $followUp): bool
+    {
+        if (! $this->canManageFollowUp($followUp)) {
+            return false;
+        }
+
+        $parent = $this->resolveParent($followUp);
+
+        return $this->maxSelectableDate($parent)->greaterThanOrEqualTo($this->windowStartFor($parent));
+    }
+
+    public function reschedule(Doctor $doctor, Appointment $followUp, string $date, string $time): Appointment
+    {
+        if ((int) $followUp->doctor_id !== (int) $doctor->id) {
+            abort(403);
+        }
+
+        if (! $this->canRescheduleFollowUp($followUp)) {
+            throw ValidationException::withMessages([
+                'selectedTime' => __('doctor.follow_up.not_eligible_manage'),
+            ]);
+        }
+
+        $parent = $this->resolveParent($followUp);
+        $this->assertDateWithinWindow($parent, $date);
+
+        $durationMinutes = max(1, (int) ($followUp->duration ?: self::sessionDurationMinutes()));
+        $slots = $this->availability->availableSlots(
+            $doctor,
+            $date,
+            $durationMinutes,
+            (int) $followUp->id,
+        );
+
+        if (! in_array($time, $slots, true)) {
+            throw ValidationException::withMessages([
+                'selectedTime' => __('doctor.follow_up.slot_unavailable'),
+            ]);
+        }
+
+        $timezone = config('app.timezone');
+        $start = Carbon::createFromFormat('Y-m-d H:i', $date.' '.$time, $timezone);
+        $end = (clone $start)->addMinutes($durationMinutes);
+
+        $nextStatus = $followUp->isPendingFollowUp()
+            ? 'pending_follow_up'
+            : 'rescheduled';
+
+        $updated = DB::transaction(function () use ($followUp, $start, $end, $durationMinutes, $nextStatus): Appointment {
+            $followUp->forceFill([
+                'scheduled_at' => $start->format('Y-m-d H:i:s'),
+                'appointment_date' => $start->format('Y-m-d'),
+                'start_time' => $start->format('H:i:s'),
+                'end_time' => $end->format('H:i:s'),
+                'duration' => $durationMinutes,
+                'extend_at' => $end->format('Y-m-d H:i:s'),
+                'status' => $nextStatus,
+            ])->save();
+
+            return $followUp->fresh();
+        });
+
+        $this->notifier->notifyRescheduled($updated, $doctor, $start);
+
+        return $updated;
+    }
+
+    public function cancel(Doctor $doctor, Appointment $followUp): Appointment
+    {
+        if ((int) $followUp->doctor_id !== (int) $doctor->id) {
+            abort(403);
+        }
+
+        if (! $this->canManageFollowUp($followUp)) {
+            throw ValidationException::withMessages([
+                'followUp' => __('doctor.follow_up.not_eligible_manage'),
+            ]);
+        }
+
+        $cancelled = DB::transaction(function () use ($followUp): Appointment {
+            $followUp->forceFill([
+                'status' => 'cancelled',
+                'cancel_status' => 'doctor',
+            ])->save();
+
+            app(AppointmentWalletService::class)->refundToPatient($followUp->fresh());
+
+            return $followUp->fresh();
+        });
+
+        $this->notifier->notifyCancelled($cancelled, $doctor);
+
+        return $cancelled;
+    }
+
     public function confirm(Appointment $appointment, User $user): Appointment
     {
         if ((int) $appointment->user_id !== (int) $user->id) {

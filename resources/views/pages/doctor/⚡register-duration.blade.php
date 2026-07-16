@@ -143,86 +143,99 @@ new #[Layout('layouts::doctor')] #[Title('Duration and price')] class extends Co
     }
 }; ?>
 
-<div class="mx-auto max-w-xl space-y-8">
-    <div class="space-y-2">
-        <flux:text class="text-sm font-medium text-zinc-500">
-            {{ __('doctor.auth.onboarding_progress', ['current' => 5, 'total' => 6]) }}
-        </flux:text>
-        <flux:heading size="xl" class="font-semibold text-zinc-900">{{ __('doctor.auth.duration_title') }}</flux:heading>
-        <flux:text class="text-zinc-600">{{ __('doctor.auth.duration_subtitle') }}</flux:text>
-    </div>
+<div class="doctor-onboarding-basic mx-auto max-w-lg space-y-5 pb-10 sm:max-w-xl sm:space-y-8 sm:pb-8">
+    @include('partials.doctor-onboarding-header', [
+        'current' => 5,
+        'total' => 6,
+        'title' => __('doctor.auth.duration_title'),
+        'subtitle' => __('doctor.auth.duration_subtitle'),
+    ])
 
-    <form wire:submit="save" class="doctor-emerald-accent space-y-5">
-        <flux:text class="text-sm font-semibold text-zinc-800">
-            {{ __('doctor.auth.duration_title') }}
-            @include('partials.required-field-mark')
-        </flux:text>
-        <flux:checkbox.group wire:model.live="doctorDurations" class="space-y-3">
-            @foreach ($durations as $duration)
-                @php
-                    $durationKey = (string) $duration->duration;
-                    $checked = in_array($durationKey, $doctorDurations, true);
-                @endphp
-                <div class="rounded-xl border border-zinc-200/80 bg-white p-3">
-                    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                        <label class="inline-flex items-center gap-3">
-                            <flux:checkbox value="{{ $durationKey }}" class="shrink-0" />
-                            <span class="text-sm font-semibold text-zinc-800">
-                                {{ __('doctor.auth.duration_minutes', ['minutes' => $duration->duration]) }}
-                            </span>
-                        </label>
+    <form wire:submit="save" class="doctor-emerald-accent doctor-onboarding-form space-y-5">
+        <div class="doctor-onboarding-card">
+            <div class="space-y-4 px-4 py-4 sm:px-6 sm:py-5">
+                <flux:text class="text-sm font-semibold text-zinc-800">
+                    {{ __('doctor.auth.duration_section_label') }}
+                    @include('partials.required-field-mark')
+                </flux:text>
+                <flux:checkbox.group wire:model.live="doctorDurations" class="space-y-3">
+                    @foreach ($durations as $duration)
+                        @php
+                            $durationKey = (string) $duration->duration;
+                            $checked = in_array($durationKey, $doctorDurations, true);
+                        @endphp
+                        <div class="rounded-xl border border-zinc-200/80 bg-white p-3">
+                            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                <label class="inline-flex items-center gap-3">
+                                    <flux:checkbox value="{{ $durationKey }}" class="shrink-0" />
+                                    <span class="text-sm font-semibold text-zinc-800">
+                                        {{ __('doctor.auth.duration_minutes', ['minutes' => $duration->duration]) }}
+                                    </span>
+                                </label>
 
-                        @if ($checked)
-                            <div class="w-full sm:w-52">
-                                <flux:field>
-                                    <flux:label>{{ __('Price') }} ({{ config('currency.sa_riyal_symbol') }}) @include('partials.required-field-mark')</flux:label>
-                                    <flux:input
-                                        type="number"
-                                        step="0.01"
-                                        min="0"
-                                        wire:model.blur="durationPrices.{{ $durationKey }}"
-                                    />
-                                </flux:field>
+                                @if ($checked)
+                                    <div class="w-full sm:w-52">
+                                        <flux:field>
+                                            <flux:label>{{ __('doctor.auth.duration_price_label') }} ({{ config('currency.sa_riyal_symbol') }}) @include('partials.required-field-mark')</flux:label>
+                                            <flux:input
+                                                type="number"
+                                                step="0.01"
+                                                min="0"
+                                                wire:model.blur="durationPrices.{{ $durationKey }}"
+                                                class="rounded-2xl!"
+                                            />
+                                        </flux:field>
+                                    </div>
+                                @endif
                             </div>
-                        @endif
-                    </div>
+                        </div>
+                    @endforeach
+                </flux:checkbox.group>
+
+                <flux:error name="doctorDurations" />
+                <flux:error name="durationPrices" />
+
+                <div class="rounded-xl border border-zinc-200/80 bg-zinc-50/70 p-3">
+                    <flux:text class="mb-3 text-sm font-semibold text-zinc-800">
+                        {{ __('doctor.auth.appointment_types') }}
+                        @include('partials.required-field-mark')
+                    </flux:text>
+                    <flux:checkbox.group wire:model.live="selectedCommunications" class="grid gap-2 sm:grid-cols-3">
+                        @foreach ($communications as $communication)
+                            @php
+                                $communicationKey = (string) $communication->communication;
+                                $communicationLabel = match ($communicationKey) {
+                                    'chat' => __('doctor.auth.communication_chat'),
+                                    'voice_call' => __('doctor.auth.communication_voice_call'),
+                                    'video_call' => __('doctor.auth.communication_video_call'),
+                                    default => $communication->title ?: str($communicationKey)->replace('_', ' ')->title(),
+                                };
+                            @endphp
+                            <label class="inline-flex items-center gap-3 rounded-lg border border-zinc-200 bg-white px-3 py-2">
+                                <flux:checkbox value="{{ $communicationKey }}" class="shrink-0" />
+                                <span class="text-sm font-medium text-zinc-800">{{ $communicationLabel }}</span>
+                            </label>
+                        @endforeach
+                    </flux:checkbox.group>
+                    <flux:error name="selectedCommunications" />
                 </div>
-            @endforeach
-        </flux:checkbox.group>
 
-        <flux:error name="doctorDurations" />
-        <flux:error name="durationPrices" />
-
-        <div class="rounded-xl border border-zinc-200/80 bg-zinc-50/70 p-3">
-            <flux:text class="mb-3 text-sm font-semibold text-zinc-800">
-                {{ __('doctor.auth.appointment_types') }}
-                @include('partials.required-field-mark')
-            </flux:text>
-            <flux:checkbox.group wire:model.live="selectedCommunications" class="grid gap-2 sm:grid-cols-3">
-                @foreach ($communications as $communication)
-                    <label class="inline-flex items-center gap-3 rounded-lg border border-zinc-200 bg-white px-3 py-2">
-                        <flux:checkbox value="{{ $communication->communication }}" class="shrink-0" />
-                        <span class="text-sm font-medium text-zinc-800">{{ $communication->title ?: str($communication->communication)->replace('_', ' ')->title() }}</span>
+                <div class="rounded-xl border border-zinc-200/80 bg-zinc-50/70 p-3">
+                    <label class="inline-flex items-center gap-3">
+                        <flux:checkbox wire:model.live="acceptInstantAppointment" class="shrink-0" />
+                        <span class="text-sm font-semibold text-zinc-800">{{ __('doctor.auth.accept_instant_appointment') }}</span>
                     </label>
-                @endforeach
-            </flux:checkbox.group>
-            <flux:error name="selectedCommunications" />
-        </div>
-
-        <div class="rounded-xl border border-zinc-200/80 bg-zinc-50/70 p-3">
-            <label class="inline-flex items-center gap-3">
-                <flux:checkbox wire:model.live="acceptInstantAppointment" class="shrink-0" />
-                <span class="text-sm font-semibold text-zinc-800">{{ __('doctor.auth.accept_instant_appointment') }}</span>
-            </label>
-            <flux:text class="mt-1 text-xs text-zinc-500">{{ __('doctor.auth.accept_instant_appointment_hint') }}</flux:text>
+                    <flux:text class="mt-1 text-xs text-zinc-600">{{ __('doctor.auth.accept_instant_appointment_hint') }}</flux:text>
+                </div>
+            </div>
         </div>
 
         <div class="flex flex-col gap-3 sm:flex-row sm:justify-between">
-            <flux:button type="button" variant="ghost" wire:click="goBack" class="order-2 sm:order-1">
+            <flux:button type="button" variant="ghost" wire:click="goBack" class="order-2 !rounded-full !text-zinc-700 sm:order-1">
                 {{ __('doctor.auth.back') }}
             </flux:button>
             <flux:button
-                class="order-1 w-full !bg-[#10B981] !text-white hover:!brightness-95 sm:order-2 sm:w-auto"
+                class="doctor-onboarding-cta order-1 sm:order-2 sm:w-auto sm:min-w-40"
                 type="submit"
                 variant="primary"
             >

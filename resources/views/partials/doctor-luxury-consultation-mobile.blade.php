@@ -10,14 +10,14 @@
     class="doctor-luxury-consultation relative flex h-svh max-h-svh min-h-0 flex-col overflow-hidden bg-slate-50 lg:hidden"
     data-test="doctor-luxury-consultation"
     wire:key="doctor-consultation-mobile-{{ $appointment->id }}"
-    x-data="{ tab: 'summary', chatOpen: false, callActive: false, chatCardMinimized: false, hasNewMessage: false }"
+    x-data="{ tab: 'summary', chatOpen: false, callActive: false, chatCardMinimized: false, hasNewMessage: false, unreadCount: 0 }"
     x-bind:class="{
         'doctor-consultation--call-active': callActive,
         'doctor-consultation--chat-open': chatOpen,
     }"
-    x-on:consultation-call-active.window="callActive = true; chatOpen = false"
+    x-on:consultation-call-active.window="if (! callActive) { chatOpen = false } callActive = true"
     x-on:consultation-call-ended.window="callActive = false; chatOpen = false"
-    x-on:doctor-chat-message-received.window="if (chatCardMinimized) hasNewMessage = true"
+    x-on:doctor-chat-message-received.window="if ((callActive && ! chatOpen) || chatCardMinimized) { hasNewMessage = true; unreadCount = Math.min(unreadCount + 1, 99) }"
 >
     <header class="shrink-0 border-b border-slate-100 bg-white px-4 pb-3 pt-[max(2rem,env(safe-area-inset-top))]">
         <div class="flex items-center gap-3">
@@ -121,7 +121,7 @@
 
                 <div
                     id="doctor-consultation-call-controls-wrap"
-                    class="pointer-events-none absolute inset-x-0 bottom-0 z-20 hidden flex justify-center px-4 pb-4 pt-8"
+                    class="pointer-events-none absolute inset-x-0 bottom-0 z-20 hidden justify-center px-4 pb-4 pt-8"
                 >
                     <div
                         class="doctor-consultation-call-controls pointer-events-auto flex items-center justify-center gap-3 rounded-full border border-white/10 bg-zinc-900/90 px-3 py-2 shadow-xl backdrop-blur-md"
@@ -151,14 +151,31 @@
                         <button
                             type="button"
                             id="agora-toggle-chat-mobile"
-                            x-on:click="chatOpen = !chatOpen"
+                            x-on:click="chatOpen = !chatOpen; if (chatOpen) { hasNewMessage = false; unreadCount = 0; chatCardMinimized = false }"
                             x-bind:aria-pressed="chatOpen"
-                            x-bind:title="chatOpen ? @js(__('doctor.consultation.close_chat')) : @js(__('doctor.consultation.open_chat'))"
-                            x-bind:class="chatOpen ? 'doctor-consultation-call-controls__btn--active' : ''"
-                            class="doctor-consultation-call-controls__btn hidden"
+                            x-bind:aria-label="hasNewMessage && !chatOpen ? @js(__('doctor.consultation.chat_new_message_hint')) : (chatOpen ? @js(__('doctor.consultation.close_chat')) : @js(__('doctor.consultation.open_chat')))"
+                            x-bind:title="hasNewMessage && !chatOpen ? @js(__('doctor.consultation.chat_new_message_hint')) : (chatOpen ? @js(__('doctor.consultation.close_chat')) : @js(__('doctor.consultation.open_chat')))"
+                            x-bind:class="{
+                                'doctor-consultation-call-controls__btn--active': chatOpen,
+                                'doctor-consultation-call-controls__btn--notify': hasNewMessage && !chatOpen,
+                            }"
+                            class="doctor-consultation-call-controls__btn relative hidden"
                             data-test="doctor-consultation-chat-toggle"
                         >
                             <flux:icon name="chat-bubble-left-right" variant="mini" class="size-5 shrink-0" />
+                            <span
+                                x-show="hasNewMessage && !chatOpen"
+                                x-cloak
+                                class="pointer-events-none absolute -end-0.5 -top-0.5"
+                                data-test="doctor-consultation-chat-unread-badge"
+                                aria-hidden="true"
+                            >
+                                <span class="absolute inset-0 animate-ping rounded-full bg-emerald-400/80"></span>
+                                <span
+                                    class="relative flex min-h-4 min-w-4 items-center justify-center rounded-full bg-[#10B981] px-1 text-[0.5625rem] font-bold leading-none text-white ring-2 ring-zinc-900"
+                                    x-text="unreadCount > 9 ? '9+' : (unreadCount > 1 ? unreadCount : '')"
+                                ></span>
+                            </span>
                         </button>
                         <button
                             type="button"
@@ -231,17 +248,46 @@
                                 <p class="text-sm font-bold text-slate-900">{{ $this->appointmentTimeRangeLabel() }}</p>
                             @endif
 
-                            @if ($appointment->status === 'in_process' && $this->appointmentEndsAtLabel())
-                                <div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-slate-200/80 pt-2">
+                            @if ($appointment->status === 'in_process' && ! $this->sessionTimeExpired() && $this->appointmentEndsAtLabel())
+                                <div
+                                    id="doctor-session-countdown-mobile"
+                                    class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-slate-200/80 pt-2"
+                                    data-test="doctor-session-countdown-mobile"
+                                >
                                     <p class="text-xs text-slate-500">
                                         {{ __('doctor.consultation.ends_at', ['time' => $this->appointmentEndsAtLabel()]) }}
                                     </p>
                                     @if ($appointment->extend_at)
-                                        <p class="inline-flex items-center gap-1.5 text-xs font-bold text-[#047857]">
+                                        <p
+                                            id="doctor-session-ends-in-mobile"
+                                            class="inline-flex items-center gap-1.5 text-xs font-bold text-[#047857]"
+                                        >
                                             <span>{{ __('doctor.consultation.ends_in') }}</span>
                                             <span id="timer-session-remaining-mobile" class="font-mono tabular-nums">--:--</span>
                                         </p>
                                     @endif
+                                    <span
+                                        id="doctor-session-finished-chip"
+                                        class="hidden rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-semibold text-slate-600 shadow-sm"
+                                        data-test="doctor-session-finished-chip"
+                                    >
+                                        {{ __('doctor.consultation.session_finished') }}
+                                    </span>
+                                </div>
+                            @elseif ($appointment->status === 'in_process' && $this->sessionTimeExpired())
+                                <div class="mt-2 flex flex-wrap items-center gap-2 border-t border-slate-200/80 pt-2">
+                                    @if ($this->appointmentEndsAtLabel())
+                                        <p class="text-xs text-slate-500">
+                                            {{ __('doctor.consultation.ends_at', ['time' => $this->appointmentEndsAtLabel()]) }}
+                                        </p>
+                                    @endif
+                                    <span
+                                        id="doctor-session-finished-chip"
+                                        class="inline-flex rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-semibold text-slate-600 shadow-sm"
+                                        data-test="doctor-session-finished-chip"
+                                    >
+                                        {{ __('doctor.consultation.session_finished') }}
+                                    </span>
                                 </div>
                             @elseif ($this->appointmentEndsAtLabel())
                                 <p class="mt-1 text-xs font-medium text-slate-500">
@@ -357,6 +403,11 @@
                             <flux:menu.item wire:click="requestCompleteAppointment" icon="check-circle">
                                 {{ __('doctor.card.mark_complete') }}
                             </flux:menu.item>
+                            @if ($this->canRequestSessionRefund())
+                                <flux:menu.item wire:click="promptRefundRequest" icon="banknotes">
+                                    {{ __('doctor.refund.request') }}
+                                </flux:menu.item>
+                            @endif
                         @endif
                     </flux:menu>
                 </flux:dropdown>
@@ -454,7 +505,7 @@
             x-show="!chatCardMinimized"
             id="doctor-chat-messages-mobile"
             class="doctor-consultation-chat-messages max-h-44 space-y-3 overflow-y-auto px-4 py-3"
-            wire:ignore.self
+            wire:ignore
         >
             @forelse ($messages as $msg)
                 <div

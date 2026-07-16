@@ -36,7 +36,7 @@ final class PatientMissedAppointmentService
     {
         return $appointment->isDoctorMissed()
             && ! $appointment->is_follow_up
-            && ! $appointment->refundRequests()->exists()
+            && ! $appointment->hasOpenRefundRequest()
             && ! $appointment->isPatientRefunded()
             && ! $this->wallet->hasRefunded($appointment);
     }
@@ -65,7 +65,7 @@ final class PatientMissedAppointmentService
             ]);
         }
 
-        if ($appointment->refundRequests()->exists()) {
+        if ($appointment->hasOpenRefundRequest()) {
             throw ValidationException::withMessages([
                 'appointment' => __('patient.missed.already_requested'),
             ]);
@@ -107,6 +107,7 @@ final class PatientMissedAppointmentService
                 'appointment_id' => $appointment->id,
                 'patient_id' => $user->id,
                 'doctor_id' => $appointment->doctor_id,
+                'requested_by' => 'patient',
                 'reason_key' => $reasonKey,
                 'reason_note' => $reasonNote,
                 'status' => 'pending_review',
@@ -121,7 +122,7 @@ final class PatientMissedAppointmentService
 
     public function refund(User $user, Appointment $appointment): void
     {
-        if ($appointment->refundRequests()->exists()) {
+        if ($appointment->hasOpenRefundRequest()) {
             return;
         }
 

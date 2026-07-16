@@ -156,14 +156,14 @@ new #[Layout('layouts::doctor')] #[Title('Duration and price')] class extends Co
                             <label class="inline-flex items-center gap-3">
                                 <flux:checkbox value="{{ $durationKey }}" class="shrink-0" />
                                 <span class="text-sm font-semibold text-zinc-800">
-                                    {{ $duration->duration }} {{ __('minutes') }}
+                                    {{ __('doctor.auth.duration_minutes', ['minutes' => $duration->duration]) }}
                                 </span>
                             </label>
 
                             @if ($checked)
                                 <div class="w-full sm:w-52">
                                     <flux:field>
-                                        <flux:label>{{ __('Price') }} @include('partials.required-field-mark')</flux:label>
+                                        <flux:label>{{ __('doctor.auth.duration_price_label') }} ({{ config('currency.sa_riyal_symbol') }}) @include('partials.required-field-mark')</flux:label>
                                         <flux:input
                                             type="number"
                                             step="0.01"
@@ -182,14 +182,23 @@ new #[Layout('layouts::doctor')] #[Title('Duration and price')] class extends Co
             <flux:error name="durationPrices" />
             <div class="rounded-xl border border-zinc-200/80 bg-zinc-50/70 p-3">
                 <flux:text class="mb-3 text-sm font-semibold text-zinc-800">
-                    {{ __('Available communication types') }}
+                    {{ __('doctor.auth.appointment_types') }}
                     @include('partials.required-field-mark')
                 </flux:text>
                 <flux:checkbox.group wire:model.live="selectedCommunications" class="grid gap-2 sm:grid-cols-3">
                     @foreach ($communications as $communication)
+                        @php
+                            $communicationKey = (string) $communication->communication;
+                            $communicationLabel = match ($communicationKey) {
+                                'chat' => __('doctor.auth.communication_chat'),
+                                'voice_call' => __('doctor.auth.communication_voice_call'),
+                                'video_call' => __('doctor.auth.communication_video_call'),
+                                default => $communication->title ?: str($communicationKey)->replace('_', ' ')->title(),
+                            };
+                        @endphp
                         <label class="inline-flex items-center gap-3 rounded-lg border border-zinc-200 bg-white px-3 py-2">
-                            <flux:checkbox value="{{ $communication->communication }}" class="shrink-0" />
-                            <span class="text-sm font-medium text-zinc-800">{{ $communication->title ?: str($communication->communication)->replace('_', ' ')->title() }}</span>
+                            <flux:checkbox value="{{ $communicationKey }}" class="shrink-0" />
+                            <span class="text-sm font-medium text-zinc-800">{{ $communicationLabel }}</span>
                         </label>
                     @endforeach
                 </flux:checkbox.group>

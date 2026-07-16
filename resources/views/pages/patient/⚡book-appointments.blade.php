@@ -360,6 +360,8 @@ new #[Layout('layouts::patient')] #[Title('Book an appointment')] class extends 
             ]);
         });
 
+        // MyFatoorah: go to checkout so Embedded Payment v3 loads on-site (no hosted redirect).
+        // Other gateways also use checkout (HyperPay widget / Stripe).
         $this->redirect(route('patient.checkout', $temp));
     }
 

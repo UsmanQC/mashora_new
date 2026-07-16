@@ -146,6 +146,14 @@ class Doctor extends Authenticatable implements Wallet, WalletFloat
     }
 
     /**
+     * @return MorphMany<DeviceToken, $this>
+     */
+    public function deviceTokens(): MorphMany
+    {
+        return $this->morphMany(DeviceToken::class, 'userable');
+    }
+
+    /**
      * @return MorphMany<Ticket, $this>
      */
     public function tickets(): MorphMany

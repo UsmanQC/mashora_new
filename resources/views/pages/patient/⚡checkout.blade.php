@@ -4,6 +4,7 @@ use App\Livewire\Concerns\InteractsWithPatientWalletPayment;
 use App\Models\Doctor;
 use App\Models\TemporaryAppointment;
 use App\Services\HyperpayCheckoutService;
+use App\Services\MyFatoorahEmbeddedV3Service;
 use App\Services\PatientPaymentCompletionService;
 use App\Services\StripeCheckoutService;
 use App\Support\PaymentGateway;
@@ -13,7 +14,6 @@ use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
-use MyFatoorah\Library\MyFatoorah;
 use MyFatoorah\Library\API\Payment\MyFatoorahPayment;
 
 new #[Layout('layouts::patient')] #[Title('Payment')] class extends Component
@@ -30,6 +30,8 @@ new #[Layout('layouts::patient')] #[Title('Payment')] class extends Component
     public string $hyperpayEnv = '';
     public string $hyperpayCallbackUrl = '';
     public string $mfSessionId = '';
+    public string $mfSessionJsUrl = '';
+    public string $mfCompleteUrl = '';
     public string $mfCountryCode = '';
     public string $mfJsDomain = '';
 
@@ -46,7 +48,7 @@ new #[Layout('layouts::patient')] #[Title('Payment')] class extends Component
         if ($this->usesHyperPay()) {
             $this->initHyperpayCheckout();
         } elseif ($this->usesMyFatoorah()) {
-            $this->initEmbeddedPaymentSession();
+            $this->initMyFatoorahEmbeddedV3();
         }
     }
 
@@ -91,7 +93,64 @@ new #[Layout('layouts::patient')] #[Title('Payment')] class extends Component
 
         if ($this->usesHyperPay() && $this->amountDue() > 0) {
             $this->initHyperpayCheckout();
+        } elseif ($this->usesMyFatoorah() && $this->amountDue() > 0) {
+            $this->initMyFatoorahEmbeddedV3();
         }
+    }
+
+    public function initMyFatoorahEmbeddedV3(): void
+    {
+        $this->js('window.__mfSessionBooted = null');
+
+        if ($this->myFatoorahConfigError() !== null) {
+            $this->paymentError = $this->myFatoorahConfigError() ?? '';
+            $this->embeddedReady = false;
+
+            return;
+        }
+
+        if ($this->amountDue() <= 0) {
+            $this->embeddedReady = false;
+
+            return;
+        }
+
+        $user = Auth::user();
+        if (! $user instanceof \App\Models\User) {
+            abort(403);
+        }
+
+        $temp = $this->temporaryAppointment->fresh();
+        if ($temp === null) {
+            return;
+        }
+
+        /** @var MyFatoorahEmbeddedV3Service $embedded */
+        $embedded = app(MyFatoorahEmbeddedV3Service::class);
+        $session = $embedded->createCompletePaymentSession(
+            $temp,
+            PatientPaymentCompletionService::amountDue($temp),
+            $user
+        );
+
+        if (! ($session['ok'] ?? false)) {
+            $this->embeddedReady = false;
+            $this->mfSessionId = '';
+            $this->mfSessionJsUrl = '';
+            $this->mfCompleteUrl = '';
+            $this->paymentError = (string) ($session['message'] ?? __('patient_booking.payment_start_failed'));
+
+            return;
+        }
+
+        $temp->payment_session_id = (string) $session['session_id'];
+        $temp->save();
+
+        $this->mfSessionId = (string) $session['session_id'];
+        $this->mfSessionJsUrl = (string) $session['session_js_url'];
+        $this->mfCompleteUrl = route('patient.payment.embedded', ['temporaryAppointment' => $temp->id]);
+        $this->embeddedReady = true;
+        $this->paymentError = '';
     }
 
     public function initHyperpayCheckout(): void
@@ -363,7 +422,8 @@ new #[Layout('layouts::patient')] #[Title('Payment')] class extends Component
             return;
         }
 
-        $this->startMyFatoorahPayment();
+        // MyFatoorah: stay on embedded checkout — never start hosted SendPayment redirect.
+        $this->initMyFatoorahEmbeddedV3();
     }
 
     public function startStripePayment(): void
@@ -662,128 +722,12 @@ new #[Layout('layouts::patient')] #[Title('Payment')] class extends Component
             </div>
 
             <div class="order-1 lg:order-2">
-                <div class="overflow-hidden rounded-3xl border border-slate-200/90 bg-white shadow-[0_8px_30px_-12px_rgba(15,23,42,0.12)]" data-test="patient-checkout-payment-card">
-                    <div class="border-b border-slate-100 bg-gradient-to-b from-slate-50/90 to-white px-5 py-4">
-                        <div class="flex items-start justify-between gap-4">
-                            <div class="flex min-w-0 items-start gap-3">
-                                <span class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#10B981]/10 text-[#10B981] ring-1 ring-[#10B981]/15">
-                                    <flux:icon name="lock-closed" variant="mini" class="size-4" />
-                                </span>
-                                <div class="min-w-0">
-                                    <flux:heading size="sm" class="font-semibold text-slate-900">{{ __('patient_booking.checkout_accepts') }}</flux:heading>
-                                    <p class="mt-0.5 text-xs leading-relaxed text-slate-500">{{ __('patient_booking.luxury.trust_badge') }}</p>
-                                </div>
-                            </div>
-                            <div class="shrink-0 text-end">
-                                <p class="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-500">
-                                    {{ $showAmountDue ? __('patient_booking.amount_due') : __('patient_booking.total') }}
-                                </p>
-                                <p class="text-xl font-bold tabular-nums text-[#059669]">
-                                    {{ number_format($showAmountDue ? $checkoutDue : $checkoutTotal, 2) }}
-                                    <span class="text-sm">{{ __('patient_booking.sar') }}</span>
-                                </p>
-                            </div>
-                        </div>
-
-                    </div>
-
-                    <div class="space-y-4 p-5">
-                        @include('partials.patient-checkout-payment-panel')
-
-                        <div class="border-t border-slate-100 pt-4">
-                            @include('partials.patient-checkout-payment-methods', ['compact' => true, 'labelSurface' => 'bg-white'])
-                        </div>
-                    </div>
-
-                    <div class="border-t border-slate-100 px-5 py-4">
-                        <flux:button :href="route('patient.home')" wire:navigate variant="ghost" class="w-full">
-                            {{ __('patient_booking.back_home') }}
-                        </flux:button>
-                    </div>
-                </div>
+                @include('partials.patient-checkout-payment-card', [
+                    'showBackHome' => true,
+                    'mfContainerId' => 'mf-unified-desktop',
+                    'mfPreferDesktop' => true,
+                ])
             </div>
         </div>
     </div>
-
-    @if ($this->usesMyFatoorah() && $embeddedReady && $this->amountDue() > 0)
-        <form id="embedded-exec-form" action="{{ route('patient.payment.execute', ['temporaryAppointment' => $temporaryAppointment->id]) }}" method="POST" class="hidden">
-            @csrf
-        </form>
-
-        <script src="{{ $mfJsDomain }}/cardview/v2/session.js" id="mf-session-js"></script>
-        <script>
-            (function () {
-                const showCardError = () => {
-                    const box = document.getElementById('mf-card-error');
-                    if (box) {
-                        box.classList.remove('hidden');
-                    }
-                };
-
-                const startEmbedded = () => {
-                    if (!window.myFatoorah) {
-                        showCardError();
-                        return;
-                    }
-
-                    const mfConfig = {
-                        countryCode: @js($mfCountryCode),
-                        sessionId: @js($mfSessionId),
-                        cardViewId: "mf-form-element",
-                        style: {
-                            direction: @js(App::isLocale('ar') ? 'rtl' : 'ltr'),
-                            cardHeight: 160,
-                            input: {
-                                color: "#111827",
-                                fontSize: "14px",
-                                inputHeight: "42px",
-                                borderColor: "#d4d4d8",
-                                borderWidth: "1px",
-                                borderRadius: "8px",
-                                placeHolder: {
-                                    holderName: @js(__('patient_booking.payment_placeholder_card_holder')),
-                                    cardNumber: @js(__('patient_booking.payment_placeholder_card_number')),
-                                    expiryDate: @js(__('patient_booking.payment_placeholder_expiry')),
-                                    securityCode: @js(__('patient_booking.payment_placeholder_cvv')),
-                                },
-                            },
-                            label: {
-                                display: true,
-                                color: "#525252",
-                                fontSize: "12px",
-                            },
-                        },
-                    };
-
-                    window.myFatoorah.init(mfConfig);
-                };
-
-                const scriptEl = document.getElementById('mf-session-js');
-                if (scriptEl) {
-                    scriptEl.addEventListener('error', showCardError);
-                }
-
-                if (window.myFatoorah) {
-                    startEmbedded();
-                } else {
-                    scriptEl?.addEventListener('load', startEmbedded, { once: true });
-                }
-
-                document.getElementById('embedded-pay-now')?.addEventListener('click', function () {
-                    if (!window.myFatoorah) {
-                        showCardError();
-                        return;
-                    }
-
-                    window.myFatoorah.submit()
-                        .then(function () {
-                            document.getElementById('embedded-exec-form')?.submit();
-                        })
-                        .catch(function () {
-                            showCardError();
-                        });
-                });
-            })();
-        </script>
-    @endif
 </div>

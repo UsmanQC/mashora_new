@@ -223,7 +223,7 @@ class DoctorAvailabilityService
 
                     while ($cursor->copy()->addMinutes($duration)->lessThanOrEqualTo($end)) {
                         $times[] = $cursor->format('H:i');
-                        $cursor = $cursor->addMinutes(self::SLOT_MINUTES);
+                        $cursor = $cursor->addMinutes($duration);
                     }
 
                     return $times;

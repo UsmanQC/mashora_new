@@ -9,6 +9,7 @@ use App\Services\AppointmentSessionService;
 use App\Services\PatientMissedAppointmentService;
 use App\Support\DoctorAgoraChannel;
 use Flux\Flux;
+use Illuminate\Support\Js;
 use Illuminate\Support\Str;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\On;
@@ -159,10 +160,23 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
             'seen' => false,
         ]);
 
-        broadcast(new AppointmentChatMessageSent($message));
+        broadcast(new AppointmentChatMessageSent($message))->toOthers();
 
         $this->reset('draft');
         $this->loadMessages();
+
+        $this->js(
+            'window.dispatchEvent(new CustomEvent("mashora:chat-message-sent", { detail: '
+            .Js::from([
+                'id' => $message->id,
+                'body' => $message->body,
+                'send_by' => 'patient',
+                'from_id' => $patient->id,
+                'created_at' => $message->created_at?->toIso8601String(),
+                'self' => true,
+            ])
+            .' }))'
+        );
     }
 
     public function loadMessages(): void
@@ -303,7 +317,21 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
             return __('patient.appointments.session_finished');
         }
 
-        return __('patient.appointments.status_'.$this->appointment->status);
+        return $this->statusLabel((string) $this->appointment->status);
+    }
+
+    public function statusLabel(string $status): string
+    {
+        return match ($status) {
+            'new' => __('patient.appointments.status_new'),
+            'in_process' => __('patient.appointments.status_in_process'),
+            'pending_follow_up' => __('patient.follow_up.badge'),
+            'rescheduled' => __('patient.appointments.tab_rescheduled'),
+            'completed' => __('patient.appointments.status_completed'),
+            'cancelled' => __('patient.appointments.tab_cancelled'),
+            'not_attended' => __('patient.appointments.status_missed'),
+            default => __('patient.appointments.status_'.$status),
+        };
     }
 
     public function doctorInitials(): string
@@ -447,19 +475,19 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
         </div>
     </header>
 
-    @if ($appointment->allowsPatientCalls())
+    @if ($appointment->allowsPatientCalls() && $appointment->status === 'in_process')
         <div class="hidden flex-wrap items-center gap-2 sm:flex">
-            @if ($appointment->status === 'in_process' && $this->sessionTimeExpired())
+            @if ($this->sessionTimeExpired())
                 <span
                     id="patient-session-finished-chip-desktop"
-                    class="rounded-full border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-[11px] font-semibold text-zinc-600"
+                    class="inline-flex rounded-full border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-[11px] font-semibold text-zinc-600"
                 >
                     {{ __('patient.appointments.session_finished') }}
                 </span>
             @else
                 <span
                     id="patient-call-started-chip-desktop"
-                    class="hidden inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700"
+                    class="hidden items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700"
                 >
                     <span id="patient-call-chip-label-desktop">{{ __('patient.appointments.call_in_progress') }}</span>
                     <span id="patient-call-chip-duration-desktop" class="font-mono tabular-nums">00:00</span>
@@ -470,14 +498,12 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 >
                     {{ __('patient.appointments.session_finished') }}
                 </span>
-                @if ($appointment->status === 'in_process')
-                    <span
-                        id="patient-waiting-for-call-chip-desktop"
-                        class="rounded-full border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-[11px] font-semibold text-zinc-600"
-                    >
-                        {{ __('patient.appointments.waiting_for_specialist_call') }}
-                    </span>
-                @endif
+                <span
+                    id="patient-waiting-for-call-chip-desktop"
+                    class="inline-flex rounded-full border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-[11px] font-semibold text-zinc-600"
+                >
+                    {{ __('patient.appointments.waiting_for_specialist_call') }}
+                </span>
             @endif
         </div>
     @endif
@@ -515,22 +541,39 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
 
     <div class="space-y-4 px-6 pt-4 sm:space-y-5 sm:px-0 sm:pt-0">
     @if ($appointment->isSessionStartRequestPending())
-        <flux:callout variant="warning" icon="question-mark-circle" class="border-amber-200 bg-amber-50 text-amber-950">
+        <div
+            class="rounded-2xl border border-[#10B981]/35 bg-gradient-to-br from-emerald-50 via-white to-white p-4 shadow-sm ring-1 ring-[#10B981]/10 sm:p-5"
+            data-test="patient-session-start-dialog"
+        >
             <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div class="min-w-0">
-                    <p class="text-sm font-semibold">{{ __('patient.appointments.session_start_request_pending') }}</p>
-                    <p class="mt-1 text-sm text-amber-900">{{ __('patient.appointments.session_start_request_banner') }}</p>
+                    <p class="text-sm font-semibold text-[#047857]">{{ __('patient.appointments.session_start_request_pending') }}</p>
+                    <p class="mt-1 text-sm text-zinc-700">{{ __('patient.appointments.session_start_request_banner') }}</p>
                 </div>
                 <div class="flex flex-wrap gap-2">
-                    <flux:button type="button" size="sm" variant="primary" wire:click="approveSessionStart" wire:loading.attr="disabled">
+                    <flux:button
+                        type="button"
+                        size="sm"
+                        variant="primary"
+                        class="!rounded-xl !bg-[#10B981] !text-white hover:!brightness-95"
+                        wire:click="approveSessionStart"
+                        wire:loading.attr="disabled"
+                    >
                         {{ __('patient.appointments.session_start_request_approve') }}
                     </flux:button>
-                    <flux:button type="button" size="sm" variant="filled" class="!border !border-zinc-300 !bg-white !text-black shadow-sm hover:!bg-zinc-100" wire:click="declineSessionStart" wire:loading.attr="disabled">
+                    <flux:button
+                        type="button"
+                        size="sm"
+                        variant="filled"
+                        class="!rounded-xl !border !border-zinc-300 !bg-white !text-black shadow-sm hover:!bg-zinc-100"
+                        wire:click="declineSessionStart"
+                        wire:loading.attr="disabled"
+                    >
                         {{ __('patient.appointments.session_start_request_decline') }}
                     </flux:button>
                 </div>
             </div>
-        </flux:callout>
+        </div>
     @endif
 
     @if (in_array($appointment->status, ['new', 'rescheduled'], true) && ! $appointment->isChatOpen())
@@ -548,7 +591,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
     @elseif ($appointment->status === 'completed' && $appointment->isChatOpen())
         <flux:callout variant="secondary" icon="chat-bubble-left-right" class="border-zinc-200 bg-white scheme-light !text-zinc-900">
             <span class="text-sm text-zinc-900">{{ __('patient.appointments.chat_open_after_completed', [
-                'date' => $appointment->chatOpenUntil()->locale(app()->getLocale())->translatedFormat('d M Y'),
+                'date' => $appointment->chatOpenUntil()->locale(app()->getLocale())->translatedFormat('d M Y · g:i A'),
             ]) }}</span>
         </flux:callout>
     @endif
@@ -594,6 +637,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
 
     <div
         id="incoming-call-banner-desktop"
+        wire:ignore
         class="hidden rounded-2xl border border-emerald-300 bg-gradient-to-r from-emerald-50 via-emerald-50/95 to-white px-4 py-3 shadow-md shadow-emerald-900/10 ring-1 ring-inset ring-emerald-200/80 sm:px-5"
         role="alert"
         data-test="patient-incoming-call-banner-desktop"
@@ -641,7 +685,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
     >
         <div class="grid min-h-[34rem] grid-cols-1 max-sm:min-h-[min(32rem,calc(100dvh-18rem))] lg:grid-cols-12">
             <div class="flex min-h-[30rem] flex-col border-zinc-200 max-sm:min-h-[min(28rem,calc(100dvh-20rem))] lg:col-span-8 lg:border-e">
-                <div id="patient-chat-messages" class="min-h-0 flex-1 space-y-3 overflow-y-auto bg-gradient-to-b from-zinc-50/90 via-zinc-50/70 to-zinc-100/70 px-4 py-4 sm:px-5">
+                <div id="patient-chat-messages" class="min-h-0 flex-1 space-y-3 overflow-y-auto bg-gradient-to-b from-zinc-50/90 via-zinc-50/70 to-zinc-100/70 px-4 py-4 sm:px-5" wire:ignore>
             @forelse ($messages as $msg)
                 <div @class(['flex', 'justify-end' => $msg['send_by'] === 'patient', 'justify-start' => $msg['send_by'] !== 'patient']) wire:key="patient-chat-{{ $msg['id'] }}">
                     <div @class([
@@ -700,7 +744,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                     <div class="mt-6 grid gap-2 text-start">
                         <div class="rounded-xl border border-zinc-200/80 bg-white/90 px-3 py-2 shadow-sm">
                             <p class="text-[11px] font-semibold uppercase tracking-wide text-zinc-400">{{ __('patient.appointments.status') }}</p>
-                            <p class="mt-0.5 text-sm font-semibold text-zinc-800">{{ __('patient.appointments.status_'.$appointment->status) }}</p>
+                            <p class="mt-0.5 text-sm font-semibold text-zinc-800">{{ $this->statusLabel((string) $appointment->status) }}</p>
                         </div>
                         <div class="rounded-xl border border-zinc-200/80 bg-white/90 px-3 py-2 shadow-sm">
                             <p class="text-[11px] font-semibold uppercase tracking-wide text-zinc-400">{{ __('patient.appointments.session_label') }}</p>
@@ -939,7 +983,6 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
             const pusherCluster = boot.dataset.pusherCluster || 'mt1';
             const callEnabled = boot.dataset.agoraReady === '1';
             let appointmentStatus = boot.dataset.appointmentStatus || 'new';
-            const messagesWrap = chatMessagesEl();
             const seen = new Set();
 
             function metricsEl() {
@@ -953,35 +996,91 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
             document.querySelectorAll('#patient-chat-messages [wire\\:key^="patient-chat-"], #patient-chat-messages-mobile [wire\\:key^="patient-chat-mobile-"]').forEach((el) => {
                 const key = el.getAttribute('wire:key') || '';
                 const id = key.replace('patient-chat-mobile-', '').replace('patient-chat-', '');
-                if (id) seen.add(id);
+                if (id) seen.add(String(id));
             });
 
-            function appendMessageRow(payload) {
-                if (!messagesWrap || !payload.id || seen.has(payload.id)) return;
-                if (payload.send_by === 'patient' && Number(payload.from_id || 0) === patientId) return;
-                seen.add(payload.id);
+            function patientMessageListEls() {
+                return [
+                    document.getElementById('patient-chat-messages-mobile'),
+                    document.getElementById('patient-chat-messages'),
+                ].filter(Boolean);
+            }
 
-                const emptyState = messagesWrap.querySelector('.flex.min-h-\\[18rem\\], .patient-consultation-chat-empty');
-                if (emptyState) emptyState.remove();
+            function appendMessageIntoPatientWrap(wrap, payload) {
+                const emptyState = wrap.querySelector('.flex.min-h-\\[18rem\\], .patient-consultation-chat-empty');
+                if (emptyState) {
+                    emptyState.remove();
+                }
 
                 const row = document.createElement('div');
                 const mine = payload.send_by === 'patient';
-                row.className = mine ? 'flex justify-end' : 'flex justify-start';
+                const mobileChat = wrap.id === 'patient-chat-messages-mobile';
 
-                const bubble = document.createElement('div');
-                bubble.className = mine
-                    ? 'max-w-[min(86%,30rem)] rounded-2xl bg-[#10B981] px-3.5 py-2.5 text-sm text-white shadow-sm'
-                    : 'max-w-[min(86%,30rem)] rounded-2xl border border-zinc-200 bg-white px-3.5 py-2.5 text-sm text-zinc-800 shadow-sm';
+                if (mobileChat) {
+                    row.className = mine ? 'flex flex-row-reverse gap-2' : 'flex gap-2';
 
-                const p = document.createElement('p');
-                p.className = 'whitespace-pre-wrap break-words';
-                p.textContent = payload.body || '';
-                bubble.appendChild(p);
-                row.appendChild(bubble);
-                messagesWrap.appendChild(row);
-                messagesWrap.scrollTop = messagesWrap.scrollHeight;
-                window.dispatchEvent(new CustomEvent('patient-chat-message-received'));
+                    const stack = document.createElement('div');
+                    stack.className = 'min-w-0 max-w-[78%]'.concat(mine ? ' text-end' : '');
+
+                    const bubble = document.createElement('div');
+                    bubble.className = mine
+                        ? 'inline-block rounded-2xl rounded-br-md bg-[#10B981] px-3.5 py-2 text-sm text-white shadow-sm'
+                        : 'inline-block rounded-2xl rounded-bl-md border border-slate-100 bg-slate-50 px-3.5 py-2 text-sm text-slate-800 shadow-sm';
+
+                    const p = document.createElement('p');
+                    p.className = 'whitespace-pre-wrap break-words text-start';
+                    p.textContent = payload.body || '';
+                    bubble.appendChild(p);
+                    stack.appendChild(bubble);
+
+                    if (payload.created_at) {
+                        const time = document.createElement('time');
+                        time.className = 'mt-1 block text-[0.625rem] text-slate-400'.concat(mine ? ' text-end' : '');
+                        const d = new Date(payload.created_at);
+                        time.textContent = d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+                        stack.appendChild(time);
+                    }
+
+                    row.appendChild(stack);
+                } else {
+                    row.className = mine ? 'flex justify-end' : 'flex justify-start';
+
+                    const bubble = document.createElement('div');
+                    bubble.className = mine
+                        ? 'max-w-[min(86%,30rem)] rounded-2xl bg-[#10B981] px-3.5 py-2.5 text-sm text-white shadow-sm'
+                        : 'max-w-[min(86%,30rem)] rounded-2xl border border-zinc-200 bg-white px-3.5 py-2.5 text-sm text-zinc-800 shadow-sm';
+
+                    const p = document.createElement('p');
+                    p.className = 'whitespace-pre-wrap break-words';
+                    p.textContent = payload.body || '';
+                    bubble.appendChild(p);
+                    row.appendChild(bubble);
+                }
+
+                wrap.appendChild(row);
+                wrap.scrollTop = wrap.scrollHeight;
             }
+
+            function appendMessageRow(payload, { fromSelf = false } = {}) {
+                if (! payload?.id || seen.has(String(payload.id))) {
+                    return;
+                }
+
+                seen.add(String(payload.id));
+
+                const lists = patientMessageListEls();
+                if (lists.length === 0) {
+                    return;
+                }
+
+                lists.forEach((wrap) => appendMessageIntoPatientWrap(wrap, payload));
+
+                if (! fromSelf && payload.send_by !== 'patient') {
+                    window.dispatchEvent(new CustomEvent('patient-chat-message-received'));
+                }
+            }
+
+            boot.__appendChatMessage = (payload, options = {}) => appendMessageRow(payload, options);
 
             let incomingPayload = null;
 
@@ -1086,22 +1185,40 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 return mode === 'audio' ? 'audio' : 'video';
             }
 
-            function readStoredCallPayload() {
+            function readActiveStoredCallPayload() {
                 try {
                     const activeRaw = sessionStorage.getItem('mashora_active_call_' + appointmentId);
-                    const pendingRaw = sessionStorage.getItem('mashora_pending_call_' + appointmentId);
-                    const raw = activeRaw || pendingRaw;
 
-                    if (! raw) {
+                    if (! activeRaw) {
                         return null;
                     }
 
-                    const data = JSON.parse(raw);
+                    const data = JSON.parse(activeRaw);
 
                     return data?.agora_app_id && data?.agora_channel ? data : null;
                 } catch (_) {
                     return null;
                 }
+            }
+
+            function readPendingStoredCallPayload() {
+                try {
+                    const pendingRaw = sessionStorage.getItem('mashora_pending_call_' + appointmentId);
+
+                    if (! pendingRaw) {
+                        return null;
+                    }
+
+                    const data = JSON.parse(pendingRaw);
+
+                    return data?.agora_app_id && data?.agora_channel ? data : null;
+                } catch (_) {
+                    return null;
+                }
+            }
+
+            function readStoredCallPayload() {
+                return readActiveStoredCallPayload() || readPendingStoredCallPayload();
             }
 
             async function createLocalMediaTracks(mode) {
@@ -1286,43 +1403,45 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 return new Date(endIso).getTime() <= Date.now();
             }
 
+            function setChipVisible(el, visible, displayClass = 'inline-flex') {
+                if (! el) {
+                    return;
+                }
+
+                el.classList.toggle('hidden', ! visible);
+                el.classList.toggle(displayClass, visible);
+            }
+
             function refreshCallUiState() {
                 const sessionFinished = isSessionFinished();
                 const sessionActive = callEnabled && appointmentStatus === 'in_process' && ! sessionFinished;
                 const ui = callUiEls();
                 const incomingBanner = incomingBannerEl();
-
-                if (ui.waiting) {
-                    ui.waiting.classList.toggle(
-                        'hidden',
-                        sessionFinished
-                            || !sessionActive
-                            || activeMode
-                            || incomingPayload
-                            || (incomingBanner && !incomingBanner.classList.contains('hidden')),
-                    );
-                }
-
-                if (ui.chip) {
-                    ui.chip.classList.toggle('hidden', sessionFinished || !activeMode);
-                }
-
-                document.getElementById('patient-call-started-chip-desktop')?.classList.toggle(
-                    'hidden',
-                    sessionFinished || !activeMode,
-                );
-                document.getElementById('patient-waiting-for-call-chip-desktop')?.classList.toggle(
-                    'hidden',
-                    sessionFinished
-                        || !sessionActive
-                        || activeMode
-                        || incomingPayload
-                        || (incomingBanner && !incomingBanner.classList.contains('hidden')),
-                );
-
-                const sessionLiveBanner = document.getElementById('patient-session-live-banner');
                 const hasIncomingCall = Boolean(incomingPayload)
                     || (incomingBanner && !incomingBanner.classList.contains('hidden'));
+                const showWaiting = sessionActive
+                    && ! activeMode
+                    && ! hasIncomingCall
+                    && ! sessionFinished;
+                const showCallChip = Boolean(activeMode) && ! sessionFinished;
+
+                setChipVisible(ui.waiting, showWaiting);
+                setChipVisible(ui.chip, showCallChip);
+
+                setChipVisible(
+                    document.getElementById('patient-call-started-chip-desktop'),
+                    showCallChip,
+                );
+                setChipVisible(
+                    document.getElementById('patient-waiting-for-call-chip-desktop'),
+                    showWaiting,
+                );
+
+                // Always keep both mobile/desktop call chips consistent.
+                setChipVisible(document.getElementById('patient-call-started-chip'), showCallChip);
+                setChipVisible(document.getElementById('patient-waiting-for-call-chip'), showWaiting);
+
+                const sessionLiveBanner = document.getElementById('patient-session-live-banner');
 
                 if (sessionLiveBanner) {
                     if (sessionFinished || !sessionActive) {
@@ -1334,8 +1453,11 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 }
 
                 if (sessionFinished) {
-                    document.getElementById('patient-session-finished-chip')?.classList.remove('hidden');
-                    document.getElementById('patient-session-finished-chip-desktop')?.classList.remove('hidden');
+                    setChipVisible(document.getElementById('patient-session-finished-chip'), true, 'inline-flex');
+                    setChipVisible(document.getElementById('patient-session-finished-chip-desktop'), true, 'inline-flex');
+                    setChipVisible(ui.chip, false);
+                    setChipVisible(document.getElementById('patient-call-started-chip'), false);
+                    setChipVisible(document.getElementById('patient-call-started-chip-desktop'), false);
                 }
             }
 
@@ -1553,18 +1675,63 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 });
             }
 
-            function showOverlay(show) {
+            function playerHasPlayingVideo(playerId) {
+                const el = document.getElementById(playerId);
+
+                return Boolean(el?.querySelector('video'));
+            }
+
+            function shouldReplayVideoTracks() {
+                const localTrack = boot.__localVideo || localVideo;
+
+                if (localTrack && ! playerHasPlayingVideo(agoraLocalPlayerId())) {
+                    return true;
+                }
+
+                if (! agoraClient) {
+                    return false;
+                }
+
+                const hasRemoteVideo = agoraClient.remoteUsers.some((user) => Boolean(user.videoTrack));
+
+                return hasRemoteVideo && ! playerHasPlayingVideo(agoraRemotePlayerId());
+            }
+
+            function isInlineCallLive() {
+                if (isPatientConsultationMobile()) {
+                    return document
+                        .getElementById('patient-consultation-inline-video')
+                        ?.classList
+                        .contains('patient-consultation-inline-video--live') === true;
+                }
+
+                return Boolean(overlay && ! overlay.classList.contains('hidden'));
+            }
+
+            function setMobileCallControlsVisible(visible) {
+                const controlsWrap = document.getElementById('patient-consultation-call-controls-wrap');
+
+                if (! controlsWrap) {
+                    return;
+                }
+
+                controlsWrap.classList.toggle('hidden', ! visible);
+                controlsWrap.classList.toggle('flex', visible);
+            }
+
+            function showOverlay(show, { forceReplay = true } = {}) {
                 const inline = document.getElementById('patient-consultation-inline-video');
                 const idle = document.getElementById('patient-consultation-video-idle');
-                const controlsWrap = document.getElementById('patient-consultation-call-controls-wrap');
                 const leaveMobile = document.getElementById('patient-agora-leave-mobile');
 
                 if (isPatientConsultationMobile()) {
+                    const wasLive = inline?.classList.contains('patient-consultation-inline-video--live') === true;
+
                     overlay?.classList.add('hidden');
                     overlay?.setAttribute('aria-hidden', 'true');
                     inline?.classList.toggle('patient-consultation-inline-video--live', show);
                     idle?.classList.toggle('hidden', show);
-                    controlsWrap?.classList.toggle('hidden', !show);
+                    setMobileCallControlsVisible(show);
                     leaveMobile?.classList.toggle('hidden', !show);
                     leaveMobile?.classList.toggle('inline-flex', show);
 
@@ -1572,13 +1739,15 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                     chatToggle?.classList.toggle('hidden', !show);
                     chatToggle?.classList.toggle('inline-flex', show);
 
-                    window.dispatchEvent(new CustomEvent(show ? 'patient-consultation-call-active' : 'patient-consultation-call-ended'));
+                    if (show !== wasLive) {
+                        window.dispatchEvent(new CustomEvent(show ? 'patient-consultation-call-active' : 'patient-consultation-call-ended'));
+                    }
 
                     document.querySelectorAll('#patient-consultation-inline-video .doctor-consultation-call-controls__btn:not(.hidden)').forEach((btn) => {
                         btn.classList.add('inline-flex');
                     });
 
-                    if (show) {
+                    if (show && (forceReplay || shouldReplayVideoTracks())) {
                         window.requestAnimationFrame(() => {
                             window.requestAnimationFrame(() => {
                                 replayActiveVideoTracks();
@@ -1593,10 +1762,12 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                     return;
                 }
 
+                const wasVisible = ! overlay.classList.contains('hidden');
+
                 overlay.classList.toggle('hidden', !show);
                 overlay.setAttribute('aria-hidden', show ? 'false' : 'true');
 
-                if (show) {
+                if (show && (forceReplay || shouldReplayVideoTracks() || ! wasVisible)) {
                     window.requestAnimationFrame(() => {
                         window.requestAnimationFrame(() => {
                             replayActiveVideoTracks();
@@ -1678,6 +1849,9 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 if (clearStoredCall) {
                     clearPendingCallStorage();
                 }
+
+                refreshCallUiState();
+                window.dispatchEvent(new CustomEvent('patient-consultation-call-ended'));
             }
 
             async function postEndCall() {
@@ -1831,12 +2005,12 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                 document.getElementById('patient-consultation-inline-video')?.setAttribute('aria-hidden', 'true');
 
                 const ui = callUiEls();
-                ui.chip?.classList.add('hidden');
-                ui.waiting?.classList.add('hidden');
-                document.getElementById('patient-call-started-chip')?.classList.add('hidden');
-                document.getElementById('patient-call-started-chip-desktop')?.classList.add('hidden');
-                document.getElementById('patient-waiting-for-call-chip')?.classList.add('hidden');
-                document.getElementById('patient-waiting-for-call-chip-desktop')?.classList.add('hidden');
+                setChipVisible(ui.chip, false);
+                setChipVisible(ui.waiting, false);
+                setChipVisible(document.getElementById('patient-call-started-chip'), false);
+                setChipVisible(document.getElementById('patient-call-started-chip-desktop'), false);
+                setChipVisible(document.getElementById('patient-waiting-for-call-chip'), false);
+                setChipVisible(document.getElementById('patient-waiting-for-call-chip-desktop'), false);
                 document.getElementById('patient-session-live-banner')?.classList.add('hidden');
                 document.getElementById('patient-live-now-badge')?.classList.add('hidden');
                 document.getElementById('patient-chat-live-now-badge')?.classList.add('hidden');
@@ -1853,8 +2027,8 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                     remainingDesktop.textContent = finishedLabel;
                 }
 
-                document.getElementById('patient-session-finished-chip')?.classList.remove('hidden');
-                document.getElementById('patient-session-finished-chip-desktop')?.classList.remove('hidden');
+                setChipVisible(document.getElementById('patient-session-finished-chip'), true);
+                setChipVisible(document.getElementById('patient-session-finished-chip-desktop'), true);
 
                 const statusLabel = document.getElementById('patient-conversation-status-label');
                 if (statusLabel) {
@@ -2127,7 +2301,6 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                     }
 
                     showIncomingCallBanner(data, { silent: true });
-                    persistActiveCall(data, data.call_type === 'audio' ? 'audio' : 'video');
 
                     return true;
                 } catch (_) {
@@ -2138,20 +2311,31 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
             async function restoreAndRejoinCall(attempt = 0) {
                 syncPatientSessionFromDom(boot);
 
-                if (appointmentStatus !== 'in_process' || activeMode || callJoinInProgress) {
-                    return;
-                }
-
-                await restorePendingCallFromServer();
-                const stored = readStoredCallPayload();
-
-                if (! stored && ! incomingPayload?.agora_app_id) {
+                if (appointmentStatus !== 'in_process' || isSessionFinished()) {
+                    clearPendingCallStorage();
+                    activeMode = null;
+                    boot.__activeMode = null;
                     refreshCallUiState();
 
                     return;
                 }
 
-                const payload = incomingPayload?.agora_app_id ? incomingPayload : stored;
+                if (activeMode || callJoinInProgress) {
+                    return;
+                }
+
+                const activeStored = readActiveStoredCallPayload();
+
+                if (! activeStored) {
+                    restorePendingCallFromStorage();
+                    await restorePendingCallFromServer();
+                    refreshCallUiState();
+
+                    return;
+                }
+
+                await restorePendingCallFromServer();
+                const payload = incomingPayload?.agora_app_id ? incomingPayload : activeStored;
                 const mode = resolveEffectiveCallMode(
                     payload?.call_type === 'audio' ? 'audio' : 'video',
                     payload,
@@ -2169,6 +2353,21 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                         restoreAndRejoinCall(attempt + 1).catch(() => {});
                     }, 1200 * (attempt + 1));
                 }
+            }
+
+            function restoreIncomingCallBanner() {
+                if (activeMode || callJoinInProgress || appointmentStatus !== 'in_process' || isSessionFinished()) {
+                    return;
+                }
+
+                if (incomingPayload?.agora_app_id) {
+                    incomingBannerEl()?.classList.remove('hidden');
+                    refreshCallUiState();
+
+                    return;
+                }
+
+                restorePendingCallFromStorage();
             }
 
             async function joinSessionCall() {
@@ -2288,6 +2487,11 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                     await resetPartialAgoraJoin();
                     showOverlay(false);
                     showCallToast(callErrorMessage(e, labelCallFailed, effectiveMode));
+
+                    if (incomingPayload?.agora_app_id && ! activeMode) {
+                        incomingBannerEl()?.classList.remove('hidden');
+                    }
+
                     refreshCallUiState();
                 } finally {
                     callJoinInProgress = false;
@@ -2353,6 +2557,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
             boot.__bindCallControlButtons = bindCallControlButtons;
             boot.__restorePendingCall = restorePendingCallFromStorage;
             boot.__restoreAndRejoinCall = restoreAndRejoinCall;
+            boot.__restoreIncomingCallBanner = restoreIncomingCallBanner;
 
             if (appointmentStatus === 'in_process') {
                 restoreAndRejoinCall().catch(() => {});
@@ -2431,6 +2636,16 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                     teardownPatientConversationRealtime();
                 });
 
+                window.addEventListener('mashora:chat-message-sent', (event) => {
+                    const detail = event.detail || {};
+                    if (detail.send_by !== 'patient') {
+                        return;
+                    }
+
+                    const bootEl = document.getElementById('patient-conversation-bootstrap');
+                    bootEl?.__appendChatMessage?.(detail, { fromSelf: Boolean(detail.self) });
+                });
+
                 // Persist call creds across hard refreshes; never end the remote call automatically.
                 window.addEventListener('pagehide', () => {
                     const bootEl = document.getElementById('patient-conversation-bootstrap');
@@ -2503,11 +2718,13 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
 
                 activeMode = mode;
                 boot.__activeMode = mode;
-                showOverlay(true);
+
+                // Soft sync on Livewire poll/morph: keep the call UI without restarting Agora video.
+                const forceReplay = ! isInlineCallLive() || shouldReplayVideoTracks();
+                showOverlay(true, { forceReplay });
                 showMediaControlsForMode(mode);
                 syncMediaControlUi(mode);
                 updateActiveCallOverlayUi();
-                replayActiveVideoTracks();
             };
 
             function registerPatientConversationMorphHook() {
@@ -2542,6 +2759,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
                             bootEl?.__observeSessionMetrics?.();
                             bootEl?.__syncSessionFromDom?.();
                             bootEl?.__syncSessionExpiryFromDom?.();
+                            bootEl?.__restoreIncomingCallBanner?.();
                             startSessionTimers();
                         });
                     });

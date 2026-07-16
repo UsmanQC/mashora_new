@@ -2,6 +2,7 @@
     $pwaApp = $pwaApp ?? 'patient';
     $isAr = app()->getLocale() === 'ar';
     $appConfig = config("pwa.apps.{$pwaApp}", config('pwa.apps.patient'));
+    $showPush = (bool) ($showPush ?? false);
 @endphp
 
 <div
@@ -33,6 +34,15 @@
                 >
                     {{ $isAr ? 'تثبيت' : 'Install' }}
                 </button>
+                @if ($showPush)
+                    <button
+                        type="button"
+                        id="awaan-pwa-enable-push"
+                        class="rounded-xl bg-zinc-900 px-4 py-2 text-xs font-bold text-white transition hover:bg-zinc-800"
+                    >
+                        {{ $isAr ? 'السماح بالإشعارات' : 'Allow notifications' }}
+                    </button>
+                @endif
                 <button
                     type="button"
                     id="awaan-pwa-install-dismiss"
@@ -41,6 +51,7 @@
                     {{ $isAr ? 'لاحقاً' : 'Later' }}
                 </button>
             </div>
+            <p id="awaan-pwa-enable-push-hint" class="mt-2 hidden text-[11px] text-amber-700"></p>
         </div>
     </div>
 </div>
@@ -60,6 +71,9 @@
         let deferredPrompt = null;
         const confirmBtn = document.getElementById('awaan-pwa-install-confirm');
         const dismissBtn = document.getElementById('awaan-pwa-install-dismiss');
+        const pushBtn = document.getElementById('awaan-pwa-enable-push');
+        const pushHint = document.getElementById('awaan-pwa-enable-push-hint');
+        const isAr = @json($isAr);
 
         window.addEventListener('beforeinstallprompt', (event) => {
             event.preventDefault();
@@ -81,6 +95,45 @@
         dismissBtn?.addEventListener('click', () => {
             localStorage.setItem(storageKey, '1');
             root.classList.add('hidden');
+        });
+
+        pushBtn?.addEventListener('click', async () => {
+            pushBtn.disabled = true;
+            if (pushHint) {
+                pushHint.classList.add('hidden');
+            }
+
+            try {
+                const started = Date.now();
+                while (typeof window.enableAwaanPushNotifications !== 'function' && Date.now() - started < 5000) {
+                    await new Promise((resolve) => setTimeout(resolve, 100));
+                }
+
+                if (typeof window.enableAwaanPushNotifications !== 'function') {
+                    if (pushHint) {
+                        pushHint.textContent = isAr
+                            ? 'ارفع public/js/awaan-fcm.js على السيرفر ثم حدّث الصفحة.'
+                            : 'Upload public/js/awaan-fcm.js to the server, then refresh.';
+                        pushHint.classList.remove('hidden');
+                    }
+                    return;
+                }
+
+                const ok = await window.enableAwaanPushNotifications();
+                if (ok) {
+                    pushBtn.textContent = isAr ? 'تم التفعيل' : 'Enabled';
+                    return;
+                }
+
+                if (pushHint) {
+                    pushHint.textContent = isAr
+                        ? 'لم تُقبل الإشعارات. تحقق من إعدادات الموقع.'
+                        : 'Notifications were not allowed. Check site settings.';
+                    pushHint.classList.remove('hidden');
+                }
+            } finally {
+                pushBtn.disabled = false;
+            }
         });
     })();
 </script>

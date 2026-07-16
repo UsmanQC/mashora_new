@@ -1,5 +1,6 @@
 <?php
 
+use App\Livewire\Concerns\RedirectsAuthenticatedDoctorsFromGuestPages;
 use App\Models\Doctor;
 use App\Support\CountryPhoneTerritories;
 use App\Support\PatientPhone;
@@ -12,12 +13,23 @@ use Livewire\Component;
 
 new #[Layout('layouts::doctor-guest')] #[Title('Doctor portal')] class extends Component
 {
+    use RedirectsAuthenticatedDoctorsFromGuestPages;
+
     public string $countryIso = 'SA';
 
     public string $phone = '';
 
+    public function mount(): void
+    {
+        $this->redirectAuthenticatedDoctorAwayFromGuestPages();
+    }
+
     public function proceed(): void
     {
+        if ($this->redirectAuthenticatedDoctorAwayFromGuestPages()) {
+            return;
+        }
+
         $this->countryIso = strtoupper(trim($this->countryIso));
 
         $isos = array_column(config('country_phone_territories'), 'iso');

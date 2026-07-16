@@ -7,14 +7,14 @@
     class="patient-luxury-consultation-mobile relative flex h-svh max-h-svh min-h-0 flex-col overflow-hidden bg-slate-50 sm:hidden"
     data-test="patient-luxury-consultation-mobile"
     wire:key="patient-consultation-mobile-{{ $appointment->id }}"
-    x-data="{ chatOpen: false, callActive: false, chatCardMinimized: false, hasNewMessage: false }"
+    x-data="{ chatOpen: false, callActive: false, chatCardMinimized: false, hasNewMessage: false, unreadCount: 0 }"
     x-bind:class="{
         'patient-consultation--call-active': callActive,
         'patient-consultation--chat-open': chatOpen,
     }"
-    x-on:patient-consultation-call-active.window="callActive = true; chatOpen = false"
+    x-on:patient-consultation-call-active.window="if (! callActive) { chatOpen = false } callActive = true"
     x-on:patient-consultation-call-ended.window="callActive = false; chatOpen = false"
-    x-on:patient-chat-message-received.window="if (chatCardMinimized) hasNewMessage = true"
+    x-on:patient-chat-message-received.window="if ((callActive && ! chatOpen) || chatCardMinimized) { hasNewMessage = true; unreadCount = Math.min(unreadCount + 1, 99) }"
 >
     <header class="shrink-0 border-b border-slate-100 bg-white px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
         <div class="flex items-center gap-3">
@@ -43,14 +43,29 @@
             @endif
 
             @if ($appointment->isSessionStartRequestPending())
-                <div class="rounded-2xl border border-amber-200/90 bg-amber-50 px-4 py-4 shadow-sm">
-                    <p class="text-sm font-bold text-amber-950">{{ __('patient.appointments.session_start_request_pending') }}</p>
-                    <p class="mt-1 text-xs leading-relaxed text-amber-900">{{ __('patient.appointments.session_start_request_banner') }}</p>
+                <div
+                    class="rounded-2xl border border-[#10B981]/35 bg-gradient-to-br from-emerald-50 via-white to-white px-4 py-4 shadow-sm ring-1 ring-[#10B981]/10"
+                    data-test="patient-session-start-dialog"
+                >
+                    <p class="text-sm font-bold text-[#047857]">{{ __('patient.appointments.session_start_request_pending') }}</p>
+                    <p class="mt-1 text-xs leading-relaxed text-zinc-700">{{ __('patient.appointments.session_start_request_banner') }}</p>
                     <div class="mt-3 flex flex-col gap-2">
-                        <flux:button type="button" variant="primary" class="w-full" wire:click="approveSessionStart" wire:loading.attr="disabled">
+                        <flux:button
+                            type="button"
+                            variant="primary"
+                            class="w-full !rounded-xl !bg-[#10B981] !text-white hover:!brightness-95"
+                            wire:click="approveSessionStart"
+                            wire:loading.attr="disabled"
+                        >
                             {{ __('patient.appointments.session_start_request_approve') }}
                         </flux:button>
-                        <flux:button type="button" variant="outline" class="w-full !text-slate-900" wire:click="declineSessionStart" wire:loading.attr="disabled">
+                        <flux:button
+                            type="button"
+                            variant="outline"
+                            class="w-full !rounded-xl !border-zinc-300 !bg-white !text-black hover:!bg-zinc-50"
+                            wire:click="declineSessionStart"
+                            wire:loading.attr="disabled"
+                        >
                             {{ __('patient.appointments.session_start_request_decline') }}
                         </flux:button>
                     </div>
@@ -122,9 +137,9 @@
                 </div>
             @endif
 
-            @if ($appointment->allowsPatientCalls())
+            @if ($appointment->allowsPatientCalls() && $appointment->status === 'in_process')
                 <div class="flex flex-wrap items-center gap-2">
-                    @if ($appointment->status === 'in_process' && $this->sessionTimeExpired())
+                    @if ($this->sessionTimeExpired())
                         <span
                             id="patient-session-finished-chip"
                             class="inline-flex rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-semibold text-slate-600 shadow-sm"
@@ -134,25 +149,23 @@
                     @else
                         <span
                             id="patient-call-started-chip"
-                            class="hidden inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700"
+                            class="hidden items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700"
                         >
                             <span id="patient-call-chip-label">{{ __('patient.appointments.call_in_progress') }}</span>
                             <span id="patient-call-chip-duration" class="font-mono tabular-nums">00:00</span>
                         </span>
                         <span
                             id="patient-session-finished-chip"
-                            class="hidden inline-flex rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-semibold text-slate-600 shadow-sm"
+                            class="hidden rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-semibold text-slate-600 shadow-sm"
                         >
                             {{ __('patient.appointments.session_finished') }}
                         </span>
-                        @if ($appointment->status === 'in_process')
-                            <span
-                                id="patient-waiting-for-call-chip"
-                                class="inline-flex rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-600 shadow-sm"
-                            >
-                                {{ __('patient.appointments.waiting_for_specialist_call') }}
-                            </span>
-                        @endif
+                        <span
+                            id="patient-waiting-for-call-chip"
+                            class="inline-flex rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-600 shadow-sm"
+                        >
+                            {{ __('patient.appointments.waiting_for_specialist_call') }}
+                        </span>
                     @endif
                 </div>
             @endif
@@ -199,7 +212,7 @@
 
                     <div
                     id="patient-consultation-call-controls-wrap"
-                    class="pointer-events-none absolute inset-x-0 bottom-0 z-20 hidden flex justify-center px-4 pb-4 pt-8"
+                    class="pointer-events-none absolute inset-x-0 bottom-0 z-20 hidden justify-center px-4 pb-4 pt-8"
                     >
                         <div
                             class="doctor-consultation-call-controls pointer-events-auto flex items-center justify-center gap-3 rounded-full border border-white/10 bg-zinc-900/90 px-3 py-2 shadow-xl backdrop-blur-md"
@@ -229,14 +242,31 @@
                             <button
                                 type="button"
                                 id="patient-agora-toggle-chat-mobile"
-                                x-on:click="chatOpen = !chatOpen"
+                                x-on:click="chatOpen = !chatOpen; if (chatOpen) { hasNewMessage = false; unreadCount = 0; chatCardMinimized = false }"
                                 x-bind:aria-pressed="chatOpen"
-                                x-bind:title="chatOpen ? @js(__('patient.appointments.luxury.close_chat')) : @js(__('patient.appointments.luxury.open_chat'))"
-                                x-bind:class="chatOpen ? 'doctor-consultation-call-controls__btn--active' : ''"
-                                class="doctor-consultation-call-controls__btn hidden"
+                                x-bind:aria-label="hasNewMessage && !chatOpen ? @js(__('patient.appointments.luxury.chat_new_message_hint')) : (chatOpen ? @js(__('patient.appointments.luxury.close_chat')) : @js(__('patient.appointments.luxury.open_chat')))"
+                                x-bind:title="hasNewMessage && !chatOpen ? @js(__('patient.appointments.luxury.chat_new_message_hint')) : (chatOpen ? @js(__('patient.appointments.luxury.close_chat')) : @js(__('patient.appointments.luxury.open_chat')))"
+                                x-bind:class="{
+                                    'doctor-consultation-call-controls__btn--active': chatOpen,
+                                    'doctor-consultation-call-controls__btn--notify': hasNewMessage && !chatOpen,
+                                }"
+                                class="doctor-consultation-call-controls__btn relative hidden"
                                 data-test="patient-consultation-chat-toggle"
                             >
                                 <flux:icon name="chat-bubble-left-right" variant="mini" class="size-5 shrink-0" />
+                                <span
+                                    x-show="hasNewMessage && !chatOpen"
+                                    x-cloak
+                                    class="pointer-events-none absolute -end-0.5 -top-0.5"
+                                    data-test="patient-consultation-chat-unread-badge"
+                                    aria-hidden="true"
+                                >
+                                    <span class="absolute inset-0 animate-ping rounded-full bg-emerald-400/80"></span>
+                                    <span
+                                        class="relative flex min-h-4 min-w-4 items-center justify-center rounded-full bg-[#10B981] px-1 text-[0.5625rem] font-bold leading-none text-white ring-2 ring-zinc-900"
+                                        x-text="unreadCount > 9 ? '9+' : (unreadCount > 1 ? unreadCount : '')"
+                                    ></span>
+                                </span>
                             </button>
                             <button
                                 type="button"
@@ -283,6 +313,7 @@
 
     <div
         id="incoming-call-banner"
+        wire:ignore
         class="hidden shrink-0 border-t border-emerald-200/80 bg-gradient-to-r from-emerald-50 to-white px-4 py-3 shadow-[0_-4px_20px_-8px_rgba(16,185,129,0.35)]"
         role="alert"
         data-test="patient-incoming-call-banner"
@@ -397,7 +428,7 @@
             x-show="!chatCardMinimized"
             id="patient-chat-messages-mobile"
             class="patient-consultation-chat-messages max-h-44 space-y-3 overflow-y-auto px-4 py-3"
-            wire:ignore.self
+            wire:ignore
         >
             @forelse ($messages as $msg)
                 <div

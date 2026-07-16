@@ -105,9 +105,9 @@
 
         <div
             @class([
-                'flex min-w-0 flex-col lg:ps-64',
-                'h-svh max-h-svh min-h-0 overflow-hidden' => $doctorLuxuryFullBleed,
-                'min-h-svh' => ! $doctorLuxuryFullBleed,
+                'flex min-w-0 flex-col lg:ps-64 min-h-svh',
+                /* Lock viewport scroll only on small screens; desktop must page-scroll. */
+                'max-lg:h-svh max-lg:max-h-svh max-lg:min-h-0 max-lg:overflow-hidden' => $doctorLuxuryFullBleed,
             ])
             x-data="{ doctorMenuOpen: false }"
             @keydown.escape.window="doctorMenuOpen = false"
@@ -120,6 +120,8 @@
                     'doctor.menu',
                     'doctor.ratings',
                 );
+
+                $doctorOnboardingChrome = request()->routeIs($guestOnboardingRoutes);
             @endphp
 
             <header
@@ -130,22 +132,26 @@
             >
                 <div class="min-w-0 flex-1">
                     <a
-                        href="{{ route('doctor.dashboard') }}"
+                        href="{{ $doctorOnboardingChrome ? route('doctor.welcome') : route('doctor.dashboard') }}"
                         wire:navigate
                         class="inline-flex min-w-0 items-center"
                         title="{{ __('patient.brand') }}"
                     >
                         @include('partials.patient-brand-logo', [
-                            'imgClass' => 'h-9 w-auto max-w-[min(100%,11rem)] object-contain object-start',
+                            'imgClass' => 'h-8 w-auto max-w-[min(100%,10.5rem)] object-contain object-start sm:h-9 sm:max-w-[min(100%,11rem)]',
                         ])
                     </a>
                 </div>
 
                 <div class="flex shrink-0 items-center gap-2">
-                    <div class="hidden sm:block">
+                    @if ($doctorOnboardingChrome)
                         @include('partials.doctor-language-switch', ['variant' => 'chrome'])
-                    </div>
-                    @include('partials.doctor-user-account-menu', ['density' => 'chrome'])
+                    @else
+                        <div class="hidden sm:block">
+                            @include('partials.doctor-language-switch', ['variant' => 'chrome'])
+                        </div>
+                        @include('partials.doctor-user-account-menu', ['density' => 'chrome'])
+                    @endif
                 </div>
             </header>
 
@@ -191,7 +197,15 @@
             </flux:toast.group>
         @endpersist
         @stack('scripts')
-        @include('partials.pwa-install-prompt', ['pwaApp' => 'doctor'])
+        @include('partials.pwa-install-prompt', [
+            'pwaApp' => 'doctor',
+            'showPush' => false, // notification dialog temporarily disabled
+        ])
+
+        @auth('doctor')
+            @include('partials.fcm-web', ['portal' => 'doctor'])
+        @endauth
+
         @fluxScripts
     </body>
 </html>
