@@ -44,9 +44,49 @@ final class SmsService
                 .'&message='.urlencode($message)
                 .'&sender='.urlencode($sender);
 
-            $response = Http::timeout(30)->get($url);
+            try {
+                $http = Http::timeout(30);
 
-            return $response->json() ?? $response->body();
+                if (app()->isLocal()) {
+                    $http = $http->withoutVerifying();
+                }
+
+                $response = $http->get($url);
+            } catch (\Throwable $e) {
+                Log::error('Dreams SMS request failed', [
+                    'to' => $digits,
+                    'sender' => $sender,
+                    'message' => $e->getMessage(),
+                ]);
+
+                return false;
+            }
+
+            $body = $response->json() ?? $response->body();
+            $bodyString = is_scalar($body) ? (string) $body : json_encode($body);
+
+            Log::info('Dreams SMS send attempted', [
+                'to' => $digits,
+                'sender' => $sender,
+                'status' => $response->status(),
+                'successful' => $response->successful(),
+                'body' => $body,
+            ]);
+
+            // Dreams returns Result:SMS_ID:mobile on success, or negative codes like -116.
+            if (
+                ! $response->successful()
+                || str_contains($bodyString, '-')
+                && ! str_starts_with(ltrim($bodyString), 'Result')
+            ) {
+                Log::warning('Dreams SMS rejected or failed', [
+                    'to' => $digits,
+                    'sender' => $sender,
+                    'body' => $body,
+                ]);
+            }
+
+            return $body;
         }
 
         if ($verificationCode === null || $verificationCode === '') {
