@@ -90,6 +90,7 @@
                 booting: true,
                 failed: false,
                 failReason: '',
+                softError: '',
                 ready: false,
                 paying: false,
                 submitPay() {
@@ -97,6 +98,7 @@
                         return;
                     }
                     this.paying = true;
+                    this.softError = '';
                     try {
                         window.myfatoorah.submitCardPayment();
                     } catch (e) {
@@ -111,6 +113,7 @@
                     const completeUrl = @js($this->mfCompleteUrl);
                     const sessionId = @js($this->mfSessionId);
                     const scriptUrl = @js($this->mfSessionJsUrl);
+                    const successUrl = @js(route('patient.payment.success', ['temporaryAppointment' => $this->temporaryAppointment->id]));
                     const csrf = @js(csrf_token());
                     const containerId = @js($mfContainerId);
                     const preferDesktop = @js(($mfPreferDesktop ?? false));
@@ -139,8 +142,15 @@
                         ready = false;
                         paying = false;
                         failed = true;
+                        softError = '';
                         failReason = reason || '';
                         console.error('[MyFatoorah embed]', reason || 'init failed');
+                    };
+
+                    const softFail = (reason = '') => {
+                        paying = false;
+                        softError = reason || 'payment unsuccessful';
+                        console.warn('[MyFatoorah embed]', softError);
                     };
 
                     const isThisViewport = () => {
@@ -154,41 +164,86 @@
                         return;
                     }
 
+                    const extractPaymentId = (response) => {
+                        if (response?.paymentId) {
+                            return String(response.paymentId);
+                        }
+                        if (! response?.redirectionUrl) {
+                            return '';
+                        }
+                        try {
+                            const url = new URL(response.redirectionUrl, window.location.origin);
+                            return url.searchParams.get('paymentId') || url.searchParams.get('Id') || '';
+                        } catch (e) {
+                            return '';
+                        }
+                    };
+
+                    const completeBooking = (payload) => {
+                        paying = true;
+                        softError = '';
+                        fetch(completeUrl, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                'X-CSRF-TOKEN': csrf,
+                                'X-Requested-With': 'XMLHttpRequest',
+                            },
+                            body: JSON.stringify(payload),
+                        })
+                            .then((res) => res.json().then((data) => ({ ok: res.ok, data })))
+                            .then(({ data }) => {
+                                if (data?.redirect) {
+                                    window.location.href = data.redirect;
+                                    return;
+                                }
+                                softFail('booking completion failed');
+                            })
+                            .catch(() => softFail('booking completion network error'));
+                    };
+
                     const payment = (response) => {
                         paying = false;
+                        console.info('[MyFatoorah embed] callback', response);
 
                         if (!response || !response.isSuccess) {
-                            fail('payment callback unsuccessful');
+                            softFail(response?.message || response?.error || 'payment unsuccessful');
                             return;
                         }
+
+                        const paymentId = extractPaymentId(response);
 
                         if (response.paymentCompleted && response.paymentData) {
-                            fetch(completeUrl, {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                    'Accept': 'application/json',
-                                    'X-CSRF-TOKEN': csrf,
-                                    'X-Requested-With': 'XMLHttpRequest',
-                                },
-                                body: JSON.stringify({
-                                    paymentData: response.paymentData,
-                                    sessionId: response.sessionId || sessionId,
-                                }),
-                            })
-                                .then((res) => res.json().then((data) => ({ ok: res.ok, data })))
-                                .then(({ data }) => {
-                                    if (data?.redirect) {
-                                        window.location.href = data.redirect;
-                                        return;
-                                    }
-                                    fail('booking completion failed');
-                                })
-                                .catch(() => fail('booking completion network error'));
+                            completeBooking({
+                                paymentData: response.paymentData,
+                                paymentId: paymentId || null,
+                                sessionId: response.sessionId || sessionId,
+                            });
                             return;
                         }
 
-                        fail('unexpected payment callback (hosted redirect blocked)');
+                        // Apple Pay / wallets may finish with paymentId only (no encrypted paymentData).
+                        if (paymentId) {
+                            completeBooking({
+                                paymentId: paymentId,
+                                sessionId: response.sessionId || sessionId,
+                            });
+                            return;
+                        }
+
+                        // Intermediate callback (OTP / 3DS still in progress) — keep waiting.
+                        if (response.paymentCompleted === false) {
+                            return;
+                        }
+
+                        // Last resort: send user to success page so server can resolve via CustomerReference.
+                        if (response.paymentCompleted === true) {
+                            window.location.href = successUrl;
+                            return;
+                        }
+
+                        softFail('unexpected payment callback');
                     };
 
                     const eventHandler = (event) => {
@@ -386,6 +441,10 @@
                     <span x-show="!paying">{{ __('myfatoorah.payNow') }}</span>
                     <span x-show="paying" x-cloak>{{ __('patient_booking.payment_processing') }}</span>
                 </button>
+            </div>
+
+            <div class="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900" x-cloak x-show="softError && !failed">
+                <p x-text="softError"></p>
             </div>
 
             <div class="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900" x-cloak x-show="failed">

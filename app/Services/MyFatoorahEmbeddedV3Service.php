@@ -79,12 +79,18 @@ class MyFatoorahEmbeddedV3Service
 
             // Limit embed + wallets (drops KNET / Benefit). Card kept for Insert Card Details.
             // Note: MyFatoorah docs only list card/applepay/googlepay (and stcpay) for embed — not samsungpay.
+            // Redirection is required so Apple Pay / wallets that leave the page still land on our success route with paymentId.
             $response = $http->post($this->apiBaseUrl().'/v3/sessions', [
                 'PaymentMode' => 'COMPLETE_PAYMENT',
                 'Order' => $order,
                 'Customer' => $customerPayload,
                 'SupportedPaymentMethods' => ['card', 'applepay', 'googlepay'],
                 'Language' => app()->getLocale() === 'ar' ? 'AR' : 'EN',
+                'IntegrationUrls' => [
+                    'Redirection' => route('patient.payment.success', [
+                        'temporaryAppointment' => $temporaryAppointment->id,
+                    ]),
+                ],
             ]);
 
             /** @var array{IsSuccess?: bool, Message?: string, ValidationErrors?: mixed, Data?: array{SessionId?: string, EncryptionKey?: string}} $json */
@@ -112,6 +118,7 @@ class MyFatoorahEmbeddedV3Service
                 ];
             }
 
+            $temporaryAppointment->payment_session_id = $sessionId;
             $this->storeEncryptionKey($temporaryAppointment, $encryptionKey);
 
             return [
@@ -142,13 +149,34 @@ class MyFatoorahEmbeddedV3Service
     public function storeEncryptionKey(TemporaryAppointment $temporaryAppointment, string $encryptionKey): void
     {
         Cache::put($this->encryptionCacheKey($temporaryAppointment), $encryptionKey, now()->addDay());
+
+        // Persist on the booking row so decrypt still works if cache was cleared / multi-server.
+        $meta = json_decode((string) $temporaryAppointment->payment_response, true);
+        if (! is_array($meta)) {
+            $meta = [];
+        }
+
+        $meta['provider'] = 'myfatoorah';
+        $meta['mode'] = 'embedded_v3';
+        $meta['encryption_key'] = $encryptionKey;
+        $meta['session_id'] = $temporaryAppointment->payment_session_id;
+
+        $temporaryAppointment->payment_response = json_encode($meta);
+        $temporaryAppointment->save();
     }
 
     public function encryptionKeyFor(TemporaryAppointment $temporaryAppointment): ?string
     {
         $key = Cache::get($this->encryptionCacheKey($temporaryAppointment));
 
-        return is_string($key) && $key !== '' ? $key : null;
+        if (is_string($key) && $key !== '') {
+            return $key;
+        }
+
+        $meta = json_decode((string) $temporaryAppointment->payment_response, true);
+        $stored = is_array($meta) ? ($meta['encryption_key'] ?? null) : null;
+
+        return is_string($stored) && $stored !== '' ? $stored : null;
     }
 
     /**

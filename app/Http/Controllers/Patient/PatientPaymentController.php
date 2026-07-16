@@ -162,23 +162,40 @@ class PatientPaymentController extends Controller
     }
 
     /**
-     * MyFatoorah Embedded Payment v3 callback: decrypt paymentData and complete booking.
+     * MyFatoorah Embedded Payment v3 callback: decrypt paymentData (or verify paymentId) and complete booking.
      */
     public function completeEmbedded(Request $request, TemporaryAppointment $temporaryAppointment): JsonResponse
     {
         abort_unless($temporaryAppointment->user_id === auth()->id(), 403);
 
         $validated = $request->validate([
-            'paymentData' => ['required', 'string'],
+            'paymentData' => ['nullable', 'string', 'required_without:paymentId'],
+            'paymentId' => ['nullable', 'string', 'required_without:paymentData'],
             'sessionId' => ['nullable', 'string'],
         ]);
 
         /** @var PatientPaymentCompletionService $completion */
         $completion = app(PatientPaymentCompletionService::class);
-        $result = $completion->confirmMyFatoorahEmbeddedV3IfPaid(
-            $temporaryAppointment,
-            $validated['paymentData']
-        );
+
+        if (filled($validated['paymentData'] ?? null)) {
+            $result = $completion->confirmMyFatoorahEmbeddedV3IfPaid(
+                $temporaryAppointment,
+                (string) $validated['paymentData']
+            );
+
+            // Apple Pay sometimes returns paymentId alongside undecryptable paymentData — fall back.
+            if ($result['state'] !== 'paid' && filled($validated['paymentId'] ?? null)) {
+                $result = $completion->confirmIfPaid(
+                    $temporaryAppointment,
+                    $request->merge(['paymentId' => $validated['paymentId']])
+                );
+            }
+        } else {
+            $result = $completion->confirmIfPaid(
+                $temporaryAppointment,
+                $request->merge(['paymentId' => $validated['paymentId']])
+            );
+        }
 
         if ($result['state'] === 'paid' && $result['appointment'] !== null) {
             return response()->json([
