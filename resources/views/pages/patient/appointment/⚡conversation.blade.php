@@ -60,7 +60,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
 
     public function canSelectPaymentAccountRefund(): bool
     {
-        return filled($this->appointment->payment_invoice_id);
+        return $this->appointment->hasPaymentAccountRefundSource();
     }
 
     /**

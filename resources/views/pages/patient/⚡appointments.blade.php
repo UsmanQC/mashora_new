@@ -601,7 +601,7 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
         $appointment = $this->pendingRefundAppointment;
 
         return $appointment instanceof Appointment
-            && filled($appointment->payment_invoice_id);
+            && $appointment->hasPaymentAccountRefundSource();
     }
     public function refundReasonOptions(): array
     {

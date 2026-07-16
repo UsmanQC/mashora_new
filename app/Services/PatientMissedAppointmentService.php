@@ -110,7 +110,7 @@ final class PatientMissedAppointmentService
 
         if (
             $refundDestination === AppointmentRefundRequest::REFUND_DESTINATION_PAYMENT_ACCOUNT
-            && ! filled($appointment->payment_invoice_id)
+            && ! $appointment->hasPaymentAccountRefundSource()
         ) {
             throw ValidationException::withMessages([
                 'refundDestination' => __('patient.missed.refund_account_missing'),

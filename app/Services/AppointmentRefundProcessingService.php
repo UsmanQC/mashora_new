@@ -28,7 +28,7 @@ final class AppointmentRefundProcessingService
             return 0.0;
         }
 
-        if (filled($appointment->payment_invoice_id) || (float) $appointment->doctor_share > 0) {
+        if ($appointment->hasPaymentAccountRefundSource() || (float) $appointment->doctor_share > 0) {
             return $total;
         }
 
@@ -39,7 +39,7 @@ final class AppointmentRefundProcessingService
 
     public function gatewayAmountPaid(Appointment $appointment): float
     {
-        if (! filled($appointment->payment_invoice_id)) {
+        if (! $appointment->hasPaymentAccountRefundSource()) {
             return 0.0;
         }
 
@@ -172,7 +172,7 @@ final class AppointmentRefundProcessingService
 
     public function canRefundToPaymentAccount(Appointment $appointment): bool
     {
-        return filled($appointment->payment_invoice_id);
+        return $appointment->hasPaymentAccountRefundSource();
     }
 
     public function normalizeDestination(string $destination): string

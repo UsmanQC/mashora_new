@@ -21,11 +21,17 @@ final class MyFatoorahRefundService
             ]);
         }
 
-        $invoiceId = trim((string) $appointment->payment_invoice_id);
+        $invoiceId = trim((string) ($appointment->resolvedPaymentInvoiceId() ?? ''));
+
         if ($invoiceId === '') {
             throw ValidationException::withMessages([
                 'refund' => __('patient.missed.refund_account_missing'),
             ]);
+        }
+
+        // Keep appointment in sync when the invoice only existed on temporary_appointments.
+        if ((string) ($appointment->payment_invoice_id ?? '') !== $invoiceId) {
+            $appointment->forceFill(['payment_invoice_id' => $invoiceId])->save();
         }
 
         $refundAmount = round(max(0.01, $amount), 2);
