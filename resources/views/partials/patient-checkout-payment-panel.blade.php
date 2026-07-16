@@ -118,6 +118,22 @@
                     const insertCard = @js(__('myfatoorah.insertCardDetails'));
                     const isNarrow = ! window.matchMedia('(min-width: 640px)').matches;
 
+                    // Apple Pay only on Apple devices; hide the button on Android/Chrome.
+                    let supportsApplePay = false;
+                    try {
+                        supportsApplePay = Boolean(
+                            window.ApplePaySession
+                            && typeof ApplePaySession.canMakePayments === 'function'
+                            && ApplePaySession.canMakePayments()
+                        );
+                    } catch (e) {
+                        supportsApplePay = false;
+                    }
+
+                    const paymentOptions = supportsApplePay
+                        ? ['ApplePay', 'GooglePay', 'Card']
+                        : ['GooglePay', 'Card'];
+
                     const fail = (reason = '') => {
                         booting = false;
                         ready = false;
@@ -212,7 +228,7 @@
                                 callback: payment,
                                 containerId: containerId,
                                 shouldHandlePaymentUrl: true,
-                                paymentOptions: ['ApplePay', 'GooglePay', 'Card'],
+                                paymentOptions: paymentOptions,
                                 eventListener: eventHandler,
                                 subscribedEvents: [
                                     'VIEW_READY',
