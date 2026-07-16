@@ -651,8 +651,19 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
             return;
         }
 
-        $this->refundMissed($this->refundAppointmentId);
-        $this->dismissRefundMissedModal();
+        try {
+            $this->refundMissed($this->refundAppointmentId);
+            $this->dismissRefundMissedModal();
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $message = collect($e->errors())->flatten()->first();
+
+            Flux::toast(
+                variant: 'danger',
+                text: is_string($message) && $message !== ''
+                    ? $message
+                    : __('patient.missed.not_eligible'),
+            );
+        }
     }
 
     public function getPendingRefundAppointmentProperty(): ?Appointment

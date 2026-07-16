@@ -128,13 +128,26 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
             'refundDestination' => __('patient.missed.refund_modal.destination_label'),
         ]);
 
-        app(PatientMissedAppointmentService::class)->requestRefund(
-            $user,
-            $this->appointment,
-            $this->refundReason,
-            $this->refundReason === 'other' ? $this->refundReasonNote : null,
-            $this->refundDestination,
-        );
+        try {
+            app(PatientMissedAppointmentService::class)->requestRefund(
+                $user,
+                $this->appointment,
+                $this->refundReason,
+                $this->refundReason === 'other' ? $this->refundReasonNote : null,
+                $this->refundDestination,
+            );
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $message = collect($e->errors())->flatten()->first();
+
+            Flux::toast(
+                variant: 'danger',
+                text: is_string($message) && $message !== ''
+                    ? $message
+                    : __('patient.missed.not_eligible'),
+            );
+
+            return;
+        }
 
         $this->appointment->refresh();
         $this->dismissRefundMissedModal();

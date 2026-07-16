@@ -502,6 +502,7 @@ return [
         'refund_request_submitted' => 'Refund request submitted successfully. Admin will review it soon.',
         'refunded_label' => 'Refunded to payment account',
         'refund_account_missing' => 'Payment account details are missing for this appointment. Refund cannot be processed.',
+        'refund_account_amount_unavailable' => 'No card/payment-account amount is available to refund for this appointment. Try refund to wallet, or contact support.',
         'refund_exceeds_paid' => 'Refund amount cannot exceed what the patient paid. Maximum refundable: :amount SAR.',
         'refund_account_failed' => 'Could not refund this payment account right now. Please try again later.',
         'already_requested' => 'A refund request already exists for this appointment.',

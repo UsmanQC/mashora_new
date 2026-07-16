@@ -248,3 +248,37 @@ test('payment account refunds cannot exceed gateway portion when wallet was used
 
     expect($appointment->fresh()->refund_payment_invoice_id)->toBe('RF-2002');
 });
+
+test('payment account refundable amount uses paid total when wallet_amount equals total but invoice exists', function () {
+    $doctor = Doctor::factory()->create();
+    $patient = User::factory()->create();
+
+    $appointment = Appointment::factory()->create([
+        'doctor_id' => $doctor->id,
+        'user_id' => $patient->id,
+        'status' => 'not_attended',
+        'cancel_status' => 'doctor_missed',
+        'payment_invoice_id' => 'INV-CARD-1',
+        'total' => 150,
+        'wallet_amount' => 150,
+        'doctor_share' => 105,
+    ]);
+
+    $processing = app(AppointmentRefundProcessingService::class);
+
+    expect($processing->gatewayAmountPaid($appointment))->toBe(150.0)
+        ->and($processing->maximumRefundableAmount(
+            $appointment,
+            AppointmentRefundProcessingService::DESTINATION_PAYMENT_ACCOUNT,
+        ))->toBe(150.0);
+
+    $request = app(PatientMissedAppointmentService::class)->requestRefund(
+        $patient,
+        $appointment,
+        'service_not_provided',
+        null,
+        AppointmentRefundRequest::REFUND_DESTINATION_PAYMENT_ACCOUNT,
+    );
+
+    expect((float) $request->requested_amount)->toBe(150.0);
+});

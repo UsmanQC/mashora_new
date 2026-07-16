@@ -43,7 +43,17 @@ final class AppointmentRefundProcessingService
             return 0.0;
         }
 
-        return max(0, round($this->amountPaid($appointment) - (float) $appointment->wallet_amount, 2));
+        $paid = $this->amountPaid($appointment);
+        $walletUsed = max(0, min($paid, round((float) $appointment->wallet_amount, 2)));
+        $gateway = max(0, round($paid - $walletUsed, 2));
+
+        // Some card bookings store wallet_amount equal to total even though MyFatoorah
+        // was charged. If an invoice exists, treat the paid amount as gateway-refundable.
+        if ($gateway < 0.01 && $paid >= 0.01) {
+            return $paid;
+        }
+
+        return $gateway;
     }
 
     public function amountAlreadyRefunded(Appointment $appointment, ?string $destination = null): float

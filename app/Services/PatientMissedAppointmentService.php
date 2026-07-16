@@ -122,7 +122,9 @@ final class PatientMissedAppointmentService
 
         if ($requestedAmount < 0.01) {
             throw ValidationException::withMessages([
-                'appointment' => __('patient.missed.not_eligible'),
+                'appointment' => $refundDestination === AppointmentRefundRequest::REFUND_DESTINATION_PAYMENT_ACCOUNT
+                    ? __('patient.missed.refund_account_amount_unavailable')
+                    : __('patient.missed.not_eligible'),
             ]);
         }
 
@@ -142,7 +144,11 @@ final class PatientMissedAppointmentService
             ]);
         });
 
-        $this->refundRequestNotifier->notifySubmitted($request);
+        try {
+            $this->refundRequestNotifier->notifySubmitted($request);
+        } catch (\Throwable $e) {
+            report($e);
+        }
 
         return $request;
     }

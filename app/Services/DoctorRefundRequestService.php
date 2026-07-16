@@ -106,7 +106,11 @@ final class DoctorRefundRequestService
             ]);
         });
 
-        $this->refundRequestNotifier->notifySubmitted($request);
+        try {
+            $this->refundRequestNotifier->notifySubmitted($request);
+        } catch (\Throwable $e) {
+            report($e);
+        }
 
         return $request;
     }
