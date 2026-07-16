@@ -55,7 +55,10 @@ final class PendingPatientBooking
 
     public static function captureFromRequest(Request $request): bool
     {
-        if (! $request->is('patient/book-appointments/*')) {
+        $isBookingPath = $request->is('patient/book-appointments/*')
+            || $request->is('book-appointments/*');
+
+        if (! $isBookingPath) {
             return false;
         }
 
@@ -82,7 +85,7 @@ final class PendingPatientBooking
         $path = parse_url($url, PHP_URL_PATH);
         $query = parse_url($url, PHP_URL_QUERY);
 
-        if (! is_string($path) || ! preg_match('#/patient/book-appointments/(\d+)(?:/|$)#', $path, $matches)) {
+        if (! is_string($path) || ! preg_match('#/(?:patient/)?book-appointments/(\d+)(?:/|$)#', $path, $matches)) {
             return false;
         }
 
@@ -105,7 +108,7 @@ final class PendingPatientBooking
     {
         $path = parse_url($url, PHP_URL_PATH);
 
-        return is_string($path) && str_contains($path, '/patient/book-appointments/');
+        return is_string($path) && (bool) preg_match('#/(?:patient/)?book-appointments/#', $path);
     }
 
     /**
