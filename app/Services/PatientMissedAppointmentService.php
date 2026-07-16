@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Support\AppTimezone;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
 
 final class PatientMissedAppointmentService
@@ -131,7 +132,7 @@ final class PatientMissedAppointmentService
         $request = DB::transaction(function () use ($appointment, $user, $reasonKey, $reasonNote, $refundDestination, $requestedAmount): AppointmentRefundRequest {
             $appointment->loadMissing('doctor');
 
-            return AppointmentRefundRequest::query()->create([
+            $payload = [
                 'appointment_id' => $appointment->id,
                 'patient_id' => $user->id,
                 'doctor_id' => $appointment->doctor_id,
@@ -139,9 +140,14 @@ final class PatientMissedAppointmentService
                 'reason_key' => $reasonKey,
                 'reason_note' => $reasonNote,
                 'status' => 'pending_review',
-                'refund_destination' => $refundDestination,
                 'requested_amount' => $requestedAmount,
-            ]);
+            ];
+
+            if (Schema::hasColumn('appointment_refund_requests', 'refund_destination')) {
+                $payload['refund_destination'] = $refundDestination;
+            }
+
+            return AppointmentRefundRequest::query()->create($payload);
         });
 
         try {

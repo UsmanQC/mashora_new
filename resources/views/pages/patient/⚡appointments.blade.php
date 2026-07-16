@@ -663,6 +663,13 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
                     ? $message
                     : __('patient.missed.not_eligible'),
             );
+        } catch (\Throwable $e) {
+            report($e);
+
+            Flux::toast(
+                variant: 'danger',
+                text: __('patient.missed.refund_request_failed'),
+            );
         }
     }
 

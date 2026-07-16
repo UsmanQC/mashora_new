@@ -147,6 +147,15 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
             );
 
             return;
+        } catch (\Throwable $e) {
+            report($e);
+
+            Flux::toast(
+                variant: 'danger',
+                text: __('patient.missed.refund_request_failed'),
+            );
+
+            return;
         }
 
         $this->appointment->refresh();

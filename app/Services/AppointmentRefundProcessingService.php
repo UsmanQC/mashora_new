@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Appointment;
 use App\Models\AppointmentRefundRequest;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
 
 final class AppointmentRefundProcessingService
@@ -60,7 +61,10 @@ final class AppointmentRefundProcessingService
     {
         $query = $appointment->refundRequests()->where('status', 'processed');
 
-        if ($destination !== null) {
+        if (
+            $destination !== null
+            && Schema::hasColumn('appointment_refund_requests', 'refund_destination')
+        ) {
             $query->where('refund_destination', $this->normalizeDestination($destination));
         }
 

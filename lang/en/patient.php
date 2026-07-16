@@ -500,6 +500,7 @@ return [
         ],
         'refund_success' => ':amount SAR was refunded back to your payment account.',
         'refund_request_submitted' => 'Refund request submitted successfully. Admin will review it soon.',
+        'refund_request_failed' => 'Could not submit the refund request right now. Please try again.',
         'refunded_label' => 'Refunded to payment account',
         'refund_account_missing' => 'Payment account details are missing for this appointment. Refund cannot be processed.',
         'refund_account_amount_unavailable' => 'No card/payment-account amount is available to refund for this appointment. Try refund to wallet, or contact support.',
