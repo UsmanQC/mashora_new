@@ -11,6 +11,7 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
+use Throwable;
 
 final class PatientMissedAppointmentService
 {
@@ -30,7 +31,6 @@ final class PatientMissedAppointmentService
         private readonly AppointmentWalletService $wallet,
         private readonly DoctorAvailabilityService $availability,
         private readonly PatientAppointmentNotifier $notifier,
-        private readonly AppointmentRefundRequestNotifier $refundRequestNotifier,
     ) {}
 
     public function canResolve(Appointment $appointment): bool
@@ -150,13 +150,32 @@ final class PatientMissedAppointmentService
             return AppointmentRefundRequest::query()->create($payload);
         });
 
-        try {
-            $this->refundRequestNotifier->notifySubmitted($request);
-        } catch (\Throwable $e) {
-            report($e);
-        }
+        $this->queueSubmittedNotification((int) $request->id);
 
         return $request;
+    }
+
+    private function queueSubmittedNotification(int $requestId): void
+    {
+        $callback = function () use ($requestId): void {
+            try {
+                $fresh = AppointmentRefundRequest::query()->find($requestId);
+
+                if ($fresh instanceof AppointmentRefundRequest) {
+                    app(AppointmentRefundRequestNotifier::class)->notifySubmitted($fresh);
+                }
+            } catch (Throwable $e) {
+                report($e);
+            }
+        };
+
+        if (app()->runningUnitTests()) {
+            $callback();
+
+            return;
+        }
+
+        dispatch($callback)->afterResponse();
     }
 
     public function refund(User $user, Appointment $appointment): void

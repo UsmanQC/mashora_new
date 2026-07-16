@@ -15,7 +15,6 @@ final class DoctorRefundRequestService
 
     public function __construct(
         private readonly AppointmentWalletService $wallet,
-        private readonly AppointmentRefundRequestNotifier $refundRequestNotifier,
     ) {}
 
     public function canRequestRefund(Appointment $appointment): bool
@@ -112,10 +111,23 @@ final class DoctorRefundRequestService
             return AppointmentRefundRequest::query()->create($payload);
         });
 
-        try {
-            $this->refundRequestNotifier->notifySubmitted($request);
-        } catch (\Throwable $e) {
-            report($e);
+        $requestId = (int) $request->id;
+        $callback = function () use ($requestId): void {
+            try {
+                $fresh = AppointmentRefundRequest::query()->find($requestId);
+
+                if ($fresh instanceof AppointmentRefundRequest) {
+                    app(AppointmentRefundRequestNotifier::class)->notifySubmitted($fresh);
+                }
+            } catch (\Throwable $e) {
+                report($e);
+            }
+        };
+
+        if (app()->runningUnitTests()) {
+            $callback();
+        } else {
+            dispatch($callback)->afterResponse();
         }
 
         return $request;

@@ -654,6 +654,7 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
         try {
             $this->refundMissed($this->refundAppointmentId);
             $this->dismissRefundMissedModal();
+            $this->redirectRoute('patient.appointments', ['tab' => 'missed'], navigate: true);
         } catch (\Illuminate\Validation\ValidationException $e) {
             $message = collect($e->errors())->flatten()->first();
 
