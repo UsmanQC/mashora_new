@@ -86,7 +86,26 @@
             wire:key="mf-v3-{{ $this->mfSessionId }}-{{ $mfContainerId }}"
             data-test="patient-checkout-mf-embed"
             data-mf-container="{{ $mfContainerId }}"
-            x-data="{ booting: true, failed: false, failReason: '' }"
+            x-data="{
+                booting: true,
+                failed: false,
+                failReason: '',
+                ready: false,
+                paying: false,
+                submitPay() {
+                    if (this.paying || ! window.myfatoorah?.submitCardPayment) {
+                        return;
+                    }
+                    this.paying = true;
+                    try {
+                        window.myfatoorah.submitCardPayment();
+                    } catch (e) {
+                        this.paying = false;
+                        this.failed = true;
+                        this.failReason = e?.message || 'submit failed';
+                    }
+                },
+            }"
             x-init="
                 (() => {
                     const completeUrl = @js($this->mfCompleteUrl);
@@ -96,12 +115,13 @@
                     const containerId = @js($mfContainerId);
                     const preferDesktop = @js(($mfPreferDesktop ?? false));
                     const lang = @js(app()->getLocale() === 'ar' ? 'ar' : 'en');
-                    const payNow = @js(__('myfatoorah.payNow'));
                     const insertCard = @js(__('myfatoorah.insertCardDetails'));
                     const isNarrow = ! window.matchMedia('(min-width: 640px)').matches;
 
                     const fail = (reason = '') => {
                         booting = false;
+                        ready = false;
+                        paying = false;
                         failed = true;
                         failReason = reason || '';
                         console.error('[MyFatoorah embed]', reason || 'init failed');
@@ -119,6 +139,8 @@
                     }
 
                     const payment = (response) => {
+                        paying = false;
+
                         if (!response || !response.isSuccess) {
                             fail('payment callback unsuccessful');
                             return;
@@ -156,6 +178,13 @@
                     const eventHandler = (event) => {
                         if (event?.name === 'VIEW_READY') {
                             booting = false;
+                            ready = true;
+                        }
+                        if (event?.name === 'PAYMENT_STARTED') {
+                            paying = true;
+                        }
+                        if (event?.name === 'SESSION_CANCELED' || event?.name === 'PAYMENT_COMPLETED') {
+                            paying = false;
                         }
                     };
 
@@ -172,17 +201,17 @@
 
                         if (window.__mfSessionBooted === sessionId) {
                             booting = false;
+                            ready = true;
                             return;
                         }
 
                         try {
-                            // Default MyFatoorah layout + brand green Pay Now (mobile-friendly heights).
+                            // Card fields only in iframe; Pay Now is our sticky button (less mobile scroll).
                             window.myfatoorah.init({
                                 sessionId: sessionId,
                                 callback: payment,
                                 containerId: containerId,
                                 shouldHandlePaymentUrl: true,
-                                // Wallet row: Apple + Google only (+ Card form). Same sizes = cleaner row.
                                 paymentOptions: ['ApplePay', 'GooglePay', 'Card'],
                                 eventListener: eventHandler,
                                 subscribedEvents: [
@@ -204,13 +233,13 @@
                                         style: {
                                             showCardholderName: true,
                                             hideCardIcons: false,
-                                            cardHeight: isNarrow ? '300px' : '260px',
-                                            tokenHeight: isNarrow ? '300px' : '260px',
+                                            cardHeight: isNarrow ? '190px' : '200px',
+                                            tokenHeight: isNarrow ? '190px' : '200px',
                                             input: {
                                                 color: '#0f172a',
                                                 fontSize: isNarrow ? '16px' : '14px',
                                                 fontFamily: 'sans-serif',
-                                                inputHeight: isNarrow ? '44px' : '40px',
+                                                inputHeight: isNarrow ? '40px' : '38px',
                                                 inputMargin: '0px',
                                                 borderColor: '#e2e8f0',
                                                 borderWidth: '1px',
@@ -230,25 +259,15 @@
                                                 borderRadius: '10px',
                                             },
                                             button: {
-                                                useCustomButton: false,
-                                                textContent: payNow,
-                                                fontSize: isNarrow ? '16px' : '15px',
-                                                fontFamily: 'sans-serif',
-                                                color: 'white',
-                                                backgroundColor: '#10B981',
-                                                height: isNarrow ? '48px' : '44px',
-                                                borderRadius: '12px',
-                                                width: '100%',
-                                                margin: '14px auto 0 auto',
-                                                cursor: 'pointer',
+                                                useCustomButton: true,
                                             },
                                             separator: {
                                                 useCustomSeparator: false,
                                                 textContent: insertCard,
-                                                fontSize: '14px',
+                                                fontSize: '13px',
                                                 color: '#94a3b8',
                                                 fontFamily: 'sans-serif',
-                                                textSpacing: '10px',
+                                                textSpacing: '8px',
                                                 lineStyle: 'solid',
                                                 lineColor: '#e2e8f0',
                                                 lineThickness: '1px',
@@ -258,7 +277,7 @@
                                     applePay: {
                                         language: lang,
                                         style: {
-                                            frameHeight: '52px',
+                                            frameHeight: '48px',
                                             frameWidth: '100%',
                                             button: {
                                                 height: '44px',
@@ -270,7 +289,7 @@
                                     googlePay: {
                                         language: lang,
                                         style: {
-                                            frameHeight: '52px',
+                                            frameHeight: '48px',
                                             frameWidth: '100%',
                                             button: {
                                                 height: '44px',
@@ -326,14 +345,31 @@
             "
         >
             <div class="mf-embed-shell mx-auto w-full max-w-[400px] rounded-2xl bg-white px-1 sm:px-0">
-                <div x-show="booting && !failed" x-cloak class="space-y-3 py-6">
+                <div x-show="booting && !failed" x-cloak class="space-y-3 py-4">
                     <div class="h-10 animate-pulse rounded-xl bg-slate-100"></div>
                     <div class="h-10 animate-pulse rounded-xl bg-slate-100"></div>
-                    <div class="h-28 animate-pulse rounded-xl bg-slate-100"></div>
+                    <div class="h-24 animate-pulse rounded-xl bg-slate-100"></div>
                     <p class="text-center text-xs text-slate-400">{{ __('patient_booking.payment_processing') }}</p>
                 </div>
 
-                <div id="{{ $mfContainerId }}" class="mf-embed-root min-h-[22rem] w-full bg-white sm:min-h-[20rem]"></div>
+                <div id="{{ $mfContainerId }}" class="mf-embed-root w-full bg-white"></div>
+            </div>
+
+            <div
+                class="sticky bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-30 -mx-1 bg-gradient-to-t from-white via-white to-white/90 px-1 pt-3 pb-1 sm:static sm:bottom-auto sm:z-auto sm:mx-0 sm:bg-none sm:px-0 sm:pt-4 sm:pb-0"
+                x-show="ready && !failed"
+                x-cloak
+            >
+                <button
+                    type="button"
+                    class="flex min-h-12 w-full items-center justify-center rounded-2xl border border-[#10B981] bg-[#10B981] px-4 text-base font-semibold text-white shadow-[0_10px_28px_-8px_rgba(16,185,129,0.45)] hover:brightness-[0.97] disabled:cursor-not-allowed disabled:opacity-70"
+                    data-test="patient-checkout-mf-pay-now"
+                    x-bind:disabled="paying"
+                    x-on:click="submitPay()"
+                >
+                    <span x-show="!paying">{{ __('myfatoorah.payNow') }}</span>
+                    <span x-show="paying" x-cloak>{{ __('patient_booking.payment_processing') }}</span>
+                </button>
             </div>
 
             <div class="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900" x-cloak x-show="failed">

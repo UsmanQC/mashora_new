@@ -1756,11 +1756,15 @@ select:focus[data-flux-control] {
 
 .mf-embed-root {
     overflow: visible;
+    min-height: 0;
 }
 
 .mf-embed-root iframe {
     border: 0 !important;
     border-radius: 10px;
+    /* Avoid tall empty iframe chrome under the card fields */
+    max-height: none;
+    vertical-align: top;
     transition: box-shadow 0.2s ease, outline-color 0.2s ease;
 }
 
