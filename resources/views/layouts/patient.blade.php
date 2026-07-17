@@ -174,6 +174,7 @@
         @endpersist
         @include('partials.patient-global-incoming-call-listener')
         @include('partials.patient-global-join-call-banner')
+        @include('partials.patient-checkout-mf-embed-script')
         @stack('scripts')
 
         @include('partials.pwa-install-prompt', [

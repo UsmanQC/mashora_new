@@ -96,9 +96,6 @@
                 ],
             ];
         @endphp
-        @once
-            @include('partials.patient-checkout-mf-embed-script')
-        @endonce
         {{-- Embedded Payment v3 only. x-init uses single quotes so @js JSON cannot break the HTML attribute. --}}
         <div
             class="space-y-4"
