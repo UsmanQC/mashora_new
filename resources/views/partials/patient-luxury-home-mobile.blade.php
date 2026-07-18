@@ -107,7 +107,7 @@
                                 />
                             @else
                                 <span @class([
-                                    'pointer-events-none text-xl leading-none',
+                                    'patient-luxury-mood-emoji pointer-events-none',
                                     'opacity-70' => ! $isSaved && ! $isPending,
                                 ]) aria-hidden="true">{{ $mood['emoji'] }}</span>
                             @endif
