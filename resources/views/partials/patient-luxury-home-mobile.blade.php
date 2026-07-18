@@ -99,7 +99,7 @@
                                     src="{{ $mood['image_url'] }}"
                                     alt=""
                                     @class([
-                                        'pointer-events-none size-7 object-contain',
+                                        'pointer-events-none',
                                         'grayscale-[25%] opacity-80' => ! $isSaved && ! $isPending,
                                     ])
                                     decoding="async"

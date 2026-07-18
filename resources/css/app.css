@@ -1673,24 +1673,32 @@ select:focus[data-flux-control] {
 }
 
 .patient-luxury-mood-icon {
-    display: flex;
+    display: grid;
+    place-items: center;
     width: 3rem;
     height: 3rem;
-    align-items: center;
-    justify-content: center;
     border-radius: 1rem;
     border: 1px solid #f1f5f9;
     background-color: #f8fafc;
     color: #94a3b8;
+    line-height: 0;
     transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease, transform 0.3s ease;
+}
+
+.patient-luxury-mood-icon > img {
+    display: block;
+    width: 1.75rem;
+    height: 1.75rem;
+    object-fit: contain;
+    object-position: center;
 }
 
 .patient-luxury-mood-emoji {
     display: block;
-    font-size: 1.375rem;
+    font-size: 1.25rem;
     line-height: 1;
-    /* Emoji glyphs render below the vertical middle of their line box; nudge up to optically center. */
-    transform: translateY(-0.05em);
+    /* Native emoji glyphs sit high in their box; nudge down to optically center. */
+    transform: translateY(0.08em);
 }
 
 .patient-luxury-home .patient-luxury-mood-icon {
