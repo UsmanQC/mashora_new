@@ -9,7 +9,7 @@
 
     $singleLinkClass = match ($variant) {
         'header', 'sidebar' => 'inline-flex shrink-0 items-center justify-center rounded-full border border-white/30 bg-white/15 px-3.5 py-1.5 text-[0.6875rem] font-bold uppercase tracking-[0.06em] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] transition hover:bg-white/25',
-        'luxury' => 'inline-flex h-9 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white px-3 text-[0.6875rem] font-bold uppercase tracking-[0.06em] text-slate-700 shadow-sm transition hover:border-emerald-200 hover:text-[#059669]',
+        'luxury' => 'inline-flex size-9 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-[0.6875rem] font-bold uppercase tracking-[0.06em] text-slate-700 shadow-sm transition hover:border-emerald-200 hover:text-[#059669]',
         'marketing' => 'inline-flex shrink-0 items-center justify-center rounded-full border border-slate-200/90 bg-white px-3 py-1.5 text-[0.6875rem] font-bold uppercase tracking-[0.06em] text-slate-700 shadow-sm transition hover:border-emerald-200 hover:text-[#059669]',
         'chrome', 'guest' => 'inline-flex shrink-0 items-center justify-center rounded-full border border-zinc-200/90 bg-zinc-100/95 px-3.5 py-1.5 text-[0.6875rem] font-bold uppercase tracking-[0.06em] text-zinc-700 shadow-sm transition hover:bg-white',
         'menu' => 'flex w-full items-center justify-center rounded-full border border-zinc-200/90 bg-zinc-100/95 px-3.5 py-2 text-xs font-bold uppercase tracking-[0.06em] text-zinc-700 transition hover:bg-white',
