@@ -41,7 +41,7 @@
                     <a
                         href="{{ $notificationsUrl }}"
                         wire:navigate
-                        class="relative flex size-9 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:border-emerald-200 hover:text-[#059669]"
+                        class="relative flex size-10 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 transition hover:border-emerald-200 hover:text-[#059669]"
                         aria-label="{{ __('patient.home_luxury.notifications_aria') }}"
                     >
                         <flux:icon name="bell" variant="outline" class="size-[1.125rem]" />

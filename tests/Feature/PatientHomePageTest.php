@@ -263,7 +263,7 @@ test('patient profile menu logout item includes sign out icon', function () {
         ->assertSee('data-flux-menu-item-has-icon', false);
 });
 
-test('signed-in patient mobile home profile opens logout menu instead of profile link', function () {
+test('signed-in patient mobile home profile links to menu', function () {
     $user = User::factory()->create([
         'profile_completed' => true,
         'name' => 'Testing',
@@ -272,7 +272,7 @@ test('signed-in patient mobile home profile opens logout menu instead of profile
     $this->actingAs($user)->get(route('patient.home'))
         ->assertSuccessful()
         ->assertSee('data-test="patient-luxury-home-profile-menu-trigger"', false)
-        ->assertSee('data-test="patient-logout-button"', false)
+        ->assertSee(route('patient.menu'), false)
         ->assertDontSee('data-test="patient-luxury-home-avatar"', false);
 });
 
