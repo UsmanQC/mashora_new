@@ -41,7 +41,7 @@
                     <a
                         href="{{ $notificationsUrl }}"
                         wire:navigate
-                        class="relative flex size-9 shrink-0 items-center justify-center rounded-full border border-slate-100 bg-white text-slate-600 shadow-[0_4px_20px_-2px_rgba(0,0,0,0.03)] transition-colors hover:text-[#059669]"
+                        class="relative flex size-9 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:border-emerald-200 hover:text-[#059669]"
                         aria-label="{{ __('patient.home_luxury.notifications_aria') }}"
                     >
                         <flux:icon name="bell" variant="outline" class="size-[1.125rem]" />
@@ -117,24 +117,7 @@
                 @endforeach
             </div>
 
-            @if ($isAuthenticated && $this->hasLoggedMoodToday && $this->todayMoodKey)
-                <div
-                    class="patient-luxury-mood-saved mt-3 flex items-center gap-2.5 rounded-2xl border border-emerald-100 bg-emerald-50/80 px-3 py-2.5"
-                    data-test="patient-luxury-mood-saved"
-                >
-                    <span class="flex size-8 shrink-0 items-center justify-center rounded-full bg-[#10B981] text-white shadow-sm">
-                        <flux:icon name="check" variant="mini" class="size-4" />
-                    </span>
-                    <div class="min-w-0">
-                        <p class="text-[0.6875rem] font-semibold text-emerald-800">
-                            {{ __('patient.home_luxury.mood_logged_title') }}
-                        </p>
-                        <p class="truncate text-[0.625rem] text-emerald-600/90">
-                            {{ __('patient.home_luxury.mood_logged_banner', ['mood' => __('patient.mood_selector_options.'.$this->todayMoodKey)]) }}
-                        </p>
-                    </div>
-                </div>
-            @elseif ($isAuthenticated && $this->pendingMoodKey)
+            @if ($isAuthenticated && ! $this->hasLoggedMoodToday && $this->pendingMoodKey)
                 <div
                     class="patient-luxury-mood-save-panel mt-3 space-y-3 rounded-2xl border border-emerald-100/80 bg-slate-50/90 p-3"
                     data-test="patient-luxury-mood-save-panel"
@@ -180,7 +163,7 @@
                         <span wire:loading wire:target="saveMoodQuick">{{ __('patient.mood_tracker_saving') }}</span>
                     </flux:button>
                 </div>
-            @elseif ($isAuthenticated)
+            @elseif ($isAuthenticated && ! $this->hasLoggedMoodToday)
                 <p class="mt-2.5 text-center text-[0.625rem] font-medium text-slate-400">
                     {{ __('patient.home_luxury.mood_tap_hint') }}
                 </p>
