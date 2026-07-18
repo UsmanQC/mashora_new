@@ -96,13 +96,15 @@
                 ],
             ];
         @endphp
-        {{-- Embedded Payment v3 only. x-init uses single quotes so @js JSON cannot break the HTML attribute. --}}
+        {{-- Config in JSON script avoids Alpine/HTML quote breakage; init() uses `this` (not $data). --}}
+        <script type="application/json" id="mf-embed-config-{{ $mfContainerId }}">@json($mfEmbedConfig)</script>
         <div
             class="space-y-4"
             wire:ignore
             wire:key="mf-v3-{{ $this->mfSessionId }}-{{ $mfContainerId }}"
             data-test="patient-checkout-mf-embed"
             data-mf-container="{{ $mfContainerId }}"
+            data-mf-config-id="mf-embed-config-{{ $mfContainerId }}"
             x-data="{
                 booting: true,
                 failed: false,
@@ -124,15 +126,52 @@
                         this.failReason = e?.message || 'submit failed';
                     }
                 },
+                init() {
+                    const boot = () => {
+                        if (typeof window.startMyFatoorahEmbed !== 'function') {
+                            this.booting = false;
+                            this.failed = true;
+                            this.failReason = 'payment helper missing';
+                            return;
+                        }
+
+                        const configEl = document.getElementById(this.$el.dataset.mfConfigId || '');
+                        let config = {};
+                        try {
+                            config = JSON.parse(configEl?.textContent || '{}');
+                        } catch (e) {
+                            this.booting = false;
+                            this.failed = true;
+                            this.failReason = 'invalid payment config';
+                            return;
+                        }
+
+                        window.startMyFatoorahEmbed(this, config);
+                    };
+
+                    if (typeof window.startMyFatoorahEmbed === 'function') {
+                        boot();
+                        return;
+                    }
+
+                    // Layout script may still be parsing on first paint.
+                    let tries = 0;
+                    const timer = setInterval(() => {
+                        tries += 1;
+                        if (typeof window.startMyFatoorahEmbed === 'function' || tries >= 40) {
+                            clearInterval(timer);
+                            boot();
+                        }
+                    }, 50);
+                },
             }"
-            x-init='window.startMyFatoorahEmbed($data, @js($mfEmbedConfig))'
         >
             <div class="mf-embed-shell mx-auto w-full max-w-[400px] rounded-2xl bg-white px-1 sm:px-0">
                 <div x-show="booting && !failed" x-cloak class="space-y-3 py-4">
                     <div class="h-10 animate-pulse rounded-xl bg-slate-100"></div>
                     <div class="h-10 animate-pulse rounded-xl bg-slate-100"></div>
                     <div class="h-24 animate-pulse rounded-xl bg-slate-100"></div>
-                    <p class="text-center text-xs text-slate-400">{{ __('patient_booking.payment_processing') }}</p>
+                    <p class="text-center text-xs text-slate-400">{{ __('patient_booking.payment_form_loading') }}</p>
                 </div>
 
                 <div id="{{ $mfContainerId }}" class="mf-embed-root w-full bg-white"></div>

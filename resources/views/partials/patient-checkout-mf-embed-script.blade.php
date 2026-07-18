@@ -1,6 +1,12 @@
-{{-- Loaded once; startMyFatoorahEmbed(state, config) is called from Alpine x-init. --}}
+{{-- Loaded from patient layout; startMyFatoorahEmbed(state, config) is called from Alpine init(). --}}
 <script>
     window.startMyFatoorahEmbed = function (state, config) {
+        if (! state || typeof state !== 'object') {
+            console.error('[MyFatoorah embed] invalid Alpine state');
+            return;
+        }
+
+        config = config || {};
         const completeUrl = config.completeUrl || '';
         const sessionId = config.sessionId || '';
         const scriptUrl = config.scriptUrl || '';

@@ -71,6 +71,7 @@ return [
     'payment_placeholder_expiry' => 'شهر / سنة',
     'payment_placeholder_cvv' => 'CVV',
     'payment_processing' => 'جارٍ بدء الدفع…',
+    'payment_form_loading' => 'جارٍ تحميل نموذج الدفع…',
     'payment_secure_note' => 'ستُعاد توجيهك إلى بوابة الدفع لإتمام الدفع بالبطاقة.',
     'payment_embedded_unavailable' => 'حقول البطاقة غير متاحة مؤقتًا. استخدم زر المتابعة أدناه لإكمال الدفع بأمان.',
     'pay_now_fallback' => 'المتابعة إلى صفحة الدفع الآمنة',
