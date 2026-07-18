@@ -56,6 +56,13 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
 
     public string $refundReasonNote = '';
 
+    public string $refundDestination = 'wallet';
+
+    public function canSelectPaymentAccountRefund(): bool
+    {
+        return $this->appointment->hasPaymentAccountRefundSource();
+    }
+
     /**
      * @return array<string, string>
      */
@@ -86,6 +93,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
         $this->showRefundModal = true;
         $this->refundReason = 'service_not_provided';
         $this->refundReasonNote = '';
+        $this->refundDestination = 'wallet';
     }
 
     public function dismissRefundMissedModal(): void
@@ -93,6 +101,7 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
         $this->showRefundModal = false;
         $this->refundReason = 'service_not_provided';
         $this->refundReasonNote = '';
+        $this->refundDestination = 'wallet';
     }
 
     public function confirmRefundMissed(): void
@@ -112,17 +121,42 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
         $this->validate([
             'refundReason' => ['required', 'string', 'in:'.implode(',', PatientMissedAppointmentService::REFUND_REASON_KEYS)],
             'refundReasonNote' => ['nullable', 'string', 'max:2000', 'required_if:refundReason,other'],
+            'refundDestination' => ['required', 'string', 'in:wallet,payment_account'],
         ], [], [
             'refundReason' => __('patient.missed.refund'),
             'refundReasonNote' => __('patient.missed.reason_note_label'),
+            'refundDestination' => __('patient.missed.refund_modal.destination_label'),
         ]);
 
-        app(PatientMissedAppointmentService::class)->requestRefund(
-            $user,
-            $this->appointment,
-            $this->refundReason,
-            $this->refundReason === 'other' ? $this->refundReasonNote : null,
-        );
+        try {
+            app(PatientMissedAppointmentService::class)->requestRefund(
+                $user,
+                $this->appointment,
+                $this->refundReason,
+                $this->refundReason === 'other' ? $this->refundReasonNote : null,
+                $this->refundDestination,
+            );
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $message = collect($e->errors())->flatten()->first();
+
+            Flux::toast(
+                variant: 'danger',
+                text: is_string($message) && $message !== ''
+                    ? $message
+                    : __('patient.missed.not_eligible'),
+            );
+
+            return;
+        } catch (\Throwable $e) {
+            report($e);
+
+            Flux::toast(
+                variant: 'danger',
+                text: __('patient.missed.refund_request_failed'),
+            );
+
+            return;
+        }
 
         $this->appointment->refresh();
         $this->dismissRefundMissedModal();
@@ -806,6 +840,33 @@ new #[Layout('layouts::patient')] #[Title('Session conversation')] class extends
             </flux:text>
 
             <div class="mt-4 space-y-3">
+                <flux:field>
+                    <flux:label>{{ __('patient.missed.refund_modal.destination_label') }}</flux:label>
+                    <div class="doctor-emerald-pill-radios">
+                        <flux:radio.group variant="pills" wire:model.live="refundDestination" class="w-full">
+                            <flux:radio value="wallet" :label="__('patient.missed.refund_modal.destination_wallet')" />
+                            <flux:radio
+                                value="payment_account"
+                                :label="__('patient.missed.refund_modal.destination_account')"
+                                :disabled="! $this->canSelectPaymentAccountRefund()"
+                            />
+                        </flux:radio.group>
+                    </div>
+                    <flux:error name="refundDestination" />
+                    <flux:text class="mt-1 text-xs text-zinc-500">
+                        @if ($refundDestination === 'payment_account')
+                            {{ __('patient.missed.refund_modal.destination_account_hint') }}
+                        @else
+                            {{ __('patient.missed.refund_modal.destination_wallet_hint') }}
+                        @endif
+                    </flux:text>
+                    @unless ($this->canSelectPaymentAccountRefund())
+                        <flux:text class="mt-1 text-xs text-amber-700">
+                            {{ __('patient.missed.refund_modal.destination_account_unavailable') }}
+                        </flux:text>
+                    @endunless
+                </flux:field>
+
                 <flux:select
                     wire:model.live="refundReason"
                     :label="__('patient.missed.refund_reason_label')"

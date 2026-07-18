@@ -11,6 +11,7 @@ use App\Http\Middleware\RedirectAuthenticatedPatientVisitor;
 use App\Http\Middleware\RedirectIfDoctorAuthenticated;
 use App\Http\Middleware\SetLocaleFromSession;
 use App\Support\PendingPatientBooking;
+use App\Support\PortalDomains;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -24,10 +25,35 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
         then: function (): void {
-            Route::middleware('web')
-                ->prefix('doctor')
-                ->name('doctor.')
-                ->group(base_path('routes/doctor.php'));
+            $patientRoutes = function (): void {
+                require base_path('routes/patient.php');
+            };
+
+            $doctorRoutes = function (): void {
+                require base_path('routes/doctor.php');
+            };
+
+            if (PortalDomains::patientEnabled()) {
+                Route::domain((string) PortalDomains::patient())
+                    ->middleware('web')
+                    ->group($patientRoutes);
+            } else {
+                Route::middleware('web')
+                    ->prefix('patient')
+                    ->group($patientRoutes);
+            }
+
+            if (PortalDomains::doctorEnabled()) {
+                Route::domain((string) PortalDomains::doctor())
+                    ->middleware('web')
+                    ->name('doctor.')
+                    ->group($doctorRoutes);
+            } else {
+                Route::middleware('web')
+                    ->prefix('doctor')
+                    ->name('doctor.')
+                    ->group($doctorRoutes);
+            }
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {
@@ -36,11 +62,11 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         $middleware->redirectGuestsTo(function (Request $request) {
-            if ($request->is('doctor', 'doctor/*')) {
+            if (PortalDomains::isDoctorPortalRequest($request)) {
                 return route('doctor.login');
             }
 
-            if ($request->is('patient', 'patient/*')) {
+            if (PortalDomains::isPatientPortalRequest($request)) {
                 PendingPatientBooking::captureFromRequest($request);
 
                 return route('patient.phone');

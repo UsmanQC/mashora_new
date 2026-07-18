@@ -49,7 +49,7 @@
     x-cloak
 >
     <nav
-        class="patient-glass-nav pointer-events-auto mx-auto flex max-w-md items-end justify-between gap-0 rounded-full px-1 py-1 shadow-[0_8px_30px_rgb(0,0,0,0.08)]"
+        class="patient-glass-nav pointer-events-auto mx-auto flex max-w-md items-end justify-between gap-0.5 rounded-full px-2 py-1.5 shadow-[0_8px_30px_rgb(0,0,0,0.08)]"
         aria-label="{{ __('patient.nav.label') }}"
     >
         <a

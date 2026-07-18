@@ -113,8 +113,9 @@ final class PatientPaymentCompletionService
                 $keyData['key'],
                 $keyData['type'],
                 (string) $temporaryAppointment->id,
-                self::amountDue($temporaryAppointment),
-                'SAR'
+                // Do not pass amount/currency — wallet partials and display formatting can false-fail.
+                null,
+                null
             );
         } catch (Throwable $e) {
             report($e);
@@ -548,7 +549,12 @@ final class PatientPaymentCompletionService
             return;
         }
 
-        App::make(DoctorAppointmentNotifier::class)->notifyNewBooking($appointment->fresh());
+        try {
+            App::make(DoctorAppointmentNotifier::class)->notifyNewBooking($appointment->fresh());
+        } catch (Throwable $e) {
+            // Payment already succeeded — never block booking completion on notification/push failures.
+            report($e);
+        }
     }
 
     public static function generateAppointmentNumber(): string

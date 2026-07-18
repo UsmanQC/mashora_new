@@ -11,6 +11,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Redirect;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use MyFatoorah\Library\API\Payment\MyFatoorahPayment;
 use Throwable;
@@ -162,34 +163,85 @@ class PatientPaymentController extends Controller
     }
 
     /**
-     * MyFatoorah Embedded Payment v3 callback: decrypt paymentData and complete booking.
+     * MyFatoorah Embedded Payment v3 callback: decrypt paymentData (or verify paymentId) and complete booking.
      */
     public function completeEmbedded(Request $request, TemporaryAppointment $temporaryAppointment): JsonResponse
     {
         abort_unless($temporaryAppointment->user_id === auth()->id(), 403);
 
-        $validated = $request->validate([
-            'paymentData' => ['required', 'string'],
-            'sessionId' => ['nullable', 'string'],
-        ]);
+        $successRedirect = route('patient.payment.success', ['temporaryAppointment' => $temporaryAppointment->id]);
+        $failedRedirect = route('patient.payment.failed', ['temporaryAppointment' => $temporaryAppointment->id]);
+
+        try {
+            $validated = $request->validate([
+                'paymentData' => ['nullable', 'string'],
+                'paymentId' => ['nullable', 'string'],
+                'sessionId' => ['nullable', 'string'],
+            ]);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'ok' => false,
+                'message' => $e->getMessage(),
+                'redirect' => $failedRedirect,
+            ], 422);
+        }
+
+        $paymentData = trim((string) ($validated['paymentData'] ?? ''));
+        $paymentId = trim((string) ($validated['paymentId'] ?? ''));
+
+        if ($paymentData === '' && $paymentId === '') {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Missing paymentData and paymentId',
+                'redirect' => $failedRedirect,
+            ], 422);
+        }
 
         /** @var PatientPaymentCompletionService $completion */
         $completion = app(PatientPaymentCompletionService::class);
-        $result = $completion->confirmMyFatoorahEmbeddedV3IfPaid(
-            $temporaryAppointment,
-            $validated['paymentData']
-        );
+        $result = ['appointment' => null, 'state' => 'failed'];
+
+        try {
+            if ($paymentData !== '') {
+                $result = $completion->confirmMyFatoorahEmbeddedV3IfPaid($temporaryAppointment, $paymentData);
+            }
+
+            if ($result['state'] !== 'paid' && $paymentId !== '') {
+                $result = $completion->confirmIfPaid(
+                    $temporaryAppointment,
+                    Request::create('/', 'GET', ['paymentId' => $paymentId])
+                );
+            }
+
+            // Charge succeeded but decrypt/paymentId path failed — inquire by CustomerReference.
+            if ($result['state'] !== 'paid') {
+                $result = $completion->confirmIfPaid(
+                    $temporaryAppointment,
+                    Request::create('/', 'GET')
+                );
+            }
+        } catch (Throwable $e) {
+            report($e);
+
+            return response()->json([
+                'ok' => false,
+                'message' => 'Booking completion error',
+                'redirect' => $failedRedirect,
+            ], 500);
+        }
 
         if ($result['state'] === 'paid' && $result['appointment'] !== null) {
             return response()->json([
                 'ok' => true,
-                'redirect' => route('patient.payment.success', ['temporaryAppointment' => $temporaryAppointment->id]),
+                'redirect' => $successRedirect,
             ]);
         }
 
         return response()->json([
             'ok' => false,
-            'redirect' => route('patient.payment.failed', ['temporaryAppointment' => $temporaryAppointment->id]),
+            'message' => 'Payment not confirmed yet',
+            'state' => $result['state'],
+            'redirect' => $failedRedirect,
         ], 422);
     }
 }

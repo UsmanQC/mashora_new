@@ -6,6 +6,7 @@ use App\Models\Appointment;
 use App\Models\AppointmentRefundRequest;
 use App\Models\Doctor;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
 
 final class DoctorRefundRequestService
@@ -14,7 +15,6 @@ final class DoctorRefundRequestService
 
     public function __construct(
         private readonly AppointmentWalletService $wallet,
-        private readonly AppointmentRefundRequestNotifier $refundRequestNotifier,
     ) {}
 
     public function canRequestRefund(Appointment $appointment): bool
@@ -78,10 +78,22 @@ final class DoctorRefundRequestService
             ]);
         }
 
-        $request = DB::transaction(function () use ($appointment, $doctor, $reasonNote): AppointmentRefundRequest {
+        $processing = app(AppointmentRefundProcessingService::class);
+        $requestedAmount = $processing->maximumRefundableAmount(
+            $appointment,
+            AppointmentRefundRequest::REFUND_DESTINATION_WALLET,
+        );
+
+        if ($requestedAmount < 0.01) {
+            throw ValidationException::withMessages([
+                'appointment' => __('doctor.refund.not_paid'),
+            ]);
+        }
+
+        $request = DB::transaction(function () use ($appointment, $doctor, $reasonNote, $requestedAmount): AppointmentRefundRequest {
             $appointment->loadMissing('user');
 
-            return AppointmentRefundRequest::query()->create([
+            $payload = [
                 'appointment_id' => $appointment->id,
                 'patient_id' => $appointment->user_id,
                 'doctor_id' => $doctor->id,
@@ -89,11 +101,17 @@ final class DoctorRefundRequestService
                 'reason_key' => self::REASON_KEY,
                 'reason_note' => $reasonNote,
                 'status' => 'pending_review',
-                'requested_amount' => (float) $appointment->total,
-            ]);
+                'requested_amount' => $requestedAmount,
+            ];
+
+            if (Schema::hasColumn('appointment_refund_requests', 'refund_destination')) {
+                $payload['refund_destination'] = AppointmentRefundRequest::REFUND_DESTINATION_WALLET;
+            }
+
+            return AppointmentRefundRequest::query()->create($payload);
         });
 
-        $this->refundRequestNotifier->notifySubmitted($request);
+        app(AppointmentRefundRequestNotifier::class)->queue('notifySubmitted', (int) $request->id);
 
         return $request;
     }

@@ -192,6 +192,7 @@ return [
         'otp_verify' => 'Verify and continue',
         'otp_resend' => 'Resend code',
         'otp_invalid' => 'That code is incorrect. Try again or request a new code.',
+        'otp_send_failed' => 'We could not send the SMS right now. Please try again.',
         'verification_sms' => 'Your Awaan verification code is :code.',
         'otp_dev_banner' => 'Local / test mode: SMS is not sent. Use this code: :code',
 
@@ -942,6 +943,7 @@ return [
         'refund_request_rejected_title' => 'Refund request rejected',
         'refund_request_rejected_body' => 'Admin rejected the refund request from :patient.',
         'refund_request_processed_title' => 'Refund processed',
-        'refund_request_processed_body' => 'Refund of :amount SAR for :patient was processed and credited to the patient wallet.',
+        'refund_request_processed_wallet_body' => 'Refund of :amount SAR for :patient was processed and credited to the patient wallet.',
+        'refund_request_processed_account_body' => 'Refund of :amount SAR for :patient was processed and sent to the patient payment account.',
     ],
 ];

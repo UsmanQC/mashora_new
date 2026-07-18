@@ -14,10 +14,28 @@
     <form
         action="{{ $callbackUrl }}"
         class="paymentWidgets min-h-[10rem] w-full rounded-xl border border-zinc-200 bg-white p-2"
-        data-brands="APPLEPAY VISA MASTER MADA"
+        data-brands="VISA MASTER MADA"
+        data-test="hyperpay-payment-form"
     ></form>
 
     <script>
+        (function () {
+            var form = document.querySelector('[data-test="hyperpay-payment-form"]');
+            var supportsApplePay = false;
+            try {
+                supportsApplePay = Boolean(
+                    window.ApplePaySession
+                    && typeof ApplePaySession.canMakePayments === 'function'
+                    && ApplePaySession.canMakePayments()
+                );
+            } catch (e) {
+                supportsApplePay = false;
+            }
+            if (form && supportsApplePay) {
+                form.setAttribute('data-brands', 'APPLEPAY VISA MASTER MADA');
+            }
+        })();
+
         window.hyperpayOrLabel = @js(__('patient_booking.or_divider'));
 
         var wpwlOptions = window.hyperpayWrapOnReady({

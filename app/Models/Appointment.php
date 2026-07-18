@@ -437,6 +437,39 @@ class Appointment extends Model
         return $this->hasMany(AppointmentRefundRequest::class);
     }
 
+    /**
+     * Checkout booking row that created this appointment (holds MyFatoorah invoice ids).
+     *
+     * @return HasOne<TemporaryAppointment, $this>
+     */
+    public function temporaryAppointment(): HasOne
+    {
+        return $this->hasOne(TemporaryAppointment::class, 'appointment_id');
+    }
+
+    /**
+     * MyFatoorah invoice id from the appointment, or from the linked temporary booking.
+     */
+    public function resolvedPaymentInvoiceId(): ?string
+    {
+        $invoiceId = trim((string) ($this->payment_invoice_id ?? ''));
+
+        if ($invoiceId !== '') {
+            return $invoiceId;
+        }
+
+        $this->loadMissing('temporaryAppointment');
+
+        $temporaryInvoiceId = trim((string) ($this->temporaryAppointment?->payment_invoice_id ?? ''));
+
+        return $temporaryInvoiceId !== '' ? $temporaryInvoiceId : null;
+    }
+
+    public function hasPaymentAccountRefundSource(): bool
+    {
+        return filled($this->resolvedPaymentInvoiceId());
+    }
+
     public function isDoctorMissed(): bool
     {
         return $this->status === 'not_attended'

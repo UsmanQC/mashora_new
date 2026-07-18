@@ -583,9 +583,26 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
 
     public string $refundReasonNote = '';
 
+    public string $refundDestination = 'wallet';
+
     /**
      * @return array<string, string>
      */
+    public function refundDestinationOptions(): array
+    {
+        return [
+            'wallet' => __('patient.missed.refund_modal.destination_wallet'),
+            'payment_account' => __('patient.missed.refund_modal.destination_account'),
+        ];
+    }
+
+    public function canSelectPaymentAccountRefund(): bool
+    {
+        $appointment = $this->pendingRefundAppointment;
+
+        return $appointment instanceof Appointment
+            && $appointment->hasPaymentAccountRefundSource();
+    }
     public function refundReasonOptions(): array
     {
         return [
@@ -615,6 +632,7 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
         $this->refundAppointmentId = $appointment->id;
         $this->refundReason = 'service_not_provided';
         $this->refundReasonNote = '';
+        $this->refundDestination = 'wallet';
         $this->showRefundModal = true;
     }
 
@@ -624,6 +642,7 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
         $this->refundAppointmentId = null;
         $this->refundReason = 'service_not_provided';
         $this->refundReasonNote = '';
+        $this->refundDestination = 'wallet';
     }
 
     public function confirmRefundMissed(): void
@@ -632,8 +651,27 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
             return;
         }
 
-        $this->refundMissed($this->refundAppointmentId);
-        $this->dismissRefundMissedModal();
+        try {
+            $this->refundMissed($this->refundAppointmentId);
+            $this->dismissRefundMissedModal();
+            $this->redirectRoute('patient.appointments', ['tab' => 'missed'], navigate: true);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $message = collect($e->errors())->flatten()->first();
+
+            Flux::toast(
+                variant: 'danger',
+                text: is_string($message) && $message !== ''
+                    ? $message
+                    : __('patient.missed.not_eligible'),
+            );
+        } catch (\Throwable $e) {
+            report($e);
+
+            Flux::toast(
+                variant: 'danger',
+                text: __('patient.missed.refund_request_failed'),
+            );
+        }
     }
 
     public function getPendingRefundAppointmentProperty(): ?Appointment
@@ -655,9 +693,11 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
         $this->validate([
             'refundReason' => ['required', 'string', 'in:'.implode(',', PatientMissedAppointmentService::REFUND_REASON_KEYS)],
             'refundReasonNote' => ['nullable', 'string', 'max:2000', 'required_if:refundReason,other'],
+            'refundDestination' => ['required', 'string', 'in:wallet,payment_account'],
         ], [], [
             'refundReason' => __('patient.missed.refund'),
             'refundReasonNote' => __('patient.missed.reason_note_label'),
+            'refundDestination' => __('patient.missed.refund_modal.destination_label'),
         ]);
 
         app(PatientMissedAppointmentService::class)->requestRefund(
@@ -665,6 +705,7 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
             $appointment,
             $this->refundReason,
             $this->refundReason === 'other' ? $this->refundReasonNote : null,
+            $this->refundDestination,
         );
 
         Flux::toast(
@@ -872,6 +913,33 @@ new #[Layout('layouts::patient')] #[Title('Appointments')] class extends Compone
             </flux:text>
 
             <div class="mt-4 space-y-3">
+                <flux:field>
+                    <flux:label>{{ __('patient.missed.refund_modal.destination_label') }}</flux:label>
+                    <div class="doctor-emerald-pill-radios">
+                        <flux:radio.group variant="pills" wire:model.live="refundDestination" class="w-full">
+                            <flux:radio value="wallet" :label="__('patient.missed.refund_modal.destination_wallet')" />
+                            <flux:radio
+                                value="payment_account"
+                                :label="__('patient.missed.refund_modal.destination_account')"
+                                :disabled="! $this->canSelectPaymentAccountRefund()"
+                            />
+                        </flux:radio.group>
+                    </div>
+                    <flux:error name="refundDestination" />
+                    <flux:text class="mt-1 text-xs text-zinc-500">
+                        @if ($refundDestination === 'payment_account')
+                            {{ __('patient.missed.refund_modal.destination_account_hint') }}
+                        @else
+                            {{ __('patient.missed.refund_modal.destination_wallet_hint') }}
+                        @endif
+                    </flux:text>
+                    @unless ($this->canSelectPaymentAccountRefund())
+                        <flux:text class="mt-1 text-xs text-amber-700">
+                            {{ __('patient.missed.refund_modal.destination_account_unavailable') }}
+                        </flux:text>
+                    @endunless
+                </flux:field>
+
                 <flux:select
                     wire:model.live="refundReason"
                     :label="__('patient.missed.refund_reason_label')"

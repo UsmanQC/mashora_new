@@ -71,6 +71,7 @@ return [
     'payment_placeholder_expiry' => 'MM / YY',
     'payment_placeholder_cvv' => 'CVV',
     'payment_processing' => 'Starting payment…',
+    'payment_form_loading' => 'Loading payment form…',
     'payment_secure_note' => 'You will be redirected to our payment partner to complete your card payment.',
     'payment_embedded_unavailable' => 'Card fields are temporarily unavailable. Use the fallback button below to continue securely.',
     'pay_now_fallback' => 'Continue to secure payment page',

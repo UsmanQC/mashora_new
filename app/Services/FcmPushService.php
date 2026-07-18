@@ -28,35 +28,39 @@ final class FcmPushService
      */
     public function sendToNotifiable(Model $notifiable, string $title, string $body, array $data = [], bool $silent = false): void
     {
-        $accessToken = $this->tokens->accessToken();
-        $projectId = $this->tokens->projectId();
+        try {
+            $accessToken = $this->tokens->accessToken();
+            $projectId = $this->tokens->projectId();
 
-        if ($accessToken === null || $projectId === null || $projectId === '') {
-            return;
-        }
+            if ($accessToken === null || $projectId === null || $projectId === '') {
+                return;
+            }
 
-        $deviceTokens = DeviceToken::query()
-            ->where('userable_type', $notifiable::class)
-            ->where('userable_id', $notifiable->getKey())
-            ->whereNotNull('device_token')
-            ->pluck('device_token')
-            ->filter(fn (mixed $token): bool => is_string($token) && $token !== '')
-            ->unique()
-            ->values();
+            $deviceTokens = DeviceToken::query()
+                ->where('userable_type', $notifiable::class)
+                ->where('userable_id', $notifiable->getKey())
+                ->whereNotNull('device_token')
+                ->pluck('device_token')
+                ->filter(fn (mixed $token): bool => is_string($token) && $token !== '')
+                ->unique()
+                ->values();
 
-        if ($deviceTokens->isEmpty()) {
-            Log::info('FCM skipped: no device tokens for recipient', [
-                'notifiable_type' => $notifiable::class,
-                'notifiable_id' => $notifiable->getKey(),
-            ]);
+            if ($deviceTokens->isEmpty()) {
+                Log::info('FCM skipped: no device tokens for recipient', [
+                    'notifiable_type' => $notifiable::class,
+                    'notifiable_id' => $notifiable->getKey(),
+                ]);
 
-            return;
-        }
+                return;
+            }
 
-        $endpoint = "https://fcm.googleapis.com/v1/projects/{$projectId}/messages:send";
+            $endpoint = "https://fcm.googleapis.com/v1/projects/{$projectId}/messages:send";
 
-        foreach ($deviceTokens as $deviceToken) {
-            $this->sendToToken($endpoint, $accessToken, $deviceToken, $title, $body, $data, $silent);
+            foreach ($deviceTokens as $deviceToken) {
+                $this->sendToToken($endpoint, $accessToken, $deviceToken, $title, $body, $data, $silent);
+            }
+        } catch (Throwable $e) {
+            report($e);
         }
     }
 

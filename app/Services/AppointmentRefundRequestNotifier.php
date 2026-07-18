@@ -7,12 +7,43 @@ use App\Models\AppointmentRefundRequest;
 use App\Models\Doctor;
 use App\Models\Notification;
 use App\Models\User;
+use Throwable;
 
 final class AppointmentRefundRequestNotifier
 {
     public function __construct(
         private readonly FcmPushService $push,
     ) {}
+
+    /**
+     * Run a notification after the HTTP response so FCM timeouts cannot fail admin/patient actions.
+     *
+     * @param  'notifySubmitted'|'notifyApproved'|'notifyRejected'|'notifyProcessed'  $method
+     */
+    public function queue(string $method, int $requestId): void
+    {
+        $callback = function () use ($method, $requestId): void {
+            try {
+                $fresh = AppointmentRefundRequest::query()->find($requestId);
+
+                if (! $fresh instanceof AppointmentRefundRequest || ! method_exists($this, $method)) {
+                    return;
+                }
+
+                $this->{$method}($fresh);
+            } catch (Throwable $e) {
+                report($e);
+            }
+        };
+
+        if (app()->runningUnitTests()) {
+            $callback();
+
+            return;
+        }
+
+        dispatch($callback)->afterResponse();
+    }
 
     public function notifySubmitted(AppointmentRefundRequest $request): void
     {
@@ -130,19 +161,27 @@ final class AppointmentRefundRequestNotifier
 
         $amount = number_format((float) ($request->processed_amount ?? $request->requested_amount), 2);
 
+        $messageKey = $request->refundsToPaymentAccount()
+            ? 'patient.notifications.refund_request_processed_account_body'
+            : 'patient.notifications.refund_request_processed_wallet_body';
+
         $this->notifyPatient($request, $appointment, [
             'type' => 'refund_request_processed',
             'title' => __('patient.notifications.refund_request_processed_title'),
-            'message' => __('patient.notifications.refund_request_processed_body', [
+            'message' => __($messageKey, [
                 'amount' => $amount,
             ]),
-            'action' => route('patient.wallet'),
+            'action' => $request->refundsToWallet() ? route('patient.wallet') : route('patient.appointments', ['tab' => 'missed']),
         ]);
+
+        $doctorMessageKey = $request->refundsToPaymentAccount()
+            ? 'doctor.notifications.refund_request_processed_account_body'
+            : 'doctor.notifications.refund_request_processed_wallet_body';
 
         $this->notifyDoctor($request, $appointment, [
             'type' => 'refund_request_processed',
             'title' => __('doctor.notifications.refund_request_processed_title'),
-            'message' => __('doctor.notifications.refund_request_processed_body', [
+            'message' => __($doctorMessageKey, [
                 'patient' => $this->patientName($appointment),
                 'amount' => $amount,
             ]),
@@ -154,34 +193,38 @@ final class AppointmentRefundRequestNotifier
      */
     private function notifyPatient(AppointmentRefundRequest $request, Appointment $appointment, array $payload): void
     {
-        $user = $appointment->user instanceof User
-            ? $appointment->user
-            : ($request->patient instanceof User ? $request->patient : null);
+        try {
+            $user = $appointment->user instanceof User
+                ? $appointment->user
+                : ($request->patient instanceof User ? $request->patient : null);
 
-        if ($user === null) {
-            return;
+            if ($user === null) {
+                return;
+            }
+
+            $doctor = $appointment->doctor instanceof Doctor
+                ? $appointment->doctor
+                : ($request->doctor instanceof Doctor ? $request->doctor : null);
+
+            Notification::query()->create([
+                'type' => $payload['type'],
+                'title' => $payload['title'],
+                'message' => $payload['message'],
+                'userable_type' => User::class,
+                'userable_id' => $user->id,
+                'senderable_type' => $doctor instanceof Doctor ? Doctor::class : null,
+                'senderable_id' => $doctor?->id,
+                'action' => $payload['action'] ?? route('patient.wallet'),
+            ]);
+
+            $this->push->sendToUser($user, $payload['title'], $payload['message'], [
+                'type' => $payload['type'],
+                'appointment_id' => (string) $appointment->id,
+                'refund_request_id' => (string) $request->id,
+            ]);
+        } catch (Throwable $e) {
+            report($e);
         }
-
-        $doctor = $appointment->doctor instanceof Doctor
-            ? $appointment->doctor
-            : ($request->doctor instanceof Doctor ? $request->doctor : null);
-
-        Notification::query()->create([
-            'type' => $payload['type'],
-            'title' => $payload['title'],
-            'message' => $payload['message'],
-            'userable_type' => User::class,
-            'userable_id' => $user->id,
-            'senderable_type' => $doctor instanceof Doctor ? Doctor::class : null,
-            'senderable_id' => $doctor?->id,
-            'action' => $payload['action'] ?? route('patient.wallet'),
-        ]);
-
-        $this->push->sendToUser($user, $payload['title'], $payload['message'], [
-            'type' => $payload['type'],
-            'appointment_id' => (string) $appointment->id,
-            'refund_request_id' => (string) $request->id,
-        ]);
     }
 
     /**
@@ -189,30 +232,34 @@ final class AppointmentRefundRequestNotifier
      */
     private function notifyDoctor(AppointmentRefundRequest $request, Appointment $appointment, array $payload): void
     {
-        $doctor = $appointment->doctor instanceof Doctor
-            ? $appointment->doctor
-            : ($request->doctor instanceof Doctor ? $request->doctor : null);
+        try {
+            $doctor = $appointment->doctor instanceof Doctor
+                ? $appointment->doctor
+                : ($request->doctor instanceof Doctor ? $request->doctor : null);
 
-        if ($doctor === null) {
-            return;
+            if ($doctor === null) {
+                return;
+            }
+
+            Notification::query()->create([
+                'type' => $payload['type'],
+                'title' => $payload['title'],
+                'message' => $payload['message'],
+                'userable_type' => Doctor::class,
+                'userable_id' => $doctor->id,
+                'senderable_type' => User::class,
+                'senderable_id' => $appointment->user_id,
+                'action' => route('doctor.appointments', ['status' => 'cancelled']),
+            ]);
+
+            $this->push->sendToNotifiable($doctor, $payload['title'], $payload['message'], [
+                'type' => $payload['type'],
+                'appointment_id' => (string) $appointment->id,
+                'refund_request_id' => (string) $request->id,
+            ]);
+        } catch (Throwable $e) {
+            report($e);
         }
-
-        Notification::query()->create([
-            'type' => $payload['type'],
-            'title' => $payload['title'],
-            'message' => $payload['message'],
-            'userable_type' => Doctor::class,
-            'userable_id' => $doctor->id,
-            'senderable_type' => User::class,
-            'senderable_id' => $appointment->user_id,
-            'action' => route('doctor.appointments', ['status' => 'cancelled']),
-        ]);
-
-        $this->push->sendToNotifiable($doctor, $payload['title'], $payload['message'], [
-            'type' => $payload['type'],
-            'appointment_id' => (string) $appointment->id,
-            'refund_request_id' => (string) $request->id,
-        ]);
     }
 
     private function patientName(Appointment $appointment): string

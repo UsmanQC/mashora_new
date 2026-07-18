@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Support\AppTimezone;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
 
 final class PatientMissedAppointmentService
@@ -29,7 +30,6 @@ final class PatientMissedAppointmentService
         private readonly AppointmentWalletService $wallet,
         private readonly DoctorAvailabilityService $availability,
         private readonly PatientAppointmentNotifier $notifier,
-        private readonly AppointmentRefundRequestNotifier $refundRequestNotifier,
     ) {}
 
     public function canResolve(Appointment $appointment): bool
@@ -77,6 +77,7 @@ final class PatientMissedAppointmentService
         Appointment $appointment,
         string $reasonKey,
         ?string $reasonNote = null,
+        string $refundDestination = AppointmentRefundRequest::REFUND_DESTINATION_WALLET,
     ): AppointmentRefundRequest {
         if ((int) $appointment->user_id !== (int) $user->id) {
             abort(403);
@@ -100,10 +101,37 @@ final class PatientMissedAppointmentService
             ]);
         }
 
-        $request = DB::transaction(function () use ($appointment, $user, $reasonKey, $reasonNote): AppointmentRefundRequest {
+        $refundDestination = in_array($refundDestination, [
+            AppointmentRefundRequest::REFUND_DESTINATION_WALLET,
+            AppointmentRefundRequest::REFUND_DESTINATION_PAYMENT_ACCOUNT,
+        ], true)
+            ? $refundDestination
+            : AppointmentRefundRequest::REFUND_DESTINATION_WALLET;
+
+        if (
+            $refundDestination === AppointmentRefundRequest::REFUND_DESTINATION_PAYMENT_ACCOUNT
+            && ! $appointment->hasPaymentAccountRefundSource()
+        ) {
+            throw ValidationException::withMessages([
+                'refundDestination' => __('patient.missed.refund_account_missing'),
+            ]);
+        }
+
+        $processing = app(AppointmentRefundProcessingService::class);
+        $requestedAmount = $processing->maximumRefundableAmount($appointment, $refundDestination);
+
+        if ($requestedAmount < 0.01) {
+            throw ValidationException::withMessages([
+                'appointment' => $refundDestination === AppointmentRefundRequest::REFUND_DESTINATION_PAYMENT_ACCOUNT
+                    ? __('patient.missed.refund_account_amount_unavailable')
+                    : __('patient.missed.not_eligible'),
+            ]);
+        }
+
+        $request = DB::transaction(function () use ($appointment, $user, $reasonKey, $reasonNote, $refundDestination, $requestedAmount): AppointmentRefundRequest {
             $appointment->loadMissing('doctor');
 
-            return AppointmentRefundRequest::query()->create([
+            $payload = [
                 'appointment_id' => $appointment->id,
                 'patient_id' => $user->id,
                 'doctor_id' => $appointment->doctor_id,
@@ -111,13 +139,24 @@ final class PatientMissedAppointmentService
                 'reason_key' => $reasonKey,
                 'reason_note' => $reasonNote,
                 'status' => 'pending_review',
-                'requested_amount' => (float) $appointment->total,
-            ]);
+                'requested_amount' => $requestedAmount,
+            ];
+
+            if (Schema::hasColumn('appointment_refund_requests', 'refund_destination')) {
+                $payload['refund_destination'] = $refundDestination;
+            }
+
+            return AppointmentRefundRequest::query()->create($payload);
         });
 
-        $this->refundRequestNotifier->notifySubmitted($request);
+        $this->queueSubmittedNotification((int) $request->id);
 
         return $request;
+    }
+
+    private function queueSubmittedNotification(int $requestId): void
+    {
+        app(AppointmentRefundRequestNotifier::class)->queue('notifySubmitted', $requestId);
     }
 
     public function refund(User $user, Appointment $appointment): void

@@ -79,12 +79,18 @@ class MyFatoorahEmbeddedV3Service
 
             // Limit embed + wallets (drops KNET / Benefit). Card kept for Insert Card Details.
             // Note: MyFatoorah docs only list card/applepay/googlepay (and stcpay) for embed — not samsungpay.
+            // Redirection is required so Apple Pay / wallets that leave the page still land on our success route with paymentId.
             $response = $http->post($this->apiBaseUrl().'/v3/sessions', [
                 'PaymentMode' => 'COMPLETE_PAYMENT',
                 'Order' => $order,
                 'Customer' => $customerPayload,
                 'SupportedPaymentMethods' => ['card', 'applepay', 'googlepay'],
                 'Language' => app()->getLocale() === 'ar' ? 'AR' : 'EN',
+                'IntegrationUrls' => [
+                    'Redirection' => route('patient.payment.success', [
+                        'temporaryAppointment' => $temporaryAppointment->id,
+                    ]),
+                ],
             ]);
 
             /** @var array{IsSuccess?: bool, Message?: string, ValidationErrors?: mixed, Data?: array{SessionId?: string, EncryptionKey?: string}} $json */
@@ -112,6 +118,7 @@ class MyFatoorahEmbeddedV3Service
                 ];
             }
 
+            $temporaryAppointment->payment_session_id = $sessionId;
             $this->storeEncryptionKey($temporaryAppointment, $encryptionKey);
 
             return [
@@ -142,13 +149,34 @@ class MyFatoorahEmbeddedV3Service
     public function storeEncryptionKey(TemporaryAppointment $temporaryAppointment, string $encryptionKey): void
     {
         Cache::put($this->encryptionCacheKey($temporaryAppointment), $encryptionKey, now()->addDay());
+
+        // Persist on the booking row so decrypt still works if cache was cleared / multi-server.
+        $meta = json_decode((string) $temporaryAppointment->payment_response, true);
+        if (! is_array($meta)) {
+            $meta = [];
+        }
+
+        $meta['provider'] = 'myfatoorah';
+        $meta['mode'] = 'embedded_v3';
+        $meta['encryption_key'] = $encryptionKey;
+        $meta['session_id'] = $temporaryAppointment->payment_session_id;
+
+        $temporaryAppointment->payment_response = json_encode($meta);
+        $temporaryAppointment->save();
     }
 
     public function encryptionKeyFor(TemporaryAppointment $temporaryAppointment): ?string
     {
         $key = Cache::get($this->encryptionCacheKey($temporaryAppointment));
 
-        return is_string($key) && $key !== '' ? $key : null;
+        if (is_string($key) && $key !== '') {
+            return $key;
+        }
+
+        $meta = json_decode((string) $temporaryAppointment->payment_response, true);
+        $stored = is_array($meta) ? ($meta['encryption_key'] ?? null) : null;
+
+        return is_string($stored) && $stored !== '' ? $stored : null;
     }
 
     /**
@@ -226,6 +254,89 @@ class MyFatoorahEmbeddedV3Service
             'SAU' => 'https://api-sa.myfatoorah.com',
             default => 'https://api.myfatoorah.com',
         };
+    }
+
+    /**
+     * Register a domain for Embedded Apple Pay after the verification file is hosted.
+     *
+     * @see https://docs.myfatoorah.com/reference/register-apple-pay-domain
+     *
+     * @return array{ok: bool, message: string, body?: mixed}
+     */
+    public function registerApplePayDomain(string $domainName): array
+    {
+        $domain = strtolower(trim($domainName));
+        $domain = preg_replace('#^https?://#', '', $domain) ?? $domain;
+        $domain = rtrim(explode('/', $domain)[0] ?? $domain, '/');
+
+        if ($domain === '' || ! str_contains($domain, '.')) {
+            return [
+                'ok' => false,
+                'message' => 'DomainName must look like example.com (no https://).',
+            ];
+        }
+
+        $apiKey = trim((string) config('myfatoorah.api_key'));
+
+        if ($apiKey === '') {
+            return [
+                'ok' => false,
+                'message' => __('patient_booking.payment_api_missing'),
+            ];
+        }
+
+        try {
+            $http = Http::withToken($apiKey)
+                ->acceptJson()
+                ->asJson()
+                ->timeout(45);
+
+            if (app()->isLocal()) {
+                $http = $http->withoutVerifying();
+            }
+
+            $response = $http->post($this->apiBaseUrl().'/v2/RegisterApplePayDomain', [
+                'DomainName' => $domain,
+            ]);
+
+            /** @var array{IsSuccess?: bool, Message?: string, ValidationErrors?: mixed, Data?: mixed} $json */
+            $json = $response->json() ?? [];
+
+            if (! $response->successful() || ! ($json['IsSuccess'] ?? false)) {
+                $message = $this->humanMessageFromResponse($response->status(), $json, $response->body());
+
+                Log::warning('MyFatoorah RegisterApplePayDomain failed', [
+                    'domain' => $domain,
+                    'status' => $response->status(),
+                    'api' => $this->apiBaseUrl(),
+                    'body' => $response->body(),
+                ]);
+
+                return [
+                    'ok' => false,
+                    'message' => $message,
+                    'body' => $json !== [] ? $json : $response->body(),
+                ];
+            }
+
+            Log::info('MyFatoorah RegisterApplePayDomain succeeded', [
+                'domain' => $domain,
+                'api' => $this->apiBaseUrl(),
+            ]);
+
+            return [
+                'ok' => true,
+                'message' => (string) ($json['Message'] ?? 'OK'),
+                'body' => $json,
+            ];
+        } catch (Throwable $e) {
+            report($e);
+
+            return [
+                'ok' => false,
+                'message' => $e->getMessage(),
+            ];
+        }
     }
 
     /**
