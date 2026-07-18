@@ -53,7 +53,7 @@
                     <a
                         href="{{ $phoneEntry }}"
                         wire:navigate
-                        class="shrink-0 rounded-full bg-[#10B981] px-3.5 py-1.5 text-[0.6875rem] font-bold text-white shadow-sm transition-colors hover:bg-[#059669]"
+                        class="inline-flex h-9 shrink-0 items-center justify-center rounded-full bg-[#10B981] px-3.5 text-[0.6875rem] font-bold text-white shadow-sm transition-colors hover:bg-[#059669]"
                     >
                         {{ __('patient.home_luxury.sign_in') }}
                     </a>
